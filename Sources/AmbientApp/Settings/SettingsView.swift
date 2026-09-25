@@ -6,7 +6,6 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
-    let firstRun: Bool
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
@@ -14,13 +13,18 @@ struct SettingsView: View {
     @AppStorage("settingsPane") private var pane: SettingsPane = .welcome
     @FocusState private var sidebarFocused: Bool
 
+    /// Live, not captured: the window outlives first run and is reused when Settings opens again.
+    private var firstRun: Bool { !prefs.setupCompleted }
+
     var body: some View {
         HStack(spacing: 0) {
             sidebar
             detail
         }
-        .frame(minWidth: Theme.Layout.windowMinSize.width, maxWidth: .infinity,
+        .frame(minWidth: Theme.Layout.windowMinSize.width, maxWidth: Theme.Layout.windowMaxWidth,
                minHeight: Theme.Layout.windowMinSize.height, maxHeight: .infinity)
+        // Up under the transparent title bar, so the traffic lights sit on the sidebar.
+        .ignoresSafeArea(.container, edges: .top)
         .onAppear {
             if firstRun { pane = .welcome }
             sidebarFocused = true

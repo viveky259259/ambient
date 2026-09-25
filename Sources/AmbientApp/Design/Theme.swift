@@ -38,6 +38,8 @@ enum Theme {
         static let rowMinHeight: CGFloat = 44
         static let windowSize = CGSize(width: 780, height: 560)
         static let windowMinSize = CGSize(width: 700, height: 480)
+        /// Like System Settings: wider than this only spreads the pane away from the sidebar.
+        static let windowMaxWidth: CGFloat = 900
     }
 
     enum Colors {

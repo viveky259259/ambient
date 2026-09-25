@@ -35,14 +35,22 @@ struct DockGlowPreview: View {
         }
     }
 
+    /// The same two lights `DockGlow` draws: a wash rising from the screen edge and a bright pill
+    /// behind the Dock's glass.
     @ViewBuilder private func glow(at date: Date) -> some View {
         if let style = GlowStyle.for(mood: mood, agent: .claude) {
-            Ellipse()
-                .fill(style.color.color)
-                .frame(width: 330, height: 70)
-                .blur(radius: 24)
-                .opacity(level(style, at: date) * intensity)
-                .offset(y: 30)
+            let color = style.color.color
+            ZStack(alignment: .bottom) {
+                LinearGradient(colors: [color.opacity(0.7), color.opacity(0.28), color.opacity(0)],
+                               startPoint: .bottom, endPoint: .top)
+                    .frame(height: 80)
+                Capsule()
+                    .fill(color.opacity(0.85))
+                    .frame(width: 290, height: 34)
+                    .blur(radius: 14)
+                    .padding(.bottom, 14)
+            }
+            .opacity(min(1, level(style, at: date) * intensity))
         }
     }
 

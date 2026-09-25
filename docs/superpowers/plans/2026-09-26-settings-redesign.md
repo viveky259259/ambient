@@ -1423,3 +1423,19 @@ git commit -m "feat(app): Apple-style settings window with glass sidebar, six pa
 git add README.md CHANGELOG.md
 git commit -m "docs: new settings window"
 ```
+
+---
+
+## Execution notes
+
+Changes made while executing, on top of the code above:
+
+- `.ephemeral` is unavailable on macOS; dropped from the notification-status checks.
+- `SettingsView` ignores the top safe area so the sidebar runs under the transparent title bar and the
+  traffic lights sit on it.
+- The window caps at 900pt wide (`Theme.Layout.windowMaxWidth`, `sizingOptions = [.minSize, .maxSize]`),
+  like System Settings.
+- `DockGlowPreview` draws `DockGlow`'s two lights (edge wash plus a pill behind the Dock) instead of a
+  single blurred ellipse, which read too faint.
+- `firstRun` is computed from `prefs.setupCompleted` instead of passed in: the window is reused after
+  first run, so a captured value showed **Get Started** again on the next open.

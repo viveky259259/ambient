@@ -79,8 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func showSetup() {
         if setupWindow == nil, let notifier {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let firstRun = !prefs.setupCompleted
-            let view = SettingsView(setup: setup, prefs: prefs, firstRun: firstRun,
+            let view = SettingsView(setup: setup, prefs: prefs,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
@@ -89,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                         self?.askForNotificationsOnce()
                                     })
             let hosting = NSHostingController(rootView: view)
-            hosting.sizingOptions = [.minSize]
+            hosting.sizingOptions = [.minSize, .maxSize]
             let window = NSWindow(contentViewController: hosting)
             window.title = "Ambient"
             window.titleVisibility = .hidden
