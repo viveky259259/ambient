@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **New settings window**: a floating glass sidebar with Welcome, Agents, Notch Island, Alerts, Dock Glow
+  and General. The island, notification and Dock glow panes preview the real thing as you change settings.
+- First run opens on a Welcome checklist: connect every agent at once, allow notifications, watch the demo.
+
 ## 0.1.1 — 2026-09-26
 
 - **Click to return**: notifications, island rows and menu rows now open the exact chat in Claude's
