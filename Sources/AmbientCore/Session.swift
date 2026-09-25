@@ -88,12 +88,19 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
 }
 
 /// The result of applying an event, for surfaces that react to changes.
-public struct Transition: Equatable, Sendable {
+public struct SessionChange: Equatable, Sendable {
     public let session: Session
     /// The activity before the event; nil for a session seen for the first time.
     public let previous: Activity?
     public let event: EventKind?
     public let removed: Bool
+
+    public init(session: Session, previous: Activity?, event: EventKind?, removed: Bool) {
+        self.session = session
+        self.previous = previous
+        self.event = event
+        self.removed = removed
+    }
 
     public var changed: Bool { previous != session.activity || removed }
     public var previousMood: Mood? {

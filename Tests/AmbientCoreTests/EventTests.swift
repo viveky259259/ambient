@@ -46,29 +46,29 @@ import Testing
     }
 }
 
-@Suite struct TextTests {
+@Suite struct TrimTests {
     @Test func shortTextIsUnchanged() {
-        #expect(Text.truncate("hello", max: 10) == "hello")
+        #expect(Trim.truncate("hello", max: 10) == "hello")
     }
 
     @Test func longTextIsCutWithEllipsis() {
-        let out = Text.truncate("abcdefghijklmnop", max: 8)
+        let out = Trim.truncate("abcdefghijklmnop", max: 8)
         #expect(out == "abcdefg…")
         #expect(out.count == 8)
     }
 
     @Test func whitespaceIsCollapsed() {
-        #expect(Text.truncate("  git   status\n\n --short \t", max: 80) == "git status --short")
+        #expect(Trim.truncate("  git   status\n\n --short \t", max: 80) == "git status --short")
     }
 
     @Test func emojiAreNotSplit() {
-        let out = Text.truncate("👩‍💻👩‍💻👩‍💻👩‍💻", max: 3)
+        let out = Trim.truncate("👩‍💻👩‍💻👩‍💻👩‍💻", max: 3)
         #expect(out == "👩‍💻👩‍💻…")
     }
 
     @Test func emptyOrBlankBecomesNil() {
-        #expect(Text.clean("   \n ", max: 10) == nil)
-        #expect(Text.clean(nil, max: 10) == nil)
-        #expect(Text.clean(" x ", max: 10) == "x")
+        #expect(Trim.clean("   \n ", max: 10) == nil)
+        #expect(Trim.clean(nil, max: 10) == nil)
+        #expect(Trim.clean(" x ", max: 10) == "x")
     }
 }

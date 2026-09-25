@@ -25,6 +25,32 @@ public enum Demo {
         }
     }
 
+    public struct Step: Sendable {
+        public let title: String
+        public let mood: Mood
+        public let agent: AgentKind
+        public let project: String
+        public let message: String?
+    }
+
+    /// A tour of every state across three agents, a few seconds apart.
+    public static let tour: [Step] = [
+        Step(title: "Claude starts working", mood: .working, agent: .claude, project: "api-server", message: "npm test"),
+        Step(title: "Codex joins", mood: .working, agent: .codex, project: "web", message: "cargo build --release"),
+        Step(title: "Claude needs permission", mood: .waiting, agent: .claude, project: "api-server", message: "Bash: rm -rf build"),
+        Step(title: "Claude gets back to work", mood: .working, agent: .claude, project: "api-server", message: "swift build"),
+        Step(title: "Gemini hits an error", mood: .error, agent: .gemini, project: "docs", message: "Quota exceeded"),
+        Step(title: "Codex finishes", mood: .done, agent: .codex, project: "web", message: "Release build ready: 3 crates updated"),
+        Step(title: "Claude finishes", mood: .done, agent: .claude, project: "api-server", message: "All 42 tests pass. Ready for review."),
+    ]
+
+    /// Ends every session the tour created.
+    public static func tourCleanup(now: Date = Date(), host: HostInfo? = nil) -> [AgentEvent] {
+        var seen = Set<String>()
+        return tour.filter { seen.insert("\($0.agent.rawValue)/\($0.project)").inserted }
+            .flatMap { events(for: .idle, agent: $0.agent, project: $0.project, now: now, host: host) }
+    }
+
     public static func mood(named name: String) -> Mood? {
         switch name.lowercased() {
         case "idle", "clear", "end": .idle

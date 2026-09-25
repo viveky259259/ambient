@@ -55,3 +55,18 @@ import Testing
         #expect(Demo.mood(named: "nope") == nil)
     }
 }
+
+@Suite struct DemoTourTests {
+    @Test func cleanupEndsEveryTourSession() {
+        let store = SessionStore()
+        let now = Date()
+        for step in Demo.tour {
+            for e in Demo.events(for: step.mood, agent: step.agent, project: step.project, message: step.message, now: now) {
+                store.apply(e)
+            }
+        }
+        #expect(store.sessions.count == 3)
+        for e in Demo.tourCleanup(now: now.addingTimeInterval(1)) { store.apply(e) }
+        #expect(store.sessions.isEmpty)
+    }
+}

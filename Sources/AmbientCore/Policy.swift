@@ -31,7 +31,7 @@ public enum AlertPolicy {
 
     public static let attentionMoods: Set<Mood> = [.waiting, .done, .error]
 
-    public static func decide(_ t: Transition, settings: Settings, hostIsFrontmost: Bool) -> Alert? {
+    public static func decide(_ t: SessionChange, settings: Settings, hostIsFrontmost: Bool) -> Alert? {
         guard !t.removed, !settings.quiet, !hostIsFrontmost else { return nil }
         let mood = t.session.mood
         guard attentionMoods.contains(mood), mood != t.previousMood else { return nil }
@@ -54,7 +54,7 @@ public enum IslandPolicy {
     }
 
     /// How long the island opens up to announce a transition, or nil to stay collapsed.
-    public static func bloomDuration(for t: Transition, quiet: Bool) -> TimeInterval? {
+    public static func bloomDuration(for t: SessionChange, quiet: Bool) -> TimeInterval? {
         guard !quiet, !t.removed, t.session.mood != t.previousMood else { return nil }
         switch t.session.mood {
         case .waiting: return 8

@@ -163,7 +163,7 @@ struct Commands {
         let now = Date()
         for s in sessions {
             let elapsed = s.elapsed(now: now).map(Describe.duration) ?? ""
-            let title = Describe.title(s).padding(toLength: 18, withPad: " ", startingAt: 0)
+            let title = Trim.truncate(Describe.title(s), max: 18).padding(toLength: 18, withPad: " ", startingAt: 0)
             let agent = s.agent.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
             print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(elapsed))")
         }
@@ -206,9 +206,14 @@ struct Commands {
         }
 
         let installer = HookInstaller(paths: paths)
-        for agent in AgentKind.allCases {
+        let states = AgentKind.allCases.map { ($0, installer.status($0)) }
+        if !states.contains(where: { $0.1 == .installed || $0.1 == .partial }) {
+            problems += 1
+            out.error("No agent is connected — run `ambient install`")
+        }
+        for (agent, state) in states {
             let name = agent.displayName
-            switch installer.status(agent) {
+            switch state {
             case .installed:
                 out.success("\(name): hooks installed")
                 if agent == .codex { out.note("Codex runs new hooks only after you approve them with /hooks.") }
@@ -260,23 +265,16 @@ struct Commands {
 
     private func demo() -> Int32 {
         let host = HostCapture.current()
-        let steps: [(String, Mood, AgentKind, String, String?)] = [
-            ("Claude starts working", .working, .claude, "api-server", "npm test"),
-            ("Codex joins", .working, .codex, "web", "cargo build --release"),
-            ("Claude needs permission", .waiting, .claude, "api-server", "Bash: rm -rf build"),
-            ("Claude gets back to work", .working, .claude, "api-server", "swift build"),
-            ("Gemini hits an error", .error, .gemini, "docs", "Quota exceeded"),
-            ("Codex finishes", .done, .codex, "web", "Release build ready: 3 crates updated"),
-            ("Claude finishes", .done, .claude, "api-server", "All 42 tests pass. Ready for review."),
-        ]
         print(out.bold("Ambient demo") + out.dim(" — watch the notch, the Dock and the menu bar"))
-        for (title, mood, agent, project, message) in steps {
-            print("  \(out.mood(mood, "●")) \(title)")
-            guard send(Demo.events(for: mood, agent: agent, project: project, message: message, host: host)) else { return 1 }
+        for step in Demo.tour {
+            print("  \(out.mood(step.mood, "●")) \(step.title)")
+            let events = Demo.events(for: step.mood, agent: step.agent, project: step.project, message: step.message, host: host)
+            guard send(events) else { return 1 }
             Thread.sleep(forTimeInterval: 3)
         }
-        print(out.dim("Done. Run `ambient emit idle --agent <agent> --project <name>` to clear a session, or `ambient ack`."))
-        return 0
+        print(out.dim("Clearing the demo sessions in 15 seconds…"))
+        Thread.sleep(forTimeInterval: 15)
+        return send(Demo.tourCleanup(host: host)) ? 0 : 1
     }
 
     private func tilde(_ path: String) -> String {

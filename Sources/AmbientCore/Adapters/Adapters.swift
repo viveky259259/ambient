@@ -37,7 +37,7 @@ public enum AdapterRegistry {
         guard let name = p.string("tool_name") else { return nil }
         let display = ToolNames.display(name)
         guard let detail = ToolNames.detail(name: name, input: p.object("tool_input")) else { return display }
-        return Text.clean("\(display): \(detail)", max: Limits.message)
+        return Trim.clean("\(display): \(detail)", max: Limits.message)
     }
 }
 
@@ -69,10 +69,10 @@ enum ClaudeAdapter: AgentAdapter {
         case "SubagentStop":
             return .subagentFinished
         case "Stop":
-            return .turnCompleted(summary: Text.clean(p.string("last_assistant_message"), max: Limits.message))
+            return .turnCompleted(summary: Trim.clean(p.string("last_assistant_message"), max: Limits.message))
         case "StopFailure":
             let message = p.firstString(["error_message", "error", "error_type"])
-            return .turnFailed(message: Text.clean(message, max: Limits.message))
+            return .turnFailed(message: Trim.clean(message, max: Limits.message))
         case "SessionEnd":
             return .sessionEnded
         default:
@@ -81,7 +81,7 @@ enum ClaudeAdapter: AgentAdapter {
     }
 
     private static func notification(_ p: HookPayload) -> EventKind? {
-        let message = Text.clean(p.string("message"), max: Limits.message)
+        let message = Trim.clean(p.string("message"), max: Limits.message)
         switch p.string("notification_type") {
         case "permission_prompt":
             return .needsInput(reason: "permission", message: message)
@@ -109,7 +109,7 @@ enum GeminiAdapter: AgentAdapter {
             let failed = p.object("tool_response")?.has("error") ?? false
             return .toolFinished(name: p.string("tool_name") ?? "tool", failed: failed)
         case "Notification":
-            let message = Text.clean(p.string("message"), max: Limits.message)
+            let message = Trim.clean(p.string("message"), max: Limits.message)
             if p.string("notification_type") == "ToolPermission" {
                 return .needsInput(reason: "permission", message: message)
             }
@@ -117,7 +117,7 @@ enum GeminiAdapter: AgentAdapter {
         case "PreCompress":
             return .compactStarted
         case "AfterAgent":
-            return .turnCompleted(summary: Text.clean(p.string("prompt_response"), max: Limits.message))
+            return .turnCompleted(summary: Trim.clean(p.string("prompt_response"), max: Limits.message))
         case "SessionEnd":
             return .sessionEnded
         default:

@@ -40,7 +40,7 @@ public final class SessionStore {
     public func session(id: String) -> Session? { byId[id] }
 
     @discardableResult
-    public func apply(_ e: AgentEvent) -> Transition? {
+    public func apply(_ e: AgentEvent) -> SessionChange? {
         let id = "\(e.agent.rawValue):\(e.sessionId)"
         let existing = byId[id]
         if let existing, e.timestamp < existing.lastEventAt { return nil }
@@ -53,13 +53,13 @@ public final class SessionStore {
 
         if e.kind == .sessionEnded {
             byId[id] = nil
-            return Transition(session: s, previous: previous, event: e.kind, removed: true)
+            return SessionChange(session: s, previous: previous, event: e.kind, removed: true)
         }
 
         reduce(&s, e.kind, at: e.timestamp)
         if s.activity != previous { s.activitySince = e.timestamp }
         byId[id] = s
-        return Transition(session: s, previous: previous, event: e.kind, removed: false)
+        return SessionChange(session: s, previous: previous, event: e.kind, removed: false)
     }
 
     private func reduce(_ s: inout Session, _ kind: EventKind, at date: Date) {
@@ -132,15 +132,15 @@ public final class SessionStore {
 
     /// Ages sessions out. Call periodically.
     @discardableResult
-    public func sweep(now: Date) -> [Transition] {
-        var changes: [Transition] = []
+    public func sweep(now: Date) -> [SessionChange] {
+        var changes: [SessionChange] = []
         for (id, var s) in byId {
             let quiet = now.timeIntervalSince(s.lastEventAt)
             let previous = s.activity
 
             if let pid = s.host?.agentPid, !isAlive(pid) {
                 byId[id] = nil
-                changes.append(Transition(session: s, previous: previous, event: nil, removed: true))
+                changes.append(SessionChange(session: s, previous: previous, event: nil, removed: true))
                 continue
             }
 
@@ -152,14 +152,14 @@ public final class SessionStore {
                 s.acknowledged = true
             } else if s.mood == .idle, quiet > timeouts.expire {
                 byId[id] = nil
-                changes.append(Transition(session: s, previous: previous, event: nil, removed: true))
+                changes.append(SessionChange(session: s, previous: previous, event: nil, removed: true))
                 continue
             }
 
             if s != byId[id] {
                 if s.activity != previous { s.activitySince = now }
                 byId[id] = s
-                changes.append(Transition(session: s, previous: previous, event: nil, removed: false))
+                changes.append(SessionChange(session: s, previous: previous, event: nil, removed: false))
             }
         }
         return changes

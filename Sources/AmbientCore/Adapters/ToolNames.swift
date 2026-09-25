@@ -39,15 +39,15 @@ public enum ToolNames {
             return patchedFile(patch).map(basename)
         }
         if let command = input.firstString(["command", "cmd"]) {
-            return Text.clean(command, max: 80)
+            return Trim.clean(command, max: 80)
         }
         if let path = input.firstString(["file_path", "absolute_path", "notebook_path", "path"]) {
-            return Text.clean(basename(path), max: 80)
+            return Trim.clean(basename(path), max: 80)
         }
         if let url = input.string("url") {
-            return Text.clean(URL(string: url)?.host ?? url, max: 80)
+            return Trim.clean(URL(string: url)?.host ?? url, max: 80)
         }
-        return Text.clean(input.firstString(["pattern", "query", "description", "prompt"]), max: 80)
+        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt"]), max: 80)
     }
 
     private static func basename(_ path: String) -> String {

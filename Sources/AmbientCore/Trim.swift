@@ -1,7 +1,7 @@
 import Foundation
 
 /// Helpers for the short strings Ambient shows and sends.
-public enum Text {
+public enum Trim {
     /// Collapses runs of whitespace into single spaces, trims, and cuts to `max` characters
     /// (grapheme clusters), ending with "…" when cut.
     public static func truncate(_ s: String, max: Int) -> String {

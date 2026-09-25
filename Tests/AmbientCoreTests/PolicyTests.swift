@@ -5,9 +5,9 @@ import Testing
 private let t0 = Date(timeIntervalSince1970: 2_000_000)
 
 /// Runs events through a store and returns the last transition.
-private func transition(_ kinds: [(EventKind, TimeInterval)], session: String = "s") -> Transition {
+private func transition(_ kinds: [(EventKind, TimeInterval)], session: String = "s") -> SessionChange {
     let store = SessionStore()
-    var last: Transition?
+    var last: SessionChange?
     for (kind, at) in kinds {
         last = store.apply(AgentEvent(agent: .claude, sessionId: session, cwd: "/p", kind: kind, timestamp: t0.addingTimeInterval(at)))
     }
