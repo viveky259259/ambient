@@ -1,4 +1,4 @@
 public enum AmbientVersion {
     /// The single source of truth; the build script copies it into Info.plist.
-    public static let current = "0.1.0"
+    public static let current = "0.1.1"
 }

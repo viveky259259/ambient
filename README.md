@@ -8,6 +8,9 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
   an amber pulse means *it needs you*, green means *done*, red means *it hit an error*. When something
   happens it blooms open for a few seconds; hover to see every session; click to jump back to it.
+- **Click to return** — a notification, an island row or a menu row takes you to the exact place the
+  agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
+  the tmux or cmux pane, or the editor window for the project.
 - **Notifications and chimes** — only for moments that need you, and only when you're not already
   looking at the app the agent runs in. Soft, synthesized two-note chimes, one per state.
   Banners withdraw themselves once the prompt is answered.
@@ -54,6 +57,22 @@ The app folds events into a state per session and picks the most urgent across a
 look at it — switch to its terminal or editor, or click it — and then settles. Sessions whose agent
 process exits disappear on their own.
 
+### Click to return
+
+Each hook also records a return address — the agent's terminal, Claude desktop's session id, the tmux
+pane, the cmux surface — and Ambient uses the most precise route the host supports:
+
+| Agent runs in | A click opens | Needs |
+| --- | --- | --- |
+| Claude desktop app | the exact chat (`claude://code/continue?session=…`) | nothing |
+| Codex app | the exact thread (`codex://threads/…`) | nothing |
+| Terminal, iTerm2 | the exact tab | Automation — macOS asks once per terminal |
+| tmux, cmux | the exact pane | nothing |
+| VS Code, Cursor, other apps | the window for the project | Accessibility (optional) |
+
+Anything that can't be reached precisely falls back to bringing the app forward. `ambient open [project]`
+does the same from a terminal or a hotkey; without a project it opens the session that needs you most.
+
 ### What Ambient changes on your system
 
 | Where | What |
@@ -70,7 +89,7 @@ Ambient's entries.
 ### Privacy
 
 Only these fields ever leave the hook process, and only to the local socket: the agent, session id,
-working directory, event kind, tool name, an 80-character hint (a command's first words, a file name, a
+working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
 
@@ -83,6 +102,7 @@ ambient status [--json]                                The sessions Ambient is t
 ambient doctor                                         Check the app, the hooks and the connection
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
 ambient demo                                           Walk through every state
+ambient open [PROJECT|SESSION]                         Jump to a session's chat, tab or window (default: most urgent)
 ambient ack                                            Mark every finished session as seen
 ```
 

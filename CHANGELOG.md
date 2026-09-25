@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 — 2026-09-26
+
+- **Click to return**: notifications, island rows and menu rows now open the exact chat in Claude's
+  desktop app, the thread in Codex's app, the Terminal or iTerm2 tab, the tmux or cmux pane, or the
+  project's editor window, falling back to the app.
+- `ambient open [project]` jumps to a session from the terminal; with no argument, the most urgent one.
+- Codex sessions from Codex's app are recognized even though it doesn't pass its bundle id to hooks.
+
 ## 0.1.0 — 2026-09-26
 
 First release.
