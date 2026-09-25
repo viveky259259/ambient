@@ -148,6 +148,19 @@ private let foreignSettings = """
         #expect(box.installer.status(.codex) == .installed)
     }
 
+    @Test func entriesWithAnOldShapeNeedAnUpdate() throws {
+        let box = try Sandbox()
+        try box.mkdir(".claude")
+        try box.installer.install(.claude)
+        // Simulate an older release that registered Stop without "async".
+        var root = try JSONValue.parse(box.read(".claude/settings.json"))
+        root["hooks"]?["Stop"]?[0]?["hooks"]?[0]?["async"] = nil
+        try box.write(".claude/settings.json", root.serialized())
+        #expect(box.installer.status(.claude) == .partial)
+        try box.installer.install(.claude)
+        #expect(box.installer.status(.claude) == .installed)
+    }
+
     @Test func codexSessionEndIsSynchronous() throws {
         let box = try Sandbox()
         try box.mkdir(".codex")

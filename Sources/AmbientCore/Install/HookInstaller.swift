@@ -127,9 +127,9 @@ public struct HookInstaller: Sendable {
         let current = command(for: agent)
         var exact = 0, any = false
         for event in spec.events {
-            let commands = Self.commands(in: root["hooks"]?[event])
-            if commands.contains(current) { exact += 1 }
-            if commands.contains(where: Self.isAmbientCommand) { any = true }
+            let wanted = spec.entry(current, event)
+            if Self.entries(in: root["hooks"]?[event]).contains(wanted) { exact += 1 }
+            if Self.commands(in: root["hooks"]?[event]).contains(where: Self.isAmbientCommand) { any = true }
         }
         // Stale entries under events we no longer register also count.
         if case let .object(members)? = root["hooks"], members.contains(where: { !spec.events.contains($0.key) && Self.commands(in: $0.value).contains(where: Self.isAmbientCommand) }) {
@@ -139,12 +139,16 @@ public struct HookInstaller: Sendable {
         return any ? .partial : .notInstalled
     }
 
-    private static func commands(in eventValue: JSONValue?) -> [String] {
+    private static func entries(in eventValue: JSONValue?) -> [JSONValue] {
         guard case let .array(groups)? = eventValue else { return [] }
-        return groups.flatMap { group -> [String] in
+        return groups.flatMap { group -> [JSONValue] in
             guard case let .array(entries)? = group["hooks"] else { return [] }
-            return entries.compactMap { $0["command"]?.stringValue }
+            return entries
         }
+    }
+
+    private static func commands(in eventValue: JSONValue?) -> [String] {
+        entries(in: eventValue).compactMap { $0["command"]?.stringValue }
     }
 
     // MARK: - Install / uninstall
