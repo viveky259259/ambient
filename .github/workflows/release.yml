@@ -17,6 +17,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check the tag matches the version
+        run: |
+          VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+          test "v$VERSION" = "$GITHUB_REF_NAME" || { echo "::error::Tag $GITHUB_REF_NAME doesn't match version $VERSION"; exit 1; }
+
       - name: Import Developer ID certificate
         if: env.HAS_SIGNING == 'true'
         env:
