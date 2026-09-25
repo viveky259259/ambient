@@ -57,7 +57,7 @@ cp "$ICNS" "$APP/Contents/Resources/AppIcon.icns"
 SIGN_FLAGS=(--force --sign "$SIGN_ID")
 if [[ $SIGN_ID != "-" ]]; then SIGN_FLAGS+=(--options runtime --timestamp); fi
 codesign "${SIGN_FLAGS[@]}" --identifier com.viveky259259.Ambient.cli "$APP/Contents/Helpers/ambient"
-codesign "${SIGN_FLAGS[@]}" "$APP"
+codesign "${SIGN_FLAGS[@]}" --entitlements Resources/Ambient.entitlements "$APP"
 codesign --verify --strict "$APP"
 echo "Built $APP ($VERSION build $BUILD_NUMBER, signed: $SIGN_ID)"
 

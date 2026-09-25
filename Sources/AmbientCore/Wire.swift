@@ -6,6 +6,10 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case statusRequest
     case status(sessions: [Session], mood: Mood)
     case acknowledgeAll
+    /// Take the user to a session: by project, id or id prefix; nil for the most urgent one.
+    case open(query: String?)
+    /// Reply to `open`: the session that was opened, or nil if nothing matched.
+    case opened(sessionID: String?)
     case ping
     case pong(version: String)
 }

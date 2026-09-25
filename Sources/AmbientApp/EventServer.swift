@@ -33,9 +33,14 @@ final class EventServer {
             case .acknowledgeAll:
                 DispatchQueue.main.async { model.value.acknowledgeAll() }
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
+            case let .open(query):
+                let (sessions, _) = snapshot.get()
+                let match = SessionMatcher.find(query, in: sessions)
+                if let match { DispatchQueue.main.async { model.value.open(match) } }
+                return try? Wire.encode(.opened(sessionID: match?.id))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case .status, .pong:
+            case .status, .pong, .opened:
                 return nil
             }
         }

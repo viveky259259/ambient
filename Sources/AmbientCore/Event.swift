@@ -43,11 +43,32 @@ public struct HostInfo: Codable, Equatable, Sendable {
     /// The agent process itself. When it's gone, so is the session.
     public var agentPid: Int32?
 
-    public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = [], agentPid: Int32? = nil) {
+    // Return addresses: enough to bring the user back to the exact chat, tab or pane.
+
+    /// The agent's controlling terminal, e.g. "/dev/ttys004".
+    public var tty: String?
+    /// Claude desktop's id for a Code session (`CLAUDE_CODE_HOST_SESSION_ID`).
+    public var hostSessionId: String?
+    public var tmuxSocket: String?
+    public var tmuxPane: String?
+    public var cmuxWorkspace: String?
+    public var cmuxSurface: String?
+    public var cmuxSocket: String?
+
+    public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = [], agentPid: Int32? = nil,
+                tty: String? = nil, hostSessionId: String? = nil, tmuxSocket: String? = nil, tmuxPane: String? = nil,
+                cmuxWorkspace: String? = nil, cmuxSurface: String? = nil, cmuxSocket: String? = nil) {
         self.bundleId = bundleId
         self.termProgram = termProgram
         self.pids = pids
         self.agentPid = agentPid
+        self.tty = tty
+        self.hostSessionId = hostSessionId
+        self.tmuxSocket = tmuxSocket
+        self.tmuxPane = tmuxPane
+        self.cmuxWorkspace = cmuxWorkspace
+        self.cmuxSurface = cmuxSurface
+        self.cmuxSocket = cmuxSocket
     }
 }
 

@@ -17,6 +17,7 @@ struct Commands {
         case "emit": return emit(rest)
         case "demo": return demo()
         case "ack": return ack()
+        case "open": return open(rest)
         case "link": return link() ? 0 : 1
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         case "help", "--help", "-h": return usage()
@@ -38,6 +39,7 @@ struct Commands {
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini] [--project NAME] [--message TEXT]
           ambient demo                                            Walk through every state
+          ambient open [PROJECT|SESSION]                          Jump to a session's chat, tab or window (default: the most urgent)
           ambient ack                                             Mark every finished session as seen
           ambient version
 
@@ -166,6 +168,19 @@ struct Commands {
             let title = Trim.truncate(Describe.title(s), max: 18).padding(toLength: 18, withPad: " ", startingAt: 0)
             let agent = s.agent.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
             print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(elapsed))")
+        }
+        return 0
+    }
+
+    private func open(_ args: [String]) -> Int32 {
+        let query = args.first { !$0.hasPrefix("--") }
+        guard case let .opened(id)? = request(.open(query: query)) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        guard id != nil else {
+            out.error(query.map { "No session matches '\($0)'. Try `ambient status`." } ?? "No sessions to open.")
+            return 1
         }
         return 0
     }

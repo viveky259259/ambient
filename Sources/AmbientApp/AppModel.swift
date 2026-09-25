@@ -11,6 +11,7 @@ final class AppModel: ObservableObject {
 
     let prefs: Preferences
     let snapshot = Snapshot()
+    private let focuser = Focuser()
     private let store = SessionStore()
     private let stateURL: URL?
     private var saveWork: DispatchWorkItem?
@@ -53,9 +54,9 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Opens the session's host app and marks its result as seen.
+    /// Takes the user to the session — its chat, tab or window — and marks its result as seen.
     func open(_ session: Session) {
-        HostActivator.activate(session.host)
+        focuser.focus(session)
         acknowledge(session.id)
     }
 
