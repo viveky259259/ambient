@@ -43,7 +43,7 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var turnEndedAt: Date?
     public var toolCount: Int
     public var subagents: Int
-    /// The user has seen the latest result (done or error).
+    /// The user has seen the latest result or prompt (done, error or waiting).
     public var acknowledged: Bool
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
@@ -66,7 +66,8 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
 
     public var mood: Mood {
         switch activity {
-        case .waiting: .waiting
+        // A prompt the user has looked at: they've probably answered it and the agent is running again.
+        case .waiting: acknowledged ? .working : .waiting
         case .error: acknowledged ? .idle : .error
         case .done: acknowledged ? .idle : .done
         case .thinking, .tool, .compacting: .working

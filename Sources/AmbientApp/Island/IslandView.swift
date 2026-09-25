@@ -55,7 +55,7 @@ struct IslandView: View {
     private var wings: some View {
         HStack(spacing: 0) {
             if let s = model.primary {
-                StateGlyph(mood: s.activity.rawMood, color: s.tint, size: 13)
+                StateGlyph(mood: s.mood, color: s.moodTint, size: 13)
                     .frame(width: IslandViewModel.wing + 6)
                 Spacer(minLength: model.geometry.notchWidth - 12)
                 WingLabel(primary: s, active: model.sessions.filter { $0.mood != .idle })
@@ -80,12 +80,12 @@ private struct WingLabel: View {
         if active.count > 1 {
             HStack(spacing: 4) {
                 ForEach(active.prefix(4)) { s in
-                    Circle().fill(s.tint.color).frame(width: 6, height: 6)
+                    Circle().fill(s.moodTint.color).frame(width: 6, height: 6)
                 }
             }
         } else {
             Group {
-                switch primary.activity.rawMood {
+                switch primary.mood {
                 case .waiting: Image(systemName: "hand.raised.fill")
                 case .error: Image(systemName: "exclamationmark.triangle.fill")
                 case .working, .idle, .done:
@@ -95,7 +95,7 @@ private struct WingLabel: View {
                 }
             }
             .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundStyle(primary.tint.color)
+            .foregroundStyle(primary.moodTint.color)
         }
     }
 

@@ -82,11 +82,31 @@ private func ev(_ kind: EventKind, at seconds: TimeInterval, session: String = "
         #expect(store.mood == .done)
     }
 
-    @Test func waitingIsNotAcknowledgedByLooking() {
+    @Test func seeingAPromptSettlesItToWorking() {
         let store = SessionStore()
         store.apply(ev(.needsInput(reason: "permission", message: nil), at: 1, host: HostInfo(bundleId: "com.apple.Terminal")))
-        #expect(store.acknowledge(hostBundleId: "com.apple.Terminal").isEmpty)
+        #expect(store.acknowledge(hostBundleId: "com.apple.Terminal") == ["claude:s1"])
+        // The user has seen it, and has likely approved a command that's now running.
+        #expect(store.mood == .working)
+        #expect(store.sessions.first?.activity == .waiting(reason: "permission", message: nil))
+    }
+
+    @Test func aNewPromptAsksAgain() {
+        let store = SessionStore()
+        store.apply(ev(.needsInput(reason: "permission", message: "a"), at: 1))
+        store.acknowledge(sessionID: "claude:s1")
+        store.apply(ev(.toolFinished(name: "Bash", failed: false), at: 2))
+        store.apply(ev(.needsInput(reason: "permission", message: "b"), at: 3))
         #expect(store.mood == .waiting)
+    }
+
+    @Test func theSecondEventForTheSamePromptDoesNotAskAgain() {
+        // Claude reports one prompt twice: PermissionRequest, then a permission_prompt notification.
+        let store = SessionStore()
+        store.apply(ev(.needsInput(reason: "permission", message: "Bash: rm"), at: 1))
+        store.acknowledge(sessionID: "claude:s1")
+        store.apply(ev(.needsInput(reason: "permission", message: "Claude needs your permission to use Bash"), at: 2))
+        #expect(store.mood == .working)
     }
 
     @Test func newPromptResetsAcknowledgement() {

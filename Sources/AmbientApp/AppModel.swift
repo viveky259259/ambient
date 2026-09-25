@@ -41,8 +41,9 @@ final class AppModel: ObservableObject {
         guard let t = store.apply(event) else { return }
         publish()
         transitions.send(t)
-        if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != .waiting, HostActivator.isFrontmost(t.session.host) {
-            // The user is already in the app: let the result register, then consider it seen.
+        if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
+           HostActivator.isFrontmost(t.session.host) {
+            // The user is already in the app: let the result or prompt register, then consider it seen.
             let id = t.session.id
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
                 guard let self, let s = self.store.session(id: id), HostActivator.isFrontmost(s.host) else { return }

@@ -80,6 +80,7 @@ public final class SessionStore {
             if s.turnStartedAt == nil || s.turnEndedAt != nil { startTurn(&s, at: date) }
             s.activity = .thinking
         case let .needsInput(reason, message):
+            if case .waiting = s.activity {} else { s.acknowledged = false }
             s.activity = .waiting(reason: reason, message: message)
         case .compactStarted:
             if s.activity != .compacting { s.beforeCompaction = s.activity }
@@ -114,16 +115,16 @@ public final class SessionStore {
         s.acknowledged = false
     }
 
-    /// Marks a finished session as seen. Returns true if that lowered its mood.
+    /// Marks a session's result or prompt as seen. Returns true if that lowered its mood.
     @discardableResult
     public func acknowledge(sessionID: String) -> Bool {
-        guard var s = byId[sessionID], !s.acknowledged, s.mood == .done || s.mood == .error else { return false }
+        guard var s = byId[sessionID], !s.acknowledged, [.done, .error, .waiting].contains(s.mood) else { return false }
         s.acknowledged = true
         byId[sessionID] = s
         return true
     }
 
-    /// Marks every finished session hosted by an app as seen, e.g. when the user switches to it.
+    /// Marks every session hosted by an app as seen, e.g. when the user switches to it.
     @discardableResult
     public func acknowledge(hostBundleId: String) -> [String] {
         let ids = byId.values.filter { $0.host?.bundleId == hostBundleId }.map(\.id).sorted()

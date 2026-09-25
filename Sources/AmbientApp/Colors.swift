@@ -21,5 +21,8 @@ extension Activity {
 }
 
 extension Session {
+    /// The color of what the session is literally doing, for rows that describe it.
     var tint: RGB { Palette.mood(activity.rawMood, agent: agent) }
+    /// The color of how much it wants attention, for the aggregate signals (island wings, menu bar, Dock).
+    var moodTint: RGB { Palette.mood(mood, agent: agent) }
 }

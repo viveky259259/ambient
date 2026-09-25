@@ -35,7 +35,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         guard let button = item.button else { return }
         let mood = model.mood
         let primary = IslandPolicy.primary(model.sessions)
-        button.image = Self.icon(mood: mood, color: primary?.tint.nsColor, quiet: prefs.isQuiet)
+        button.image = Self.icon(mood: mood, color: primary?.moodTint.nsColor, quiet: prefs.isQuiet)
         let waiting = model.sessions.filter { $0.mood == .waiting }.count
         button.title = waiting > 1 ? " \(waiting)" : ""
         button.imagePosition = .imageLeading
