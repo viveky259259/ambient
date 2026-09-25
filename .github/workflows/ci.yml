@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
+      - name: Test
+        run: swift test
+      - name: Build app (ad-hoc signed)
+        run: scripts/build-app.sh --universal
+      - name: Smoke-test the CLI
+        run: |
+          CLI=build/Ambient.app/Contents/Helpers/ambient
+          $CLI version
+          echo '{"session_id":"ci","hook_event_name":"Stop"}' | $CLI hook claude
+          test "$(echo '{}' | $CLI hook gemini)" = "{}"
+          lipo -archs $CLI | grep -q x86_64
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ambient.app
+          path: build/Ambient.app
+          retention-days: 7

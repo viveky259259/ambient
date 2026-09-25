@@ -7,7 +7,13 @@ enum Hook {
     static func run(arguments: [String], paths: AmbientPaths) {
         guard let name = arguments.first, let agent = AgentKind(rawValue: name) else { return }
         // Gemini parses stdout as JSON; answer with an empty object, whatever happens.
-        defer { if agent == .gemini { FileHandle.standardOutput.write(Data("{}\n".utf8)) } }
+        let reply: @Sendable () -> Void = { if agent == .gemini { FileHandle.standardOutput.write(Data("{}\n".utf8)) } }
+        defer { reply() }
+        // Never outlive the agent's patience, even if stdin is never closed.
+        DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
+            reply()
+            exit(0)
+        }
 
         let input = FileHandle.standardInput.readDataToEndOfFile()
         guard let payload = HookPayload(json: input),

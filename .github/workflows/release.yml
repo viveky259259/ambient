@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      HAS_SIGNING: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Import Developer ID certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/signing.keychain-db
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$P12" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+
+      - name: Store notarization credentials
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEY_P8: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          ISSUER: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$KEY_P8" | base64 --decode > $RUNNER_TEMP/notary.p8
+          xcrun notarytool store-credentials ambient-notary --key $RUNNER_TEMP/notary.p8 --key-id "$KEY_ID" --issuer "$ISSUER"
+
+      - name: Build, sign and notarize
+        if: env.HAS_SIGNING == 'true'
+        run: NOTARY_PROFILE=ambient-notary scripts/release.sh
+
+      - name: Missing signing secrets
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          echo "::error::Set DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, NOTARY_KEY_P8_BASE64, NOTARY_KEY_ID and NOTARY_ISSUER_ID to publish signed releases."
+          exit 1
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          NOTES=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
+          gh release create "$GITHUB_REF_NAME" dist/Ambient-$VERSION.dmg dist/Ambient-$VERSION.zip dist/Ambient-$VERSION.sha256 \
+            --title "Ambient $VERSION" --notes "$NOTES"

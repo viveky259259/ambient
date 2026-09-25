@@ -12,14 +12,22 @@ final class AppModel: ObservableObject {
     let prefs: Preferences
     let snapshot = Snapshot()
     private let store = SessionStore()
+    private let stateURL: URL?
+    private var saveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
     private var observers: [NSObjectProtocol] = []
 
-    init(prefs: Preferences) {
+    init(prefs: Preferences, stateURL: URL?) {
         self.prefs = prefs
+        self.stateURL = stateURL
     }
 
     func start() {
+        if let stateURL {
+            store.load(StateFile.load(from: stateURL))
+            store.sweep(now: Date())
+            publish(save: false)
+        }
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer?.tolerance = 1
         let center = NSWorkspace.shared.notificationCenter
@@ -80,10 +88,28 @@ final class AppModel: ObservableObject {
         changes.forEach(transitions.send)
     }
 
-    private func publish() {
+    private func publish(save: Bool = true) {
         sessions = store.sessions
         mood = store.mood
         snapshot.set(sessions: sessions, mood: mood)
+        if save { scheduleSave() }
+    }
+
+    /// Writes sessions to disk shortly after they settle; demo sessions aren't worth keeping.
+    private func scheduleSave() {
+        guard let stateURL else { return }
+        saveWork?.cancel()
+        let sessions = self.sessions.filter { !$0.sessionId.hasPrefix("demo-") }
+        let work = DispatchWorkItem { try? StateFile.save(sessions, to: stateURL) }
+        saveWork = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
+    /// Saves immediately, e.g. when quitting.
+    func saveNow() {
+        saveWork?.cancel()
+        guard let stateURL else { return }
+        try? StateFile.save(sessions.filter { !$0.sessionId.hasPrefix("demo-") }, to: stateURL)
     }
 
     /// Thread-safe copy of the state, for answering `ambient status` off the main thread.

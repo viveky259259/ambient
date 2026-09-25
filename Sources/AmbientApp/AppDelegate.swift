@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "app")
     private let paths = AmbientPaths.current()
     private let prefs = Preferences.shared
-    private lazy var model = AppModel(prefs: prefs)
+    private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile)
     private var server: EventServer?
     private var island: IslandController?
     private var notifier: Notifier?
@@ -52,10 +52,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dockGlow = DockGlow(model: model, prefs: prefs)
         dockGlow?.start()
 
-        if !prefs.setupCompleted { showSetup() }
+        if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
+    }
+
+    /// The system prompt appears only while permission is undecided.
+    private func askForNotificationsOnce() {
+        guard prefs.notificationsEnabled, let notifier else { return }
+        notifier.authorizationStatus { status in
+            if status == .notDetermined { notifier.requestAuthorization() }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        model.saveNow()
         server?.stop()
     }
 
@@ -77,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                  onDone: { [weak self] in
                                      self?.prefs.setupCompleted = true
                                      self?.setupWindow?.close()
+                                     self?.askForNotificationsOnce()
                                  })
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
             window.title = "Ambient"
