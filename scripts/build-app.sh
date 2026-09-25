@@ -29,8 +29,12 @@ swift build -c release "${ARCH_FLAGS[@]}" --product ambient
 # Where SwiftPM puts products differs between single- and multi-arch builds and between versions.
 BIN=$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)
 
-APP=build/Ambient.app
-rm -rf "$APP"
+# Assemble and sign in a staging folder, then swap it in. build/Ambient.app may be running, and its
+# CLI is what agent hooks execute (~/.ambient/bin/ambient); signing code while it executes fails
+# with "Input/output error", so in-use files are never written — they're replaced.
+DEST=build/Ambient.app
+APP=build/.stage/Ambient.app
+rm -rf build/.stage
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$APP/Contents/Resources"
 cp "$BIN/AmbientApp" "$APP/Contents/MacOS/Ambient"
 cp "$BIN/ambient" "$APP/Contents/Helpers/ambient"
@@ -59,6 +63,10 @@ if [[ $SIGN_ID != "-" ]]; then SIGN_FLAGS+=(--options runtime --timestamp); fi
 codesign "${SIGN_FLAGS[@]}" --identifier com.viveky259259.Ambient.cli "$APP/Contents/Helpers/ambient"
 codesign "${SIGN_FLAGS[@]}" --entitlements Resources/Ambient.entitlements "$APP"
 codesign --verify --strict "$APP"
+rm -rf "$DEST"
+mv "$APP" "$DEST"
+rmdir build/.stage
+APP=$DEST
 echo "Built $APP ($VERSION build $BUILD_NUMBER, signed: $SIGN_ID)"
 
 if (( RUN )); then
