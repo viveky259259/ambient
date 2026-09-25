@@ -22,15 +22,12 @@ done
 VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
 BUILD_NUMBER=${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}
 
-if (( UNIVERSAL )); then
-  swift build -c release --arch arm64 --arch x86_64 --product AmbientApp
-  swift build -c release --arch arm64 --arch x86_64 --product ambient
-  BIN=.build/apple/Products/Release
-else
-  swift build -c release --product AmbientApp
-  swift build -c release --product ambient
-  BIN=.build/release
-fi
+ARCH_FLAGS=()
+(( UNIVERSAL )) && ARCH_FLAGS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCH_FLAGS[@]}" --product AmbientApp
+swift build -c release "${ARCH_FLAGS[@]}" --product ambient
+# Where SwiftPM puts products differs between single- and multi-arch builds and between versions.
+BIN=$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)
 
 APP=build/Ambient.app
 rm -rf "$APP"
