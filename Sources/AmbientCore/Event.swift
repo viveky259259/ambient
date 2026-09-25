@@ -40,11 +40,14 @@ public struct HostInfo: Codable, Equatable, Sendable {
     public var termProgram: String?
     /// The hook's parent process chain, nearest first. Used to find the host app when `bundleId` is unknown.
     public var pids: [Int32]
+    /// The agent process itself. When it's gone, so is the session.
+    public var agentPid: Int32?
 
-    public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = []) {
+    public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = [], agentPid: Int32? = nil) {
         self.bundleId = bundleId
         self.termProgram = termProgram
         self.pids = pids
+        self.agentPid = agentPid
     }
 }
 
