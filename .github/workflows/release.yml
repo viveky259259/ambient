@@ -51,17 +51,21 @@ jobs:
         if: env.HAS_SIGNING == 'true'
         run: NOTARY_PROFILE=ambient-notary scripts/release.sh
 
-      - name: Missing signing secrets
+      - name: No signing secrets
         if: env.HAS_SIGNING != 'true'
         run: |
-          echo "::error::Set DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, NOTARY_KEY_P8_BASE64, NOTARY_KEY_ID and NOTARY_ISSUER_ID to publish signed releases."
-          exit 1
+          echo "::warning::Signing secrets aren't configured, so this tag wasn't built here. Publish with scripts/release.sh locally, or set DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, NOTARY_KEY_P8_BASE64, NOTARY_KEY_ID and NOTARY_ISSUER_ID."
 
       - name: Publish
+        if: env.HAS_SIGNING == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          NOTES=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
-          gh release create "$GITHUB_REF_NAME" dist/Ambient-$VERSION.dmg dist/Ambient-$VERSION.zip dist/Ambient-$VERSION.sha256 \
-            --title "Ambient $VERSION" --notes "$NOTES"
+          FILES=(dist/Ambient-$VERSION.dmg dist/Ambient-$VERSION.zip dist/Ambient-$VERSION.sha256)
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
+          else
+            NOTES=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
+            gh release create "$GITHUB_REF_NAME" "${FILES[@]}" --title "Ambient $VERSION" --notes "$NOTES"
+          fi
