@@ -44,9 +44,10 @@ final class AppModel: ObservableObject {
         if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
             // The user is already in the app: let the result or prompt register, then consider it seen.
-            let id = t.session.id
+            let id = t.session.id, activity = t.session.activity
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
-                guard let self, let s = self.store.session(id: id), HostActivator.isFrontmost(s.host) else { return }
+                guard let self, let s = self.store.session(id: id), s.activity == activity,
+                      HostActivator.isFrontmost(s.host) else { return }
                 self.acknowledge(id)
             }
         }

@@ -27,6 +27,8 @@ final class IslandController {
     private var bloomTimer: Timer?
     private var hovering = false
     private var hoverWork: DispatchWorkItem?
+    /// After a click, stay collapsed until the pointer leaves, rather than springing open again.
+    private var hoverSuppressed = false
 
     init?(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
@@ -155,9 +157,10 @@ final class IslandController {
         var hot = viewModel.geometry.screenRect(for: viewModel.currentSize)
         hot.size.height += 2 // include the very top pixel row
         let inside = active && hot.contains(point)
-        panel.ignoresMouseEvents = !inside
+        if panel.ignoresMouseEvents == inside { panel.ignoresMouseEvents = !inside }
+        if !inside { hoverSuppressed = false }
 
-        if inside, !hovering {
+        if inside, !hovering, !hoverSuppressed {
             scheduleHover(true, after: viewModel.presentation == .hidden ? 0.3 : 0.12)
         } else if !inside, hovering {
             scheduleHover(false, after: 0.3)
@@ -183,6 +186,7 @@ final class IslandController {
         hoverWork?.cancel()
         hoverWork = nil
         hovering = false
+        hoverSuppressed = true
         bloomID = nil
         refresh()
     }

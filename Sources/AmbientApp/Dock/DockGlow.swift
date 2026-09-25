@@ -84,7 +84,8 @@ final class DockGlow {
         guard let style else { return }
         let k = CGFloat(prefs.dockGlowIntensity)
         let c = style.color.nsColor
-        let thin = (lastLayout?.0.height ?? 0) <= edgeLight + 1 && edge == .bottom
+        let floorSize = lastLayout?.0.size ?? .zero
+        let thin = (edge == .bottom ? floorSize.height : floorSize.width) <= edgeLight + 1
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.8)
         floor.colors = [c.withAlphaComponent((thin ? 0.95 : 0.7) * k).cgColor,
