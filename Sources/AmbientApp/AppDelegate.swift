@@ -80,19 +80,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if setupWindow == nil, let notifier {
             let setup = SetupModel(paths: paths, notifier: notifier)
             let firstRun = !prefs.setupCompleted
-            let view = SetupView(setup: setup, prefs: prefs, firstRun: firstRun,
-                                 onDemo: { [weak self] in self?.playDemo() },
-                                 onPreviewSound: { [weak notifier] in notifier?.preview($0) },
-                                 onDone: { [weak self] in
-                                     self?.prefs.setupCompleted = true
-                                     self?.setupWindow?.close()
-                                     self?.askForNotificationsOnce()
-                                 })
-            let window = NSWindow(contentViewController: NSHostingController(rootView: view))
+            let view = SettingsView(setup: setup, prefs: prefs, firstRun: firstRun,
+                                    onDemo: { [weak self] in self?.playDemo() },
+                                    onPreviewSound: { [weak notifier] in notifier?.preview($0) },
+                                    onDone: { [weak self] in
+                                        self?.prefs.setupCompleted = true
+                                        self?.setupWindow?.close()
+                                        self?.askForNotificationsOnce()
+                                    })
+            let hosting = NSHostingController(rootView: view)
+            hosting.sizingOptions = [.minSize]
+            let window = NSWindow(contentViewController: hosting)
             window.title = "Ambient"
-            window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+            window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            // An empty unified toolbar gives the title bar the height that seats the traffic lights
+            // inside the floating sidebar.
+            window.toolbar = NSToolbar(identifier: "settings")
+            window.toolbarStyle = .unified
             window.isReleasedWhenClosed = false
+            window.setContentSize(Theme.Layout.windowSize)
             window.center()
             setupModel = setup
             setupWindow = window

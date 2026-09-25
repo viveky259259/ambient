@@ -894,7 +894,7 @@ struct WelcomePane: View {
     }
 
     private var notificationsAllowed: Bool {
-        [.authorized, .provisional, .ephemeral].contains(setup.notificationStatus)
+        [.authorized, .provisional].contains(setup.notificationStatus)
     }
 }
 
@@ -1111,7 +1111,7 @@ struct AlertsPane: View {
 
     @ViewBuilder private var permission: some View {
         switch setup.notificationStatus {
-        case .authorized, .provisional, .ephemeral:
+        case .authorized, .provisional:
             StatusBadge("Allowed", .success)
         case .denied:
             Button("Open System Settings") { setup.requestNotifications() }.buttonStyle(.pill)
