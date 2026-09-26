@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gemini CLI notifications on Mac: 3 ways to know when it's done</title>
+  <meta name="description" content="Get a Mac notification when Gemini CLI finishes or needs approval. Built-in notifications, AfterAgent and Notification hooks, and a notch app, compared.">
+  <link rel="canonical" href="https://yaml.cafe/guides/gemini-cli-notifications-mac/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/gemini-cli-notifications-mac/">
+  <meta property="og:title" content="How to get notified when Gemini CLI finishes or needs you on Mac">
+  <meta property="og:description" content="Built-in notifications, AfterAgent and Notification hooks, or a notch status app. Setup for each, compared.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-09-27">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://yaml.cafe/guides/gemini-cli-notifications-mac/#article",
+        "headline": "How to get notified when Gemini CLI finishes or needs you on Mac",
+        "description": "Three ways to get a Mac notification when Gemini CLI finishes or needs approval: built-in notifications, AfterAgent and Notification hooks, or Ambient.",
+        "url": "https://yaml.cafe/guides/gemini-cli-notifications-mac/",
+        "mainEntityOfPage": "https://yaml.cafe/guides/gemini-cli-notifications-mac/",
+        "image": "https://yaml.cafe/assets/og.png",
+        "datePublished": "2026-09-27",
+        "dateModified": "2026-09-27",
+        "inLanguage": "en",
+        "proficiencyLevel": "Beginner",
+        "about": [
+          { "@type": "SoftwareApplication", "name": "Gemini CLI", "applicationCategory": "DeveloperApplication" },
+          { "@type": "SoftwareApplication", "@id": "https://yaml.cafe/#app", "name": "Ambient" }
+        ],
+        "author": { "@type": "Organization", "@id": "https://yaml.cafe/#org", "name": "yaml.cafe", "url": "https://yaml.cafe/" },
+        "publisher": { "@type": "Organization", "@id": "https://yaml.cafe/#org", "name": "yaml.cafe", "logo": "https://yaml.cafe/assets/icon-256.png" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Ambient", "item": "https://yaml.cafe/" },
+          { "@type": "ListItem", "position": 2, "name": "Guides", "item": "https://yaml.cafe/guides/" },
+          { "@type": "ListItem", "position": 3, "name": "Gemini CLI notifications on Mac", "item": "https://yaml.cafe/guides/gemini-cli-notifications-mac/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Why doesn't enableNotifications do anything?", "acceptedAnswer": { "@type": "Answer", "text": "The feature is experimental and may need enabling under /settings. It needs a terminal that supports OSC 9, such as iTerm2, WezTerm, Ghostty or Kitty; elsewhere you get only the terminal bell. Inside tmux, add set -g allow-passthrough on to ~/.tmux.conf, and check that your terminal may post notifications in System Settings." } },
+          { "@type": "Question", "name": "Why does my Gemini CLI hook break the session?", "acceptedAnswer": { "@type": "Answer", "text": "Gemini CLI reads a hook's stdout as JSON, so a hook must not print plain text there. Send any output to stderr or /dev/null. Hooks also run synchronously, so keep them fast and set a timeout in milliseconds." } },
+          { "@type": "Question", "name": "Can I see Gemini CLI and Claude Code sessions in one place?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows every Gemini CLI, Claude Code and Codex session together at the notch, in the menu bar and on the Dock, with the most urgent state first." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get notified when Gemini CLI finishes or needs you on Mac</h1>
+    <p class="meta">Updated <time datetime="2026-09-27">September 27, 2026</time> · 4 min read</p>
+
+    <p class="answer">Turn on Gemini CLI's own notifications by setting <code>general.enableNotifications</code> to <code>true</code> in <code>~/.gemini/settings.json</code>. It's experimental, and it alerts you when a task needs approval or finishes: a desktop notification in iTerm2, WezTerm, Ghostty and Kitty, the terminal bell elsewhere. For custom alerts, use <code>AfterAgent</code> and <code>Notification</code> hooks. For a live status, use Ambient.</p>
+
+    <h2>Which option should you use?</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th></th><th>Built-in</th><th>Hooks</th><th>Ambient</th></tr></thead>
+        <tbody>
+          <tr><th>Setup</th><td>One setting</td><td>Edit <code>settings.json</code></td><td>Install, click Connect All</td></tr>
+          <tr><th>Works in</th><td>OSC&nbsp;9 terminals (a bell elsewhere)</td><td>Any terminal</td><td>Any terminal or editor</td></tr>
+          <tr><th>Status while it works</th><td>No</td><td>No</td><td>Yes: notch, menu bar and Dock</td></tr>
+          <tr><th>Click takes you to</th><td>Depends on the terminal</td><td>Script Editor, with <code>osascript</code></td><td>The exact tab or tmux pane</td></tr>
+          <tr><th>Other agents</th><td>No</td><td>No</td><td>Claude Code and Codex</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Option 1: Gemini CLI's built-in notifications</h2>
+    <pre><code>// ~/.gemini/settings.json
+{
+  "general": {
+    "enableNotifications": true
+  }
+}</code></pre>
+    <p>Gemini CLI then notifies you when an action needs your approval and when a session's task completes. It uses the OSC&nbsp;9 escape sequence, which iTerm2, WezTerm, Ghostty and Kitty show as a desktop notification. Other terminals get the bell. The feature is experimental, so you may need to turn it on under <code>/settings</code>. Inside tmux, add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code>.</p>
+
+    <h2>Option 2: AfterAgent and Notification hooks</h2>
+    <p>Gemini CLI runs hooks at points in its lifecycle. Two matter here: <code>AfterAgent</code> fires when the agent loop ends, and <code>Notification</code> fires when Gemini raises a system notification, such as a request to approve a tool.</p>
+    <pre><code>// ~/.gemini/settings.json
+{
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "name": "done-alert",
+            "type": "command",
+            "command": "osascript -e 'display notification \"Gemini finished\" with title \"Gemini CLI\"' >/dev/null 2>&amp;1",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "name": "needs-you-alert",
+            "type": "command",
+            "command": "osascript -e 'display notification \"Gemini needs you\" with title \"Gemini CLI\"' >/dev/null 2>&amp;1",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+    <ul>
+      <li><strong>Keep stdout clean.</strong> Gemini CLI reads a hook's stdout as JSON, so a hook must not print plain text there. That's why the commands above send their output to <code>/dev/null</code>.</li>
+      <li><strong>Keep hooks fast.</strong> Gemini hooks run synchronously and <code>timeout</code> is in milliseconds.</li>
+      <li><strong>Allow Script Editor.</strong> <code>osascript</code> notifications belong to Script Editor. Turn on its notifications in System Settings › Notifications, and expect a click to open Script Editor rather than your terminal.</li>
+    </ul>
+
+    <h2>Option 3: Ambient, a live status at the notch</h2>
+    <p>Ambient is a free Mac app that turns Gemini CLI's hooks into a status you can read at a glance: a blue orb while Gemini works, an amber pulse when it needs you, a check when it's done, red when a turn fails. A click returns you to the exact Terminal or iTerm2 tab or tmux pane.</p>
+    <ol>
+      <li>Download Ambient from <a href="/">yaml.cafe</a> and drag it to Applications.</li>
+      <li>Open it and click <strong>Connect All</strong>.</li>
+      <li>Restart Gemini CLI sessions that were already open.</li>
+    </ol>
+    <p>Connecting backs up <code>~/.gemini/settings.json</code>, then adds hooks named <code>ambient</code> for eight Gemini events, including <code>BeforeAgent</code>, <code>BeforeTool</code>, <code>Notification</code> and <code>AfterAgent</code>. Each finishes in about 15&nbsp;ms and sends a few short fields over a Unix socket on your Mac. Nothing leaves the machine, and <code>ambient uninstall</code> removes only Ambient's entries.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Gemini CLI, Claude Code and Codex.</p>
+      <a class="btn" href="/">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Why doesn't enableNotifications do anything?</h3>
+    <p>The feature is experimental and may need enabling under <code>/settings</code>. It needs a terminal that supports OSC&nbsp;9, such as iTerm2, WezTerm, Ghostty or Kitty; elsewhere you get only the terminal bell. Inside tmux, add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code>, and check that your terminal may post notifications in System Settings.</p>
+    <h3>Why does my Gemini CLI hook break the session?</h3>
+    <p>Gemini CLI reads a hook's stdout as JSON, so a hook must not print plain text there. Send any output to stderr or <code>/dev/null</code>. Hooks also run synchronously, so keep them fast and set a timeout in milliseconds.</p>
+    <h3>Can I see Gemini CLI and Claude Code sessions in one place?</h3>
+    <p>Yes. Ambient shows every Gemini CLI, Claude Code and Codex session together at the notch, in the menu bar and on the Dock, with the most urgent state first.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://geminicli.com/docs/cli/notifications/">Notifications (experimental)</a>, Gemini CLI docs</li>
+      <li><a href="https://geminicli.com/docs/hooks/">Gemini CLI hooks</a>, Gemini CLI docs</li>
+      <li><a href="https://developers.googleblog.com/tailor-gemini-cli-to-your-workflow-with-hooks/">Tailor Gemini CLI to your workflow with hooks</a>, Google Developers Blog</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a> · <a href="/guides/codex-notifications-mac/">Codex notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>

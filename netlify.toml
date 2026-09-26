@@ -8,6 +8,7 @@
     Content-Type = "application/x-apple-diskimage"
     Content-Disposition = "attachment"
     Cache-Control = "public, max-age=3600"
+    X-Robots-Tag = "noindex"
 
 [[headers]]
   for = "/assets/*"

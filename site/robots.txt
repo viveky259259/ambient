@@ -1,0 +1,8 @@
+# yaml.cafe — Ambient's site.
+# Search engines and AI assistants (GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot,
+# PerplexityBot, Google-Extended, Bingbot and others) are welcome to read and cite every page.
+User-agent: *
+Allow: /
+Disallow: /downloads/
+
+Sitemap: https://yaml.cafe/sitemap.xml

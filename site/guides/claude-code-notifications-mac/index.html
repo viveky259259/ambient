@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code notifications on Mac: 3 ways to set them up</title>
+  <meta name="description" content="Get a Mac notification when Claude Code finishes or asks for permission. Built-in terminal alerts, a Notification hook and a notch status app, compared.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-notifications-mac/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-notifications-mac/">
+  <meta property="og:title" content="How to get notified when Claude Code finishes or needs you on Mac">
+  <meta property="og:description" content="Built-in terminal alerts, a Notification hook, or a notch status app. Setup for each, compared.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-09-27">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://yaml.cafe/guides/claude-code-notifications-mac/#article",
+        "headline": "How to get notified when Claude Code finishes or needs you on Mac",
+        "description": "Three ways to get a Mac notification when Claude Code finishes or asks for permission: built-in terminal alerts, a Notification hook, or Ambient.",
+        "url": "https://yaml.cafe/guides/claude-code-notifications-mac/",
+        "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-mac/",
+        "image": "https://yaml.cafe/assets/og.png",
+        "datePublished": "2026-09-27",
+        "dateModified": "2026-09-27",
+        "inLanguage": "en",
+        "proficiencyLevel": "Beginner",
+        "about": [
+          { "@type": "SoftwareApplication", "name": "Claude Code", "applicationCategory": "DeveloperApplication" },
+          { "@type": "SoftwareApplication", "@id": "https://yaml.cafe/#app", "name": "Ambient" }
+        ],
+        "author": { "@type": "Organization", "@id": "https://yaml.cafe/#org", "name": "yaml.cafe", "url": "https://yaml.cafe/" },
+        "publisher": { "@type": "Organization", "@id": "https://yaml.cafe/#org", "name": "yaml.cafe", "logo": "https://yaml.cafe/assets/icon-256.png" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Ambient", "item": "https://yaml.cafe/" },
+          { "@type": "ListItem", "position": 2, "name": "Guides", "item": "https://yaml.cafe/guides/" },
+          { "@type": "ListItem", "position": 3, "name": "Claude Code notifications on Mac", "item": "https://yaml.cafe/guides/claude-code-notifications-mac/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Why don't I get Claude Code notifications in the VS Code terminal?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code sends desktop notifications by default only in Ghostty, Kitty and iTerm2. In the VS Code or Cursor integrated terminal, Terminal.app or Warp, set preferredNotifChannel to terminal_bell, add a Notification hook, or use Ambient, which works in any terminal or editor." } },
+          { "@type": "Question", "name": "Why does the \"Claude is done\" notification take a minute to arrive?", "acceptedAnswer": { "@type": "Answer", "text": "The idle_prompt notification fires about 60 seconds after Claude finishes responding, and only if you haven't typed since. For an alert the moment Claude finishes, add a Stop hook, or use Ambient, which marks the session done as soon as the turn ends." } },
+          { "@type": "Question", "name": "Do Claude Code notifications work inside tmux?", "acceptedAnswer": { "@type": "Answer", "text": "Built-in desktop notifications need set -g allow-passthrough on in ~/.tmux.conf so they reach the outer terminal. Hooks don't pass through the terminal, so a Notification hook and Ambient work in tmux without that setting, and Ambient returns you to the exact pane." } },
+          { "@type": "Question", "name": "Do Claude Code notifications work over SSH?", "acceptedAnswer": { "@type": "Answer", "text": "The built-in desktop notification reaches your local machine over SSH in Ghostty, Kitty and iTerm2. Hooks run on the machine where Claude Code runs, so an osascript hook or Ambient only works when Claude Code runs on your Mac." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get notified when Claude Code finishes or needs you on Mac</h1>
+    <p class="meta">Updated <time datetime="2026-09-27">September 27, 2026</time> · 6 min read</p>
+
+    <p class="answer">Claude Code already sends a desktop notification in Ghostty, Kitty and iTerm2 when it finishes or waits for permission. In any other terminal, set <code>preferredNotifChannel</code> to <code>"terminal_bell"</code>, or add a <code>Notification</code> hook to <code>~/.claude/settings.json</code>. To watch several sessions at once and click straight back to the right tab, use a notch status app such as Ambient.</p>
+
+    <h2>Which option should you use?</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th></th><th>Built-in</th><th>Notification hook</th><th>Ambient</th></tr></thead>
+        <tbody>
+          <tr><th>Setup</th><td>None in Ghostty and Kitty, one setting in iTerm2</td><td>Edit <code>settings.json</code></td><td>Install, click Connect All</td></tr>
+          <tr><th>Works in</th><td>Ghostty, Kitty, iTerm2 (a bell elsewhere)</td><td>Any terminal</td><td>Any terminal or editor, and the Claude desktop app</td></tr>
+          <tr><th>Status while it works</th><td>No</td><td>No</td><td>Yes: notch, menu bar and Dock</td></tr>
+          <tr><th>Many sessions at once</th><td>One notification each</td><td>One notification each</td><td>Every session, most urgent first</td></tr>
+          <tr><th>Click takes you to</th><td>Depends on the terminal</td><td>Script Editor, with <code>osascript</code></td><td>The exact tab, tmux pane or Claude chat</td></tr>
+          <tr><th>Other agents</th><td>No</td><td>No</td><td>Codex and Gemini CLI</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>If you run one session in iTerm2, the built-in notification is enough. If you run several agents, or work in VS Code, Cursor or Terminal, read on.</p>
+
+    <h2>Option 1: Claude Code's built-in notifications</h2>
+    <p>When Claude finishes a task or pauses for a permission prompt while you appear to be away from the terminal, Claude Code fires a notification. By default it becomes a desktop notification only in Ghostty, Kitty and iTerm2.</p>
+    <ul>
+      <li><strong>Ghostty and Kitty:</strong> nothing to set up.</li>
+      <li><strong>iTerm2:</strong> open Settings › Profiles › Terminal, check <em>Notification Center Alerts</em>, click <em>Filter Alerts</em> and enable <em>Send escape sequence-generated alerts</em>.</li>
+      <li><strong>Terminal, Warp, VS Code, Cursor:</strong> no desktop notification. Ring the terminal bell instead:</li>
+    </ul>
+    <pre><code>// ~/.claude/settings.json
+{
+  "preferredNotifChannel": "terminal_bell"
+}</code></pre>
+    <p>Inside tmux, notifications never reach the outer terminal until you allow passthrough. Add this to <code>~/.tmux.conf</code> and run <code>tmux source-file ~/.tmux.conf</code>:</p>
+    <pre><code>set -g allow-passthrough on</code></pre>
+    <p>Still nothing? Check that your terminal app is allowed to post notifications in System Settings › Notifications.</p>
+
+    <h2>Option 2: A Notification hook</h2>
+    <p>A hook runs a command of your choice at a point in Claude Code's lifecycle, in any terminal. This one posts a macOS notification whenever Claude needs your attention:</p>
+    <pre><code>// ~/.claude/settings.json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+    <p>If your file already has a <code>hooks</code> key, add <code>Notification</code> next to the events already in it. Type <code>/hooks</code> in Claude Code to confirm the hook is registered.</p>
+
+    <h3>When the Notification event fires</h3>
+    <ul>
+      <li><code>permission_prompt</code>: Claude needs you to approve a tool, and the prompt has waited about six seconds.</li>
+      <li><code>idle_prompt</code>: Claude finished responding about 60 seconds ago and you haven't typed since.</li>
+    </ul>
+    <p>Put one of those in <code>"matcher"</code> to alert on only that case. For an alert the moment Claude finishes, use the <code>Stop</code> event, which runs when the main agent finishes responding:</p>
+    <pre><code>"Stop": [
+  { "hooks": [{ "type": "command", "command": "afplay /System/Library/Sounds/Glass.aiff" }] }
+]</code></pre>
+
+    <h3>Two things that trip people up</h3>
+    <ul>
+      <li><strong>No notification appears.</strong> <code>osascript</code> posts through Script Editor, and macOS won't ask for permission. Run <code>osascript -e 'display notification "test"'</code> once, then turn on <em>Allow Notifications</em> for Script Editor in System Settings › Notifications.</li>
+      <li><strong>Clicking it opens Script Editor.</strong> The notification belongs to Script Editor, not your terminal. <code>terminal-notifier</code> (<code>brew install terminal-notifier</code>) can bring a chosen app forward instead with <code>-activate</code>.</li>
+    </ul>
+
+    <h2>Option 3: Ambient, a live status for every session</h2>
+    <p>Ambient is a free Mac app that turns Claude Code's hooks into a status you can read at a glance. A black pill at the notch shows a coral orb while Claude works, an amber pulse when it needs you, green when it's done and red when a turn fails. Banners and soft chimes arrive only for those moments, and a click takes you back to where the agent runs.</p>
+    <ol>
+      <li>Download Ambient from <a href="/">yaml.cafe</a> and drag it to Applications.</li>
+      <li>Open it and click <strong>Connect All</strong>.</li>
+      <li>Restart Claude Code sessions that were already open, so they load the new hooks.</li>
+    </ol>
+    <p>Connecting adds one hook group per Claude Code event to <code>~/.claude/settings.json</code>, each running <code>~/.ambient/bin/ambient hook claude</code> in the background. Ambient backs the file up first and never touches your other settings. Each hook finishes in about 15&nbsp;ms and sends a few short fields over a Unix socket on your Mac. Nothing leaves the machine.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Claude Code runs in</th><th>A click opens</th></tr></thead>
+        <tbody>
+          <tr><td>The Claude desktop app</td><td>The exact chat</td></tr>
+          <tr><td>Terminal or iTerm2</td><td>The exact tab</td></tr>
+          <tr><td>tmux or cmux</td><td>The exact pane</td></tr>
+          <tr><td>VS Code, Cursor and other editors</td><td>The project's window</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Ambient stays quiet while you're already in the app running the agent, and skips banners for turns shorter than 20 seconds. The built-in notification keeps working alongside it, so you can use both.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Why don't I get Claude Code notifications in the VS Code terminal?</h3>
+    <p>Claude Code sends desktop notifications by default only in Ghostty, Kitty and iTerm2. In the VS Code or Cursor integrated terminal, Terminal.app or Warp, set <code>preferredNotifChannel</code> to <code>terminal_bell</code>, add a Notification hook, or use Ambient, which works in any terminal or editor.</p>
+    <h3>Why does the "Claude is done" notification take a minute to arrive?</h3>
+    <p>The <code>idle_prompt</code> notification fires about 60 seconds after Claude finishes responding, and only if you haven't typed since. For an alert the moment Claude finishes, add a <code>Stop</code> hook, or use Ambient, which marks the session done as soon as the turn ends.</p>
+    <h3>Do Claude Code notifications work inside tmux?</h3>
+    <p>Built-in desktop notifications need <code>set -g allow-passthrough on</code> in <code>~/.tmux.conf</code> so they reach the outer terminal. Hooks don't pass through the terminal, so a Notification hook and Ambient work in tmux without that setting, and Ambient returns you to the exact pane.</p>
+    <h3>Do Claude Code notifications work over SSH?</h3>
+    <p>The built-in desktop notification reaches your local machine over SSH in Ghostty, Kitty and iTerm2. Hooks run on the machine where Claude Code runs, so an <code>osascript</code> hook or Ambient only works when Claude Code runs on your Mac.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/terminal-config">Configure your terminal for Claude Code</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks-guide">Automate actions with hooks</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks#notification">Hooks reference: Notification</a>, Claude Code docs</li>
+    </ul>
+    <p>More guides: <a href="/guides/codex-notifications-mac/">Codex notifications on Mac</a> · <a href="/guides/gemini-cli-notifications-mac/">Gemini CLI notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>
