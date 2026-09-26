@@ -1,0 +1,8 @@
+{
+  "name": "ambient-site-functions",
+  "private": true,
+  "description": "Dependencies for yaml.cafe's Netlify edge functions (netlify/edge-functions).",
+  "dependencies": {
+    "@netlify/blobs": "11.1.1"
+  }
+}

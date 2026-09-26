@@ -110,7 +110,8 @@
 
   const startDownload = () => {
     const a = document.createElement("a");
-    a.href = dmg;
+    const ref = store.get("ambient-ref");
+    a.href = ref ? `${dmg}?ref=${encodeURIComponent(ref)}` : dmg;
     a.download = "";
     document.body.appendChild(a);
     a.click();

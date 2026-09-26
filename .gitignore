@@ -14,3 +14,4 @@ site/downloads/
 .netlify
 marketing/node_modules/
 marketing/out/
+/node_modules/
