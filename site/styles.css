@@ -283,6 +283,11 @@ dialog[open] { animation: sheet-in 0.35s var(--spring); }
 .field input[aria-invalid="true"] { border-color: var(--error); }
 .error { color: #d70015; font-size: 13px; min-height: 18px; margin: 4px 0 0; text-align: left; }
 .sheet .btn { width: 100%; margin-top: 8px; }
+.sheet .updates { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
+.sheet .optional { font-weight: 400; color: var(--ink-2); }
+.sheet .inline { display: flex; gap: 8px; }
+.sheet .inline input { flex: 1; min-width: 0; }
+.sheet .inline .btn { width: auto; margin-top: 0; flex: none; }
 .sheet .legal { font-size: 12px; color: var(--ink-2); margin: 14px 0 0; }
 .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: #f0f0f2; color: #6e6e73; cursor: pointer; font-size: 16px; line-height: 30px; }
 .hidden { display: none !important; }

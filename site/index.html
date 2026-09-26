@@ -83,7 +83,7 @@
           { "@type": "Question", "name": "What does it change on my Mac?", "acceptedAnswer": { "@type": "Answer", "text": "It adds its own hook entries to ~/.claude/settings.json, ~/.codex/hooks.json and ~/.gemini/settings.json, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run ambient uninstall." } },
           { "@type": "Question", "name": "How do I uninstall Ambient?", "acceptedAnswer": { "@type": "Answer", "text": "Run ambient uninstall to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the ~/.ambient folder." } },
           { "@type": "Question", "name": "Which Macs does it run on?", "acceptedAnswer": { "@type": "Answer", "text": "macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar." } },
-          { "@type": "Question", "name": "Why do you ask for my name and email?", "acceptedAnswer": { "@type": "Answer", "text": "Downloading adds you to the waitlist for Ambient news and new features. We use your details only for that." } }
+          { "@type": "Question", "name": "Do I need to sign up to download it?", "acceptedAnswer": { "@type": "Answer", "text": "No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional." } }
         ]
       }
     ]
@@ -268,7 +268,7 @@
       <details><summary>What does it change on my Mac?</summary><p>It adds its own hook entries to <code>~/.claude/settings.json</code>, <code>~/.codex/hooks.json</code> and <code>~/.gemini/settings.json</code>, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run <code>ambient uninstall</code>.</p></details>
       <details><summary>How do I uninstall Ambient?</summary><p>Run <code>ambient uninstall</code> to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the <code>~/.ambient</code> folder.</p></details>
       <details><summary>Which Macs does it run on?</summary><p>macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.</p></details>
-      <details><summary>Why do you ask for my name and email?</summary><p>Downloading adds you to the waitlist for Ambient news and new features. We use your details only for that. See the <a href="/privacy.html">privacy notice</a>.</p></details>
+      <details><summary>Do I need to sign up to download it?</summary><p>No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional. See the <a href="/privacy.html">privacy notice</a>.</p></details>
     </div>
   </div>
 </section>
@@ -295,32 +295,26 @@
 
 <dialog id="download-sheet" aria-labelledby="sheet-title">
   <button class="close" type="button" data-close aria-label="Close">✕</button>
-  <div class="sheet" id="sheet-form">
+  <div class="sheet">
     <img class="icon" src="/assets/icon-256.png" alt="">
-    <h2 id="sheet-title">Get Ambient</h2>
-    <p class="note">Join the waitlist and your download starts right away.</p>
-    <form name="waitlist" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field" novalidate>
+    <h2 id="sheet-title">Your download has started.</h2>
+    <p class="note">Open the disk image and drag Ambient to Applications. Then open Ambient and click <strong>Connect All</strong>.</p>
+    <p class="legal">Didn't start? <a id="download-again" href="/downloads/Ambient-0.2.0.dmg" download>Download again</a></p>
+    <form class="updates" name="waitlist" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field" novalidate>
       <input type="hidden" name="form-name" value="waitlist">
+      <input type="hidden" name="ref" id="wl-ref">
       <p class="visually-hidden"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
       <div class="field">
-        <label for="wl-name">Name</label>
-        <input id="wl-name" name="name" type="text" autocomplete="name" required maxlength="100" placeholder="Ada Lovelace">
-      </div>
-      <div class="field">
-        <label for="wl-email">Email</label>
-        <input id="wl-email" name="email" type="email" autocomplete="email" required maxlength="200" placeholder="ada@example.com">
+        <label for="wl-email">Email me when a new version ships <span class="optional">(optional)</span></label>
+        <div class="inline">
+          <input id="wl-email" name="email" type="email" autocomplete="email" required maxlength="200" placeholder="ada@example.com">
+          <button class="btn" type="submit" id="wl-submit">Notify me</button>
+        </div>
       </div>
       <p class="error" id="wl-error" role="alert"></p>
-      <button class="btn" type="submit" id="wl-submit">Join and download</button>
-      <p class="legal">We'll only email you about Ambient. <a href="/privacy.html">Privacy</a></p>
+      <p class="legal">Only about Ambient. <a href="/privacy.html">Privacy</a></p>
     </form>
-  </div>
-  <div class="sheet hidden" id="sheet-done">
-    <img class="icon" src="/assets/icon-256.png" alt="">
-    <h2>You're on the list.</h2>
-    <p class="note">Your download has started. Open the disk image and drag Ambient to Applications.</p>
-    <a class="btn" id="download-again" href="/downloads/Ambient-0.2.0.dmg" download>Download again</a>
-    <p class="legal">Then open Ambient and click <strong>Connect All</strong>.</p>
+    <p class="legal hidden" id="wl-done" role="status">Thanks. We'll email you when a new version ships.</p>
   </div>
 </dialog>
 

@@ -76,16 +76,20 @@
     });
   });
 
-  // MARK: - Download and waitlist
+  // MARK: - Download and updates
+
+  // The download starts on the first click; the sheet then offers an optional email for new versions.
+  // A ?ref= tag on the landing URL (one per launch post) is kept for the visit and sent with the form.
+  const params = new URLSearchParams(location.search);
+  if (params.get("ref")) store.set("ambient-ref", params.get("ref").slice(0, 60));
 
   const sheet = document.getElementById("download-sheet");
   const form = sheet.querySelector("form");
-  const formView = document.getElementById("sheet-form");
-  const doneView = document.getElementById("sheet-done");
+  const done = document.getElementById("wl-done");
   const error = document.getElementById("wl-error");
   const submit = document.getElementById("wl-submit");
-  const nameInput = document.getElementById("wl-name");
   const emailInput = document.getElementById("wl-email");
+  document.getElementById("wl-ref").value = store.get("ambient-ref") || "";
 
   const startDownload = () => {
     const a = document.createElement("a");
@@ -97,54 +101,44 @@
   };
 
   const showDone = () => {
-    formView.classList.add("hidden");
-    doneView.classList.remove("hidden");
+    form.classList.add("hidden");
+    done.classList.remove("hidden");
   };
+  if (store.get("ambient-waitlist") === "joined") showDone();
 
   const open = () => {
-    if (store.get("ambient-waitlist") === "joined") {
-      showDone();
-      startDownload();
-    }
+    startDownload();
     if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
-    if (!formView.classList.contains("hidden")) nameInput.focus();
   };
 
   document.querySelectorAll("[data-download]").forEach((b) => b.addEventListener("click", open));
   sheet.querySelector("[data-close]").addEventListener("click", () => sheet.close());
   sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
 
-  const setError = (message, input) => {
+  const setError = (message) => {
     error.textContent = message;
-    [nameInput, emailInput].forEach((i) => i.setAttribute("aria-invalid", String(i === input)));
-    if (input) input.focus();
+    emailInput.setAttribute("aria-invalid", String(Boolean(message)));
+    if (message) emailInput.focus();
   };
-  [nameInput, emailInput].forEach((i) => i.addEventListener("input", () => {
-    error.textContent = "";
-    i.setAttribute("aria-invalid", "false");
-  }));
+  emailInput.addEventListener("input", () => setError(""));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name = nameInput.value.trim();
-    const email = emailInput.value.trim();
-    if (!name) return setError("Enter your name.", nameInput);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.", emailInput);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) return setError("Enter a valid email address.");
 
     submit.disabled = true;
-    submit.textContent = "Joining…";
+    submit.textContent = "Saving…";
     try {
       const body = new URLSearchParams(new FormData(form)).toString();
       const res = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
       if (!res.ok) throw new Error(String(res.status));
       store.set("ambient-waitlist", "joined");
       showDone();
-      startDownload();
     } catch {
-      setError("Couldn't join the waitlist. Check your connection and try again.");
+      setError("Couldn't save your email. Check your connection and try again.");
     } finally {
       submit.disabled = false;
-      submit.textContent = "Join and download";
+      submit.textContent = "Notify me";
     }
   });
 })();

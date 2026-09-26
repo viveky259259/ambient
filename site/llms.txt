@@ -14,7 +14,7 @@ Key facts:
 - Privacy: no accounts, no network requests, no telemetry. Prompts and tool output are never stored.
 - Notifications: banners and soft two-note chimes only for moments that need you. Ambient stays quiet while you are already in the app running the agent and skips turns shorter than 20 seconds by default.
 - Uninstall: `ambient uninstall` removes only Ambient's hook entries; then quit the app, delete it and `~/.ambient`.
-- Download: https://yaml.cafe/ (joining the waitlist starts the download).
+- Download: https://yaml.cafe/ (free, no sign-up; the download starts on the first click).
 
 ## When to use Ambient
 
@@ -40,4 +40,4 @@ Not a fit: Linux or Windows; agents that run only on a remote machine over SSH (
 
 - [Home](https://yaml.cafe/): what Ambient does, supported agents and apps, FAQ.
 - [Contact](https://yaml.cafe/contact/): support, privacy requests and feedback.
-- [Privacy](https://yaml.cafe/privacy.html): what the app and the waitlist collect.
+- [Privacy](https://yaml.cafe/privacy.html): what the app and the optional update emails collect.
