@@ -1,0 +1,10 @@
+{
+  "x_thread": [
+    "Your Mac, aware of your coding agents.\n\nAmbient shows what Claude Code, Codex and Gemini CLI are doing, right at the notch. Coral while it works. Amber when it needs you. Green when it's done.\n\nFree for macOS.",
+    "The problem: an agent stops for permission in a terminal you're not watching, and you find out ten minutes later.\n\nAmbient hooks every lifecycle event (about 15 ms, never slows the agent) and turns it into one signal you can read at a glance.",
+    "It speaks up only when it matters: a banner and a soft chime for needs you, done or error, and never while you're already in the app running the agent.\n\nClick, and you're back in the exact chat, terminal tab or tmux pane.",
+    "Across the room? The Dock glows in the color of what your agents are doing.\n\nAnd nothing leaves your Mac: no accounts, no network, no telemetry.",
+    "Free for macOS 14+: https://yaml.cafe\n\nBuilt with Claude Code. I'd love your feedback, especially if you run several agents at once."
+  ],
+  "linkedin": "I just launched Ambient, a free Mac app for developers who work with AI coding agents.\n\nThe problem I kept running into: Claude Code, Codex or Gemini CLI would stop to ask for permission in a terminal I wasn't looking at. Ten minutes lost, every time.\n\nAmbient makes agent state ambient:\n• A notch island: coral while an agent works, amber when it needs you, green when it's done, red on errors\n• Notifications and soft chimes, only when you're not already looking\n• One click back to the exact chat, terminal tab or tmux pane\n• A glow along the Dock you can see from across the room\n• Private by design: no accounts, no network, no telemetry\n\nUnder the hood: native hooks that take about 15 ms and never slow the agent, a local Unix socket, and a SwiftUI app that uses the new Liquid Glass design.\n\nIt's free for macOS 14+ at https://yaml.cafe. I'd love to hear what you think, especially if you run several agents at once.\n\n#AI #DeveloperTools #macOS #ClaudeCode #Productivity"
+}

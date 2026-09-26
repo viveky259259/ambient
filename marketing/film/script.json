@@ -1,0 +1,21 @@
+{
+  "voice": "Kokoro-82M-8bit af_heart (en-US)",
+  "scenes": [
+    { "id": "terminal", "caption": "You started a coding agent. Now you're watching a terminal.",
+      "tts": "You started a coding agent. Now you're watching a terminal." },
+    { "id": "island", "caption": "Ambient gives your Mac a sense of what your agents are doing.",
+      "tts": "Ambient gives your Mac a sense of what your agents are doing." },
+    { "id": "needs-you", "caption": "When Claude Code needs permission, the notch blooms amber — and a soft chime reaches you, even in another app.",
+      "tts": "When Claude Code needs permission, the notch blooms amber, and a soft chime reaches you, even in another app." },
+    { "id": "done", "caption": "When it's done, it turns green, and stays that way until you look.",
+      "tts": "When it's done, it turns green, and stays that way until you look." },
+    { "id": "return", "caption": "One click takes you back to the exact chat, terminal tab or tmux pane where it's running.",
+      "tts": "One click takes you back to the exact chat, terminal tab, or tee-mux pane where it's running." },
+    { "id": "dock", "caption": "Across the room? The Dock glows in the color of what your agents are doing.",
+      "tts": "Across the room? The Dock glows in the color of what your agents are doing." },
+    { "id": "agents", "caption": "It works with Claude Code, Codex and Gemini CLI. Hooks take fifteen milliseconds, and nothing leaves your Mac.",
+      "tts": "It works with Claude Code, Codex, and Gemini C L I. Hooks take fifteen milliseconds, and nothing leaves your Mac." },
+    { "id": "cta", "caption": "Connect everything in one click. Ambient is free for macOS. Get it at yaml.cafe.",
+      "tts": "Connect everything in one click. Ambient is free for Mac O S. Get it at yamel dot cafe." }
+  ]
+}

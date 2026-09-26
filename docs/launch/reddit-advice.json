@@ -1,0 +1,4309 @@
+[
+  {
+    "n": 1,
+    "community": "r/ClaudeAI",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Use the current Showcase format if available; disclose affiliation; no referral links; keep marketing minimal; explain Claude/Claude Code\u2019s contribution.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/ClaudeAI/about/rules/) [source](https://www.reddit.com/r/ClaudeAI/comments/1sb85oe/removed/) [source](https://www.reddit.com/r/ClaudeAI/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "I built a Mac notch island that shows what Claude Code is doing and lights up when it needs permission",
+        "central_problem": null,
+        "central_question": "What would you want it to show for long-running sessions?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 921,
+            "end": 978,
+            "text": "What would you want it to show for long-running sessions?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 626,
+              "end": 631,
+              "text": "15 ms"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/ClaudeAI/about/rules/",
+          "https://www.reddit.com/r/ClaudeAI/comments/1sb85oe/removed/",
+          "https://www.reddit.com/r/ClaudeAI/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Use the current Showcase format if available; disclose affiliation; no referral links; keep marketing minimal; explain Claude/Claude Code\u2019s contribution.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/ClaudeAI/about/rules/) [source](https://www.reddit.com/r/ClaudeAI/comments/1sb85oe/removed/) [source](https://www.reddit.com/r/ClaudeAI/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "I built a Mac notch island that shows what Claude Code is doing and lights up when it needs permission",
+          "central_problem": null,
+          "central_question": "What would you want it to show for long-running sessions?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 921,
+              "end": 978,
+              "text": "What would you want it to show for long-running sessions?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 626,
+                "end": 631,
+                "text": "15 ms"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/ClaudeAI/about/rules/",
+            "https://www.reddit.com/r/ClaudeAI/comments/1sb85oe/removed/",
+            "https://www.reddit.com/r/ClaudeAI/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Use the current Showcase format if available; disclose affiliation; no referral links; keep marketing minimal; explain Claude/Claude Code\u2019s contribution.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/ClaudeAI/about/rules/) [source](https://www.reddit.com/r/ClaudeAI/comments/1sb85oe/removed/) [source](https://www.reddit.com/r/ClaudeAI/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 2,
+    "community": "r/ClaudeCode",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "No verified community profile is available.",
+        "reasons": [
+          "Check the live subreddit rules manually before publishing."
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": null,
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Stop babysitting Claude Code: a notch indicator for permission prompts, finished turns and errors",
+        "central_problem": null,
+        "central_question": "Question for heavy users: do you want a sound for every finished turn, or only for permission prompts?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 830,
+            "end": 932,
+            "text": "Question for heavy users: do you want a sound for every finished turn, or only for permission prompts?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 588,
+              "end": 593,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 806,
+              "end": 808,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "No verified community profile is available.",
+        "warning": "Check the live subreddit flair list."
+      },
+      "route": {
+        "available": false,
+        "content_type": null,
+        "route": null,
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "No verified profile is available.",
+        "evidence_urls": [],
+        "verified_on": null
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "No verified community profile is available.",
+          "reasons": [
+            "Check the live subreddit rules manually before publishing."
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": null,
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Stop babysitting Claude Code: a notch indicator for permission prompts, finished turns and errors",
+          "central_problem": null,
+          "central_question": "Question for heavy users: do you want a sound for every finished turn, or only for permission prompts?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 830,
+              "end": 932,
+              "text": "Question for heavy users: do you want a sound for every finished turn, or only for permission prompts?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 588,
+                "end": 593,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 806,
+                "end": 808,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "No verified community profile is available.",
+          "warning": "Check the live subreddit flair list."
+        },
+        "route": {
+          "available": false,
+          "content_type": null,
+          "route": null,
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "No verified profile is available.",
+          "evidence_urls": [],
+          "verified_on": null
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Check the live subreddit rules manually before publishing."
+      ]
+    }
+  },
+  {
+    "n": 3,
+    "community": "r/ChatGPTCoding",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "No verified community profile is available.",
+        "reasons": [
+          "Check the live subreddit rules manually before publishing."
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": null,
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "A small fix for the worst part of agentic coding: not noticing when the agent is waiting on you",
+        "central_problem": null,
+        "central_question": "How do you keep track of several agents at once?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 711,
+            "end": 759,
+            "text": "How do you keep track of several agents at once?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 270,
+              "end": 271,
+              "text": "1"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 368,
+              "end": 369,
+              "text": "2"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 471,
+              "end": 472,
+              "text": "3"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 565,
+              "end": 566,
+              "text": "4"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "No verified community profile is available.",
+        "warning": "Check the live subreddit flair list."
+      },
+      "route": {
+        "available": false,
+        "content_type": null,
+        "route": null,
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "No verified profile is available.",
+        "evidence_urls": [],
+        "verified_on": null
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "No verified community profile is available.",
+          "reasons": [
+            "Check the live subreddit rules manually before publishing."
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": null,
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "A small fix for the worst part of agentic coding: not noticing when the agent is waiting on you",
+          "central_problem": null,
+          "central_question": "How do you keep track of several agents at once?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 711,
+              "end": 759,
+              "text": "How do you keep track of several agents at once?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 270,
+                "end": 271,
+                "text": "1"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 368,
+                "end": 369,
+                "text": "2"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 471,
+                "end": 472,
+                "text": "3"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 565,
+                "end": 566,
+                "text": "4"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "No verified community profile is available.",
+          "warning": "Check the live subreddit flair list."
+        },
+        "route": {
+          "available": false,
+          "content_type": null,
+          "route": null,
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "No verified profile is available.",
+          "evidence_urls": [],
+          "verified_on": null
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Check the live subreddit rules manually before publishing."
+      ]
+    }
+  },
+  {
+    "n": 4,
+    "community": "r/buildinpublic",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Show an experiment or decision; avoid \u201ccheck out my product\u201d and link repetition; disclose what is real versus planned.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/buildinpublic/about/rules/) [source](https://www.reddit.com/r/buildinpublic/comments/1r6vflw/heres_what_ive_learned_about_free_marketing_on/) [source](https://www.reddit.com/r/buildinpublic/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Building an agent notifier taught me the best notification is the one you don't send",
+        "central_problem": null,
+        "central_question": "What's a notification rule you wish every app had?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 833,
+            "end": 883,
+            "text": "What's a notification rule you wish every app had?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 342,
+              "end": 352,
+              "text": "20 seconds"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 598,
+              "end": 601,
+              "text": "0.2"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 602,
+              "end": 603,
+              "text": "0"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/buildinpublic/about/rules/",
+          "https://www.reddit.com/r/buildinpublic/comments/1r6vflw/heres_what_ive_learned_about_free_marketing_on/",
+          "https://www.reddit.com/r/buildinpublic/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Show an experiment or decision; avoid \u201ccheck out my product\u201d and link repetition; disclose what is real versus planned.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/buildinpublic/about/rules/) [source](https://www.reddit.com/r/buildinpublic/comments/1r6vflw/heres_what_ive_learned_about_free_marketing_on/) [source](https://www.reddit.com/r/buildinpublic/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Building an agent notifier taught me the best notification is the one you don't send",
+          "central_problem": null,
+          "central_question": "What's a notification rule you wish every app had?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 833,
+              "end": 883,
+              "text": "What's a notification rule you wish every app had?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 342,
+                "end": 352,
+                "text": "20 seconds"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 598,
+                "end": 601,
+                "text": "0.2"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 602,
+                "end": 603,
+                "text": "0"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/buildinpublic/about/rules/",
+            "https://www.reddit.com/r/buildinpublic/comments/1r6vflw/heres_what_ive_learned_about_free_marketing_on/",
+            "https://www.reddit.com/r/buildinpublic/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Show an experiment or decision; avoid \u201ccheck out my product\u201d and link repetition; disclose what is real versus planned.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/buildinpublic/about/rules/) [source](https://www.reddit.com/r/buildinpublic/comments/1r6vflw/heres_what_ive_learned_about_free_marketing_on/) [source](https://www.reddit.com/r/buildinpublic/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 5,
+    "community": "r/devtools",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Verify self-promo/flair policy; focus on the developer problem and measurable improvement; no link-only showcase.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/devtools/about/rules/) [source](https://www.reddit.com/r/devtools/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Ambient: see whether your coding agents are working, waiting or done without switching windows (macOS)",
+        "central_problem": null,
+        "central_question": "Feedback I'm after: which terminals or editors should click-to-return support next?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 759,
+            "end": 842,
+            "text": "Feedback I'm after: which terminals or editors should click-to-return support next?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 338,
+              "end": 343,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 358,
+              "end": 359,
+              "text": "0"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 735,
+              "end": 737,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/devtools/about/rules/",
+          "https://www.reddit.com/r/devtools/new.json?limit=100&raw_json=1",
+          "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Verify self-promo/flair policy; focus on the developer problem and measurable improvement; no link-only showcase.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/devtools/about/rules/) [source](https://www.reddit.com/r/devtools/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Ambient: see whether your coding agents are working, waiting or done without switching windows (macOS)",
+          "central_problem": null,
+          "central_question": "Feedback I'm after: which terminals or editors should click-to-return support next?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 759,
+              "end": 842,
+              "text": "Feedback I'm after: which terminals or editors should click-to-return support next?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 338,
+                "end": 343,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 358,
+                "end": 359,
+                "text": "0"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 735,
+                "end": 737,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/devtools/about/rules/",
+            "https://www.reddit.com/r/devtools/new.json?limit=100&raw_json=1",
+            "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Verify self-promo/flair policy; focus on the developer problem and measurable improvement; no link-only showcase.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/devtools/about/rules/) [source](https://www.reddit.com/r/devtools/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+      ]
+    }
+  },
+  {
+    "n": 6,
+    "community": "r/AI_Agents",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Lead with the agent design problem; avoid \u201ctry my product\u201d language; include architecture, limits, and a specific question.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/AI_Agents/about/rules/) [source](https://www.reddit.com/r/aiagents/comments/1usmwe2/can_i_build_agent_that_browse_the_web_and_use_erps/) [source](https://www.reddit.com/r/AI_Agents/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "How should a coding agent ask for your attention without becoming noise?",
+        "central_problem": null,
+        "central_question": "Is \"stays green until you look\" right, or should done decay on a timer?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 710,
+            "end": 762,
+            "text": "Should \"error\" outrank \"needs you\" when both happen?"
+          },
+          {
+            "source": "body",
+            "start": 766,
+            "end": 837,
+            "text": "Is \"stays green until you look\" right, or should done decay on a timer?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 485,
+              "end": 487,
+              "text": "20"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 707,
+              "end": 708,
+              "text": "1"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 763,
+              "end": 764,
+              "text": "2"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/AI_Agents/about/rules/",
+          "https://www.reddit.com/r/aiagents/comments/1usmwe2/can_i_build_agent_that_browse_the_web_and_use_erps/",
+          "https://www.reddit.com/r/AI_Agents/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Lead with the agent design problem; avoid \u201ctry my product\u201d language; include architecture, limits, and a specific question.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/AI_Agents/about/rules/) [source](https://www.reddit.com/r/aiagents/comments/1usmwe2/can_i_build_agent_that_browse_the_web_and_use_erps/) [source](https://www.reddit.com/r/AI_Agents/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "How should a coding agent ask for your attention without becoming noise?",
+          "central_problem": null,
+          "central_question": "Is \"stays green until you look\" right, or should done decay on a timer?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 710,
+              "end": 762,
+              "text": "Should \"error\" outrank \"needs you\" when both happen?"
+            },
+            {
+              "source": "body",
+              "start": 766,
+              "end": 837,
+              "text": "Is \"stays green until you look\" right, or should done decay on a timer?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 485,
+                "end": 487,
+                "text": "20"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 707,
+                "end": 708,
+                "text": "1"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 763,
+                "end": 764,
+                "text": "2"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/AI_Agents/about/rules/",
+            "https://www.reddit.com/r/aiagents/comments/1usmwe2/can_i_build_agent_that_browse_the_web_and_use_erps/",
+            "https://www.reddit.com/r/AI_Agents/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Lead with the agent design problem; avoid \u201ctry my product\u201d language; include architecture, limits, and a specific question.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/AI_Agents/about/rules/) [source](https://www.reddit.com/r/aiagents/comments/1usmwe2/can_i_build_agent_that_browse_the_web_and_use_erps/) [source](https://www.reddit.com/r/AI_Agents/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 7,
+    "community": "r/LLMDevs",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Include implementation detail, evaluation setup, and limitations; no link-only showcase; distinguish measured results from hypothesis.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/LLMDevs/about/rules/) [source](https://www.reddit.com/r/LLMDevs/) [source](https://www.reddit.com/r/LLMDevs/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Hooking agent CLIs without slowing them down: 15 ms hooks, a Unix socket and per-session state",
+        "central_problem": null,
+        "central_question": "What would you measure beyond hook latency?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 972,
+            "end": 1015,
+            "text": "What would you measure beyond hook latency?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "title",
+              "start": 46,
+              "end": 51,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 496,
+              "end": 501,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 356,
+              "end": 357,
+              "text": "8"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 437,
+              "end": 438,
+              "text": "0"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/LLMDevs/about/rules/",
+          "https://www.reddit.com/r/LLMDevs/",
+          "https://www.reddit.com/r/LLMDevs/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Include implementation detail, evaluation setup, and limitations; no link-only showcase; distinguish measured results from hypothesis.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/LLMDevs/about/rules/) [source](https://www.reddit.com/r/LLMDevs/) [source](https://www.reddit.com/r/LLMDevs/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Hooking agent CLIs without slowing them down: 15 ms hooks, a Unix socket and per-session state",
+          "central_problem": null,
+          "central_question": "What would you measure beyond hook latency?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 972,
+              "end": 1015,
+              "text": "What would you measure beyond hook latency?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "title",
+                "start": 46,
+                "end": 51,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 496,
+                "end": 501,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 356,
+                "end": 357,
+                "text": "8"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 437,
+                "end": 438,
+                "text": "0"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/LLMDevs/about/rules/",
+            "https://www.reddit.com/r/LLMDevs/",
+            "https://www.reddit.com/r/LLMDevs/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Include implementation detail, evaluation setup, and limitations; no link-only showcase; distinguish measured results from hypothesis.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/LLMDevs/about/rules/) [source](https://www.reddit.com/r/LLMDevs/) [source](https://www.reddit.com/r/LLMDevs/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 8,
+    "community": "r/AgentsOfAI",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Explain identity, user consent, auditability, and failure recovery; avoid \u201cautonomous\u201d hype and broad claims.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/AgentsOfAI/about/rules/) [source](https://vi.reddit.com/r/AgentsOfAI/comments/1u8vzkj/building_agents_that_can_talk_to_each_other_is/) [source](https://www.reddit.com/r/AgentsOfAI/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Human-in-the-loop fails when the human doesn't notice the loop",
+        "central_problem": null,
+        "central_question": "Do you think better visibility would make you use auto-approve less?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 874,
+            "end": 942,
+            "text": "Do you think better visibility would make you use auto-approve less?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 668,
+              "end": 673,
+              "text": "15 ms"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/AgentsOfAI/about/rules/",
+          "https://vi.reddit.com/r/AgentsOfAI/comments/1u8vzkj/building_agents_that_can_talk_to_each_other_is/",
+          "https://www.reddit.com/r/AgentsOfAI/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Explain identity, user consent, auditability, and failure recovery; avoid \u201cautonomous\u201d hype and broad claims.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/AgentsOfAI/about/rules/) [source](https://vi.reddit.com/r/AgentsOfAI/comments/1u8vzkj/building_agents_that_can_talk_to_each_other_is/) [source](https://www.reddit.com/r/AgentsOfAI/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Human-in-the-loop fails when the human doesn't notice the loop",
+          "central_problem": null,
+          "central_question": "Do you think better visibility would make you use auto-approve less?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 874,
+              "end": 942,
+              "text": "Do you think better visibility would make you use auto-approve less?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 668,
+                "end": 673,
+                "text": "15 ms"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/AgentsOfAI/about/rules/",
+            "https://vi.reddit.com/r/AgentsOfAI/comments/1u8vzkj/building_agents_that_can_talk_to_each_other_is/",
+            "https://www.reddit.com/r/AgentsOfAI/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Explain identity, user consent, auditability, and failure recovery; avoid \u201cautonomous\u201d hype and broad claims.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/AgentsOfAI/about/rules/) [source](https://vi.reddit.com/r/AgentsOfAI/comments/1u8vzkj/building_agents_that_can_talk_to_each_other_is/) [source](https://www.reddit.com/r/AgentsOfAI/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 9,
+    "community": "r/OpenAI",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Keep the post OpenAI-specific; disclose API/model usage; do not imply endorsement; a generic product link is high risk.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/OpenAI/about/rules/) [source](https://www.reddit.com/r/OpenAI/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Codex CLI and Codex app: a notch indicator that shows when a Codex thread needs you",
+        "central_problem": null,
+        "central_question": "Codex users: what else would you want surfaced from a running thread?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 764,
+            "end": 833,
+            "text": "Codex users: what else would you want surfaced from a running thread?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 555,
+              "end": 560,
+              "text": "15 ms"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/OpenAI/about/rules/",
+          "https://www.reddit.com/r/OpenAI/new.json?limit=100&raw_json=1",
+          "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Keep the post OpenAI-specific; disclose API/model usage; do not imply endorsement; a generic product link is high risk.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/OpenAI/about/rules/) [source](https://www.reddit.com/r/OpenAI/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Codex CLI and Codex app: a notch indicator that shows when a Codex thread needs you",
+          "central_problem": null,
+          "central_question": "Codex users: what else would you want surfaced from a running thread?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 764,
+              "end": 833,
+              "text": "Codex users: what else would you want surfaced from a running thread?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 555,
+                "end": 560,
+                "text": "15 ms"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/OpenAI/about/rules/",
+            "https://www.reddit.com/r/OpenAI/new.json?limit=100&raw_json=1",
+            "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Keep the post OpenAI-specific; disclose API/model usage; do not imply endorsement; a generic product link is high risk.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/OpenAI/about/rules/) [source](https://www.reddit.com/r/OpenAI/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+      ]
+    }
+  },
+  {
+    "n": 10,
+    "community": "r/IMadeThis",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Historical posting guidance: Show the thing working; do not repeat identical posts; keep the description human-written and answer comments.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/IMadeThis/about/rules/) [source](https://www.reddit.com/r/IMadeThis/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "I made a notch island for my Mac that tells me when my AI coding agents need me",
+        "central_problem": null,
+        "central_question": "One question: would you rather it show only the agent that needs you, or every running session?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 341,
+            "end": 436,
+            "text": "One question: would you rather it show only the agent that needs you, or every running session?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 317,
+              "end": 319,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/IMadeThis/about/rules/",
+          "https://www.reddit.com/r/IMadeThis/new.json?limit=100&raw_json=1",
+          "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Historical posting guidance: Show the thing working; do not repeat identical posts; keep the description human-written and answer comments.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/IMadeThis/about/rules/) [source](https://www.reddit.com/r/IMadeThis/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "I made a notch island for my Mac that tells me when my AI coding agents need me",
+          "central_problem": null,
+          "central_question": "One question: would you rather it show only the agent that needs you, or every running session?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 341,
+              "end": 436,
+              "text": "One question: would you rather it show only the agent that needs you, or every running session?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 317,
+                "end": 319,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/IMadeThis/about/rules/",
+            "https://www.reddit.com/r/IMadeThis/new.json?limit=100&raw_json=1",
+            "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Historical posting guidance: Show the thing working; do not repeat identical posts; keep the description human-written and answer comments.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/IMadeThis/about/rules/) [source](https://www.reddit.com/r/IMadeThis/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+      ]
+    }
+  },
+  {
+    "n": 11,
+    "community": "r/indiehackers",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Use the correct Self Promotion flair for a product post; do not disguise promotion as a founder story; substantiate metrics; no fake Q&A or vote manipulation.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/indiehackers/comments/1uzsfzy/community_reorganisation_new_posting_guidelines/) [source](https://www.reddit.com/r/indiehackers/comments/1pj44es/new-rules-the-indiehackers-subreddit-getting/) [source](https://www.reddit.com/r/indiehackers/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Launched Ambient today: a free Mac app for people who run AI coding agents",
+        "central_problem": null,
+        "central_question": "Would you pay for a team version (shared agent status)?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 520,
+            "end": 594,
+            "text": "Is gating a free download behind a waitlist form going to kill conversion?"
+          },
+          {
+            "source": "body",
+            "start": 598,
+            "end": 653,
+            "text": "Would you pay for a team version (shared agent status)?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 23,
+              "end": 24,
+              "text": "0"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 517,
+              "end": 518,
+              "text": "1"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 595,
+              "end": 596,
+              "text": "2"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/indiehackers/comments/1uzsfzy/community_reorganisation_new_posting_guidelines/",
+          "https://www.reddit.com/r/indiehackers/comments/1pj44es/new-rules-the-indiehackers-subreddit-getting/",
+          "https://www.reddit.com/r/indiehackers/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Use the correct Self Promotion flair for a product post; do not disguise promotion as a founder story; substantiate metrics; no fake Q&A or vote manipulation.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/indiehackers/comments/1uzsfzy/community_reorganisation_new_posting_guidelines/) [source](https://www.reddit.com/r/indiehackers/comments/1pj44es/new-rules-the-indiehackers-subreddit-getting/) [source](https://www.reddit.com/r/indiehackers/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Launched Ambient today: a free Mac app for people who run AI coding agents",
+          "central_problem": null,
+          "central_question": "Would you pay for a team version (shared agent status)?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 520,
+              "end": 594,
+              "text": "Is gating a free download behind a waitlist form going to kill conversion?"
+            },
+            {
+              "source": "body",
+              "start": 598,
+              "end": 653,
+              "text": "Would you pay for a team version (shared agent status)?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 23,
+                "end": 24,
+                "text": "0"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 517,
+                "end": 518,
+                "text": "1"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 595,
+                "end": 596,
+                "text": "2"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/indiehackers/comments/1uzsfzy/community_reorganisation_new_posting_guidelines/",
+            "https://www.reddit.com/r/indiehackers/comments/1pj44es/new-rules-the-indiehackers-subreddit-getting/",
+            "https://www.reddit.com/r/indiehackers/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Use the correct Self Promotion flair for a product post; do not disguise promotion as a founder story; substantiate metrics; no fake Q&A or vote manipulation.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/indiehackers/comments/1uzsfzy/community_reorganisation_new_posting_guidelines/) [source](https://www.reddit.com/r/indiehackers/comments/1pj44es/new-rules-the-indiehackers-subreddit-getting/) [source](https://www.reddit.com/r/indiehackers/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 12,
+    "community": "r/launch",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/launch/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/launch/new.json?limit=50&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Ambient: your Mac, aware of your coding agents (free, macOS)",
+        "central_problem": null,
+        "central_question": "Which agent should I support next?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 486,
+            "end": 520,
+            "text": "Which agent should I support next?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 443,
+              "end": 445,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/launch/about/rules.json?raw_json=1",
+          "https://www.reddit.com/r/launch/new.json?limit=50&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/launch/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/launch/new.json?limit=50&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Ambient: your Mac, aware of your coding agents (free, macOS)",
+          "central_problem": null,
+          "central_question": "Which agent should I support next?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 486,
+              "end": 520,
+              "text": "Which agent should I support next?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 443,
+                "end": 445,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/launch/about/rules.json?raw_json=1",
+            "https://www.reddit.com/r/launch/new.json?limit=50&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/launch/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/launch/new.json?limit=50&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 13,
+    "community": "r/automation",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: standalone.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/automation/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/automation/new.json?limit=50&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "Automating the \"is my agent done yet?\" check with hooks and a Mac status light",
+        "central_problem": null,
+        "central_question": "What other long-running jobs would you want on the same light: CI runs, builds, deploys?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 772,
+            "end": 860,
+            "text": "What other long-running jobs would you want on the same light: CI runs, builds, deploys?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 241,
+              "end": 246,
+              "text": "15 ms"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "standalone",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/automation/about/rules.json?raw_json=1",
+          "https://www.reddit.com/r/automation/new.json?limit=50&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: standalone.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/automation/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/automation/new.json?limit=50&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "Automating the \"is my agent done yet?\" check with hooks and a Mac status light",
+          "central_problem": null,
+          "central_question": "What other long-running jobs would you want on the same light: CI runs, builds, deploys?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 772,
+              "end": 860,
+              "text": "What other long-running jobs would you want on the same light: CI runs, builds, deploys?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 241,
+                "end": 246,
+                "text": "15 ms"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "standalone",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/automation/about/rules.json?raw_json=1",
+            "https://www.reddit.com/r/automation/new.json?limit=50&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: standalone.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/automation/about/rules.json?raw_json=1) [source](https://www.reddit.com/r/automation/new.json?limit=50&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 14,
+    "community": "r/AI_Programming",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Verify current flair and self-promo policy before posting; keep the code/workflow central; disclose AI use.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/AI_Programming/about/rules/) [source](https://www.reddit.com/r/AI_Programming/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "My workflow for running several AI coding agents at once without watching terminals",
+        "central_problem": null,
+        "central_question": "How do you split attention across agents?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 634,
+            "end": 675,
+            "text": "How do you split attention across agents?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 119,
+              "end": 120,
+              "text": "1"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 199,
+              "end": 200,
+              "text": "2"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 324,
+              "end": 325,
+              "text": "3"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 416,
+              "end": 417,
+              "text": "4"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 484,
+              "end": 485,
+              "text": "2"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/AI_Programming/about/rules/",
+          "https://www.reddit.com/r/AI_Programming/new.json?limit=100&raw_json=1",
+          "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Verify current flair and self-promo policy before posting; keep the code/workflow central; disclose AI use.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/AI_Programming/about/rules/) [source](https://www.reddit.com/r/AI_Programming/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "My workflow for running several AI coding agents at once without watching terminals",
+          "central_problem": null,
+          "central_question": "How do you split attention across agents?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 634,
+              "end": 675,
+              "text": "How do you split attention across agents?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 119,
+                "end": 120,
+                "text": "1"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 199,
+                "end": 200,
+                "text": "2"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 324,
+                "end": 325,
+                "text": "3"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 416,
+                "end": 417,
+                "text": "4"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 484,
+                "end": 485,
+                "text": "2"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/AI_Programming/about/rules/",
+            "https://www.reddit.com/r/AI_Programming/new.json?limit=100&raw_json=1",
+            "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Verify current flair and self-promo policy before posting; keep the code/workflow central; disclose AI use.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/AI_Programming/about/rules/) [source](https://www.reddit.com/r/AI_Programming/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+      ]
+    }
+  },
+  {
+    "n": 15,
+    "community": "r/appledevelopers",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Moderators have discussed a high volume of TestFlight/website links; a clear template with tools, feedback requested, and lessons is preferred.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/appledevelopers/about/rules.json) [source](https://www.reddit.com/r/appledevelopers/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/appledevelopers/comments/1uo5dl8/subreddit_posting/)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Feedback wanted: Ambient, a notch island for AI coding agents (SwiftUI + AppKit, macOS 14+)",
+        "central_problem": null,
+        "central_question": "Feedback I'd like: does the settings window feel native to you?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 721,
+            "end": 784,
+            "text": "Feedback I'd like: does the settings window feel native to you?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "title",
+              "start": 87,
+              "end": 89,
+              "text": "14"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 171,
+              "end": 172,
+              "text": "6"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 417,
+              "end": 419,
+              "text": "26"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/appledevelopers/about/rules.json",
+          "https://www.reddit.com/r/appledevelopers/new.json?limit=50&raw_json=1",
+          "https://www.reddit.com/r/appledevelopers/comments/1uo5dl8/subreddit_posting/"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Moderators have discussed a high volume of TestFlight/website links; a clear template with tools, feedback requested, and lessons is preferred.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/appledevelopers/about/rules.json) [source](https://www.reddit.com/r/appledevelopers/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/appledevelopers/comments/1uo5dl8/subreddit_posting/)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Feedback wanted: Ambient, a notch island for AI coding agents (SwiftUI + AppKit, macOS 14+)",
+          "central_problem": null,
+          "central_question": "Feedback I'd like: does the settings window feel native to you?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 721,
+              "end": 784,
+              "text": "Feedback I'd like: does the settings window feel native to you?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "title",
+                "start": 87,
+                "end": 89,
+                "text": "14"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 171,
+                "end": 172,
+                "text": "6"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 417,
+                "end": 419,
+                "text": "26"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/appledevelopers/about/rules.json",
+            "https://www.reddit.com/r/appledevelopers/new.json?limit=50&raw_json=1",
+            "https://www.reddit.com/r/appledevelopers/comments/1uo5dl8/subreddit_posting/"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Moderators have discussed a high volume of TestFlight/website links; a clear template with tools, feedback requested, and lessons is preferred.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/appledevelopers/about/rules.json) [source](https://www.reddit.com/r/appledevelopers/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/appledevelopers/comments/1uo5dl8/subreddit_posting/)"
+      ]
+    }
+  },
+  {
+    "n": 16,
+    "community": "r/macosprogramming",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Endpoint is sparse; safest assumption is technical discussion, no link-first promotion, and no permission-bypass claims. | Technical macOS questions and code fit; tool promotion must be subordinate to a concrete API issue.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/macosprogramming/about/rules.json) [source](https://www.reddit.com/r/macosprogramming/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macosprogramming/about/rules/) [source](https://www.reddit.com/r/macosprogramming/new/)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Drawing a Dynamic-Island-style panel around the MacBook notch: what worked",
+        "central_problem": null,
+        "central_question": "Open question: has anyone found a cleaner way than polling to detect the menu bar hiding in full-screen apps?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 744,
+            "end": 853,
+            "text": "Open question: has anyone found a cleaner way than polling to detect the menu bar hiding in full-screen apps?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 44,
+              "end": 46,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/macosprogramming/about/rules.json",
+          "https://www.reddit.com/r/macosprogramming/new.json?limit=50&raw_json=1",
+          "https://www.reddit.com/r/macosprogramming/about/rules/",
+          "https://www.reddit.com/r/macosprogramming/new/"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Endpoint is sparse; safest assumption is technical discussion, no link-first promotion, and no permission-bypass claims. | Technical macOS questions and code fit; tool promotion must be subordinate to a concrete API issue.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/macosprogramming/about/rules.json) [source](https://www.reddit.com/r/macosprogramming/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macosprogramming/about/rules/) [source](https://www.reddit.com/r/macosprogramming/new/)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Drawing a Dynamic-Island-style panel around the MacBook notch: what worked",
+          "central_problem": null,
+          "central_question": "Open question: has anyone found a cleaner way than polling to detect the menu bar hiding in full-screen apps?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 744,
+              "end": 853,
+              "text": "Open question: has anyone found a cleaner way than polling to detect the menu bar hiding in full-screen apps?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 44,
+                "end": 46,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/macosprogramming/about/rules.json",
+            "https://www.reddit.com/r/macosprogramming/new.json?limit=50&raw_json=1",
+            "https://www.reddit.com/r/macosprogramming/about/rules/",
+            "https://www.reddit.com/r/macosprogramming/new/"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Endpoint is sparse; safest assumption is technical discussion, no link-first promotion, and no permission-bypass claims. | Technical macOS questions and code fit; tool promotion must be subordinate to a concrete API issue.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/macosprogramming/about/rules.json) [source](https://www.reddit.com/r/macosprogramming/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macosprogramming/about/rules/) [source](https://www.reddit.com/r/macosprogramming/new/)"
+      ]
+    }
+  },
+  {
+    "n": 17,
+    "community": "r/macapps",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: megathread.",
+          "Historical posting guidance: Requires 10 local karma; main-feed promotion requires qualification and a PCP template; otherwise monthly megathread. Official distribution links only, disclose relationship, no redirects/referrals.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/macapps/about/rules.json) [source](https://www.reddit.com/r/macapps/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macapps/comments/1ryaeex/)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_advice",
+        "topic": "(comment in the current self-promotion megathread)",
+        "central_problem": null,
+        "central_question": "Which agent or terminal should it support next?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 420,
+            "end": 467,
+            "text": "Which agent or terminal should it support next?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 64,
+              "end": 66,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "megathread",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/macapps/about/rules.json",
+          "https://www.reddit.com/r/macapps/new.json?limit=50&raw_json=1",
+          "https://www.reddit.com/r/macapps/comments/1ryaeex/"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: megathread.",
+            "Historical posting guidance: Requires 10 local karma; main-feed promotion requires qualification and a PCP template; otherwise monthly megathread. Official distribution links only, disclose relationship, no redirects/referrals.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/macapps/about/rules.json) [source](https://www.reddit.com/r/macapps/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macapps/comments/1ryaeex/)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_advice",
+          "topic": "(comment in the current self-promotion megathread)",
+          "central_problem": null,
+          "central_question": "Which agent or terminal should it support next?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 420,
+              "end": 467,
+              "text": "Which agent or terminal should it support next?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 64,
+                "end": 66,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "megathread",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/macapps/about/rules.json",
+            "https://www.reddit.com/r/macapps/new.json?limit=50&raw_json=1",
+            "https://www.reddit.com/r/macapps/comments/1ryaeex/"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: megathread.",
+        "Historical posting guidance: Requires 10 local karma; main-feed promotion requires qualification and a PCP template; otherwise monthly megathread. Official distribution links only, disclose relationship, no redirects/referrals.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/macapps/about/rules.json) [source](https://www.reddit.com/r/macapps/new.json?limit=50&raw_json=1) [source](https://www.reddit.com/r/macapps/comments/1ryaeex/)"
+      ]
+    }
+  },
+  {
+    "n": 18,
+    "community": "r/SideProject",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: megathread.",
+          "Historical posting guidance: Follow flair, account-age/karma gates, and any weekly thread; do not broadcast the same copy to many subs; ask for focused feedback.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/SideProject/about/rules/) [source](https://www.reddit.com/r/SideProject/comments/1spnjkl/how_do_you_guys_even_promote_your_projects/) [source](https://www.reddit.com/r/SideProject/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "My side project: a Mac notch island that tells you when your AI coding agent needs you",
+        "central_problem": null,
+        "central_question": "Would that stop you from trying it?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 576,
+            "end": 611,
+            "text": "Would that stop you from trying it?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "specification",
+            "span": {
+              "source": "body",
+              "start": 343,
+              "end": 345,
+              "text": "v0"
+            }
+          },
+          {
+            "kind": "specification",
+            "span": {
+              "source": "body",
+              "start": 353,
+              "end": 359,
+              "text": "2.6 MB"
+            }
+          },
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 421,
+              "end": 426,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 346,
+              "end": 349,
+              "text": "2.0"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 380,
+              "end": 383,
+              "text": "148"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "megathread",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/SideProject/about/rules/",
+          "https://www.reddit.com/r/SideProject/comments/1spnjkl/how_do_you_guys_even_promote_your_projects/",
+          "https://www.reddit.com/r/SideProject/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: megathread.",
+            "Historical posting guidance: Follow flair, account-age/karma gates, and any weekly thread; do not broadcast the same copy to many subs; ask for focused feedback.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/SideProject/about/rules/) [source](https://www.reddit.com/r/SideProject/comments/1spnjkl/how_do_you_guys_even_promote_your_projects/) [source](https://www.reddit.com/r/SideProject/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "My side project: a Mac notch island that tells you when your AI coding agent needs you",
+          "central_problem": null,
+          "central_question": "Would that stop you from trying it?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 576,
+              "end": 611,
+              "text": "Would that stop you from trying it?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "specification",
+              "span": {
+                "source": "body",
+                "start": 343,
+                "end": 345,
+                "text": "v0"
+              }
+            },
+            {
+              "kind": "specification",
+              "span": {
+                "source": "body",
+                "start": 353,
+                "end": 359,
+                "text": "2.6 MB"
+              }
+            },
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 421,
+                "end": 426,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 346,
+                "end": 349,
+                "text": "2.0"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 380,
+                "end": 383,
+                "text": "148"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "megathread",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/SideProject/about/rules/",
+            "https://www.reddit.com/r/SideProject/comments/1spnjkl/how_do_you_guys_even_promote_your_projects/",
+            "https://www.reddit.com/r/SideProject/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: megathread.",
+        "Historical posting guidance: Follow flair, account-age/karma gates, and any weekly thread; do not broadcast the same copy to many subs; ask for focused feedback.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/SideProject/about/rules/) [source](https://www.reddit.com/r/SideProject/comments/1spnjkl/how_do_you_guys_even_promote_your_projects/) [source](https://www.reddit.com/r/SideProject/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  },
+  {
+    "n": 19,
+    "community": "r/IndianProgrammers",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical posting guidance: Check current flair and self-promo limits; provide code/demo and a clear learning; avoid \u201cplease try my app\u201d language.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/IndianProgrammers/about/rules/) [source](https://www.reddit.com/r/IndianProgrammers/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "Built a macOS app that shows when Claude Code or Codex needs you: what I learned about agent hooks",
+        "central_problem": null,
+        "central_question": "Anyone else building on top of agent CLIs?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 617,
+            "end": 659,
+            "text": "Anyone else building on top of agent CLIs?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 319,
+              "end": 324,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 572,
+              "end": 574,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "general_discussion",
+        "route": "unknown",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/IndianProgrammers/about/rules/",
+          "https://www.reddit.com/r/IndianProgrammers/new.json?limit=100&raw_json=1",
+          "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical posting guidance: Check current flair and self-promo limits; provide code/demo and a clear learning; avoid \u201cplease try my app\u201d language.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/IndianProgrammers/about/rules/) [source](https://www.reddit.com/r/IndianProgrammers/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "Built a macOS app that shows when Claude Code or Codex needs you: what I learned about agent hooks",
+          "central_problem": null,
+          "central_question": "Anyone else building on top of agent CLIs?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 617,
+              "end": 659,
+              "text": "Anyone else building on top of agent CLIs?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 319,
+                "end": 324,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 572,
+                "end": 574,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "general_discussion",
+          "route": "unknown",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/IndianProgrammers/about/rules/",
+            "https://www.reddit.com/r/IndianProgrammers/new.json?limit=100&raw_json=1",
+            "https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical posting guidance: Check current flair and self-promo limits; provide code/demo and a clear learning; avoid \u201cplease try my app\u201d language.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/IndianProgrammers/about/rules/) [source](https://www.reddit.com/r/IndianProgrammers/new.json?limit=100&raw_json=1) [source](https://www.business.reddit.com/learning-hub/articles/promote-organic-reddit-posts)"
+      ]
+    }
+  },
+  {
+    "n": 20,
+    "community": "r/developersIndia",
+    "advice": {
+      "validation": {
+        "eligible": true,
+        "blockers": []
+      },
+      "rules": {
+        "status": "unknown",
+        "score": null,
+        "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+        "reasons": [
+          "Historical route hint: day specific.",
+          "Historical posting guidance: Use I Made This or Showcase Sunday when appropriate; no \u201cinstall/join waitlist/star repo\u201d objective; avoid AI-generated copy and repeated self-promo; include video/demo and engineering lessons.",
+          "Verify these points against the current subreddit rules before posting.",
+          "Research links: [source](https://www.reddit.com/r/developersIndia/comments/1vd8a6j/a_quick_note_regarding_the_direction_of/) [source](https://www.reddit.com/r/developersIndia/comments/1ca5bn4) [source](https://www.reddit.com/r/developersIndia/new.json?limit=100&raw_json=1)"
+        ]
+      },
+      "quality": {
+        "status": "strong",
+        "score": 100,
+        "summary": "Draft quality is assessed independently of community rules.",
+        "reasons": []
+      },
+      "engagement": {
+        "available": false,
+        "label": null,
+        "confidence": null,
+        "probabilities": {},
+        "warning": "No evaluated engagement model is configured."
+      },
+      "suggestions": [],
+      "rule_profile_verified_on": "2026-09-13",
+      "semantics": {
+        "schema_version": "1.0",
+        "extractor_name": "deterministic-semantic-v1",
+        "confidence": 0.7,
+        "intent": "ask_question",
+        "topic": "I made a notch indicator for macOS that shows when your AI coding agent is waiting for you",
+        "central_problem": null,
+        "central_question": "For people running agents in tmux: would a status-line integration be more useful than the notch?",
+        "question_spans": [
+          {
+            "source": "body",
+            "start": 451,
+            "end": 548,
+            "text": "For people running agents in tmux: would a status-line integration be more useful than the notch?"
+          }
+        ],
+        "evidence": [
+          {
+            "kind": "measurement",
+            "span": {
+              "source": "body",
+              "start": 308,
+              "end": 313,
+              "text": "15 ms"
+            }
+          },
+          {
+            "kind": "quantity",
+            "span": {
+              "source": "body",
+              "start": 372,
+              "end": 374,
+              "text": "14"
+            }
+          }
+        ],
+        "promotional_spans": [],
+        "missing_information": []
+      },
+      "flair": {
+        "available": false,
+        "suggested_flair": null,
+        "confidence": "unknown",
+        "rationale": "The historical profile is not verified against the current flair list.",
+        "warning": "Choose from the live subreddit flair list before publishing."
+      },
+      "route": {
+        "available": false,
+        "content_type": "project_showcase",
+        "route": "day_specific",
+        "destination": null,
+        "standalone_allowed": null,
+        "enforcement": "unknown",
+        "confidence": "unknown",
+        "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+        "evidence_urls": [
+          "https://www.reddit.com/r/developersIndia/comments/1vd8a6j/a_quick_note_regarding_the_direction_of/",
+          "https://www.reddit.com/r/developersIndia/comments/1ca5bn4",
+          "https://www.reddit.com/r/developersIndia/new.json?limit=100&raw_json=1"
+        ],
+        "verified_on": "2026-09-13"
+      },
+      "profile_evidence_ids": [],
+      "profile_snapshot_id": ""
+    },
+    "revision": {
+      "original": {
+        "validation": {
+          "eligible": true,
+          "blockers": []
+        },
+        "rules": {
+          "status": "unknown",
+          "score": null,
+          "summary": "Historical community research is available as a candidate, but has not been verified against current sources.",
+          "reasons": [
+            "Historical route hint: day specific.",
+            "Historical posting guidance: Use I Made This or Showcase Sunday when appropriate; no \u201cinstall/join waitlist/star repo\u201d objective; avoid AI-generated copy and repeated self-promo; include video/demo and engineering lessons.",
+            "Verify these points against the current subreddit rules before posting.",
+            "Research links: [source](https://www.reddit.com/r/developersIndia/comments/1vd8a6j/a_quick_note_regarding_the_direction_of/) [source](https://www.reddit.com/r/developersIndia/comments/1ca5bn4) [source](https://www.reddit.com/r/developersIndia/new.json?limit=100&raw_json=1)"
+          ]
+        },
+        "quality": {
+          "status": "strong",
+          "score": 100,
+          "summary": "Draft quality is assessed independently of community rules.",
+          "reasons": []
+        },
+        "engagement": {
+          "available": false,
+          "label": null,
+          "confidence": null,
+          "probabilities": {},
+          "warning": "No evaluated engagement model is configured."
+        },
+        "suggestions": [],
+        "rule_profile_verified_on": "2026-09-13",
+        "semantics": {
+          "schema_version": "1.0",
+          "extractor_name": "deterministic-semantic-v1",
+          "confidence": 0.7,
+          "intent": "ask_question",
+          "topic": "I made a notch indicator for macOS that shows when your AI coding agent is waiting for you",
+          "central_problem": null,
+          "central_question": "For people running agents in tmux: would a status-line integration be more useful than the notch?",
+          "question_spans": [
+            {
+              "source": "body",
+              "start": 451,
+              "end": 548,
+              "text": "For people running agents in tmux: would a status-line integration be more useful than the notch?"
+            }
+          ],
+          "evidence": [
+            {
+              "kind": "measurement",
+              "span": {
+                "source": "body",
+                "start": 308,
+                "end": 313,
+                "text": "15 ms"
+              }
+            },
+            {
+              "kind": "quantity",
+              "span": {
+                "source": "body",
+                "start": 372,
+                "end": 374,
+                "text": "14"
+              }
+            }
+          ],
+          "promotional_spans": [],
+          "missing_information": []
+        },
+        "flair": {
+          "available": false,
+          "suggested_flair": null,
+          "confidence": "unknown",
+          "rationale": "The historical profile is not verified against the current flair list.",
+          "warning": "Choose from the live subreddit flair list before publishing."
+        },
+        "route": {
+          "available": false,
+          "content_type": "project_showcase",
+          "route": "day_specific",
+          "destination": null,
+          "standalone_allowed": null,
+          "enforcement": "unknown",
+          "confidence": "unknown",
+          "rationale": "A historical route hint exists, but current route evidence has not been verified.",
+          "evidence_urls": [
+            "https://www.reddit.com/r/developersIndia/comments/1vd8a6j/a_quick_note_regarding_the_direction_of/",
+            "https://www.reddit.com/r/developersIndia/comments/1ca5bn4",
+            "https://www.reddit.com/r/developersIndia/new.json?limit=100&raw_json=1"
+          ],
+          "verified_on": "2026-09-13"
+        },
+        "profile_evidence_ids": [],
+        "profile_snapshot_id": ""
+      },
+      "original_acceptance": {
+        "available": false,
+        "probability": null,
+        "confidence": null,
+        "warning": "No evaluated acceptance model is configured."
+      },
+      "candidates": [],
+      "manual_actions": [
+        "Historical route hint: day specific.",
+        "Historical posting guidance: Use I Made This or Showcase Sunday when appropriate; no \u201cinstall/join waitlist/star repo\u201d objective; avoid AI-generated copy and repeated self-promo; include video/demo and engineering lessons.",
+        "Verify these points against the current subreddit rules before posting.",
+        "Research links: [source](https://www.reddit.com/r/developersIndia/comments/1vd8a6j/a_quick_note_regarding_the_direction_of/) [source](https://www.reddit.com/r/developersIndia/comments/1ca5bn4) [source](https://www.reddit.com/r/developersIndia/new.json?limit=100&raw_json=1)"
+      ]
+    }
+  }
+]

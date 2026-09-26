@@ -1,0 +1,175 @@
+{
+  "product_url": "https://yaml.cafe",
+  "note": "Drafts for user approval. Each needs a live rules check in Chrome immediately before posting. Posted one per hour.",
+  "drafts": [
+    {
+      "n": 1,
+      "community": "r/ClaudeAI",
+      "route": "post",
+      "flair": "Built with Claude",
+      "title": "I built a Mac notch island that shows what Claude Code is doing and lights up when it needs permission",
+      "body": "I kept losing time to one thing: Claude Code would stop for a permission prompt in a terminal I wasn't looking at, and I'd find it ten minutes later.\n\nSo I built Ambient, a free macOS app. It registers Claude Code hooks (prompt submitted, tool started/finished, permission requested, turn finished or failed) and turns them into a small island that grows out of the notch: a coral orb while Claude works, amber when it needs you, green when it's done. It also posts a notification with a soft chime, but only when you're not already in the app running Claude.\n\nHow Claude fits in: the hooks run in the background and exit in ~15 ms, so they never slow a session down. Clicking the island opens the exact chat in the Claude desktop app (or the Terminal/iTerm2 tab, tmux pane, or editor window). Nothing leaves your Mac. Claude Code also helped me write much of the Swift.\n\nI'm the developer. It's free: https://yaml.cafe\n\nWhat would you want it to show for long-running sessions?"
+    },
+    {
+      "n": 2,
+      "community": "r/ClaudeCode",
+      "route": "post",
+      "flair": "Showcase",
+      "title": "Stop babysitting Claude Code: a notch indicator for permission prompts, finished turns and errors",
+      "body": "If you run Claude Code in a few terminals at once, you know the loop: switch tabs to check whether it's waiting on you.\n\nI made Ambient to end that. It adds Claude Code hooks for each lifecycle event and shows the state at the Mac's notch: working, needs you (permission or a question), done, or error. When something changes the island blooms open for a few seconds with the project and the tool it's waiting on, e.g. \"api-server: Needs permission, Bash: rm -rf build\". Click it and you're back in the exact tab or pane.\n\nDetails people usually ask about:\n- Hooks run async and exit in ~15 ms; if the app isn't running, events are dropped.\n- The installer only adds its own entries to ~/.claude/settings.json and keeps a backup.\n- `ambient doctor` checks the whole chain.\n\nI built it; it's free for macOS 14+: https://yaml.cafe\n\nQuestion for heavy users: do you want a sound for every finished turn, or only for permission prompts?"
+    },
+    {
+      "n": 3,
+      "community": "r/ChatGPTCoding",
+      "route": "post",
+      "flair": "Resources And Tips",
+      "title": "A small fix for the worst part of agentic coding: not noticing when the agent is waiting on you",
+      "body": "With Claude Code, Codex and Gemini CLI all running tasks in the background, my biggest time sink wasn't the agents. It was not noticing when one of them stopped to ask a question.\n\nWhat worked for me was making agent state ambient instead of something I have to check:\n\n1. Hook every lifecycle event (prompt, tool start/stop, permission request, turn end or failure).\n2. Reduce each to a mood and pick the most urgent across sessions: needs you > error > done > working.\n3. Show it where I'm always looking: the notch and the menu bar, plus a light along the Dock.\n4. Only notify when I'm not already in the agent's app.\n\nI packaged this as a free Mac app called Ambient (I'm the developer): https://yaml.cafe\n\nHow do you keep track of several agents at once? Terminal bells, tmux alerts, something else?"
+    },
+    {
+      "n": 4,
+      "community": "r/buildinpublic",
+      "route": "post",
+      "flair": null,
+      "title": "Building an agent notifier taught me the best notification is the one you don't send",
+      "body": "I'm building Ambient, a Mac app that shows what coding agents (Claude Code, Codex, Gemini CLI) are doing at the notch.\n\nThe first version notified on everything and was unbearable within an hour. What I changed:\n\n- No banner if you're already in the app running the agent. You can see it.\n- Finished turns only notify if they ran longer than 20 seconds (configurable).\n- A \"done\" state stays green until you actually look at that session, then settles on its own.\n- A banner withdraws itself once you've answered the prompt.\n\nThe result feels quieter even though it knows more. This week I shipped 0.2.0 with a redesigned settings window and a waitlist-gated download to see who actually installs it.\n\nReal numbers so far: it's free, launched today, zero users beyond me. I'll post what the waitlist shows.\n\nSite: https://yaml.cafe\n\nWhat's a notification rule you wish every app had?"
+    },
+    {
+      "n": 5,
+      "community": "r/devtools",
+      "route": "post",
+      "flair": null,
+      "title": "Ambient: see whether your coding agents are working, waiting or done without switching windows (macOS)",
+      "body": "The problem: agent CLIs stop for permission prompts, and unless you're watching that terminal you won't know. With three sessions going, you end up tab-cycling.\n\nAmbient fixes it with hooks plus a status surface:\n- Hooks for Claude Code, Codex and Gemini CLI reduce each event to a few fields and send one line over a local Unix socket (~15 ms, always exits 0).\n- The app folds events into per-session state and shows the most urgent one at the notch, in the menu bar and as a glow along the Dock.\n- Clicking a session returns you to the exact place it runs: Claude desktop chat, Codex thread, Terminal/iTerm2 tab, tmux or cmux pane, or the editor window.\n\nNo accounts, no network, no telemetry. I'm the developer; it's free for macOS 14+: https://yaml.cafe\n\nFeedback I'm after: which terminals or editors should click-to-return support next?"
+    },
+    {
+      "n": 6,
+      "community": "r/AI_Agents",
+      "route": "post",
+      "flair": "Discussion",
+      "title": "How should a coding agent ask for your attention without becoming noise?",
+      "body": "I've been working on this problem for agent CLIs (Claude Code, Codex, Gemini CLI) and landed on a policy I'd like critiqued.\n\nEach session is reduced to one mood, and the UI shows only the most urgent across all sessions: needs you > error > done > working > idle.\n\n- Needs you: persistent amber until the prompt is answered; one banner and chime, but only if you're not already in the host app.\n- Error: red until you look at that session.\n- Done: green until you look; short turns (<20 s) don't notify at all.\n- Working: a quiet breathing indicator, no sound ever.\n\nThe agent never gets approval through this path. Consent stays in the terminal; the indicator only tells you where to go.\n\nOpen questions:\n1. Should \"error\" outrank \"needs you\" when both happen?\n2. Is \"stays green until you look\" right, or should done decay on a timer?\n\nDisclosure: I implemented this as a free Mac app, Ambient (https://yaml.cafe), but I'm mostly interested in the policy."
+    },
+    {
+      "n": 7,
+      "community": "r/LLMDevs",
+      "route": "post",
+      "flair": "Tools",
+      "title": "Hooking agent CLIs without slowing them down: 15 ms hooks, a Unix socket and per-session state",
+      "body": "Implementation notes from building a status indicator for Claude Code, Codex and Gemini CLI on macOS.\n\nConstraint: a hook must never slow the agent or fail its run.\n\nWhat worked:\n- The hook is a small native binary. It reads the event JSON from stdin, reduces it to a handful of fields (agent, session id, event kind, tool name, a message trimmed to a UTF-8-safe length) and writes one line to ~/.ambient/ambient.sock.\n- It always exits 0. For Claude Code and Codex it runs async. It takes about 15 ms; if the app isn't running, the event is dropped.\n- The app folds events into per-session state with a priority order and ages out sessions whose agent process has exited.\n- The installer edits settings.json/hooks.json while preserving key order, symlinks, permissions and other tools' hooks, with a backup.\n\nLimitations: Codex asks you to trust new hooks via /hooks; there's no Windows or Linux version.\n\nThe app is Ambient, free (I'm the developer): https://yaml.cafe. What would you measure beyond hook latency?"
+    },
+    {
+      "n": 8,
+      "community": "r/AgentsOfAI",
+      "route": "post",
+      "flair": null,
+      "title": "Human-in-the-loop fails when the human doesn't notice the loop",
+      "body": "Permission prompts are the main safety control in coding agents: the agent stops and asks before running a risky command. But that control has a failure mode nobody talks about. If you don't notice the prompt, the agent just waits, and people respond by switching on broad auto-approve to avoid babysitting.\n\nMy take: make the pause visible, not the approval easier.\n\nWhat I built (Ambient, a free macOS app; I'm the developer): hooks report each agent's state, and the notch shows an amber pulse the moment Claude Code, Codex or Gemini CLI asks for permission. A real example: when Claude Code stops on \"Bash: rm -rf build\", the island turns amber within the hook's ~15 ms and shows that exact command. It never approves anything. Clicking only takes you to the terminal or chat where the prompt is, so the decision stays with you and stays in context.\n\nhttps://yaml.cafe\n\nDo you think better visibility would make you use auto-approve less?"
+    },
+    {
+      "n": 9,
+      "community": "r/OpenAI",
+      "route": "post",
+      "flair": "Project",
+      "title": "Codex CLI and Codex app: a notch indicator that shows when a Codex thread needs you",
+      "body": "I built a small Mac app, Ambient, that uses Codex's hooks to show session state at the notch: working, needs you, done or error.\n\nCodex-specific details:\n- It registers hooks in ~/.codex/hooks.json. Codex asks you to trust new hooks, so you run /hooks once and approve them.\n- Clicking a Codex session opens the exact thread in the Codex app (codex://threads/…), or the terminal tab if you run the CLI.\n- It recognizes sessions started from the Codex app even though that app doesn't pass its bundle id to hooks.\n\nMeasured on my Mac, the hook takes about 15 ms and always exits successfully, so a Codex run is never held up by it. It also works with Claude Code and Gemini CLI. I'm the developer, it isn't affiliated with OpenAI, and it's free: https://yaml.cafe\n\nCodex users: what else would you want surfaced from a running thread?"
+    },
+    {
+      "n": 10,
+      "community": "r/IMadeThis",
+      "route": "post",
+      "flair": null,
+      "title": "I made a notch island for my Mac that tells me when my AI coding agents need me",
+      "body": "Ambient sits at the MacBook notch. A coral orb breathes while Claude Code is working, it turns amber and chimes when it needs permission, and green when the task is done. There's also a glow along the Dock you can see from across the room.\n\nClick it and you're back in the exact terminal tab or chat.\n\nFree for macOS 14+: https://yaml.cafe\n\nOne question: would you rather it show only the agent that needs you, or every running session?",
+      "note": "r/IMadeThis asks for a human-written description; edit it in your voice before approving."
+    },
+    {
+      "n": 11,
+      "community": "r/indiehackers",
+      "route": "post",
+      "flair": "Self Promotion",
+      "title": "Launched Ambient today: a free Mac app for people who run AI coding agents",
+      "body": "Stage: launched today, 0 users besides me, free, no revenue plan yet.\n\nWhat it is: a macOS app that shows what Claude Code, Codex and Gemini CLI are doing at the notch, in notifications and along the Dock, and takes you back to the exact session with one click.\n\nWhy free: I want to learn whether this is a daily-use tool before deciding anything about pricing. The download asks for a name and email (a waitlist), which is the one metric I'll trust: how many people bother to install it.\n\nWhat I'd love feedback on:\n1. Is gating a free download behind a waitlist form going to kill conversion?\n2. Would you pay for a team version (shared agent status)?\n\nhttps://yaml.cafe"
+    },
+    {
+      "n": 12,
+      "community": "r/launch",
+      "route": "post",
+      "flair": null,
+      "title": "Ambient: your Mac, aware of your coding agents (free, macOS)",
+      "body": "Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm signals:\n\n- Notch island: coral while working, amber when it needs you, green when done, red on errors.\n- Notifications and soft chimes, only when you're not already looking.\n- Click to return to the exact chat, terminal tab, tmux pane or editor window.\n- A Dock glow in the color of your agents' state.\n- Private: no accounts, no network, no telemetry.\n\nFree for macOS 14+. I'm the developer: https://yaml.cafe\n\nWhich agent should I support next?"
+    },
+    {
+      "n": 13,
+      "community": "r/automation",
+      "route": "post",
+      "flair": null,
+      "title": "Automating the \"is my agent done yet?\" check with hooks and a Mac status light",
+      "body": "A small automation that saved me a lot of tab-switching: every time a coding agent (Claude Code, Codex, Gemini CLI) changes state, a hook sends one line to a local app, and the app updates a status light at the notch.\n\nEach hook takes about 15 ms and sends one line over a local Unix socket, so it never slows the agent. The states map to colors: working (agent color), needs you (amber), done (green), error (red). Chimes play only for the three that need a human, and only when I'm not already in the agent's app. A finished session stays green until I look at it.\n\nThere's a CLI too: `ambient status` prints every session and `ambient open` jumps to the one that needs you most, so you can bind it to a hotkey.\n\nIt's a free Mac app I built, Ambient: https://yaml.cafe\n\nWhat other long-running jobs would you want on the same light: CI runs, builds, deploys?"
+    },
+    {
+      "n": 14,
+      "community": "r/AI_Programming",
+      "route": "post",
+      "flair": null,
+      "title": "My workflow for running several AI coding agents at once without watching terminals",
+      "body": "I usually have two or three agent sessions going: Claude Code on one repo, Codex on another. The workflow that stuck:\n\n1. Give each agent a clear task and walk away to review or write code yourself.\n2. Let a status indicator tell you when a session needs a decision (permission prompt or question), instead of polling tabs.\n3. When it pings, click straight into that exact tab or tmux pane, answer, and leave again.\n4. Review finished sessions in the order they went green.\n\nFor step 2 I built Ambient, a free Mac app that reads agent hooks and shows state at the notch and in the menu bar (disclosure: it's mine): https://yaml.cafe\n\nHow do you split attention across agents? Do you cap how many run in parallel?"
+    },
+    {
+      "n": 15,
+      "community": "r/appledevelopers",
+      "route": "post",
+      "flair": null,
+      "title": "Feedback wanted: Ambient, a notch island for AI coding agents (SwiftUI + AppKit, macOS 14+)",
+      "body": "What it is: a free macOS app that shows what coding agents (Claude Code, Codex, Gemini CLI) are doing at the notch, in notifications and along the Dock.\n\nTools: the Swift 6 toolchain, SwiftUI for the island and settings, AppKit for the panels and status item, Core Animation for the orb so hours of breathing cost nothing per frame, UserNotifications, SMAppService for login items. Settings use Liquid Glass on macOS 26 with a material fallback.\n\nLessons:\n- Finding the notch: NSScreen.auxiliaryTopLeftArea/RightArea give you its exact width; fall back to a virtual notch on other displays.\n- Signing a helper while agent hooks are executing it fails with an I/O error, so the build signs in a staging folder and swaps.\n\nFeedback I'd like: does the settings window feel native to you? Anything that looks off on your display?\n\nhttps://yaml.cafe"
+    },
+    {
+      "n": 16,
+      "community": "r/macosprogramming",
+      "route": "post",
+      "flair": null,
+      "title": "Drawing a Dynamic-Island-style panel around the MacBook notch: what worked",
+      "body": "Notes from building a notch island on macOS 14+, in case they're useful.\n\n- Geometry: on notched displays, `safeAreaInsets.top` gives the notch height, and `auxiliaryTopLeftArea`/`auxiliaryTopRightArea` bound it horizontally. Normalize them to global coordinates on multi-display setups.\n- Window: a borderless non-activating NSPanel above the menu bar, sized once for the largest state, so it never resizes. The SwiftUI view animates its shape inside it.\n- Hit testing: the panel is click-through except for the visible pill; otherwise you block the menu bar.\n- Animation: the orb's breathing runs as a CABasicAnimation on the render server, so it costs no CPU per frame for hours.\n- Other displays: a virtual notch centered in the menu bar.\n\nOpen question: has anyone found a cleaner way than polling to detect the menu bar hiding in full-screen apps?\n\n(This is from Ambient, a free app I made: https://yaml.cafe)"
+    },
+    {
+      "n": 17,
+      "community": "r/macapps",
+      "route": "megathread_comment",
+      "flair": null,
+      "title": "(comment in the current self-promotion megathread)",
+      "body": "**Ambient**: your Mac, aware of your coding agents. Free, macOS 14+.\n\nShows what Claude Code, Codex and Gemini CLI are doing: a notch island (working / needs you / done / error), notifications with soft chimes only when you're not already looking, a Dock glow, and click-to-return to the exact chat, terminal tab or tmux pane. No accounts, no network, no telemetry. Notarized DMG.\n\nI'm the developer. https://yaml.cafe\n\nWhich agent or terminal should it support next?"
+    },
+    {
+      "n": 18,
+      "community": "r/SideProject",
+      "route": "post",
+      "flair": null,
+      "title": "My side project: a Mac notch island that tells you when your AI coding agent needs you",
+      "body": "Ambient is a free macOS app for anyone who runs Claude Code, Codex or Gemini CLI. Instead of checking terminals, you glance at the notch: coral means working, amber means it needs your permission, green means done. It chimes only when you're not already in the agent's app, and one click takes you back to the exact session.\n\nWhere it stands: v0.2.0, a 2.6 MB notarized download, 148 passing tests, hooks that take about 15 ms, launched today with zero users besides me.\n\nWhat I'd like feedback on: the landing page asks for a name and email before the download (a waitlist). Would that stop you from trying it?\n\nhttps://yaml.cafe"
+    },
+    {
+      "n": 19,
+      "community": "r/IndianProgrammers",
+      "route": "post",
+      "flair": null,
+      "title": "Built a macOS app that shows when Claude Code or Codex needs you: what I learned about agent hooks",
+      "body": "I build developer tools, and this one came from my own frustration: running Claude Code and Codex in parallel and missing their permission prompts.\n\nAmbient hooks into each agent's lifecycle events and shows the state at the MacBook notch. The learning that surprised me: the hook is the hard part. It has to be fast (~15 ms), never fail the agent's run, and survive agents being updated. So it's a tiny native binary that sends one line over a Unix socket and always exits successfully, and the app repairs its own hook entries if an update changes them.\n\nFree for macOS 14+: https://yaml.cafe (I'm the developer.)\n\nAnyone else building on top of agent CLIs? What broke for you?"
+    },
+    {
+      "n": 20,
+      "community": "r/developersIndia",
+      "route": "showcase_sunday",
+      "flair": "I Made This",
+      "title": "I made a notch indicator for macOS that shows when your AI coding agent is waiting for you",
+      "body": "Ambient watches Claude Code, Codex and Gemini CLI through their hooks and shows each session's state at the notch: working, needs you, done or error. One click takes you back to the exact terminal tab or chat.\n\nTech: Swift, SwiftUI and AppKit, a native hook binary that talks to the app over a Unix socket (~15 ms per event), and no network access at all.\n\nFree for macOS 14+: https://yaml.cafe\n\nI'm happy to go into the code design in the comments.\n\nFor people running agents in tmux: would a status-line integration be more useful than the notch?",
+      "hold": "Your own words needed: r/developersIndia asks for human-written copy and no install/waitlist objective. Post only if you rewrite it yourself, on a Sunday (Showcase Sunday)."
+    }
+  ],
+  "alternates": [
+    "r/commandline",
+    "r/tmux",
+    "r/vibecoding",
+    "r/GeminiCLI",
+    "r/IndianStartups"
+  ]
+}
