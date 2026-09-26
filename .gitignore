@@ -8,3 +8,9 @@ DerivedData/
 *.dmg
 *.p12
 .env
+site/downloads/
+
+# Local Netlify folder
+.netlify
+marketing/node_modules/
+marketing/out/

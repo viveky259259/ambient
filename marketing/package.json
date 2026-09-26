@@ -1,0 +1,9 @@
+{
+  "name": "ambient-marketing",
+  "private": true,
+  "type": "module",
+  "description": "Renders Ambient's launch stills and video scenes with Playwright.",
+  "devDependencies": {
+    "playwright": "1.57.0"
+  }
+}
