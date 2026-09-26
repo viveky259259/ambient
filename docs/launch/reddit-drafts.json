@@ -32,7 +32,7 @@
       "route": "post",
       "flair": null,
       "title": "Building an agent notifier taught me the best notification is the one you don't send",
-      "body": "I'm building Ambient, a Mac app that shows what coding agents (Claude Code, Codex, Gemini CLI) are doing at the notch.\n\nThe first version notified on everything and was unbearable within an hour. What I changed:\n\n- No banner if you're already in the app running the agent. You can see it.\n- Finished turns only notify if they ran longer than 20 seconds (configurable).\n- A \"done\" state stays green until you actually look at that session, then settles on its own.\n- A banner withdraws itself once you've answered the prompt.\n\nThe result feels quieter even though it knows more. This week I shipped 0.2.0 with a redesigned settings window and a waitlist-gated download to see who actually installs it.\n\nReal numbers so far: it's free, launched today, zero users beyond me. I'll post what the waitlist shows.\n\nSite: https://yaml.cafe\n\nWhat's a notification rule you wish every app had?"
+      "body": "I'm building Ambient, a Mac app that shows what coding agents (Claude Code, Codex, Gemini CLI) are doing at the notch.\n\nThe first version notified on everything and was unbearable within an hour. What I changed:\n\n- No banner if you're already in the app running the agent. You can see it.\n- Finished turns only notify if they ran longer than 20 seconds (configurable).\n- A \"done\" state stays green until you actually look at that session, then settles on its own.\n- A banner withdraws itself once you've answered the prompt.\n\nThe result feels quieter even though it knows more. I've just shipped 0.2.0 with a redesigned settings window and a waitlist-gated download to see who actually installs it.\n\nWhere it stands: free, launched Sep 27. I'll post what the waitlist shows.\n\nSite: https://yaml.cafe\n\nWhat's a notification rule you wish every app had?"
     },
     {
       "n": 5,
@@ -88,8 +88,8 @@
       "community": "r/indiehackers",
       "route": "post",
       "flair": "Self Promotion",
-      "title": "Launched Ambient today: a free Mac app for people who run AI coding agents",
-      "body": "Stage: launched today, 0 users besides me, free, no revenue plan yet.\n\nWhat it is: a macOS app that shows what Claude Code, Codex and Gemini CLI are doing at the notch, in notifications and along the Dock, and takes you back to the exact session with one click.\n\nWhy free: I want to learn whether this is a daily-use tool before deciding anything about pricing. The download asks for a name and email (a waitlist), which is the one metric I'll trust: how many people bother to install it.\n\nWhat I'd love feedback on:\n1. Is gating a free download behind a waitlist form going to kill conversion?\n2. Would you pay for a team version (shared agent status)?\n\nhttps://yaml.cafe"
+      "title": "Launched Ambient: a free Mac app for people who run AI coding agents",
+      "body": "Stage: launched Sep 27, free, no revenue plan yet.\n\nWhat it is: a macOS app that shows what Claude Code, Codex and Gemini CLI are doing at the notch, in notifications and along the Dock, and takes you back to the exact session with one click.\n\nWhy free: I want to learn whether this is a daily-use tool before deciding anything about pricing. The download asks for a name and email (a waitlist), which is the one metric I'll trust: how many people bother to install it.\n\nWhat I'd love feedback on:\n1. Is gating a free download behind a waitlist form going to kill conversion?\n2. Would you pay for a team version (shared agent status)?\n\nhttps://yaml.cafe"
     },
     {
       "n": 12,
@@ -145,7 +145,7 @@
       "route": "post",
       "flair": null,
       "title": "My side project: a Mac notch island that tells you when your AI coding agent needs you",
-      "body": "Ambient is a free macOS app for anyone who runs Claude Code, Codex or Gemini CLI. Instead of checking terminals, you glance at the notch: coral means working, amber means it needs your permission, green means done. It chimes only when you're not already in the agent's app, and one click takes you back to the exact session.\n\nWhere it stands: v0.2.0, a 2.6 MB notarized download, 148 passing tests, hooks that take about 15 ms, launched today with zero users besides me.\n\nWhat I'd like feedback on: the landing page asks for a name and email before the download (a waitlist). Would that stop you from trying it?\n\nhttps://yaml.cafe"
+      "body": "Ambient is a free macOS app for anyone who runs Claude Code, Codex or Gemini CLI. Instead of checking terminals, you glance at the notch: coral means working, amber means it needs your permission, green means done. It chimes only when you're not already in the agent's app, and one click takes you back to the exact session.\n\nWhere it stands: v0.2.0, a 2.6 MB notarized download, 148 passing tests, hooks that take about 15 ms, launched Sep 27.\n\nWhat I'd like feedback on: the landing page asks for a name and email before the download (a waitlist). Would that stop you from trying it?\n\nhttps://yaml.cafe"
     },
     {
       "n": 19,
@@ -171,5 +171,31 @@
     "r/vibecoding",
     "r/GeminiCLI",
     "r/IndianStartups"
-  ]
+  ],
+  "schedule": {
+    "cadence": "one per day",
+    "time": "18:30 Asia/Kolkata (09:00 America/New_York)",
+    "order": [
+      1,
+      2,
+      18,
+      5,
+      6,
+      4,
+      17,
+      3,
+      7,
+      11,
+      8,
+      9,
+      15,
+      16,
+      10,
+      12,
+      13,
+      14,
+      19
+    ],
+    "start": "2026-09-27"
+  }
 }

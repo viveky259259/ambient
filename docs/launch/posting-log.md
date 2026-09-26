@@ -2,7 +2,7 @@
 
 Approved in chat on 2026-09-27: X thread, LinkedIn post, Reddit #1–#19 (as written in `launch-posts.md`). #20 r/developersIndia is on hold. Film approved: 16:9 for X and Reddit, 1:1 for LinkedIn.
 
-X and LinkedIn were scheduled from the user's Chrome (Claude in Chrome). Reddit is blocked for Claude's browser tools, so the user posts from `reddit-kit.html`, one per hour starting 1:15 AM IST on 2026-09-27, each after a live check of the subreddit's rules and flair; a post the rules forbid is skipped and replaced from the alternates.
+X and LinkedIn were scheduled from the user's Chrome (Claude in Chrome). Reddit is blocked for Claude's browser tools, so the user posts from `reddit-kit.html`, one a day at 6:30 PM IST (9 AM US Eastern) from 2026-09-27 to 2026-10-15, with reminders from `reddit-schedule.ics`, each after a live check of the subreddit's rules and flair; a post the rules forbid is skipped and replaced from the alternates.
 
 | # | Where | Status | Link |
 |---|---|---|---|

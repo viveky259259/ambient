@@ -658,12 +658,21 @@
         "question_spans": [
           {
             "source": "body",
-            "start": 833,
-            "end": 883,
+            "start": 801,
+            "end": 851,
             "text": "What's a notification rule you wish every app had?"
           }
         ],
         "evidence": [
+          {
+            "kind": "date",
+            "span": {
+              "source": "body",
+              "start": 732,
+              "end": 738,
+              "text": "Sep 27"
+            }
+          },
           {
             "kind": "measurement",
             "span": {
@@ -677,8 +686,8 @@
             "kind": "quantity",
             "span": {
               "source": "body",
-              "start": 598,
-              "end": 601,
+              "start": 596,
+              "end": 599,
               "text": "0.2"
             }
           },
@@ -686,8 +695,8 @@
             "kind": "quantity",
             "span": {
               "source": "body",
-              "start": 602,
-              "end": 603,
+              "start": 600,
+              "end": 601,
               "text": "0"
             }
           }
@@ -704,7 +713,7 @@
       },
       "route": {
         "available": false,
-        "content_type": "project_showcase",
+        "content_type": "general_discussion",
         "route": "standalone",
         "destination": null,
         "standalone_allowed": null,
@@ -764,12 +773,21 @@
           "question_spans": [
             {
               "source": "body",
-              "start": 833,
-              "end": 883,
+              "start": 801,
+              "end": 851,
               "text": "What's a notification rule you wish every app had?"
             }
           ],
           "evidence": [
+            {
+              "kind": "date",
+              "span": {
+                "source": "body",
+                "start": 732,
+                "end": 738,
+                "text": "Sep 27"
+              }
+            },
             {
               "kind": "measurement",
               "span": {
@@ -783,8 +801,8 @@
               "kind": "quantity",
               "span": {
                 "source": "body",
-                "start": 598,
-                "end": 601,
+                "start": 596,
+                "end": 599,
                 "text": "0.2"
               }
             },
@@ -792,8 +810,8 @@
               "kind": "quantity",
               "span": {
                 "source": "body",
-                "start": 602,
-                "end": 603,
+                "start": 600,
+                "end": 601,
                 "text": "0"
               }
             }
@@ -810,7 +828,7 @@
         },
         "route": {
           "available": false,
-          "content_type": "project_showcase",
+          "content_type": "general_discussion",
           "route": "standalone",
           "destination": null,
           "standalone_allowed": null,
@@ -2176,39 +2194,39 @@
         "extractor_name": "deterministic-semantic-v1",
         "confidence": 0.7,
         "intent": "ask_advice",
-        "topic": "Launched Ambient today: a free Mac app for people who run AI coding agents",
+        "topic": "Launched Ambient: a free Mac app for people who run AI coding agents",
         "central_problem": null,
         "central_question": "Would you pay for a team version (shared agent status)?",
         "question_spans": [
           {
             "source": "body",
-            "start": 520,
-            "end": 594,
+            "start": 501,
+            "end": 575,
             "text": "Is gating a free download behind a waitlist form going to kill conversion?"
           },
           {
             "source": "body",
-            "start": 598,
-            "end": 653,
+            "start": 579,
+            "end": 634,
             "text": "Would you pay for a team version (shared agent status)?"
           }
         ],
         "evidence": [
           {
-            "kind": "quantity",
+            "kind": "date",
             "span": {
               "source": "body",
-              "start": 23,
-              "end": 24,
-              "text": "0"
+              "start": 16,
+              "end": 22,
+              "text": "Sep 27"
             }
           },
           {
             "kind": "quantity",
             "span": {
               "source": "body",
-              "start": 517,
-              "end": 518,
+              "start": 498,
+              "end": 499,
               "text": "1"
             }
           },
@@ -2216,8 +2234,8 @@
             "kind": "quantity",
             "span": {
               "source": "body",
-              "start": 595,
-              "end": 596,
+              "start": 576,
+              "end": 577,
               "text": "2"
             }
           }
@@ -2287,39 +2305,39 @@
           "extractor_name": "deterministic-semantic-v1",
           "confidence": 0.7,
           "intent": "ask_advice",
-          "topic": "Launched Ambient today: a free Mac app for people who run AI coding agents",
+          "topic": "Launched Ambient: a free Mac app for people who run AI coding agents",
           "central_problem": null,
           "central_question": "Would you pay for a team version (shared agent status)?",
           "question_spans": [
             {
               "source": "body",
-              "start": 520,
-              "end": 594,
+              "start": 501,
+              "end": 575,
               "text": "Is gating a free download behind a waitlist form going to kill conversion?"
             },
             {
               "source": "body",
-              "start": 598,
-              "end": 653,
+              "start": 579,
+              "end": 634,
               "text": "Would you pay for a team version (shared agent status)?"
             }
           ],
           "evidence": [
             {
-              "kind": "quantity",
+              "kind": "date",
               "span": {
                 "source": "body",
-                "start": 23,
-                "end": 24,
-                "text": "0"
+                "start": 16,
+                "end": 22,
+                "text": "Sep 27"
               }
             },
             {
               "kind": "quantity",
               "span": {
                 "source": "body",
-                "start": 517,
-                "end": 518,
+                "start": 498,
+                "end": 499,
                 "text": "1"
               }
             },
@@ -2327,8 +2345,8 @@
               "kind": "quantity",
               "span": {
                 "source": "body",
-                "start": 595,
-                "end": 596,
+                "start": 576,
+                "end": 577,
                 "text": "2"
               }
             }
@@ -3667,12 +3685,21 @@
         "question_spans": [
           {
             "source": "body",
-            "start": 576,
-            "end": 611,
+            "start": 550,
+            "end": 585,
             "text": "Would that stop you from trying it?"
           }
         ],
         "evidence": [
+          {
+            "kind": "date",
+            "span": {
+              "source": "body",
+              "start": 437,
+              "end": 443,
+              "text": "Sep 27"
+            }
+          },
           {
             "kind": "specification",
             "span": {
@@ -3791,12 +3818,21 @@
           "question_spans": [
             {
               "source": "body",
-              "start": 576,
-              "end": 611,
+              "start": 550,
+              "end": 585,
               "text": "Would that stop you from trying it?"
             }
           ],
           "evidence": [
+            {
+              "kind": "date",
+              "span": {
+                "source": "body",
+                "start": 437,
+                "end": 443,
+                "text": "Sep 27"
+              }
+            },
             {
               "kind": "specification",
               "span": {
