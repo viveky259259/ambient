@@ -3,20 +3,92 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ambient — Your Mac, aware of your coding agents</title>
-  <meta name="description" content="Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock — so you can stop babysitting terminals.">
+  <title>Ambient: Claude Code &amp; Codex notifications in your Mac's notch</title>
+  <meta name="description" content="Free Mac app that shows what Claude Code, Codex and Gemini CLI are doing at the notch, in notifications and on the Dock, so you know when an agent needs you.">
   <link rel="canonical" href="https://yaml.cafe/">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ambient">
   <meta property="og:url" content="https://yaml.cafe/">
   <meta property="og:title" content="Ambient — Your Mac, aware of your coding agents">
   <meta property="og:description" content="A notch island, notifications and a Dock glow that tell you what Claude Code, Codex and Gemini CLI are doing. Free for macOS.">
   <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Ambient's island at a MacBook notch showing a coding agent's status">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ambient — Your Mac, aware of your coding agents">
+  <meta name="twitter:description" content="A notch island, notifications and a Dock glow that tell you what Claude Code, Codex and Gemini CLI are doing. Free for macOS.">
   <meta name="twitter:image" content="https://yaml.cafe/assets/og.png">
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="/assets/favicon-64.png">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="Ambient for LLMs">
   <link rel="stylesheet" href="/styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/",
+        "logo": "https://yaml.cafe/assets/icon-256.png",
+        "email": "vivek.yadav@stringswaytech.com",
+        "contactPoint": { "@type": "ContactPoint", "contactType": "customer support", "email": "vivek.yadav@stringswaytech.com", "url": "https://yaml.cafe/contact/", "availableLanguage": "en" }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://yaml.cafe/#website",
+        "name": "Ambient",
+        "url": "https://yaml.cafe/",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://yaml.cafe/#org" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://yaml.cafe/#app",
+        "name": "Ambient",
+        "description": "A free macOS app that shows what Claude Code, Codex and Gemini CLI are doing: a status island at the notch, notifications with chimes, a menu bar list and a glow along the Dock. One click returns you to the exact chat, terminal tab or tmux pane where the agent runs.",
+        "url": "https://yaml.cafe/",
+        "image": "https://yaml.cafe/assets/og.png",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS 14 or later",
+        "processorRequirements": "Apple silicon or Intel",
+        "softwareVersion": "0.2.0",
+        "fileSize": "2.6 MB",
+        "dateModified": "2026-09-26T00:00:00+00:00",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Notch island showing working, needs you, done and error states",
+          "Notifications and two-note chimes when an agent needs permission, finishes or fails",
+          "Click to return to the exact Claude chat, Codex thread, Terminal or iTerm2 tab, or tmux pane",
+          "Menu bar session list with quiet hours",
+          "Dock glow in the color of the current state",
+          "Works with Claude Code, Codex and Gemini CLI",
+          "No accounts, no network requests, no telemetry"
+        ],
+        "publisher": { "@id": "https://yaml.cafe/#org" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://yaml.cafe/#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is Ambient free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Download it, connect your agents and use every feature." } },
+          { "@type": "Question", "name": "Does it send my code or prompts anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them over a Unix socket to the app on your Mac. The app makes no network requests." } },
+          { "@type": "Question", "name": "Will it slow my agent down?", "acceptedAnswer": { "@type": "Answer", "text": "No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped." } },
+          { "@type": "Question", "name": "How is Ambient different from Claude Code's built-in notifications?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent." } },
+          { "@type": "Question", "name": "Does it work with tmux, iTerm2, VS Code and Cursor?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors." } },
+          { "@type": "Question", "name": "What does it change on my Mac?", "acceptedAnswer": { "@type": "Answer", "text": "It adds its own hook entries to ~/.claude/settings.json, ~/.codex/hooks.json and ~/.gemini/settings.json, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run ambient uninstall." } },
+          { "@type": "Question", "name": "How do I uninstall Ambient?", "acceptedAnswer": { "@type": "Answer", "text": "Run ambient uninstall to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the ~/.ambient folder." } },
+          { "@type": "Question", "name": "Which Macs does it run on?", "acceptedAnswer": { "@type": "Answer", "text": "macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar." } },
+          { "@type": "Question", "name": "Why do you ask for my name and email?", "acceptedAnswer": { "@type": "Answer", "text": "Downloading adds you to the waitlist for Ambient news and new features. We use your details only for that." } }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body data-dmg="/downloads/Ambient-0.2.0.dmg">
 
@@ -29,6 +101,7 @@
       <a href="#alerts">Alerts</a>
       <a href="#dock">Dock glow</a>
       <a href="#faq">FAQ</a>
+      <a href="/guides/">Guides</a>
     </div>
     <button class="btn small" data-download>Download</button>
   </div>
@@ -37,12 +110,12 @@
 <header class="hero center" id="top">
   <div class="wrap">
     <h1>Your Mac, aware of your coding agents.</h1>
-    <p class="lede">Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
+    <p class="lede">Ambient is a free Mac app that turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
     <div class="cta-row">
       <button class="btn" data-download>Download for Mac</button>
       <a class="link-btn" href="#island">See how it works ›</a>
     </div>
-    <p class="fineprint">Free · macOS 14 or later · Apple silicon and Intel · 2.6&nbsp;MB</p>
+    <p class="fineprint">Free · Version 0.2.0 · macOS 14 or later · Apple silicon and Intel · 2.6&nbsp;MB</p>
 
     <div class="macbook" aria-hidden="true">
       <div class="lid">
@@ -78,6 +151,7 @@
   </div>
 </header>
 
+<main>
 <section class="alt center" id="island">
   <div class="wrap">
     <h2>Glance. Don't babysit.</h2>
@@ -162,7 +236,19 @@
   </div>
 </section>
 
-<section class="alt center" id="private">
+<section class="alt center" id="how">
+  <div class="wrap">
+    <h2>How it works.</h2>
+    <p class="section-lede">Ambient listens to the hooks each agent already offers. Nothing wraps your agent, and nothing watches your screen.</p>
+    <ol class="grid steps">
+      <li class="card"><span class="step">1</span><h3>Connect</h3><p>Open Ambient and click Connect All. It adds its own entries to each agent's hook settings, after backing the file up.</p></li>
+      <li class="card"><span class="step">2</span><h3>Listen</h3><p>When an agent starts a turn, runs a tool, asks for permission or finishes, its hook sends one short line over a Unix socket on your Mac. In about 15&nbsp;ms, in the background.</p></li>
+      <li class="card"><span class="step">3</span><h3>Show</h3><p>Ambient keeps a state for every session and shows the most urgent: needs you, then error, then done, then working.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="center" id="private">
   <div class="wrap">
     <p class="stat grad">0 bytes</p>
     <h2>leave your Mac.</h2>
@@ -170,14 +256,17 @@
   </div>
 </section>
 
-<section class="center" id="faq">
+<section class="alt center" id="faq">
   <div class="wrap">
     <h2>Questions.</h2>
     <div class="faq">
       <details><summary>Is Ambient free?</summary><p>Yes. Download it, connect your agents and use every feature.</p></details>
       <details><summary>Does it send my code or prompts anywhere?</summary><p>No. Each hook reduces an event to a few short fields — agent, state, project name, a trimmed message — and sends them over a Unix socket to the app on your Mac. The app makes no network requests.</p></details>
       <details><summary>Will it slow my agent down?</summary><p>No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped.</p></details>
+      <details><summary>How is Ambient different from Claude Code's built-in notifications?</summary><p>Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent. <a href="/guides/claude-code-notifications-mac/">Compare every option</a>.</p></details>
+      <details><summary>Does it work with tmux, iTerm2, VS Code and Cursor?</summary><p>Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors.</p></details>
       <details><summary>What does it change on my Mac?</summary><p>It adds its own hook entries to <code>~/.claude/settings.json</code>, <code>~/.codex/hooks.json</code> and <code>~/.gemini/settings.json</code>, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run <code>ambient uninstall</code>.</p></details>
+      <details><summary>How do I uninstall Ambient?</summary><p>Run <code>ambient uninstall</code> to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the <code>~/.ambient</code> folder.</p></details>
       <details><summary>Which Macs does it run on?</summary><p>macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.</p></details>
       <details><summary>Why do you ask for my name and email?</summary><p>Downloading adds you to the waitlist for Ambient news and new features. We use your details only for that. See the <a href="/privacy.html">privacy notice</a>.</p></details>
     </div>
@@ -192,10 +281,13 @@
     <button class="btn" data-download>Download for Mac</button>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
     <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/contact/">Contact</a>
     <a href="/privacy.html">Privacy</a>
     <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
   </div>
