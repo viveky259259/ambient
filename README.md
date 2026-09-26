@@ -24,7 +24,8 @@ Everything stays on your Mac. No accounts, no network, no telemetry.
 ## Install
 
 1. Download `Ambient-<version>.dmg` from [Releases](../../releases), open it and drag **Ambient** to Applications.
-2. Open Ambient. The setup window lists the agents it found — click **Connect** for each.
+2. Open Ambient. Settings opens on **Welcome**: click **Connect All** to hook up every agent it found
+   (or connect them one at a time under **Agents**).
 3. Click **Play Demo** to see every state, then **Get Started**.
 
 Or from a terminal, once the app has run once:

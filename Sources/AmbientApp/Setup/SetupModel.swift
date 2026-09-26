@@ -41,6 +41,13 @@ final class SetupModel: ObservableObject {
         refresh()
     }
 
+    /// Connects every agent on this Mac that isn't connected yet.
+    func installAll() {
+        for agent in AgentKind.allCases where [.notInstalled, .partial].contains(agentStates[agent] ?? .notInstalled) {
+            install(agent)
+        }
+    }
+
     func uninstall(_ agent: AgentKind) {
         do {
             try installer.uninstall(agent)
