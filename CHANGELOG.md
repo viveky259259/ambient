@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-09-26
 
 - **New settings window**: a floating glass sidebar with Welcome, Agents, Notch Island, Alerts, Dock Glow
   and General. The island, notification and Dock glow panes preview the real thing as you change settings.
