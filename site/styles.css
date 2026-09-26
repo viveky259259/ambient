@@ -302,6 +302,8 @@ dialog[open] { animation: sheet-in 0.35s var(--spring); }
 .page p, .page li { color: #424245; }
 
 /* Guides */
+.page article a:not(.btn), .page > p a:not(.btn) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.page article .crumbs a { text-decoration: none; }
 .nav .push { margin-left: auto; }
 .page .crumbs { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; }
 .page .crumbs a { color: var(--ink-2); }
