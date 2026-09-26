@@ -92,6 +92,9 @@
 </head>
 <body data-dmg="/downloads/Ambient-0.2.0.dmg">
 
+<div class="edge-glow top" aria-hidden="true"></div>
+<div class="edge-glow bottom" aria-hidden="true"></div>
+
 <nav class="nav" aria-label="Main">
   <div class="wrap">
     <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
@@ -216,10 +219,10 @@
       </div>
     </div>
     <div class="chips" role="group" aria-label="Preview a state">
-      <button class="chip" data-dock="var(--claude)" aria-pressed="true"><span class="dot" style="background: var(--claude)"></span>Working</button>
-      <button class="chip" data-dock="var(--waiting)" aria-pressed="false"><span class="dot" style="background: var(--waiting)"></span>Needs you</button>
-      <button class="chip" data-dock="var(--done)" aria-pressed="false"><span class="dot" style="background: var(--done)"></span>Done</button>
-      <button class="chip" data-dock="var(--error)" aria-pressed="false"><span class="dot" style="background: var(--error)"></span>Error</button>
+      <button class="chip" data-dock="var(--claude)" data-mood="working" aria-pressed="true"><span class="dot" style="background: var(--claude)"></span>Working</button>
+      <button class="chip" data-dock="var(--waiting)" data-mood="waiting" aria-pressed="false"><span class="dot" style="background: var(--waiting)"></span>Needs you</button>
+      <button class="chip" data-dock="var(--done)" data-mood="done" aria-pressed="false"><span class="dot" style="background: var(--done)"></span>Done</button>
+      <button class="chip" data-dock="var(--error)" data-mood="error" aria-pressed="false"><span class="dot" style="background: var(--error)"></span>Error</button>
     </div>
   </div>
 </section>

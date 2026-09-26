@@ -8,6 +8,13 @@
     set(key, value) { try { localStorage.setItem(key, value); } catch { /* ignore */ } },
   };
 
+  // MARK: - Window-edge glow
+
+  // The glow along the window's edges follows the hero demo, except while the Dock section is on
+  // screen, when it follows the Dock chips. styles.css maps each mood to a color and rhythm.
+  const edge = { hero: "working", dock: "working", dockInView: false };
+  const paintEdge = () => { document.documentElement.dataset.edge = edge.dockInView ? edge.dock : edge.hero; };
+
   // MARK: - Hero island
 
   const hero = document.querySelector(".hero");
@@ -15,18 +22,20 @@
   if (hero && island) {
     const el = (id) => document.getElementById(id);
     const scenes = [
-      { color: "var(--claude)", open: false, timer: "2m", wing: "breathe", hold: 3000, caption: "Claude is working on api-server" },
-      { color: "var(--waiting)", open: true, glyph: "pulse", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
+      { mood: "working", color: "var(--claude)", open: false, timer: "2m", wing: "breathe", hold: 3000, caption: "Claude is working on api-server" },
+      { mood: "waiting", color: "var(--waiting)", open: true, glyph: "pulse", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
         msg: "Needs permission · Bash: rm -rf build", elapsed: "2m", hold: 4200, caption: "api-server needs your permission" },
-      { color: "var(--claude)", open: false, timer: "3m", wing: "breathe", hold: 2600, caption: "Claude is back at work" },
-      { color: "var(--done)", open: true, glyph: "check", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
+      { mood: "working", color: "var(--claude)", open: false, timer: "3m", wing: "breathe", hold: 2600, caption: "Claude is back at work" },
+      { mood: "done", color: "var(--done)", open: true, glyph: "check", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
         msg: "All 42 tests pass. Ready for review.", elapsed: "4m", hold: 4200, caption: "api-server is done: all 42 tests pass" },
-      { color: "var(--error)", open: true, glyph: "bang", title: "docs", tag: "GEMINI", tagColor: "var(--gemini)",
+      { mood: "error", color: "var(--error)", open: true, glyph: "bang", title: "docs", tag: "GEMINI", tagColor: "var(--gemini)",
         msg: "Quota exceeded — retry in 2 minutes", elapsed: "1m", hold: 4200, caption: "docs stopped: quota exceeded" },
-      { color: "var(--done)", open: false, timer: "✓", wing: "", hold: 2400, caption: "All done" },
+      { mood: "done", color: "var(--done)", open: false, timer: "✓", wing: "", hold: 2400, caption: "All done" },
     ];
 
     const show = (s) => {
+      edge.hero = s.mood;
+      paintEdge();
       hero.style.setProperty("--state", s.color);
       hero.style.setProperty("--glow", s.color);
       island.classList.toggle("open", s.open);
@@ -73,8 +82,16 @@
     chip.addEventListener("click", () => {
       stage.style.setProperty("--dock", chip.dataset.dock);
       document.querySelectorAll("[data-dock]").forEach((c) => c.setAttribute("aria-pressed", String(c === chip)));
+      edge.dock = chip.dataset.mood;
+      paintEdge();
     });
   });
+  if (stage && "IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      edge.dockInView = entry.isIntersecting;
+      paintEdge();
+    }, { threshold: 0.5 }).observe(stage);
+  }
 
   // MARK: - Download and updates
 
