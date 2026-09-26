@@ -36,38 +36,45 @@
 
 <header class="hero center" id="top">
   <div class="wrap">
-    <div class="screen" aria-hidden="true">
-      <div class="menubar">
-        <span>Terminal</span><span class="dim">Shell</span><span class="dim">Edit</span><span class="dim">View</span><span class="dim">Window</span>
-        <span class="right"><span class="status-orb"></span><span class="dim" id="clock">9:41</span></span>
-      </div>
-      <div class="term">
-        <div class="term-bar"><i></i><i></i><i></i><span>api-server — claude</span></div>
-        <pre><span class="p">~/api-server ❯</span> claude "make the test suite pass"
-<span class="c">✻</span> Running npm test…
-  ⎿  38 passed, 4 failed
-<span class="c">✻</span> Editing src/cache.ts</pre>
-      </div>
-      <div class="island" id="island-demo">
-        <div class="wings"><span class="orb breathe" id="wing-orb"></span><span class="timer" id="wing-timer">2m</span></div>
-        <div class="bloom">
-          <span class="orb big pulse" id="bloom-orb"></span>
-          <div>
-            <div class="title"><span id="bloom-title">api-server</span><span class="tag" id="bloom-tag">CLAUDE</span></div>
-            <div class="msg" id="bloom-msg">Needs permission · Bash: rm -rf build</div>
-          </div>
-          <span class="elapsed" id="bloom-elapsed">2m</span>
-        </div>
-      </div>
-    </div>
-    <p class="visually-hidden">An animation of Ambient's notch island: a coral orb while Claude works, an amber card when it needs permission, a green check when it's done.</p>
     <h1>Your Mac, aware of your coding agents.</h1>
     <p class="lede">Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
     <div class="cta-row">
       <button class="btn" data-download>Download for Mac</button>
       <a class="link-btn" href="#island">See how it works ›</a>
     </div>
-    <p class="fineprint">Free · macOS 14 or later · Apple silicon and Intel · 2.6 MB</p>
+    <p class="fineprint">Free · macOS 14 or later · Apple silicon and Intel · 2.6&nbsp;MB</p>
+
+    <div class="macbook" aria-hidden="true">
+      <div class="lid">
+        <div class="display">
+          <div class="menubar">
+            <span>Terminal</span><span class="dim">Shell</span><span class="dim">Edit</span><span class="dim">View</span><span class="dim">Window</span>
+            <span class="right"><span class="status-orb"></span><span class="dim" id="clock">9:41</span></span>
+          </div>
+          <div class="term">
+            <div class="term-bar"><i></i><i></i><i></i><span>api-server — claude</span></div>
+            <pre><span class="p">~/api-server ❯</span> claude "make the test suite pass"
+<span class="c">✻</span> Running npm test…
+  ⎿  38 passed, 4 failed
+<span class="c">✻</span> Editing src/cache.ts</pre>
+          </div>
+          <div class="island" id="island-demo">
+            <div class="wings"><span class="orb breathe" id="wing-orb"></span><span class="timer" id="wing-timer">2m</span></div>
+            <div class="bloom">
+              <span class="orb big pulse" id="bloom-orb"></span>
+              <div>
+                <div class="title"><span id="bloom-title">api-server</span><span class="tag" id="bloom-tag">CLAUDE</span></div>
+                <div class="msg" id="bloom-msg">Needs permission · Bash: rm -rf build</div>
+              </div>
+              <span class="elapsed" id="bloom-elapsed">2m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="base"><span class="scoop"></span></div>
+    </div>
+    <p class="island-caption"><span class="dot"></span><span id="island-caption">Claude is working on api-server</span></p>
+    <p class="visually-hidden">An animation of Ambient on a MacBook: a coral orb at the notch while Claude works, an amber card when it needs permission, a green check when it's done.</p>
   </div>
 </header>
 

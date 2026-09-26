@@ -15,21 +15,22 @@
   if (hero && island) {
     const el = (id) => document.getElementById(id);
     const scenes = [
-      { color: "var(--claude)", open: false, timer: "2m", wing: "breathe", hold: 3000 },
+      { color: "var(--claude)", open: false, timer: "2m", wing: "breathe", hold: 3000, caption: "Claude is working on api-server" },
       { color: "var(--waiting)", open: true, glyph: "pulse", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
-        msg: "Needs permission · Bash: rm -rf build", elapsed: "2m", hold: 4200 },
-      { color: "var(--claude)", open: false, timer: "3m", wing: "breathe", hold: 2600 },
+        msg: "Needs permission · Bash: rm -rf build", elapsed: "2m", hold: 4200, caption: "api-server needs your permission" },
+      { color: "var(--claude)", open: false, timer: "3m", wing: "breathe", hold: 2600, caption: "Claude is back at work" },
       { color: "var(--done)", open: true, glyph: "check", title: "api-server", tag: "CLAUDE", tagColor: "var(--claude)",
-        msg: "All 42 tests pass. Ready for review.", elapsed: "4m", hold: 4200 },
+        msg: "All 42 tests pass. Ready for review.", elapsed: "4m", hold: 4200, caption: "api-server is done: all 42 tests pass" },
       { color: "var(--error)", open: true, glyph: "bang", title: "docs", tag: "GEMINI", tagColor: "var(--gemini)",
-        msg: "Quota exceeded — retry in 2 minutes", elapsed: "1m", hold: 4200 },
-      { color: "var(--done)", open: false, timer: "✓", wing: "", hold: 2400 },
+        msg: "Quota exceeded — retry in 2 minutes", elapsed: "1m", hold: 4200, caption: "docs stopped: quota exceeded" },
+      { color: "var(--done)", open: false, timer: "✓", wing: "", hold: 2400, caption: "All done" },
     ];
 
     const show = (s) => {
       hero.style.setProperty("--state", s.color);
       hero.style.setProperty("--glow", s.color);
       island.classList.toggle("open", s.open);
+      el("island-caption").textContent = s.caption;
       if (s.open) {
         const orb = el("bloom-orb");
         orb.className = "orb big " + s.glyph;
