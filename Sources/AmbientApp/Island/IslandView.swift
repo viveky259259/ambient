@@ -140,7 +140,7 @@ private struct BloomCard: View {
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 4) {
                 if let clock = Describe.clock(session, now: Date()) {
-                    Text(clock).font(.system(size: 11, weight: .medium).monospacedDigit())
+                    Text([clock, Describe.took(session)].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 11, weight: .medium).monospacedDigit())
                         .foregroundStyle(.white.opacity(0.5))
                 }
                 if let app = HostActivator.appName(for: session.host) {

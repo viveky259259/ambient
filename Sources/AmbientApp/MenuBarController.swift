@@ -86,7 +86,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let row = NSMenuItem(title: "", action: #selector(openSession(_:)), keyEquivalent: "")
             row.target = self
             row.representedObject = s.id
-            let meta = [s.agent.displayName, Describe.place(s), Describe.clock(s, now: now)].compactMap { $0 }.joined(separator: " · ")
+            let meta = [s.agent.displayName, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
             let text = NSMutableAttributedString(string: Trim.truncate(Describe.title(s), max: 48), attributes: [.font: NSFont.menuFont(ofSize: 13)])
             text.append(NSAttributedString(string: "  \(meta)\n",
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))

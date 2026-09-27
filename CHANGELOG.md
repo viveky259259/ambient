@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 — 2026-09-28
+
+- **Real names**: sessions show their chat title from Claude's desktop app or Claude Code, or their
+  thread name from Codex, with the project folder as secondary text. Two chats in one repo no longer
+  look the same.
+- **Times that mean something**: working sessions show how long the turn has run, *needs you* shows how
+  long it has been waiting, and finished or failed sessions show how long ago ("5m ago"). The turn's
+  length moves to the bloom card and the menu as "took 1m".
+
 ## 0.2.0 — 2026-09-26
 
 - **New settings window**: a floating glass sidebar with Welcome, Agents, Notch Island, Alerts, Dock Glow
