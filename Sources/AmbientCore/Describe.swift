@@ -31,9 +31,40 @@ public enum Describe {
         }
     }
 
-    /// The session's project, or the agent's name when the project is unknown.
+    /// The chat or thread title when known, else the project, else the agent's name.
     public static func title(_ s: Session) -> String {
-        s.project ?? s.agent.displayName
+        s.title ?? s.project ?? s.agent.displayName
+    }
+
+    /// The project folder, when the title is something else and the folder adds information.
+    public static func place(_ s: Session) -> String? {
+        guard s.title != nil, let project = s.project, project != s.title else { return nil }
+        return project
+    }
+
+    /// The time that matters for the session's state: how long the turn has run while working, how long
+    /// it has been waiting for you, or how long ago it finished or failed. Nil when idle.
+    public static func clock(_ s: Session, now: Date, compact: Bool = false) -> String? {
+        func format(_ t: TimeInterval) -> String { compact ? compactDuration(t) : duration(t) }
+        switch s.activity {
+        case .idle:
+            return nil
+        case .thinking, .tool, .compacting:
+            return s.turnStartedAt.map { format(now.timeIntervalSince($0)) }
+        case .waiting:
+            return format(now.timeIntervalSince(s.activitySince))
+        case .done, .error:
+            let ago = now.timeIntervalSince(s.turnEndedAt ?? s.activitySince)
+            return ago < 10 ? "just now" : "\(format(ago)) ago"
+        }
+    }
+
+    /// "took 1m" for a finished or failed turn.
+    public static func took(_ s: Session) -> String? {
+        switch s.activity {
+        case .done, .error: s.turnDuration.map { "took \(duration($0))" }
+        default: nil
+        }
     }
 
     /// "4s", "12m", "1h 5m".
@@ -43,6 +74,11 @@ public enum Describe {
         if s < 3_600 { return "\(s / 60)m" }
         let h = s / 3_600, m = (s % 3_600) / 60
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+    }
+
+    /// Like `duration`, but whole hours only: "1h" instead of "1h 5m", for tight spaces.
+    public static func compactDuration(_ seconds: TimeInterval) -> String {
+        seconds >= 3_600 ? "\(Int(seconds / 3_600))h" : duration(seconds)
     }
 
     public static func mood(_ m: Mood) -> String {

@@ -225,4 +225,20 @@ private func ev(_ kind: EventKind, at seconds: TimeInterval, session: String = "
         let data = try JSONEncoder().encode(store.sessions)
         #expect(try JSONDecoder().decode([Session].self, from: data) == store.sessions)
     }
+
+    @Test func titlesAreSetWithoutTouchingState() {
+        let store = SessionStore()
+        store.apply(AgentEvent(agent: .claude, sessionId: "a", cwd: "/p", kind: .promptSubmitted, timestamp: Date()))
+        let before = store.session(id: "claude:a")
+        #expect(store.setTitle("Release checklist", sessionID: "claude:a"))
+        #expect(!store.setTitle("Release checklist", sessionID: "claude:a"))
+        #expect(!store.setTitle("Anything", sessionID: "claude:missing"))
+        let after = store.session(id: "claude:a")
+        #expect(after?.title == "Release checklist")
+        #expect(after?.activity == before?.activity)
+        #expect(after?.lastEventAt == before?.lastEventAt)
+        // Later events keep the title.
+        store.apply(AgentEvent(agent: .claude, sessionId: "a", cwd: "/p", kind: .turnCompleted(summary: nil), timestamp: Date()))
+        #expect(store.session(id: "claude:a")?.title == "Release checklist")
+    }
 }

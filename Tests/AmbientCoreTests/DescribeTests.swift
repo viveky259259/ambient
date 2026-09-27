@@ -32,6 +32,62 @@ import Testing
         #expect(Describe.duration(-3) == "0s")
     }
 
+    @Test func titlePrefersTheChatOrThreadTitle() {
+        var s = Session(agent: .claude, sessionId: "x", at: Date())
+        s.cwd = "/src/ambient-notification"
+        #expect(Describe.title(s) == "ambient-notification")
+        #expect(Describe.place(s) == nil)
+        s.title = "Claude agent macOS dock notifications"
+        #expect(Describe.title(s) == "Claude agent macOS dock notifications")
+        #expect(Describe.place(s) == "ambient-notification")
+    }
+
+    @Test func clockSaysWhatTheTimeMeansForEachState() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 1_000)
+        let at = { (seconds: TimeInterval) in t0.addingTimeInterval(seconds) }
+        var s = Session(agent: .claude, sessionId: "x", at: t0)
+        s.turnStartedAt = t0
+
+        // Working: how long the turn has been running.
+        s.activity = .thinking
+        s.activitySince = at(100)
+        #expect(Describe.clock(s, now: at(1_560)) == "26m")
+        #expect(Describe.took(s) == nil)
+
+        // Needs you: how long it has been waiting, not how long the turn has run.
+        s.activity = .waiting(reason: "permission", message: nil)
+        s.activitySince = at(1_500)
+        #expect(Describe.clock(s, now: at(1_680)) == "3m")
+
+        // Done: how long ago it finished; the turn's length is separate.
+        s.activity = .done(summary: nil)
+        s.activitySince = at(90)
+        s.turnEndedAt = at(90)
+        #expect(Describe.clock(s, now: at(92)) == "just now")
+        #expect(Describe.clock(s, now: at(90 + 5_229)) == "1h 27m ago")
+        #expect(Describe.clock(s, now: at(90 + 5_229), compact: true) == "1h ago")
+        #expect(Describe.took(s) == "took 1m")
+
+        // Seen results settle to idle but still finished when they finished.
+        s.acknowledged = true
+        #expect(Describe.clock(s, now: at(90 + 300)) == "5m ago")
+
+        s.activity = .error(message: nil)
+        #expect(Describe.clock(s, now: at(90 + 45)) == "45s ago")
+
+        s.activity = .idle
+        #expect(Describe.clock(s, now: at(400)) == nil)
+    }
+
+    @Test func compactClockDropsMinutesFromHours() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 0)
+        var s = Session(agent: .codex, sessionId: "x", at: t0)
+        s.turnStartedAt = t0
+        s.activity = .tool(name: "Bash", detail: nil)
+        #expect(Describe.clock(s, now: t0.addingTimeInterval(3_900)) == "1h 5m")
+        #expect(Describe.clock(s, now: t0.addingTimeInterval(3_900), compact: true) == "1h")
+    }
+
     @Test func sessionTitleFallsBackToAgent() {
         var s = Session(agent: .codex, sessionId: "x", at: Date())
         #expect(Describe.title(s) == "Codex")

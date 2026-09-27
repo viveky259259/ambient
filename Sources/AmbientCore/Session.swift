@@ -45,6 +45,8 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var subagents: Int
     /// The user has seen the latest result or prompt (done, error or waiting).
     public var acknowledged: Bool
+    /// The name the session has in its agent's own UI (Claude chat title, Codex thread name), when known.
+    public var title: String?
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
 

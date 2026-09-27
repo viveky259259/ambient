@@ -16,6 +16,23 @@ import Testing
         #expect(StateFile.load(from: url) == store.sessions)
     }
 
+    @Test func titlesSurviveAndOlderFilesStillLoad() throws {
+        let url = try tempFile()
+        var s = Session(agent: .codex, sessionId: "t", at: Date(timeIntervalSince1970: 60))
+        s.title = "Build Reddit post generator"
+        try StateFile.save([s], to: url)
+        #expect(StateFile.load(from: url).first?.title == "Build Reddit post generator")
+
+        // A state file written before titles existed.
+        var data = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+        var sessions = data["sessions"] as! [[String: Any]]
+        sessions[0].removeValue(forKey: "title")
+        data["sessions"] = sessions
+        try JSONSerialization.data(withJSONObject: data).write(to: url)
+        #expect(StateFile.load(from: url).first?.title == nil)
+        #expect(StateFile.load(from: url).first?.sessionId == "t")
+    }
+
     @Test func missingOrCorruptFilesLoadEmpty() throws {
         let url = try tempFile()
         #expect(StateFile.load(from: url).isEmpty)

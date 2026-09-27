@@ -90,17 +90,16 @@ private struct WingLabel: View {
                 case .error: Image(systemName: "exclamationmark.triangle.fill")
                 case .working, .idle, .done:
                     TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                        Text(compact(primary.elapsed(now: ctx.date) ?? 0)).monospacedDigit()
+                        Text(Describe.clock(primary, now: ctx.date, compact: true) ?? "")
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                 }
             }
             .font(.system(size: 11, weight: .semibold, design: .rounded))
             .foregroundStyle(primary.moodTint.color)
         }
-    }
-
-    private func compact(_ t: TimeInterval) -> String {
-        t >= 3_600 ? "\(Int(t / 3_600))h" : Describe.duration(t)
     }
 }
 
@@ -140,8 +139,8 @@ private struct BloomCard: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 4) {
-                if let e = session.elapsed(now: Date()) {
-                    Text(Describe.duration(e)).font(.system(size: 11, weight: .medium).monospacedDigit())
+                if let clock = Describe.clock(session, now: Date()) {
+                    Text(clock).font(.system(size: 11, weight: .medium).monospacedDigit())
                         .foregroundStyle(.white.opacity(0.5))
                 }
                 if let app = HostActivator.appName(for: session.host) {
@@ -203,12 +202,12 @@ private struct SessionRow: View {
                             Text("+\(session.subagents) agents").font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                         }
                     }
-                    Text(Describe.activity(session.activity))
+                    Text([Describe.place(session), Describe.activity(session.activity)].compactMap { $0 }.joined(separator: " · "))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
                 }
                 Spacer(minLength: 6)
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                    Text(session.elapsed(now: ctx.date).map(Describe.duration) ?? "")
+                    Text(Describe.clock(session, now: ctx.date) ?? "")
                         .font(.system(size: 10.5, weight: .medium).monospacedDigit())
                         .foregroundStyle(.white.opacity(0.45))
                 }

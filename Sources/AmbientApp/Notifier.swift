@@ -73,7 +73,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         default:
             return
         }
-        content.subtitle = [agent, HostActivator.appName(for: s.host)].compactMap { $0 }.joined(separator: " · ")
+        content.subtitle = [agent, Describe.place(s), HostActivator.appName(for: s.host)].compactMap { $0 }.joined(separator: " · ")
         content.threadIdentifier = s.id
         content.userInfo = ["session": s.id]
         content.interruptionLevel = .active

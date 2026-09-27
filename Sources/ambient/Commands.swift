@@ -164,10 +164,10 @@ struct Commands {
         print("\(out.bold("Ambient")) · \(count) · \(out.mood(mood, Describe.mood(mood)))")
         let now = Date()
         for s in sessions {
-            let elapsed = s.elapsed(now: now).map(Describe.duration) ?? ""
-            let title = Trim.truncate(Describe.title(s), max: 18).padding(toLength: 18, withPad: " ", startingAt: 0)
+            let clock = Describe.clock(s, now: now) ?? ""
+            let title = Trim.truncate(Describe.title(s), max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
             let agent = s.agent.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
-            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(elapsed))")
+            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(clock))")
         }
         return 0
     }

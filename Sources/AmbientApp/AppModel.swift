@@ -17,10 +17,14 @@ final class AppModel: ObservableObject {
     private var saveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
     private var observers: [NSObjectProtocol] = []
+    private let titles: SessionTitles?
+    private let titleQueue = DispatchQueue(label: "com.viveky259259.Ambient.titles", qos: .utility)
+    private var titleCheckedAt: [String: Date] = [:]
 
-    init(prefs: Preferences, stateURL: URL?) {
+    init(prefs: Preferences, stateURL: URL?, titles: SessionTitles? = nil) {
         self.prefs = prefs
         self.stateURL = stateURL
+        self.titles = titles
     }
 
     func start() {
@@ -29,6 +33,7 @@ final class AppModel: ObservableObject {
             store.sweep(now: Date())
             publish(save: false)
         }
+        refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer?.tolerance = 1
         let center = NSWorkspace.shared.notificationCenter
@@ -42,6 +47,7 @@ final class AppModel: ObservableObject {
         guard let t = store.apply(event) else { return }
         publish()
         transitions.send(t)
+        refreshTitles()
         if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
             // The user is already in the app: let the result or prompt register, then consider it seen.
@@ -84,11 +90,35 @@ final class AppModel: ObservableObject {
     }
 
     private func sweep() {
+        refreshTitles()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
         publish()
         changes.forEach(transitions.send)
+    }
+
+    /// Looks up the chat or thread title of each session in the background: when it first appears, then at
+    /// most once a minute, since titles are generated and renamed while a session runs.
+    private func refreshTitles() {
+        guard let titles else { return }
+        let now = Date()
+        let due = store.sessions.filter {
+            !$0.sessionId.hasPrefix("demo-") && now.timeIntervalSince(titleCheckedAt[$0.id] ?? .distantPast) >= 60
+        }
+        guard !due.isEmpty else { return }
+        for s in due { titleCheckedAt[s.id] = now }
+        let live = Set(store.sessions.map(\.id))
+        titleCheckedAt = titleCheckedAt.filter { live.contains($0.key) }
+        titleQueue.async { [weak self] in
+            let found = due.compactMap { s in titles.title(for: s).map { (s.id, $0) } }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                var changed = false
+                for (id, title) in found where self.store.setTitle(title, sessionID: id) { changed = true }
+                if changed { self.publish() }
+            }
+        }
     }
 
     private func publish(save: Bool = true) {

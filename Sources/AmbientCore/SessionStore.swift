@@ -115,6 +115,15 @@ public final class SessionStore {
         s.acknowledged = false
     }
 
+    /// Names a session; returns whether anything changed. Titles never alter state or timing.
+    @discardableResult
+    public func setTitle(_ title: String?, sessionID: String) -> Bool {
+        guard var s = byId[sessionID], s.title != title else { return false }
+        s.title = title
+        byId[sessionID] = s
+        return true
+    }
+
     /// Marks a session's result or prompt as seen. Returns true if that lowered its mood.
     @discardableResult
     public func acknowledge(sessionID: String) -> Bool {
