@@ -124,7 +124,11 @@
   };
   if (store.get("ambient-waitlist") === "joined") showDone();
 
-  const open = () => {
+  // Umami (cookieless analytics) may be blocked or not loaded yet; never let that break the page.
+  const track = (name, data) => { try { window.umami?.track(name, data); } catch { /* ignore */ } };
+
+  const open = (e) => {
+    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none" });
     startDownload();
     if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
   };
@@ -151,6 +155,7 @@
       const res = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
       if (!res.ok) throw new Error(String(res.status));
       store.set("ambient-waitlist", "joined");
+      track("Notify me", { ref: store.get("ambient-ref") || "none" });
       showDone();
     } catch {
       setError("Couldn't save your email. Check your connection and try again.");

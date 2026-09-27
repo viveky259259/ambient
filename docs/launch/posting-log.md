@@ -6,8 +6,8 @@ X and LinkedIn were scheduled from the user's Chrome (Claude in Chrome). Reddit 
 
 | # | Where | Status | Link |
 |---|---|---|---|
-| X | Launch thread (5 posts, 16:9 film on post 1) | scheduled for Sun 2026-09-27 10:48 AM (hashtags edited by the user) | [scheduled](https://x.com/compose/post/unsent/scheduled) |
-| LI | LinkedIn post (1:1 film) | scheduled for Sun 2026-09-27 10:46 AM | |
+| X | Launch thread (5 posts, 16:9 film on post 1) | posted Sun 2026-09-27 10:48 AM IST; 402 views, 5 likes, 2 replies at 3 PM | [post](https://x.com/viveky259259/status/2104078077496324100) |
+| LI | LinkedIn post (1:1 film) | posted Sun 2026-09-27 10:46 AM IST; 12 reactions at 3 PM | [post](https://www.linkedin.com/feed/update/urn:li:activity:7509843062563696640/) |
 | 1 | r/ClaudeAI | approved; you post it from `reddit-kit.html` (Reddit is blocked for Claude's browsers) | |
 | 2 | r/ClaudeCode | approved; you post it from `reddit-kit.html` (Reddit is blocked for Claude's browsers) | |
 | 3 | r/ChatGPTCoding | approved; you post it from `reddit-kit.html` (Reddit is blocked for Claude's browsers) | |
