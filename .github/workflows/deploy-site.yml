@@ -1,0 +1,71 @@
+name: Deploy site
+
+# Deploys yaml.cafe with the current release's DMG: when the site changes on main, when the Release
+# workflow publishes a version, or by hand. Runs on Linux, which is cheap.
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "netlify.toml", "scripts/deploy-site.sh", "scripts/check-site.sh"]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 5ff1015d-3777-4586-9fa8-eecd1b009152
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the release
+        id: release
+        run: |
+          VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "Ambient-$VERSION.dmg"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::v$VERSION isn't published yet; the Release workflow deploys the site once it is."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for a Netlify token
+        if: steps.release.outputs.published == 'true'
+        run: |
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo "::error::NETLIFY_AUTH_TOKEN isn't set. Run scripts/setup-ci-secrets.sh."; exit 1; }
+
+      - name: Fetch the DMG
+        if: steps.release.outputs.published == 'true'
+        run: gh release download "v${{ steps.release.outputs.version }}" --pattern "Ambient-${{ steps.release.outputs.version }}.dmg" --dir dist
+
+      - uses: actions/setup-node@v4
+        if: steps.release.outputs.published == 'true'
+        with:
+          node-version: 20
+
+      - name: Install zsh and the Netlify CLI
+        if: steps.release.outputs.published == 'true'
+        run: sudo apt-get install -y -qq zsh && npm install -g --silent netlify-cli@23
+
+      - name: Deploy to production
+        if: steps.release.outputs.published == 'true'
+        run: scripts/deploy-site.sh --prod
+
+      - name: Verify the live download
+        if: steps.release.outputs.published == 'true'
+        run: |
+          V=${{ steps.release.outputs.version }}
+          sleep 10
+          test "$(curl -fsSL "https://yaml.cafe/downloads/Ambient-$V.dmg" | sha256sum | cut -c1-64)" = "$(sha256sum "dist/Ambient-$V.dmg" | cut -c1-64)"
+          curl -fsS https://yaml.cafe/ | grep -q "Ambient-$V.dmg"
+          echo "yaml.cafe serves Ambient $V"

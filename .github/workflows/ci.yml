@@ -1,22 +1,38 @@
 name: CI
 
+# Tests and builds the app on every push to main and every pull request. Site, docs and marketing
+# changes skip it (the site is checked when it deploys); macOS minutes are the expensive ones.
 on:
   push:
     branches: [main]
+    paths-ignore: ["site/**", "docs/**", "marketing/**", "**/*.md"]
   pull_request:
+    paths-ignore: ["site/**", "docs/**", "marketing/**", "**/*.md"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # The settings window uses macOS 26 APIs (Liquid Glass), so it needs the macOS 26 SDK or later.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - name: Toolchain
         run: swift --version && xcodebuild -version
       - name: Test
         run: swift test
-      - name: Build app (ad-hoc signed)
+      - name: Build app (ad-hoc signed, universal)
         run: scripts/build-app.sh --universal
       - name: Smoke-test the CLI
         run: |
@@ -25,9 +41,12 @@ jobs:
           echo '{"session_id":"ci","hook_event_name":"Stop"}' | $CLI hook claude
           test "$(echo '{}' | $CLI hook gemini)" = "{}"
           lipo -archs $CLI | grep -q x86_64
+          lipo -archs $CLI | grep -q arm64
+      - name: Site states the app's version
+        run: scripts/check-site.sh
       - name: Upload app
         uses: actions/upload-artifact@v4
         with:
           name: Ambient.app
           path: build/Ambient.app
-          retention-days: 7
+          retention-days: 3

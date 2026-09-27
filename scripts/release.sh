@@ -6,6 +6,7 @@
 # Environment:
 #   SIGN_ID          signing identity name or SHA-1 (default: the first "Developer ID Application" identity)
 #   NOTARY_PROFILE   keychain profile from `xcrun notarytool store-credentials` (default: ambient-notary)
+#   NOTARY_KEY_PATH  App Store Connect API key (.p8) instead of a profile, with NOTARY_KEY_ID and NOTARY_ISSUER_ID
 #   SKIP_NOTARIZE=1  sign only, for a local dry run
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,10 +25,18 @@ DMG=dist/Ambient-$VERSION.dmg
 ZIP=dist/Ambient-$VERSION.zip
 rm -f "$DMG" "$ZIP"
 
+# Notary credentials: an App Store Connect API key in CI (NOTARY_KEY_PATH, NOTARY_KEY_ID, NOTARY_ISSUER_ID),
+# or a keychain profile locally (NOTARY_PROFILE).
+if [[ -n ${NOTARY_KEY_PATH:-} ]]; then
+  NOTARY_AUTH=(--key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
+else
+  NOTARY_AUTH=(--keychain-profile "$NOTARY_PROFILE")
+fi
+
 notarize() {
   [[ ${SKIP_NOTARIZE:-0} == 1 ]] && { echo "Skipping notarization of $1"; return; }
   echo "Notarizing $1…"
-  xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --timeout 30m
+  xcrun notarytool submit "$1" "${NOTARY_AUTH[@]}" --wait --timeout 30m
 }
 
 # Notarize and staple the app itself, so it launches cleanly even when copied out of the DMG offline.
