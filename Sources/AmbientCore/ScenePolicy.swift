@@ -2,13 +2,14 @@ import Foundation
 
 /// The worlds the living wallpaper can show.
 public enum SceneKind: String, CaseIterable, Codable, Sendable {
-    case sky, harbor, garden
+    case sky, harbor, garden, solar
 
     public var displayName: String {
         switch self {
         case .sky: "Sky"
         case .harbor: "Harbor"
         case .garden: "Garden"
+        case .solar: "Solar System"
         }
     }
 }

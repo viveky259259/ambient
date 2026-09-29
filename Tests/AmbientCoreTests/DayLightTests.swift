@@ -61,9 +61,11 @@ private func at(_ hour: Int, _ minute: Int, _ second: Int = 0) -> Date {
     @Test func dailyChangesAtMidnightAndCyclesThroughAll() {
         let today = ScenePolicy.kind(for: .daily, on: at(0, 1), calendar: utc)
         #expect(ScenePolicy.kind(for: .daily, on: at(23, 59), calendar: utc) == today)
-        let tomorrow = ScenePolicy.kind(for: .daily, on: at(0, 1).addingTimeInterval(86_400), calendar: utc)
-        let after = ScenePolicy.kind(for: .daily, on: at(0, 1).addingTimeInterval(2 * 86_400), calendar: utc)
-        #expect(Set([today, tomorrow, after]) == Set(SceneKind.allCases))
+        let days = (0..<SceneKind.allCases.count).map {
+            ScenePolicy.kind(for: .daily, on: at(0, 1).addingTimeInterval(Double($0) * 86_400), calendar: utc)
+        }
+        #expect(Set(days) == Set(SceneKind.allCases))
+        #expect(SceneKind.allCases.contains(.solar))
     }
 
     @Test func choicesRoundTripThroughTheirRawValues() {

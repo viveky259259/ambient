@@ -34,6 +34,7 @@ enum SceneRenderers {
         case .sky: SkyScene()
         case .harbor: HarborScene()
         case .garden: GardenScene()
+        case .solar: SkyScene()
         }
     }
 }

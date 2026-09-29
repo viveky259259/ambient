@@ -66,6 +66,18 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         #expect(Set(state.inhabitants.map(\.slot)).count == SceneState.maxInhabitants)
     }
 
+    @Test func theSolarSystemHoldsTenPlanets() {
+        let sessions = (0..<12).map { session("p\($0)", .thinking, lastEvent: TimeInterval(-$0)) }
+        let solar = SceneState.make(sessions: sessions, day: DayLog(now: evening, calendar: utc), now: evening,
+                                    kind: .solar, surface: .desk, calendar: utc, locale: gb)
+        #expect(solar.inhabitants.count == 10)
+        #expect(solar.overflow == 2)
+        #expect(Set(solar.inhabitants.map(\.slot)).count == 10)
+        #expect(make(sessions).inhabitants.count == SceneState.maxInhabitants)
+        #expect(SceneState.maxInhabitants(for: .solar) == 10)
+        #expect(SceneState.maxInhabitants(for: .garden) == SceneState.maxInhabitants)
+    }
+
     @Test func labelsReadNaturally() {
         let s = session("a", .waiting(reason: "permission", message: "Bash: swift test"),
                         cwd: "/x/ambient-notification", title: "Wallpaper that follows agents")

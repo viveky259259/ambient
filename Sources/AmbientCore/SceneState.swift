@@ -59,6 +59,8 @@ public struct TimelineLine: Equatable, Sendable {
 /// Everything a scene draws, as data. Built once per change and once a minute.
 public struct SceneState: Equatable, Sendable {
     public static let maxInhabitants = 8
+    /// How many sessions a world shows. Planets in two rows leave room for ten.
+    public static func maxInhabitants(for kind: SceneKind) -> Int { kind == .solar ? 10 : maxInhabitants }
     public static let timelineLength = 4
 
     public let kind: SceneKind
@@ -67,7 +69,7 @@ public struct SceneState: Equatable, Sendable {
     public let now: Date
     /// Most urgent first.
     public let inhabitants: [SceneInhabitant]
-    /// Sessions beyond `maxInhabitants`.
+    /// Sessions beyond what the world shows.
     public let overflow: Int
     public let marks: [DayMark]
     /// Nil on the lock screen, which draws its own clock and date.
@@ -87,7 +89,7 @@ public struct SceneState: Equatable, Sendable {
             if $0.lastEventAt != $1.lastEventAt { return $0.lastEventAt > $1.lastEventAt }
             return $0.id < $1.id
         }
-        let shown = Array(ordered.prefix(maxInhabitants))
+        let shown = Array(ordered.prefix(maxInhabitants(for: kind)))
         let slots = SceneLayout.slots(for: shown.map(\.id), keeping: previousSlots)
         let time = formatter("jmm", calendar: calendar, locale: locale)
         return SceneState(
