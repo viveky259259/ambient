@@ -6,6 +6,8 @@ import Combine
 final class AppModel: ObservableObject {
     @Published private(set) var sessions: [Session] = []
     @Published private(set) var mood: Mood = .idle
+    /// Today's story, for the living wallpaper.
+    @Published private(set) var day = DayLog(now: Date())
     /// Every applied event and sweep result, for surfaces that react to changes.
     let transitions = PassthroughSubject<SessionChange, Never>()
 
@@ -14,6 +16,8 @@ final class AppModel: ObservableObject {
     private let focuser = Focuser()
     private let store = SessionStore()
     private let stateURL: URL?
+    private let dayURL: URL?
+    private var daySaveWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -21,13 +25,16 @@ final class AppModel: ObservableObject {
     private let titleQueue = DispatchQueue(label: "com.viveky259259.Ambient.titles", qos: .utility)
     private var titleCheckedAt: [String: Date] = [:]
 
-    init(prefs: Preferences, stateURL: URL?, titles: SessionTitles? = nil) {
+    init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, titles: SessionTitles? = nil) {
         self.prefs = prefs
         self.stateURL = stateURL
+        self.dayURL = dayURL
         self.titles = titles
     }
 
     func start() {
+        if let dayURL, let saved = DayLogFile.load(from: dayURL) { day = saved }
+        rollOverDay()
         if let stateURL {
             store.load(StateFile.load(from: stateURL))
             store.sweep(now: Date())
@@ -47,6 +54,7 @@ final class AppModel: ObservableObject {
         guard let t = store.apply(event) else { return }
         publish()
         transitions.send(t)
+        record(t)
         refreshTitles()
         if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
@@ -91,6 +99,7 @@ final class AppModel: ObservableObject {
 
     private func sweep() {
         refreshTitles()
+        rollOverDay()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
@@ -121,6 +130,32 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Counts an applied event in today's story.
+    private func record(_ t: SessionChange) {
+        var next = day
+        next.apply(t, now: Date())
+        guard next != day else { return }
+        day = next
+        scheduleDaySave()
+    }
+
+    /// Starts a fresh day after midnight. Copies first: mutating a @Published value in place publishes even when nothing changes.
+    private func rollOverDay() {
+        var next = day
+        guard next.rollOver(now: Date()) else { return }
+        day = next
+        scheduleDaySave()
+    }
+
+    private func scheduleDaySave() {
+        guard let dayURL else { return }
+        daySaveWork?.cancel()
+        let log = day
+        let work = DispatchWorkItem { try? DayLogFile.save(log, to: dayURL) }
+        daySaveWork = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
     private func publish(save: Bool = true) {
         sessions = store.sessions
         mood = store.mood
@@ -140,6 +175,8 @@ final class AppModel: ObservableObject {
 
     /// Saves immediately, e.g. when quitting.
     func saveNow() {
+        daySaveWork?.cancel()
+        if let dayURL { try? DayLogFile.save(day, to: dayURL) }
         saveWork?.cancel()
         guard let stateURL else { return }
         try? StateFile.save(sessions.filter { !$0.sessionId.hasPrefix("demo-") }, to: stateURL)
