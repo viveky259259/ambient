@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
+    let wallpaper: LivingWallpaper
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
@@ -85,7 +86,7 @@ struct SettingsView: View {
         case .dock:
             DockPane(setup: setup, prefs: prefs)
         case .wallpaper:
-            WallpaperPane(prefs: prefs)
+            WallpaperPane(prefs: prefs, wallpaper: wallpaper)
         case .general:
             GeneralPane(setup: setup)
         }

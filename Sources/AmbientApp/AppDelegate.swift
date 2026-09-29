@@ -83,9 +83,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup window
 
     func showSetup() {
-        if setupWindow == nil, let notifier {
+        if setupWindow == nil, let notifier, let wallpaper {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs,
+            let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
