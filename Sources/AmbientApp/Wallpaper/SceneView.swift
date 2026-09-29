@@ -9,14 +9,31 @@ struct SceneView: View {
     /// False draws one still frame: while covered, in Low Power Mode, for thumbnails and for the lock-screen fallback image.
     var animated = true
     var reduceMotion = false
+    /// The notch effect on the island's display, and whether it's running now.
+    var effect: NotchEffectEngine?
+    var engaged = false
 
     var body: some View {
         let renderer = SceneRenderers.renderer(for: state.kind)
         let motion = SceneMotion(reduce: reduceMotion, still: !animated)
+        let running = animated && engaged && effect != nil
         ZStack {
             // The scenery and the text only change with the state, so they aren't redrawn on every frame.
             Canvas { ctx, size in renderer.drawScenery(&ctx, size: size, state: state) }
-            if animated {
+            if running, let effect {
+                // The effect: every frame advances the physics, then draws the world's life (less what's lifted into
+                // the effect) and the effect over it.
+                TimelineView(.animation(minimumInterval: 1.0 / 60, paused: false)) { context in
+                    Canvas { ctx, size in
+                        effect.advance(to: context.date)
+                        var lifted = motion
+                        lifted.lifted = effect.lifted
+                        renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: lifted)
+                        NotchEffectDrawing.draw(&ctx, size: size, engine: effect, state: state, date: context.date,
+                                                motion: lifted, showsLabels: showsText)
+                    }
+                }
+            } else if animated {
                 TimelineView(.animation(minimumInterval: Self.frameInterval(state), paused: false)) { context in
                     Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: motion) }
                 }
@@ -24,7 +41,9 @@ struct SceneView: View {
                 Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: state.now, motion: motion) }
             }
             if showsText {
-                GeometryReader { geo in SceneTextLayer(state: state, renderer: renderer, size: geo.size) }
+                GeometryReader { geo in
+                    SceneTextLayer(state: state, renderer: renderer, size: geo.size, hidesLabels: running)
+                }
             }
         }
     }
@@ -33,6 +52,18 @@ struct SceneView: View {
     static func frameInterval(_ state: SceneState) -> Double {
         let moving = state.inhabitants.contains { $0.mood != .idle } || arrivalProgress(of: state.marks, at: Date()) != nil
         return moving ? 1.0 / 12 : 1
+    }
+}
+
+/// The main desk scene, watching its notch effect so it switches to full frame rate while the effect runs.
+struct EffectSceneView: View {
+    let state: SceneState
+    @ObservedObject var effect: NotchEffectEngine
+    var animated = true
+    var reduceMotion = false
+
+    var body: some View {
+        SceneView(state: state, animated: animated, reduceMotion: reduceMotion, effect: effect, engaged: effect.engaged)
     }
 }
 

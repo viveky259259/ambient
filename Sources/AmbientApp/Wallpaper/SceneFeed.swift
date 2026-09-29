@@ -10,6 +10,8 @@ final class SceneFeed: ObservableObject {
     @Published var deskAnimated = false
     @Published var lockAnimated = false
     @Published var reduceMotion = false
+    /// The notch effect, drawn only by the desk scene on the main display.
+    let effect = NotchEffectEngine()
 }
 
 /// One display's wallpaper: the full scene on the main display, the world alone elsewhere.
@@ -20,9 +22,13 @@ struct SceneHost: View {
 
     var body: some View {
         if let state = surface == .desk ? feed.desk : feed.lock {
-            SceneView(state: isMain ? state : state.scenery(), showsText: isMain,
-                      animated: surface == .desk ? feed.deskAnimated : feed.lockAnimated,
-                      reduceMotion: feed.reduceMotion)
+            let animated = surface == .desk ? feed.deskAnimated : feed.lockAnimated
+            if surface == .desk, isMain {
+                EffectSceneView(state: state, effect: feed.effect, animated: animated, reduceMotion: feed.reduceMotion)
+            } else {
+                SceneView(state: isMain ? state : state.scenery(), showsText: isMain, animated: animated,
+                          reduceMotion: feed.reduceMotion)
+            }
         } else {
             Color.black
         }

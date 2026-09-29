@@ -21,8 +21,12 @@ struct WallpaperPane: View {
                 SettingsToggleRow(title: "Living wallpaper", isOn: $prefs.wallpaperEnabled)
             }
             Group {
-                SettingsSection(header: "Scene") {
+                SettingsSection(header: "Scene",
+                                footer: "When you open the island, the Solar System's sun lights and its planets orbit. The other scenes can form a black hole at the notch.") {
                     ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
+                    SettingsDivider()
+                    SettingsToggleRow(title: "Black hole when the island opens", isOn: $prefs.wallpaperIslandEffect)
+                        .disabled(prefs.sceneChoice == .fixed(.solar))
                 }
                 SettingsSection(header: "Lock screen") {
                     SettingsToggleRow(title: "Show on the lock screen", subtitle: lockStatus?.text,

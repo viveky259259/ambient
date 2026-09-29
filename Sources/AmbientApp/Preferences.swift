@@ -25,6 +25,7 @@ final class Preferences: ObservableObject {
     @Published var wallpaperOnLockScreen: Bool { didSet { defaults.set(wallpaperOnLockScreen, forKey: "wallpaperOnLockScreen") } }
     @Published var wallpaperLockMessages: Bool { didSet { defaults.set(wallpaperLockMessages, forKey: "wallpaperLockMessages") } }
     @Published var wallpaperCalendar: Bool { didSet { defaults.set(wallpaperCalendar, forKey: "wallpaperCalendar") } }
+    @Published var wallpaperIslandEffect: Bool { didSet { defaults.set(wallpaperIslandEffect, forKey: "wallpaperIslandEffect") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -43,6 +44,7 @@ final class Preferences: ObservableObject {
             "wallpaperOnLockScreen": true,
             "wallpaperLockMessages": false,
             "wallpaperCalendar": false,
+            "wallpaperIslandEffect": true,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -59,6 +61,7 @@ final class Preferences: ObservableObject {
         wallpaperOnLockScreen = defaults.bool(forKey: "wallpaperOnLockScreen")
         wallpaperLockMessages = defaults.bool(forKey: "wallpaperLockMessages")
         wallpaperCalendar = defaults.bool(forKey: "wallpaperCalendar")
+        wallpaperIslandEffect = defaults.bool(forKey: "wallpaperIslandEffect")
     }
 
     var isQuiet: Bool {
