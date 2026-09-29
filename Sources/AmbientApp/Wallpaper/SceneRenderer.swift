@@ -31,8 +31,9 @@ protocol SceneRenderer {
 enum SceneRenderers {
     static func renderer(for kind: SceneKind) -> any SceneRenderer {
         switch kind {
-        // Harbor and Garden get their own renderers in Task 8; until then they show the sky.
-        case .sky, .harbor, .garden: SkyScene()
+        case .sky: SkyScene()
+        case .harbor: HarborScene()
+        case .garden: GardenScene()
         }
     }
 }

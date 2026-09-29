@@ -3,17 +3,18 @@ import SwiftUI
 
 /// Every session is a star. Finished turns gather into a constellation across the sky; the Milky Way comes out at night.
 struct SkyScene: SceneRenderer {
-    /// Staggered columns, so labels (which run right, or left in the last column) don't collide.
+    /// Three staggered columns, so labels (which run right, or left in the last column) don't collide.
+    /// Best spots first: new sessions take the first free one.
     private static let deskSpots: [CGPoint] = [
-        CGPoint(x: 0.32, y: 0.36), CGPoint(x: 0.36, y: 0.48), CGPoint(x: 0.33, y: 0.60), CGPoint(x: 0.37, y: 0.70),
-        CGPoint(x: 0.58, y: 0.30), CGPoint(x: 0.61, y: 0.42), CGPoint(x: 0.57, y: 0.54), CGPoint(x: 0.60, y: 0.66),
-        CGPoint(x: 0.88, y: 0.24), CGPoint(x: 0.92, y: 0.36), CGPoint(x: 0.89, y: 0.48), CGPoint(x: 0.91, y: 0.60),
+        CGPoint(x: 0.61, y: 0.42), CGPoint(x: 0.36, y: 0.48), CGPoint(x: 0.89, y: 0.48), CGPoint(x: 0.57, y: 0.54),
+        CGPoint(x: 0.32, y: 0.36), CGPoint(x: 0.92, y: 0.36), CGPoint(x: 0.58, y: 0.30), CGPoint(x: 0.33, y: 0.60),
+        CGPoint(x: 0.60, y: 0.66), CGPoint(x: 0.91, y: 0.60), CGPoint(x: 0.37, y: 0.70), CGPoint(x: 0.88, y: 0.24),
     ]
     /// Clear of the lock screen's clock (top center) and password field (bottom center).
     private static let lockSpots: [CGPoint] = [
-        CGPoint(x: 0.12, y: 0.36), CGPoint(x: 0.16, y: 0.48), CGPoint(x: 0.13, y: 0.60), CGPoint(x: 0.15, y: 0.72),
-        CGPoint(x: 0.40, y: 0.32), CGPoint(x: 0.44, y: 0.44), CGPoint(x: 0.41, y: 0.56), CGPoint(x: 0.43, y: 0.68),
-        CGPoint(x: 0.88, y: 0.38), CGPoint(x: 0.92, y: 0.50), CGPoint(x: 0.89, y: 0.62), CGPoint(x: 0.91, y: 0.74),
+        CGPoint(x: 0.44, y: 0.44), CGPoint(x: 0.16, y: 0.48), CGPoint(x: 0.92, y: 0.50), CGPoint(x: 0.41, y: 0.56),
+        CGPoint(x: 0.12, y: 0.36), CGPoint(x: 0.88, y: 0.38), CGPoint(x: 0.40, y: 0.32), CGPoint(x: 0.13, y: 0.60),
+        CGPoint(x: 0.43, y: 0.68), CGPoint(x: 0.89, y: 0.62), CGPoint(x: 0.15, y: 0.72), CGPoint(x: 0.91, y: 0.74),
     ]
 
     func spot(_ slot: Int, surface: SceneSurface) -> CGPoint {

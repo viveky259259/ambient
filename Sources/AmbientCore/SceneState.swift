@@ -178,8 +178,8 @@ public struct SceneState: Equatable, Sendable {
 public enum SceneLayout {
     public static let slotCount = 12
 
-    /// Spots by session id. Sessions that already had one keep it. A new session takes the spot its id hashes to
-    /// (FNV-1a: the same on every launch, unlike `Hasher`), or the next free one.
+    /// Spots by session id. Sessions that already had one keep it; new ones, in id order, take the first free spot.
+    /// Scenes list their best spots first, so a handful of sessions always gets those.
     public static func slots(for ids: [String], keeping previous: [String: Int] = [:]) -> [String: Int] {
         var result: [String: Int] = [:]
         var taken = Set<Int>()
@@ -190,20 +190,10 @@ public enum SceneLayout {
             }
         }
         for id in ids.sorted() where result[id] == nil {
-            var slot = Int(fnv1a(id) % UInt64(slotCount))
-            while taken.contains(slot) { slot = (slot + 1) % slotCount }
+            guard let slot = (0..<slotCount).first(where: { !taken.contains($0) }) else { break }
             result[id] = slot
             taken.insert(slot)
         }
         return result
-    }
-
-    static func fnv1a(_ s: String) -> UInt64 {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-        for byte in s.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 0x100_0000_01b3
-        }
-        return hash
     }
 }

@@ -105,6 +105,13 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         #expect(SceneLayout.slots(for: ["claude:a"]) == SceneLayout.slots(for: ["claude:a"]))
     }
 
+    @Test func newSessionsTakeTheFirstFreeSpots() {
+        // Scenes put their best spots first, so a handful of sessions always gets those.
+        #expect(SceneLayout.slots(for: ["codex:c", "claude:a", "gemini:b"]) == ["claude:a": 0, "codex:c": 1, "gemini:b": 2])
+        let later = SceneLayout.slots(for: ["claude:a", "codex:c", "gemini:d"], keeping: ["claude:a": 0, "codex:c": 1, "gemini:b": 2])
+        #expect(later == ["claude:a": 0, "codex:c": 1, "gemini:d": 2])
+    }
+
     @Test func theStoryReadsTheDay() {
         let store = SessionStore()
         var day = DayLog(now: evening, calendar: utc)
