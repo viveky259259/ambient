@@ -9,6 +9,13 @@ struct WallpaperPane: View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             PaneHeader(pane: .wallpaper)
             WallpaperPreview(enabled: prefs.wallpaperEnabled, choice: prefs.sceneChoice)
+            if wallpaper.restorePending {
+                SettingsSection(footer: "Ambient showed the scene as your wallpaper while the Mac was locked and hasn't put yours back yet.") {
+                    SettingsRow(title: "Restore my wallpaper") {
+                        Button("Restore") { wallpaper.restoreWallpaper() }.buttonStyle(.pillProminent)
+                    }
+                }
+            }
             SettingsSection(footer: "Drawn above your wallpaper and below your desktop icons. Turn it off and your own wallpaper is simply there.") {
                 SettingsToggleRow(title: "Living wallpaper", isOn: $prefs.wallpaperEnabled)
             }
