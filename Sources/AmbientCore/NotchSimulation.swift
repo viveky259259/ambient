@@ -85,13 +85,22 @@ public struct NotchSimulation: Sendable {
     public var agents: [Body] { bodies.filter(\.isAgent) }
 
     /// Adds, removes and re-homes agents; the ones already there keep their motion. Solar re-picks its six.
+    /// Bodies at rest (everything settled, or Reduce Motion) move straight to their new homes; an agent that joins
+    /// an open black hole gets the birth's sideways speed, so it swings into orbit instead of falling through.
     public mutating func setAgents(_ agents: [NotchAgent]) {
         let existing = Dictionary(bodies.filter(\.isAgent).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let resting = reduceMotion || isSettled
         var seen = Set<String>()
         var agentBodies: [Body] = []
         for agent in agents where seen.insert(agent.id).inserted {
             var body = existing[agent.id] ?? Body(id: agent.id, isAgent: true, brightness: 1, home: agent.home)
             body.home = agent.home
+            if resting {
+                body.position = agent.home
+                body.velocity = .zero
+            } else if existing[agent.id] == nil, mode == .blackHole, born, gravity > 0 {
+                Self.kick(&body, gm: gravity, geometry: geometry, spread: 0)
+            }
             agentBodies.append(body)
         }
         if mode == .solar {
@@ -151,12 +160,14 @@ public struct NotchSimulation: Sendable {
 
     /// The gravitational wave from the hole's birth, while it runs.
     public var waveRadius: Double? {
-        guard mode == .blackHole, isOpen, sinceOpen < 1.6 else { return nil }
+        guard mode == .blackHole, isOpen, !reduceMotion, sinceOpen < 1.6 else { return nil }
         return sinceOpen * geometry.screen.y * 1.1
     }
 
     /// 0…1: the flash as the notch collapses.
-    public var birthFlash: Double { mode == .blackHole && isOpen && sinceOpen < 0.5 ? 1 - sinceOpen / 0.5 : 0 }
+    public var birthFlash: Double {
+        mode == .blackHole && isOpen && !reduceMotion && sinceOpen < 0.5 ? 1 - sinceOpen / 0.5 : 0
+    }
 
     /// 0…1: the faint flash as the hole evaporates.
     public var evaporation: Double {
@@ -200,6 +211,15 @@ public struct NotchSimulation: Sendable {
         }
     }
 
+    /// The birth's sideways speed: a Kepler ellipse released at its far point. Agents' closest pass stays well
+    /// outside the hole; dust gets random ones (`spread`, 0…1).
+    private static func kick(_ body: inout Body, gm: Double, geometry: NotchGeometry, spread: Double) {
+        let d = body.position - geometry.center, r = max(1, d.length)
+        let peri = body.isAgent ? max(geometry.radius * 1.9, r * 0.42) : r * (0.05 + spread * 0.5)
+        let speed = (2 * gm * peri / (r * (r + peri))).squareRoot()
+        body.velocity = body.velocity + Vec2(-d.y / r, d.x / r) * speed
+    }
+
     private mutating func integrateBlackHole(_ h: Double) {
         let c = geometry.center, gm = gravity, holeRadius = radius, height = geometry.screen.y
         if gm > 0, !born {
@@ -207,10 +227,8 @@ public struct NotchSimulation: Sendable {
             // Agents' closest pass stays well outside the hole; dust gets random ones, so some falls in.
             born = true
             for i in bodies.indices where !bodies[i].absorbed {
-                let d = bodies[i].position - c, r = max(1, d.length)
-                let peri = bodies[i].isAgent ? max(geometry.radius * 1.9, r * 0.42) : r * (0.05 + rng.next() * 0.5)
-                let speed = (2 * gm * peri / (r * (r + peri))).squareRoot()
-                bodies[i].velocity = bodies[i].velocity + Vec2(-d.y / r, d.x / r) * speed
+                let spread = bodies[i].isAgent ? 0 : rng.next()
+                Self.kick(&bodies[i], gm: gm, geometry: geometry, spread: spread)
             }
         }
         let wave = waveRadius

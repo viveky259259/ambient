@@ -17,6 +17,26 @@ private func run(_ sim: inout NotchSimulation, seconds: Double, fps: Double = 60
 }
 
 @Suite struct BlackHoleTests {
+    @Test func anAgentJoiningAnOpenHoleIsFlungIntoOrbit() {
+        var sim = NotchSimulation(mode: .blackHole, geometry: macBook, agents: trio, dust: 0, seed: 3)
+        sim.setOpen(true)
+        run(&sim, seconds: 2)
+        sim.setAgents(trio + [NotchAgent(id: "late", home: Vec2(756, 500), urgency: 2)])
+        var closest = Double.infinity
+        run(&sim, seconds: 12) { s in
+            if let late = s.agents.first(where: { $0.id == "late" }) { closest = min(closest, (late.position - macBook.center).length) }
+        }
+        #expect(closest > macBook.radius * 1.5)
+    }
+
+    @Test func reduceMotionHasNoWaveOrFlash() {
+        var sim = NotchSimulation(mode: .blackHole, geometry: macBook, agents: trio, dust: 10, seed: 3, reduceMotion: true)
+        sim.setOpen(true)
+        run(&sim, seconds: 0.2)
+        #expect(sim.waveRadius == nil)
+        #expect(sim.birthFlash == 0)
+    }
+
     @Test func agentsOrbitTheHoleWithoutBeingSwallowed() {
         var sim = NotchSimulation(mode: .blackHole, geometry: macBook, agents: trio, dust: 60, seed: 3)
         sim.setOpen(true)
@@ -196,6 +216,28 @@ private func run(_ sim: inout NotchSimulation, seconds: Double, fps: Double = 60
             sim.setOpen(false)
             run(&sim, seconds: 3)
             #expect(sim.isSettled)
+        }
+    }
+
+    @Test func restingBodiesMoveWithTheirHomes() {
+        for reduce in [false, true] {
+            var sim = NotchSimulation(mode: .solar, geometry: macBook, agents: trio, dust: 10, seed: 2, reduceMotion: reduce)
+            // A fourth session re-spaces the row while the island is closed.
+            let moved = trio.map { NotchAgent(id: $0.id, home: $0.home + Vec2(0, 90), urgency: $0.urgency) }
+                + [NotchAgent(id: "fourth", home: Vec2(200, 450), urgency: 4)]
+            sim.setAgents(moved)
+            #expect(sim.agents.allSatisfy { $0.position == $0.home })
+            #expect(sim.isSettled)
+            if reduce {
+                // Open and closed again: nothing moves, and it settles.
+                sim.setOpen(true)
+                run(&sim, seconds: 1)
+                sim.setAgents(trio)
+                sim.setOpen(false)
+                run(&sim, seconds: 3)
+                #expect(sim.agents.allSatisfy { $0.position == $0.home })
+                #expect(sim.isSettled)
+            }
         }
     }
 

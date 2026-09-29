@@ -107,9 +107,11 @@ enum NotchEffectDrawing {
         // Agents, lifted off as light: an orb in the agent's colour with its mood glow, trailing its path.
         for body in sim.agents where !body.absorbed {
             guard let inhabitant = inhabitants[body.id] else { continue }
-            let lift = sim.lift(body.id)
+            let lift = sim.lift(body.id), p = cg(body.position)
+            // Every agent's label rides with it, in the world's own style, so none blink out as the effect takes
+            // over and hands back.
+            if showsLabels { worldLabel(&ctx, inhabitant, at: p, home: body.home, screen: sim.geometry.screen, look: look) }
             guard lift > 0.01 else { continue }
-            let p = cg(body.position)
             trail(&ctx, engine.trails[body.id], color: Palette.mood(inhabitant.mood, agent: inhabitant.agent).color,
                   width: 2 * u, alpha: 0.55 * lift)
             var orb = ctx
@@ -119,7 +121,6 @@ enum NotchEffectDrawing {
                          color: Palette.mood(inhabitant.mood, agent: inhabitant.agent).color.opacity(level * look.glow))
             orb.fillCircle(at: p, radius: 5 * u, color: .white)
             orb.fillCircle(at: p, radius: 2.4 * u, color: Palette.agent(inhabitant.agent).color)
-            if showsLabels { label(&orb, inhabitant, at: CGPoint(x: p.x + 14 * u, y: p.y), anchor: .leading, look: look) }
         }
 
         // The hole itself, centred on the notch's bottom edge: only its lower half shows below the notch.
@@ -275,6 +276,31 @@ enum NotchEffectDrawing {
             segment.move(to: points[i - 1])
             segment.addLine(to: points[i])
             ctx.stroke(segment, with: .color(color.opacity(alpha * f)), lineWidth: width * CGFloat(f))
+        }
+    }
+
+    /// A label exactly as the scene's text layer sets it beside an inhabitant: headline, place and detail, 22 pt to
+    /// the side, on the left of inhabitants whose home is near the right edge, with the same halo.
+    private static func worldLabel(_ ctx: inout GraphicsContext, _ inhabitant: SceneInhabitant, at p: CGPoint,
+                                   home: Vec2, screen: Vec2, look: Look) {
+        let u = min(1.6, CGFloat(screen.y) / 1000)
+        let flipped = home.x / screen.x > 0.72
+        var lines: [(Text, CGFloat)] = [
+            (Text(inhabitant.headline).font(.system(size: 12.5 * u, weight: .semibold))
+                .foregroundColor(inhabitant.mood == .waiting ? look.waiting : look.ink), 15 * u),
+            (Text(inhabitant.place).font(.system(size: 12 * u)).foregroundColor(look.ink.opacity(0.75)), 14.4 * u),
+        ]
+        if let detail = inhabitant.detail {
+            lines.append((Text(detail).font(.system(size: 11 * u, design: .monospaced)).foregroundColor(look.ink.opacity(0.6)), 13.2 * u))
+        }
+        var text = ctx
+        text.addFilter(.shadow(color: look.day ? .white.opacity(0.45) : .black.opacity(0.5), radius: 6 * u))
+        let total = lines.reduce(0) { $0 + $1.1 } + 2 * u * CGFloat(lines.count - 1)
+        var y = p.y - total / 2
+        let x = flipped ? p.x - 22 * u : p.x + 22 * u
+        for (line, height) in lines {
+            text.draw(line, at: CGPoint(x: x, y: y + height / 2), anchor: flipped ? .trailing : .leading)
+            y += height + 2 * u
         }
     }
 
