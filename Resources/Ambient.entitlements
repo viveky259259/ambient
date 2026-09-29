@@ -5,5 +5,8 @@
 	<!-- Select the terminal tab an agent runs in (Terminal, iTerm2) when you click its notification. -->
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
+	<!-- Show your next event today on the living wallpaper. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
 </dict>
 </plist>

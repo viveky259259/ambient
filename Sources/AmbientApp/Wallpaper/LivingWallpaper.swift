@@ -22,6 +22,7 @@ final class LivingWallpaper: ObservableObject {
     @Published private(set) var restorePending = false
 
     let feed = SceneFeed()
+    let calendar = CalendarSource()
 
     private let model: AppModel
     private let prefs: Preferences
@@ -72,6 +73,11 @@ final class LivingWallpaper: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.refresh() }
             .store(in: &cancellables)
+        calendar.$next
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refresh() }
+            .store(in: &cancellables)
         locked = lockMonitor.isLocked
         lockMonitor.$isLocked
             .removeDuplicates()
@@ -119,13 +125,15 @@ final class LivingWallpaper: ObservableObject {
         guard prefs.wallpaperEnabled else { return turnOff() }
         let now = Date()
         let kind = ScenePolicy.kind(for: prefs.sceneChoice, on: now)
+        if prefs.wallpaperCalendar { calendar.start() } else { calendar.stop() }
+        let next = prefs.wallpaperCalendar ? calendar.next : nil
         let desk = SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .desk,
-                                   keeping: slots)
+                                   nextEvent: next, keeping: slots)
         slots = Dictionary(uniqueKeysWithValues: desk.inhabitants.map { ($0.id, $0.slot) })
         feed.desk = desk
         feed.lock = prefs.wallpaperOnLockScreen
             ? SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .lock,
-                              lockMessages: prefs.wallpaperLockMessages, keeping: slots)
+                              lockMessages: prefs.wallpaperLockMessages, nextEvent: next, keeping: slots)
             : nil
         if !desktop.isInstalled { desktop.install() }
         updateLockMode()
@@ -136,6 +144,7 @@ final class LivingWallpaper: ObservableObject {
     private func turnOff() {
         desktop.uninstall()
         lockLayer?.uninstall()
+        calendar.stop()
         if swapping { stopSwap() }
         if feed.desk != nil { feed.desk = nil }
         if feed.lock != nil { feed.lock = nil }
@@ -214,16 +223,16 @@ final class LivingWallpaper: ObservableObject {
         guard swapping, let state = feed.lock else { return }
         lastSwap = Date()
         lastSwapMoods = state.inhabitants.map(\.mood)
-        let main = NSScreen.screens.first
-        let images: [(screen: NSScreen, png: Data)] = MainActor.assumeIsolated {
-            NSScreen.screens.compactMap { screen in
+        MainActor.assumeIsolated {
+            let main = NSScreen.screens.first
+            let images: [(screen: NSScreen, png: Data)] = NSScreen.screens.compactMap { screen in
                 let isMain = screen == main
                 guard let png = WallpaperSwap.render(isMain ? state : state.scenery(), for: screen, showsText: isMain)
                 else { return nil }
                 return (screen: screen, png: png)
             }
+            swap.show(images)
         }
-        swap.show(images)
     }
 
     /// While swapped, a change in anyone's mood redraws the wallpaper, at most every 8 seconds.

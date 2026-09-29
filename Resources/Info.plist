@@ -34,6 +34,10 @@
 	<false/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Ambient selects the terminal tab your agent is running in when you click its notification or session.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Ambient shows your next event today on its living wallpaper. Nothing leaves your Mac.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Ambient shows your next event today on its living wallpaper. Nothing leaves your Mac.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Ambient status for your coding agents. MIT License.</string>
 </dict>

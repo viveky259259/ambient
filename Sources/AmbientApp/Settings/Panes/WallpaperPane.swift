@@ -4,6 +4,7 @@ import SwiftUI
 struct WallpaperPane: View {
     @ObservedObject var prefs: Preferences
     @ObservedObject var wallpaper: LivingWallpaper
+    @ObservedObject var calendar: CalendarSource
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -31,6 +32,21 @@ struct WallpaperPane: View {
                                       subtitle: "Prompts, summaries, command hints and event titles. Anyone near your Mac can read them.",
                                       isOn: $prefs.wallpaperLockMessages)
                         .disabled(!prefs.wallpaperOnLockScreen)
+                }
+                SettingsSection(header: "Your day", footer: "Ambient reads only your next timed event today, on your Mac.") {
+                    SettingsToggleRow(title: "Next calendar event", isOn: $prefs.wallpaperCalendar)
+                    if prefs.wallpaperCalendar && !calendar.hasAccess {
+                        SettingsDivider()
+                        SettingsRow(title: "Calendar access",
+                                    subtitle: calendar.canAsk ? nil : "Allow Ambient in System Settings › Privacy & Security › Calendars.",
+                                    subtitleStatus: .warning) {
+                            if calendar.canAsk {
+                                Button("Grant access…") { calendar.requestAccess() }.buttonStyle(.pill)
+                            } else {
+                                StatusBadge("Not allowed", .warning)
+                            }
+                        }
+                    }
                 }
             }
             .disabled(!prefs.wallpaperEnabled)
