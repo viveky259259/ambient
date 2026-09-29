@@ -84,6 +84,8 @@ struct SettingsView: View {
             AlertsPane(setup: setup, prefs: prefs, onPreviewSound: onPreviewSound)
         case .dock:
             DockPane(setup: setup, prefs: prefs)
+        case .wallpaper:
+            WallpaperPane(prefs: prefs)
         case .general:
             GeneralPane(setup: setup)
         }

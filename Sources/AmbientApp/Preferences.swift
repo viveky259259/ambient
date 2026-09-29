@@ -19,6 +19,12 @@ final class Preferences: ObservableObject {
     @Published var doneThreshold: Double { didSet { defaults.set(doneThreshold, forKey: "doneThreshold") } }
     @Published var quietUntil: Date? { didSet { defaults.set(quietUntil, forKey: "quietUntil") } }
     @Published var setupCompleted: Bool { didSet { defaults.set(setupCompleted, forKey: "setupCompleted") } }
+    @Published var wallpaperEnabled: Bool { didSet { defaults.set(wallpaperEnabled, forKey: "wallpaperEnabled") } }
+    /// "sky", "harbor", "garden" or "daily".
+    @Published var wallpaperScene: String { didSet { defaults.set(wallpaperScene, forKey: "wallpaperScene") } }
+    @Published var wallpaperOnLockScreen: Bool { didSet { defaults.set(wallpaperOnLockScreen, forKey: "wallpaperOnLockScreen") } }
+    @Published var wallpaperLockMessages: Bool { didSet { defaults.set(wallpaperLockMessages, forKey: "wallpaperLockMessages") } }
+    @Published var wallpaperCalendar: Bool { didSet { defaults.set(wallpaperCalendar, forKey: "wallpaperCalendar") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -32,6 +38,11 @@ final class Preferences: ObservableObject {
             "dockGlowIntensity": 1.0,
             "doneThreshold": 20.0,
             "setupCompleted": false,
+            "wallpaperEnabled": false,
+            "wallpaperScene": "daily",
+            "wallpaperOnLockScreen": true,
+            "wallpaperLockMessages": false,
+            "wallpaperCalendar": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -43,6 +54,11 @@ final class Preferences: ObservableObject {
         doneThreshold = defaults.double(forKey: "doneThreshold")
         quietUntil = defaults.object(forKey: "quietUntil") as? Date
         setupCompleted = defaults.bool(forKey: "setupCompleted")
+        wallpaperEnabled = defaults.bool(forKey: "wallpaperEnabled")
+        wallpaperScene = defaults.string(forKey: "wallpaperScene") ?? "daily"
+        wallpaperOnLockScreen = defaults.bool(forKey: "wallpaperOnLockScreen")
+        wallpaperLockMessages = defaults.bool(forKey: "wallpaperLockMessages")
+        wallpaperCalendar = defaults.bool(forKey: "wallpaperCalendar")
     }
 
     var isQuiet: Bool {
@@ -54,4 +70,6 @@ final class Preferences: ObservableObject {
         AlertPolicy.Settings(notifications: notificationsEnabled, sounds: soundsEnabled,
                              doneThreshold: doneThreshold, quiet: isQuiet)
     }
+
+    var sceneChoice: SceneChoice { SceneChoice(rawValue: wallpaperScene) ?? .daily }
 }
