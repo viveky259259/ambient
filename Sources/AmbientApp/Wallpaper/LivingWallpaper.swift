@@ -44,6 +44,8 @@ final class LivingWallpaper: ObservableObject {
     private var islandOpen = false
     /// The island's open menu, so orbits run clear of it. A guess until the island first opens.
     private var menuSize = CGSize(width: 440, height: 330)
+    /// Where the island is, as the island itself last reported it.
+    private var island: IslandGeometry?
 
     /// The macOS build the live lock screen failed on; the fallback is used until the build changes.
     private static let fallbackBuildKey = "wallpaperLockFallbackBuild"
@@ -132,7 +134,6 @@ final class LivingWallpaper: ObservableObject {
                                    nextEvent: next, keeping: slots)
         slots = Dictionary(uniqueKeysWithValues: desk.inhabitants.map { ($0.id, $0.slot) })
         feed.desk = desk
-        configureEffect()
         feed.lock = prefs.wallpaperOnLockScreen
             ? SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .lock,
                               lockMessages: prefs.wallpaperLockMessages, nextEvent: next, keeping: slots)
@@ -265,9 +266,10 @@ final class LivingWallpaper: ObservableObject {
     }
 
     /// The island opened or closed: the effect starts, or winds down and settles.
-    func islandChanged(open: Bool, menu: CGSize) {
+    func islandChanged(open: Bool, menu: CGSize, island: IslandGeometry) {
         islandOpen = open
         menuSize = menu
+        self.island = island
         configureEffect()
         feed.effect.setOpen(open)
     }
@@ -275,7 +277,7 @@ final class LivingWallpaper: ObservableObject {
     /// Sets the notch effect up for the scene now showing: Solar System always lights its sun; the other worlds
     /// form a black hole if the setting is on. None in Low Power Mode, or when the island isn't on the main display.
     private func configureEffect() {
-        guard let desk = feed.desk, let screen = NSScreen.screens.first, let island = IslandGeometry.current(),
+        guard let desk = feed.desk, let screen = NSScreen.screens.first, let island,
               island.screenFrame == screen.frame, !ProcessInfo.processInfo.isLowPowerModeEnabled else {
             return feed.effect.configure(mode: nil, geometry: nil, agents: [], reduceMotion: false)
         }
@@ -306,9 +308,11 @@ final class LivingWallpaper: ObservableObject {
         let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let desk = desktop.isVisible && !screensAsleep && !lowPower && !locked
+        let mainDesk = desk && desktop.isMainVisible
         let lock = locked && !screensAsleep && !lowPower
         if feed.reduceMotion != reduce { feed.reduceMotion = reduce }
         if feed.deskAnimated != desk { feed.deskAnimated = desk }
+        if feed.mainDeskAnimated != mainDesk { feed.mainDeskAnimated = mainDesk }
         if feed.lockAnimated != lock { feed.lockAnimated = lock }
         // Low Power Mode or Reduce Motion switched mid-effect: set it up again at once.
         configureEffect()

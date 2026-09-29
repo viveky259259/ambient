@@ -10,6 +10,8 @@ final class NotchEffectEngine: ObservableObject {
     /// Recent positions of each agent, for trails.
     private(set) var trails: [String: [CGPoint]] = [:]
     private var lastDate: Date?
+    /// Label lines cut to fit a planet's column, so they're measured once rather than every frame.
+    var fittedLines: [String: String] = [:]
 
     /// Sets the effect up, or tears it down with a nil mode or geometry. Agents keep their motion across updates.
     func configure(mode: NotchSimulation.Mode?, geometry: NotchGeometry?, agents: [NotchAgent], reduceMotion: Bool) {
@@ -39,7 +41,7 @@ final class NotchEffectEngine: ObservableObject {
         guard let sim = simulation else { return }
         if sim.isOpen != open {
             simulation?.setOpen(open)
-            lastDate = nil   // a frame paused while covered picks up without a leap
+            lastDate = nil
         }
         if open, !engaged { engaged = true }
     }
@@ -47,9 +49,13 @@ final class NotchEffectEngine: ObservableObject {
     /// Steps the simulation to `date`. Called from the scene's life canvas, once per frame.
     func advance(to date: Date) {
         guard var sim = simulation else { return }
-        sim.step(lastDate.map { date.timeIntervalSince($0) } ?? 0)
+        // A gap longer than a quarter second is a pause (the desk was covered), not motion: pick up where it was.
+        let dt = lastDate.map { date.timeIntervalSince($0) } ?? 0
+        sim.step(dt > 0.25 ? 1.0 / 60 : dt)
         lastDate = date
         simulation = sim
+        let present = Set(sim.agents.map(\.id))
+        if trails.keys.contains(where: { !present.contains($0) }) { trails = trails.filter { present.contains($0.key) } }
         for body in sim.agents {
             var trail = trails[body.id] ?? []
             trail.append(CGPoint(x: body.position.x, y: body.position.y))

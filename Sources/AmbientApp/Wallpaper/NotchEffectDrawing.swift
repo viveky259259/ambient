@@ -243,10 +243,11 @@ enum NotchEffectDrawing {
             SolarScene.planet(&ctx, inhabitant, at: p, radius: radius, sunward: sunward, day: look.day, date: date, motion: motion)
             // Labels once a planet is clear of the notch and not shrinking into the sun: centred under it in the rows,
             // beside it in orbit.
-            // Planets falling into the sun go quietly, without labels.
-            guard showsLabels, p.y > c.y + 8, near > 0.9, body.orbit != nil || light < 0.05 else { continue }
-            if light < 0.5 || body.orbit == nil {
-                label(&ctx, inhabitant, at: CGPoint(x: p.x, y: p.y + radius + 12 * u), anchor: .top, look: look)
+            // Planets falling into the sun go quietly, without labels; under Reduce Motion nothing falls, so all keep theirs.
+            let still = sim.reduceMotion
+            guard showsLabels, p.y > c.y + 8, near > 0.9, body.orbit != nil || light < 0.05 || still else { continue }
+            if light < 0.5 || body.orbit == nil || still {
+                rowLabel(&ctx, inhabitant, at: p, screen: geometry.screen, look: look, engine: engine)
             } else {
                 label(&ctx, inhabitant, at: CGPoint(x: p.x + radius + 10 * u, y: p.y), anchor: .leading, look: look)
             }
@@ -300,6 +301,46 @@ enum NotchEffectDrawing {
         let x = flipped ? p.x - 22 * u : p.x + 22 * u
         for (line, height) in lines {
             text.draw(line, at: CGPoint(x: x, y: y + height / 2), anchor: flipped ? .trailing : .leading)
+            y += height + 2 * u
+        }
+    }
+
+    /// A label exactly as the scene's text layer sets it under a planet: headline, place and detail, centred 26 pt
+    /// below it, each line cut to its fifth of the screen, with the same halo.
+    private static func rowLabel(_ ctx: inout GraphicsContext, _ inhabitant: SceneInhabitant, at p: CGPoint,
+                                 screen: Vec2, look: Look, engine: NotchEffectEngine) {
+        let u = min(1.6, CGFloat(screen.y) / 1000), width = CGFloat(screen.x) * 0.18
+        var text = ctx
+        text.addFilter(.shadow(color: look.day ? .white.opacity(0.45) : .black.opacity(0.5), radius: 6 * u))
+        func fitted(_ string: String, _ font: Font, _ key: String) -> String {
+            let cacheKey = "\(key)|\(Int(width))|\(string)"
+            if let hit = engine.fittedLines[cacheKey] { return hit }
+            func fits(_ s: String) -> Bool { text.resolve(Text(s).font(font)).measure(in: CGSize(width: 10_000, height: 100)).width <= width }
+            var result = string
+            if !fits(string) {
+                var lo = 0, hi = string.count
+                while lo < hi {
+                    let mid = (lo + hi + 1) / 2
+                    if fits(String(string.prefix(mid)) + "…") { lo = mid } else { hi = mid - 1 }
+                }
+                result = String(string.prefix(lo)) + "…"
+            }
+            engine.fittedLines[cacheKey] = result
+            return result
+        }
+        let headlineFont = Font.system(size: 12.5 * u, weight: .semibold), placeFont = Font.system(size: 12 * u)
+        let detailFont = Font.system(size: 11 * u, design: .monospaced)
+        var lines: [(Text, CGFloat)] = [
+            (Text(fitted(inhabitant.headline, headlineFont, "h")).font(headlineFont)
+                .foregroundColor(inhabitant.mood == .waiting ? look.waiting : look.ink), 15 * u),
+            (Text(fitted(inhabitant.place, placeFont, "p")).font(placeFont).foregroundColor(look.ink.opacity(0.75)), 14.4 * u),
+        ]
+        if let detail = inhabitant.detail {
+            lines.append((Text(fitted(detail, detailFont, "d")).font(detailFont).foregroundColor(look.ink.opacity(0.6)), 13.2 * u))
+        }
+        var y = p.y + 26 * u
+        for (line, height) in lines {
+            text.draw(line, at: CGPoint(x: p.x, y: y), anchor: .top)
             y += height + 2 * u
         }
     }

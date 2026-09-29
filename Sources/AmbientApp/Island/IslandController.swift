@@ -29,8 +29,8 @@ final class IslandController {
     private var hoverWork: DispatchWorkItem?
     /// After a click, stay collapsed until the pointer leaves, rather than springing open again.
     private var hoverSuppressed = false
-    /// Called when the menu opens or closes, with the open menu's size.
-    var onMenuChange: ((Bool, CGSize) -> Void)?
+    /// Called when the menu opens or closes, with the open menu's size and where the island is.
+    var onMenuChange: ((Bool, CGSize, IslandGeometry) -> Void)?
 
     init?(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
@@ -143,7 +143,7 @@ final class IslandController {
         if next != viewModel.presentation {
             let wasOpen = viewModel.presentation == .expanded
             viewModel.presentation = next
-            if (next == .expanded) != wasOpen { onMenuChange?(next == .expanded, viewModel.size(for: .expanded)) }
+            if (next == .expanded) != wasOpen { onMenuChange?(next == .expanded, viewModel.size(for: .expanded), viewModel.geometry) }
         }
         trackPointer()
     }

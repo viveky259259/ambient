@@ -8,6 +8,8 @@ final class SceneFeed: ObservableObject {
     @Published var desk: SceneState?
     @Published var lock: SceneState?
     @Published var deskAnimated = false
+    /// The main display's desk moves only while it can be seen, so its notch effect never runs unseen.
+    @Published var mainDeskAnimated = false
     @Published var lockAnimated = false
     @Published var reduceMotion = false
     /// The notch effect, drawn only by the desk scene on the main display.
@@ -24,7 +26,8 @@ struct SceneHost: View {
         if let state = surface == .desk ? feed.desk : feed.lock {
             let animated = surface == .desk ? feed.deskAnimated : feed.lockAnimated
             if surface == .desk, isMain {
-                EffectSceneView(state: state, effect: feed.effect, animated: animated, reduceMotion: feed.reduceMotion)
+                EffectSceneView(state: state, effect: feed.effect, animated: feed.mainDeskAnimated,
+                                reduceMotion: feed.reduceMotion)
             } else {
                 SceneView(state: isMain ? state : state.scenery(), showsText: isMain, animated: animated,
                           reduceMotion: feed.reduceMotion)

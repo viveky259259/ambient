@@ -8,7 +8,7 @@ final class DesktopLayer {
     private var windows: [WallpaperWindow] = []
     private var observers: [NSObjectProtocol] = []
     private var checkTimer: Timer?
-    private var lastVisible: Bool?
+    private var lastVisible: [Bool]?
     /// Called when the wallpaper becomes covered or uncovered.
     var onVisibilityChange: (() -> Void)?
 
@@ -23,6 +23,12 @@ final class DesktopLayer {
             guard window.occlusionState.contains(.visible), let screen = window.screen else { return false }
             return !Self.appWindowsCover(screen.visibleFrame)
         }
+    }
+
+    /// Whether the main display's part of the wallpaper can be seen: where the island and its effect live.
+    var isMainVisible: Bool {
+        guard let window = windows.first, window.occlusionState.contains(.visible), let screen = window.screen else { return false }
+        return !Self.appWindowsCover(screen.visibleFrame)
     }
 
     /// (Re)creates one window per display.
@@ -60,7 +66,7 @@ final class DesktopLayer {
     }
 
     private func recheck() {
-        let visible = isVisible
+        let visible = [isVisible, isMainVisible]
         guard visible != lastVisible else { return }
         lastVisible = visible
         onVisibilityChange?()

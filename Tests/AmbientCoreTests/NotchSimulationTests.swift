@@ -241,6 +241,22 @@ private func run(_ sim: inout NotchSimulation, seconds: Double, fps: Double = 60
         }
     }
 
+    @Test func theBeltFadesWithTheSun() {
+        var sim = NotchSimulation(mode: .solar, geometry: macBook, agents: trio, dust: 20, seed: 2)
+        sim.setOpen(true)
+        #expect(sim.dustAlpha == 0)
+        run(&sim, seconds: 2)
+        #expect(sim.dustAlpha == 1)
+        sim.setOpen(false)
+        var last = 1.0
+        run(&sim, seconds: 3) { s in
+            #expect(s.dustAlpha <= last + 1e-12)
+            last = s.dustAlpha
+            if s.isSettled { #expect(s.dustAlpha == 0) }
+        }
+        #expect(sim.isSettled)
+    }
+
     @Test func aFrameStepIsCappedAtAQuarterSecond() {
         var sim = NotchSimulation(mode: .blackHole, geometry: macBook, agents: trio, dust: 0, seed: 1)
         sim.step(10)

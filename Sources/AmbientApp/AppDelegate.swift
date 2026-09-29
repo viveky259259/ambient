@@ -57,7 +57,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let wallpaper = LivingWallpaper(model: model, prefs: prefs, paths: paths)
         wallpaper.start()
         self.wallpaper = wallpaper
-        island?.onMenuChange = { [weak wallpaper] open, menu in wallpaper?.islandChanged(open: open, menu: menu) }
+        island?.onMenuChange = { [weak wallpaper] open, menu, geometry in
+            wallpaper?.islandChanged(open: open, menu: menu, island: geometry)
+        }
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
     }

@@ -174,8 +174,14 @@ public struct NotchSimulation: Sendable {
         mode == .blackHole && !isOpen && presenceAtClose > 0 && sinceClose < 0.45 ? 1 - sinceClose / 0.45 : 0
     }
 
-    /// How strongly the effect's own dust shows: fully while open, fading over 2.5 s after closing.
-    public var dustAlpha: Double { isOpen ? 1 : max(0, 1 - sinceClose / 2.5) }
+    /// How strongly the effect's own dust shows. The black hole's dust shows fully while open and fades over 2.5 s
+    /// after closing; the asteroid belt comes and goes with the sun, so it's gone by the time the system settles.
+    public var dustAlpha: Double {
+        switch mode {
+        case .blackHole: isOpen ? 1 : max(0, 1 - sinceClose / 2.5)
+        case .solar: presence
+        }
+    }
 
     /// Closed, the hole or sun gone, and every agent home and still: the scene can stop drawing the effect.
     public var isSettled: Bool {
