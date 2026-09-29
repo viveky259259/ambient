@@ -24,19 +24,28 @@ final class WallpaperSwap {
     /// Whether the user's wallpaper store is one this knows how to put back.
     var isSupported: Bool { (try? Data(contentsOf: storeURL)).map(WallpaperStore.isKnownFormat) ?? false }
 
-    /// Backs up the store and marks the swap. False when the store isn't in a format we know, or can't be backed up.
+    /// Backs up the store and marks the swap. False when the store isn't in a format we know, when it can't be
+    /// backed up, or when Ambient's image is still set with no backup to put back.
     func begin() -> Bool {
-        // The backup from an unfinished swap is the user's real wallpaper; don't overwrite it with ours.
-        if restorePending { return true }
         do {
             let data = try Data(contentsOf: storeURL)
             guard WallpaperStore.isKnownFormat(data) else {
                 log.error("Wallpaper store format not recognized; not swapping")
                 return false
             }
+            let backupPresent = FileManager.default.fileExists(atPath: backupURL.path)
+            switch WallpaperBackup.decide(backupPresent: backupPresent,
+                                          storeShowsAmbient: WallpaperStore.references(directory: imagesDir, in: data)) {
+            case .refuse:
+                log.error("Ambient's scene is still the wallpaper and its backup is missing; not swapping")
+                return false
+            case .keepExisting:
+                break
+            case .takeNew:
+                try data.write(to: backupURL, options: .atomic)
+            }
             try FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true,
                                                     attributes: [.posixPermissions: 0o700])
-            try data.write(to: backupURL, options: .atomic)
             try Data().write(to: markerURL, options: .atomic)
             return true
         } catch {
@@ -63,24 +72,25 @@ final class WallpaperSwap {
     }
 
     /// Puts the user's wallpaper back, off the main thread; `completion` runs on the main queue with whether the
-    /// store now matches the backup.
-    func restore(completion: @escaping (Bool) -> Void) {
+    /// store now matches the backup. `force` restores even if Ambient's image doesn't look set (yet): for the unlock
+    /// that ends a swap this process made. Without it, a wallpaper the user picked since is kept.
+    func restore(force: Bool, completion: @escaping (Bool) -> Void) {
         queue.async { [self] in
-            let ok = restoreNow()
+            let ok = restoreNow(force: force)
             DispatchQueue.main.async { completion(ok) }
         }
     }
 
-    private func restoreNow() -> Bool {
-        guard restorePending else { return true }
+    private func restoreNow(force: Bool) -> Bool {
+        // If none of Ambient's images is set any more (the user picked a new wallpaper after a crash), keep theirs.
+        if !force, let current = try? Data(contentsOf: storeURL),
+           !WallpaperStore.references(directory: imagesDir, in: current) {
+            cleanUp()
+            return true
+        }
         guard let backup = try? Data(contentsOf: backupURL) else {
             log.error("Wallpaper backup is missing; Settings will offer to restore")
             return false
-        }
-        // If none of Ambient's images is set any more (the user picked a new wallpaper after a crash), keep theirs.
-        if let current = try? Data(contentsOf: storeURL), !WallpaperStore.references(directory: imagesDir, in: current) {
-            cleanUp()
-            return true
         }
         do {
             try backup.write(to: storeURL, options: .atomic)

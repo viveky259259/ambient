@@ -38,9 +38,8 @@ final class LivingWallpaper: ObservableObject {
     private var slots: [String: Int] = [:]
     private var screensAsleep = false
     private var locked = false
-    private var swapping = false
-    private var restoring = false
-    private var lastSwap = Date.distantPast
+    /// When to swap, redraw and restore the wallpaper; this class only carries out its actions.
+    private var swapFlow: WallpaperSwapFlow
     private var lastSwapMoods: [Mood] = []
 
     /// The macOS build the live lock screen failed on; the fallback is used until the build changes.
@@ -54,15 +53,13 @@ final class LivingWallpaper: ObservableObject {
         self.prefs = prefs
         desktop = DesktopLayer(feed: feed)
         swap = WallpaperSwap(paths: paths)
+        swapFlow = WallpaperSwapFlow(pending: swap.restorePending)
         desktop.onVisibilityChange = { [weak self] in self?.updateMotion() }
     }
 
     func start() {
         // A swap left behind by a crash or a forced quit is put right first.
-        if swap.restorePending {
-            restorePending = true
-            if !LockMonitor.screenIsLocked() { restoreWallpaper() }
-        }
+        perform(swapFlow.launched(locked: LockMonitor.screenIsLocked()))
 
         model.$sessions.combineLatest(model.$day)
             .receive(on: DispatchQueue.main)
@@ -104,11 +101,12 @@ final class LivingWallpaper: ObservableObject {
             },
             workspace.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
                 self?.screensAsleep = true
+                self?.swapFlow.displaysSlept()
                 self?.updateMotion()
             },
             workspace.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
                 self?.screensAsleep = false
-                self?.clockChanged()
+                self?.displaysWoke()
             },
             workspace.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
                 self?.updateMotion()
@@ -138,14 +136,14 @@ final class LivingWallpaper: ObservableObject {
         if !desktop.isInstalled { desktop.install() }
         updateLockMode()
         updateMotion()
-        swapIfMoodsChanged()
+        let moods = feed.lock?.inhabitants.map(\.mood) ?? []
+        if swapFlow.phase == .swapping, moods != lastSwapMoods { perform(swapFlow.moodsChanged(now: now)) }
     }
 
     private func turnOff() {
         desktop.uninstall()
         lockLayer?.uninstall()
         calendar.stop()
-        if swapping { stopSwap() }
         if feed.desk != nil { feed.desk = nil }
         if feed.lock != nil { feed.lock = nil }
         if lockMode != .off { lockMode = .off }
@@ -178,21 +176,24 @@ final class LivingWallpaper: ObservableObject {
 
     private func enterLock() {
         guard prefs.wallpaperEnabled, prefs.wallpaperOnLockScreen else { return }
-        guard liveLockAvailable, let skyLight = SkyLight.shared else { return startSwap() }
+        guard liveLockAvailable, let skyLight = SkyLight.shared else { return perform(swapFlow.lock(now: Date())) }
         if lockLayer == nil { lockLayer = LockLayer(feed: feed, skyLight: skyLight) }
         guard let lockLayer, lockLayer.isInstalled || lockLayer.install() else {
             return fallBack(because: "SkyLight refused a space")
         }
-        lockLayer.show { [weak self] in self?.fallBack(because: "the lock-screen window wasn't visible") }
+        lockLayer.show { [weak self] in self?.lockLayerChecked(visible: $0) }
+    }
+
+    /// The live layer's self-check: fall back only if it can't be seen while the displays are awake.
+    private func lockLayerChecked(visible: Bool) {
+        guard LockLayerCheck.shouldFallBack(windowVisible: visible, displaysAsleep: screensAsleep) else { return }
+        fallBack(because: "the lock-screen window wasn't visible")
     }
 
     private func leaveLock() {
         lockLayer?.hide()
-        if swapping {
-            stopSwap()
-        } else if swap.restorePending {
-            restoreWallpaper()   // Retry a restore that failed earlier.
-        }
+        // Ends a swap, or retries a restore that failed earlier.
+        perform(swapFlow.unlock())
     }
 
     /// The live layer can't show here: remember that for this macOS build and swap the wallpaper instead.
@@ -202,26 +203,35 @@ final class LivingWallpaper: ObservableObject {
         lockLayer?.uninstall()
         lockLayer = nil
         updateLockMode()
-        if locked { startSwap() }
+        if locked { perform(swapFlow.lock(now: Date())) }
     }
 
     // MARK: - Wallpaper swap (fallback)
 
-    private func startSwap() {
-        guard !swapping else { return }
-        guard swap.begin() else {
-            if lockMode != .unavailable { lockMode = .unavailable }
-            return
+    /// Carries out what the swap flow decided.
+    private func perform(_ actions: [WallpaperSwapFlow.Action]) {
+        for action in actions {
+            switch action {
+            case .begin:
+                let ok = swap.begin()
+                if !ok, lockMode != .unavailable { lockMode = .unavailable }
+                perform(swapFlow.began(ok: ok, now: Date()))
+            case .render:
+                renderSwap()
+            case let .restore(force):
+                swap.restore(force: force) { [weak self] ok in
+                    guard let self else { return }
+                    if !ok { self.log.error("Couldn't restore the wallpaper; Settings offers to try again") }
+                    self.perform(self.swapFlow.restoreFinished(ok: ok, now: Date()))
+                }
+            }
         }
-        swapping = true
-        restorePending = true
-        renderSwap()
-        swapTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.renderSwap() }
+        if restorePending != swapFlow.pending { restorePending = swapFlow.pending }
+        updateSwapTimer()
     }
 
     private func renderSwap() {
-        guard swapping, let state = feed.lock else { return }
-        lastSwap = Date()
+        guard let state = feed.lock else { return }
         lastSwapMoods = state.inhabitants.map(\.mood)
         MainActor.assumeIsolated {
             let main = NSScreen.screens.first
@@ -235,30 +245,23 @@ final class LivingWallpaper: ObservableObject {
         }
     }
 
-    /// While swapped, a change in anyone's mood redraws the wallpaper, at most every 8 seconds.
-    private func swapIfMoodsChanged() {
-        guard swapping, let state = feed.lock, state.inhabitants.map(\.mood) != lastSwapMoods,
-              Date().timeIntervalSince(lastSwap) >= 8 else { return }
-        renderSwap()
-    }
-
-    private func stopSwap() {
-        swapTimer?.invalidate()
-        swapTimer = nil
-        swapping = false
-        restoreWallpaper()
-    }
-
-    /// Puts the user's own wallpaper back. Also Settings' "Restore my wallpaper".
-    func restoreWallpaper() {
-        guard !restoring else { return }
-        restoring = true
-        swap.restore { [weak self] ok in
-            guard let self else { return }
-            self.restoring = false
-            self.restorePending = !ok
-            if !ok { self.log.error("Couldn't restore the wallpaper; Settings offers to try again") }
+    /// Redraws the swapped wallpaper every 30 seconds while it's swapped.
+    private func updateSwapTimer() {
+        guard swapFlow.phase == .swapping else {
+            swapTimer?.invalidate()
+            swapTimer = nil
+            return
         }
+        guard swapTimer == nil else { return }
+        swapTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.perform(self.swapFlow.tick(now: Date()))
+        }
+    }
+
+    /// Puts the user's own wallpaper back. Settings' "Restore my wallpaper".
+    func restoreWallpaper() {
+        perform(swapFlow.retry())
     }
 
     // MARK: - Motion, displays and time
@@ -278,12 +281,19 @@ final class LivingWallpaper: ObservableObject {
         desktop.install()
         if let lockLayer, lockLayer.isInstalled {
             lockLayer.install()   // starts hidden
-            if locked, lockMode == .live {
-                lockLayer.show { [weak self] in self?.fallBack(because: "the lock-screen window wasn't visible") }
-            }
+            if locked, lockMode == .live { lockLayer.show { [weak self] in self?.lockLayerChecked(visible: $0) } }
         }
-        if swapping { renderSwap() }
+        perform(swapFlow.screensChanged(now: Date()))
         updateMotion()
+    }
+
+    /// Displays back on: redraw a swapped wallpaper, and look again at a live layer checked while they slept.
+    private func displaysWoke() {
+        perform(swapFlow.displaysWoke(now: Date()))
+        if locked, lockMode == .live, let lockLayer, lockLayer.isInstalled {
+            lockLayer.show { [weak self] in self?.lockLayerChecked(visible: $0) }
+        }
+        clockChanged()
     }
 
     private func clockChanged() {

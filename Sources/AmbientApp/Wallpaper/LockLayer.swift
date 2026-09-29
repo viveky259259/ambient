@@ -48,8 +48,8 @@ final class LockLayer {
         windows = []
     }
 
-    /// Fades in over the lock screen, then checks that it can actually be seen; `onNotVisible` runs if not.
-    func show(onNotVisible: @escaping () -> Void) {
+    /// Fades in over the lock screen, then reports whether it can actually be seen.
+    func show(report: @escaping (_ visible: Bool) -> Void) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.4
             windows.forEach { $0.animator().alphaValue = 1 }
@@ -57,7 +57,7 @@ final class LockLayer {
         check?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self, !self.windows.isEmpty else { return }
-            if !self.windows.contains(where: { $0.occlusionState.contains(.visible) }) { onNotVisible() }
+            report(self.windows.contains { $0.occlusionState.contains(.visible) })
         }
         check = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: work)
