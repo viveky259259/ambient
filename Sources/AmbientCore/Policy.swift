@@ -127,3 +127,20 @@ public struct GlowStyle: Equatable, Sendable {
         }
     }
 }
+
+extension RGB {
+    /// A straight mix toward `other`; `t` is clamped to 0...1.
+    public func mixed(with other: RGB, _ t: Double) -> RGB {
+        let t = min(1, max(0, t))
+        return RGB(r: r + (other.r - r) * t, g: g + (other.g - g) * t, b: b + (other.b - b) * t)
+    }
+}
+
+extension GlowStyle {
+    /// Brightness at a moment: a smooth breath from `low` to `high` and back, or `high` when steady.
+    public func level(at time: TimeInterval) -> Double {
+        guard let period, period > 0 else { return high }
+        let phase = time.truncatingRemainder(dividingBy: period) / period
+        return low + (high - low) * (0.5 - 0.5 * cos(phase * 2 * .pi))
+    }
+}
