@@ -20,7 +20,10 @@ protocol SceneRenderer {
     /// Where inhabitant spot `slot` sits. Lock-screen spots stay clear of the lock screen's clock (top center)
     /// and password field (bottom center).
     func spot(_ slot: Int, surface: SceneSurface) -> CGPoint
-    func draw(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date, motion: SceneMotion)
+    /// What only changes with the state: sky, land, water and the day's build-up. Drawn once per change, not per frame.
+    func drawScenery(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState)
+    /// What moves: inhabitants, twinkles, sparks, wakes, fireflies, and the turn that just finished. Drawn every frame.
+    func drawLife(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date, motion: SceneMotion)
     /// Whether text in `region` needs dark ink: only where it sits on bright sky.
     func darkInk(_ region: SceneTextRegion, light: DayLight) -> Bool
 }

@@ -122,8 +122,9 @@ public struct SceneState: Equatable, Sendable {
     private static func inhabitant(_ s: Session, slot: Int, now: Date, freeText: Bool) -> SceneInhabitant {
         var headline = "\(s.agent.displayName) · \(Describe.shortActivity(s.activity))"
         if let clock = Describe.clock(s, now: now, compact: true) { headline += " · \(clock)" }
-        var place = Trim.truncate(Describe.title(s), max: 48)
-        if let project = Describe.place(s) { place += " · \(Trim.truncate(project, max: 32))" }
+        // Short enough that a label never reaches past about a quarter of the screen.
+        var place = Trim.truncate(Describe.title(s), max: 36)
+        if let project = Describe.place(s) { place += " · \(Trim.truncate(project, max: 24))" }
         return SceneInhabitant(id: s.id, agent: s.agent, mood: s.mood, busyness: busyness(tools: s.toolCount),
                                slot: slot, headline: headline, place: place,
                                detail: freeText ? detail(s.activity) : nil)
@@ -131,10 +132,10 @@ public struct SceneState: Equatable, Sendable {
 
     private static func detail(_ activity: Activity) -> String? {
         switch activity {
-        case let .tool(_, detail): Trim.clean(detail, max: 80)
-        case let .waiting(_, message): Trim.clean(message, max: 80)
-        case let .done(summary): Trim.clean(summary, max: 80)
-        case let .error(message): Trim.clean(message, max: 80)
+        case let .tool(_, detail): Trim.clean(detail, max: 56)
+        case let .waiting(_, message): Trim.clean(message, max: 56)
+        case let .done(summary): Trim.clean(summary, max: 56)
+        case let .error(message): Trim.clean(message, max: 56)
         case .idle, .thinking, .compacting: nil
         }
     }

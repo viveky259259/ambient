@@ -3,16 +3,17 @@ import SwiftUI
 
 /// Every session is a star. Finished turns gather into a constellation across the sky; the Milky Way comes out at night.
 struct SkyScene: SceneRenderer {
+    /// Staggered columns, so labels (which run right, or left in the last column) don't collide.
     private static let deskSpots: [CGPoint] = [
-        CGPoint(x: 0.70, y: 0.40), CGPoint(x: 0.83, y: 0.57), CGPoint(x: 0.57, y: 0.60), CGPoint(x: 0.46, y: 0.44),
-        CGPoint(x: 0.62, y: 0.30), CGPoint(x: 0.90, y: 0.36), CGPoint(x: 0.36, y: 0.62), CGPoint(x: 0.76, y: 0.66),
-        CGPoint(x: 0.50, y: 0.68), CGPoint(x: 0.28, y: 0.48), CGPoint(x: 0.90, y: 0.64), CGPoint(x: 0.40, y: 0.34),
+        CGPoint(x: 0.32, y: 0.36), CGPoint(x: 0.36, y: 0.48), CGPoint(x: 0.33, y: 0.60), CGPoint(x: 0.37, y: 0.70),
+        CGPoint(x: 0.58, y: 0.30), CGPoint(x: 0.61, y: 0.42), CGPoint(x: 0.57, y: 0.54), CGPoint(x: 0.60, y: 0.66),
+        CGPoint(x: 0.88, y: 0.24), CGPoint(x: 0.92, y: 0.36), CGPoint(x: 0.89, y: 0.48), CGPoint(x: 0.91, y: 0.60),
     ]
     /// Clear of the lock screen's clock (top center) and password field (bottom center).
     private static let lockSpots: [CGPoint] = [
-        CGPoint(x: 0.74, y: 0.42), CGPoint(x: 0.84, y: 0.58), CGPoint(x: 0.26, y: 0.56), CGPoint(x: 0.16, y: 0.40),
-        CGPoint(x: 0.68, y: 0.62), CGPoint(x: 0.88, y: 0.32), CGPoint(x: 0.34, y: 0.66), CGPoint(x: 0.12, y: 0.62),
-        CGPoint(x: 0.78, y: 0.74), CGPoint(x: 0.22, y: 0.74), CGPoint(x: 0.92, y: 0.68), CGPoint(x: 0.30, y: 0.36),
+        CGPoint(x: 0.12, y: 0.36), CGPoint(x: 0.16, y: 0.48), CGPoint(x: 0.13, y: 0.60), CGPoint(x: 0.15, y: 0.72),
+        CGPoint(x: 0.40, y: 0.32), CGPoint(x: 0.44, y: 0.44), CGPoint(x: 0.41, y: 0.56), CGPoint(x: 0.43, y: 0.68),
+        CGPoint(x: 0.88, y: 0.38), CGPoint(x: 0.92, y: 0.50), CGPoint(x: 0.89, y: 0.62), CGPoint(x: 0.91, y: 0.74),
     ]
 
     func spot(_ slot: Int, surface: SceneSurface) -> CGPoint {
@@ -56,10 +57,11 @@ struct SkyScene: SceneRenderer {
         }
     }
 
-    func draw(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date, motion: SceneMotion) {
+    // MARK: - Scenery
+
+    func drawScenery(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState) {
         let light = state.light
         let u = size.height / 1000
-        let t = date.timeIntervalSinceReferenceDate
         func mix(_ pick: (Look) -> RGB) -> Color { light.color { pick(Self.look($0)) }.color }
 
         ctx.fillVertical(CGRect(origin: .zero, size: size),
@@ -75,17 +77,22 @@ struct SkyScene: SceneRenderer {
             for _ in 0..<180 {
                 let p = CGPoint(x: rng.next() * size.width, y: rng.next() * size.height * 0.72)
                 let radius = CGFloat(0.5 + rng.next() * 1.1) * max(u, 0.6)
-                let speed = 0.4 + rng.next(), offset = rng.next() * 6.3
-                let twinkle = motion.still ? 0.75 : 0.55 + 0.45 * sin(t * speed + offset)
-                ctx.fillCircle(at: p, radius: radius, color: .white.opacity(stars * twinkle * 0.85))
+                let brightness = 0.45 + rng.next() * 0.4
+                ctx.fillCircle(at: p, radius: radius, color: .white.opacity(stars * brightness))
             }
         }
 
-        constellation(&ctx, size: size, marks: state.marks, date: date, visibility: max(0.4, stars), u: u)
-
-        for inhabitant in state.inhabitants {
-            star(&ctx, inhabitant, at: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
-                 u: u, date: date, motion: motion)
+        // The day's constellation, but for the newest star, which the life layer draws as it arrives.
+        let marks = Array(state.marks.dropLast())
+        if !marks.isEmpty {
+            let visibility = max(0.4, stars)
+            let points = marks.indices.map { Self.markPoint($0, size: size) } + [Self.markPoint(marks.count, size: size)]
+            var line = Path()
+            line.addLines(points)
+            ctx.stroke(line, with: .color(.white.opacity(0.16 * visibility)), lineWidth: max(0.6, 1.2 * u))
+            for (mark, p) in zip(marks, points) {
+                ctx.fillCircle(at: p, radius: 3 * max(u, 0.5), color: Self.markColor(mark).opacity(0.75 * visibility))
+            }
         }
 
         ctx.fill(hills(size, far: true), with: .color(mix(\.hills)))
@@ -117,46 +124,8 @@ struct SkyScene: SceneRenderer {
                        y: size.height * CGFloat(0.24 - 0.18 * f + (rng.next() - 0.5) * 0.05))
     }
 
-    private func constellation(_ ctx: inout GraphicsContext, size: CGSize, marks: [DayMark], date: Date,
-                               visibility: Double, u: CGFloat) {
-        guard !marks.isEmpty else { return }
-        let points = marks.indices.map { Self.markPoint($0, size: size) }
-        var line = Path()
-        line.addLines(points)
-        ctx.stroke(line, with: .color(.white.opacity(0.16 * visibility)), lineWidth: max(0.6, 1.2 * u))
-        for (mark, p) in zip(marks, points) {
-            let color = mark.outcome == .failed ? Palette.error : Palette.agent(mark.agent)
-            ctx.fillCircle(at: p, radius: 3 * max(u, 0.5), color: color.color.opacity(0.75 * visibility))
-        }
-        // A turn that just finished streaks in and takes its place.
-        if let f = arrivalProgress(of: marks, at: date), let p = points.last {
-            let left = CGFloat(1 - f)
-            let head = CGPoint(x: p.x + 220 * u * left, y: p.y + 140 * u * left)
-            var streak = Path()
-            streak.move(to: head)
-            streak.addLine(to: CGPoint(x: head.x + 60 * u, y: head.y + 38 * u))
-            ctx.stroke(streak, with: .color(.white.opacity(0.8 * (1 - f))), lineWidth: 2 * u)
-            ctx.fillCircle(at: head, radius: 3 * u, color: .white.opacity(1 - f / 2))
-        }
-    }
-
-    private func star(_ ctx: inout GraphicsContext, _ inhabitant: SceneInhabitant, at p: CGPoint, u: CGFloat,
-                      date: Date, motion: SceneMotion) {
-        let body = Palette.agent(inhabitant.agent).color
-        let level = glowLevel(inhabitant, date: date, motion: motion)
-        ctx.fillGlow(at: p, radius: CGFloat(80 + 40 * inhabitant.busyness) * u,
-                     color: Palette.mood(inhabitant.mood, agent: inhabitant.agent).color.opacity(level))
-        ctx.fillCircle(at: p, radius: 7 * u, color: .white.opacity(inhabitant.mood == .idle ? 0.5 : 0.95))
-        ctx.fillCircle(at: p, radius: 3.5 * u, color: body)
-        guard inhabitant.mood == .working else { return }
-        // Sparks circle a working star, more as its turn does more.
-        let sparks = 1 + Int(inhabitant.busyness * 4)
-        let turn = motion.still || motion.reduce ? 0 : date.timeIntervalSinceReferenceDate * 1.4
-        for k in 0..<sparks {
-            let angle = turn + Double(k) * 2 * .pi / Double(sparks)
-            let spark = CGPoint(x: p.x + CGFloat(cos(angle)) * 26 * u, y: p.y + CGFloat(sin(angle)) * 26 * u)
-            ctx.fillCircle(at: spark, radius: 2.2 * u, color: body.opacity(0.9))
-        }
+    private static func markColor(_ mark: DayMark) -> Color {
+        (mark.outcome == .failed ? Palette.error : Palette.agent(mark.agent)).color
     }
 
     private func hills(_ size: CGSize, far: Bool) -> Path {
@@ -181,5 +150,65 @@ struct SkyScene: SceneRenderer {
         p.addLine(to: CGPoint(x: 0, y: h))
         p.closeSubpath()
         return p
+    }
+
+    // MARK: - Life
+
+    func drawLife(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date, motion: SceneMotion) {
+        let u = size.height / 1000
+        let stars = state.light.amount(Self.starlight)
+        if stars > 0.01, !motion.still { twinkles(&ctx, size: size, strength: stars, u: u, date: date) }
+        newestMark(&ctx, size: size, state: state, date: date, visibility: max(0.4, stars), u: u)
+        for inhabitant in state.inhabitants {
+            star(&ctx, inhabitant, at: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
+                 u: u, date: date, motion: motion)
+        }
+    }
+
+    /// A few stars that twinkle over the still ones.
+    private func twinkles(_ ctx: inout GraphicsContext, size: CGSize, strength: Double, u: CGFloat, date: Date) {
+        let t = date.timeIntervalSinceReferenceDate
+        var rng = SceneRandom(seed: 13)
+        for _ in 0..<28 {
+            let p = CGPoint(x: rng.next() * size.width, y: rng.next() * size.height * 0.62)
+            let speed = 0.4 + rng.next(), offset = rng.next() * 6.3
+            let twinkle = 0.5 + 0.5 * sin(t * speed + offset)
+            ctx.fillCircle(at: p, radius: 1.3 * max(u, 0.6), color: .white.opacity(strength * twinkle * 0.9))
+        }
+    }
+
+    /// The newest star of the constellation: it streaks in when a turn finishes, then holds its place.
+    private func newestMark(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date,
+                            visibility: Double, u: CGFloat) {
+        guard let last = state.marks.last else { return }
+        let p = Self.markPoint(state.marks.count - 1, size: size)
+        ctx.fillCircle(at: p, radius: 3 * max(u, 0.5), color: Self.markColor(last).opacity(0.75 * visibility))
+        guard let f = arrivalProgress(of: state.marks, at: date) else { return }
+        let left = CGFloat(1 - f)
+        let head = CGPoint(x: p.x + 220 * u * left, y: p.y + 140 * u * left)
+        var streak = Path()
+        streak.move(to: head)
+        streak.addLine(to: CGPoint(x: head.x + 60 * u, y: head.y + 38 * u))
+        ctx.stroke(streak, with: .color(.white.opacity(0.8 * (1 - f))), lineWidth: 2 * u)
+        ctx.fillCircle(at: head, radius: 3 * u, color: .white.opacity(1 - f / 2))
+    }
+
+    private func star(_ ctx: inout GraphicsContext, _ inhabitant: SceneInhabitant, at p: CGPoint, u: CGFloat,
+                      date: Date, motion: SceneMotion) {
+        let body = Palette.agent(inhabitant.agent).color
+        let level = glowLevel(inhabitant, date: date, motion: motion)
+        ctx.fillGlow(at: p, radius: CGFloat(80 + 40 * inhabitant.busyness) * u,
+                     color: Palette.mood(inhabitant.mood, agent: inhabitant.agent).color.opacity(level))
+        ctx.fillCircle(at: p, radius: 7 * u, color: .white.opacity(inhabitant.mood == .idle ? 0.5 : 0.95))
+        ctx.fillCircle(at: p, radius: 3.5 * u, color: body)
+        guard inhabitant.mood == .working else { return }
+        // Sparks circle a working star, more as its turn does more.
+        let sparks = 1 + Int(inhabitant.busyness * 4)
+        let turn = motion.still || motion.reduce ? 0 : date.timeIntervalSinceReferenceDate * 1.4
+        for k in 0..<sparks {
+            let angle = turn + Double(k) * 2 * .pi / Double(sparks)
+            let spark = CGPoint(x: p.x + CGFloat(cos(angle)) * 26 * u, y: p.y + CGFloat(sin(angle)) * 26 * u)
+            ctx.fillCircle(at: spark, radius: 2.2 * u, color: body.opacity(0.9))
+        }
     }
 }

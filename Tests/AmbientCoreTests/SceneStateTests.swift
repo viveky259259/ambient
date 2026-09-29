@@ -79,9 +79,10 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         let s = session("a", .done(summary: String(repeating: "word ", count: 40)),
                         title: String(repeating: "T", count: 100))
         let inhabitant = make([s]).inhabitants[0]
-        #expect(inhabitant.place.count <= 48 + 3 + 32)
-        #expect(inhabitant.place.hasPrefix(String(repeating: "T", count: 47) + "…"))
-        #expect((inhabitant.detail?.count ?? 0) <= 80)
+        // Short enough that a label never reaches past a quarter of the screen.
+        #expect(inhabitant.place.count <= 36 + 3 + 24)
+        #expect(inhabitant.place.hasPrefix(String(repeating: "T", count: 35) + "…"))
+        #expect((inhabitant.detail?.count ?? 0) <= 56)
         #expect(inhabitant.detail?.hasSuffix("…") == true)
     }
 

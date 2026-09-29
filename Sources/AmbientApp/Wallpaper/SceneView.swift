@@ -12,32 +12,27 @@ struct SceneView: View {
 
     var body: some View {
         let renderer = SceneRenderers.renderer(for: state.kind)
-        if animated {
-            TimelineView(.animation(minimumInterval: Self.frameInterval(state), paused: false)) { context in
-                frame(renderer, date: context.date, motion: SceneMotion(reduce: reduceMotion, still: false))
+        let motion = SceneMotion(reduce: reduceMotion, still: !animated)
+        ZStack {
+            // The scenery and the text only change with the state, so they aren't redrawn on every frame.
+            Canvas { ctx, size in renderer.drawScenery(&ctx, size: size, state: state) }
+            if animated {
+                TimelineView(.animation(minimumInterval: Self.frameInterval(state), paused: false)) { context in
+                    Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: motion) }
+                }
+            } else {
+                Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: state.now, motion: motion) }
             }
-        } else {
-            frame(renderer, date: state.now, motion: SceneMotion(reduce: reduceMotion, still: true))
+            if showsText {
+                GeometryReader { geo in SceneTextLayer(state: state, renderer: renderer, size: geo.size) }
+            }
         }
     }
 
-    /// 30 frames a second while something moves; about one a second when everything rests.
+    /// About 12 frames a second while something moves (enough for a calm wallpaper); one a second when everything rests.
     static func frameInterval(_ state: SceneState) -> Double {
         let moving = state.inhabitants.contains { $0.mood != .idle } || arrivalProgress(of: state.marks, at: Date()) != nil
-        return moving ? 1.0 / 30 : 1
-    }
-
-    private func frame(_ renderer: any SceneRenderer, date: Date, motion: SceneMotion) -> some View {
-        GeometryReader { geo in
-            ZStack {
-                Canvas { ctx, size in
-                    renderer.draw(&ctx, size: size, state: state, date: date, motion: motion)
-                }
-                if showsText {
-                    SceneTextLayer(state: state, renderer: renderer, size: geo.size)
-                }
-            }
-        }
+        return moving ? 1.0 / 12 : 1
     }
 }
 

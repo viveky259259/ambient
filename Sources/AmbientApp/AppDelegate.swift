@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notifier: Notifier?
     private var menuBar: MenuBarController?
     private var dockGlow: DockGlow?
+    private var wallpaper: LivingWallpaper?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var demoTimers: [Timer] = []
@@ -52,6 +53,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         dockGlow = DockGlow(model: model, prefs: prefs)
         dockGlow?.start()
+
+        let wallpaper = LivingWallpaper(model: model, prefs: prefs, paths: paths)
+        wallpaper.start()
+        self.wallpaper = wallpaper
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
     }
