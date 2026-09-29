@@ -161,7 +161,11 @@ struct SkyScene: SceneRenderer {
         if stars > 0.01, !motion.still { twinkles(&ctx, size: size, strength: stars, u: u, date: date) }
         newestMark(&ctx, size: size, state: state, date: date, visibility: max(0.4, stars), u: u)
         for inhabitant in state.inhabitants {
-            star(&ctx, inhabitant, at: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
+            let lift = motion.lifted[inhabitant.id] ?? 0
+            guard lift < 0.99 else { continue }
+            var faded = ctx
+            faded.opacity = 1 - lift
+            star(&faded, inhabitant, at: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
                  u: u, date: date, motion: motion)
         }
     }

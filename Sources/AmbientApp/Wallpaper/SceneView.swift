@@ -42,6 +42,8 @@ struct SceneTextLayer: View {
     let state: SceneState
     let renderer: any SceneRenderer
     let size: CGSize
+    /// While a notch effect runs, it draws the inhabitants' labels at their moving bodies.
+    var hidesLabels = false
 
     /// 1 on a display 1000 points tall.
     private var u: CGFloat { min(1.6, size.height / 1000) }
@@ -75,6 +77,7 @@ struct SceneTextLayer: View {
             }
             .overlay {
                 labels
+                    .opacity(hidesLabels ? 0 : 1)
                     .foregroundStyle(ink(.labels))
                     .shadow(color: halo(.labels), radius: 6 * u)
             }
@@ -108,24 +111,38 @@ struct SceneTextLayer: View {
     private var labels: some View {
         ZStack {
             ForEach(state.inhabitants) { inhabitant in
-                let spot = renderer.spot(inhabitant.slot, surface: state.surface)
-                // Near the right edge, the label sits to the left of its inhabitant.
-                let flipped = spot.x > 0.72
-                Color.clear
-                    .frame(width: 1, height: 1)
-                    .overlay(alignment: flipped ? .trailing : .leading) {
-                        label(inhabitant, flipped: flipped)
-                            .fixedSize()
-                            .padding(flipped ? .trailing : .leading, 22 * u)
-                    }
-                    .position(x: spot.x * size.width, y: spot.y * size.height)
+                let spot = renderer.spot(for: inhabitant, in: state)
+                if renderer.labelsBelow {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .overlay(alignment: .top) {
+                            // Up to five to a row: each label keeps to its own fifth of the screen.
+                            label(inhabitant, alignment: .center)
+                                .lineLimit(1)
+                                .frame(width: size.width * 0.18)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 26 * u)
+                        }
+                        .position(x: spot.x * size.width, y: spot.y * size.height)
+                } else {
+                    // Near the right edge, the label sits to the left of its inhabitant.
+                    let flipped = spot.x > 0.72
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .overlay(alignment: flipped ? .trailing : .leading) {
+                            label(inhabitant, alignment: flipped ? .trailing : .leading)
+                                .fixedSize()
+                                .padding(flipped ? .trailing : .leading, 22 * u)
+                        }
+                        .position(x: spot.x * size.width, y: spot.y * size.height)
+                }
             }
         }
         .frame(width: size.width, height: size.height)
     }
 
-    private func label(_ inhabitant: SceneInhabitant, flipped: Bool) -> some View {
-        VStack(alignment: flipped ? .trailing : .leading, spacing: 2 * u) {
+    private func label(_ inhabitant: SceneInhabitant, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2 * u) {
             Text(inhabitant.headline)
                 .font(.system(size: 12.5 * u, weight: .semibold))
                 .foregroundStyle(inhabitant.mood == .waiting ? waitingInk : ink(.labels))
@@ -134,7 +151,7 @@ struct SceneTextLayer: View {
                 Text(detail).font(.system(size: 11 * u, design: .monospaced)).opacity(0.6)
             }
         }
-        .multilineTextAlignment(flipped ? .trailing : .leading)
+        .multilineTextAlignment(alignment == .trailing ? .trailing : alignment == .center ? .center : .leading)
     }
 
     /// "Today   3h 40m of agent time  ·  612 tools  ·  …", numbers in semibold.

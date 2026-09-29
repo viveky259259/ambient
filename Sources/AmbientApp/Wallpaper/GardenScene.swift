@@ -136,7 +136,11 @@ struct GardenScene: SceneRenderer {
             flower(&ctx, last, at: Self.bedPoint(state.marks.count - 1, size: size), u: u, grow: grow)
         }
         for inhabitant in state.inhabitants {
-            plant(&ctx, inhabitant, head: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
+            let lift = motion.lifted[inhabitant.id] ?? 0
+            guard lift < 0.99 else { continue }
+            var faded = ctx
+            faded.opacity = 1 - lift
+            plant(&faded, inhabitant, head: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
                   size: size, u: u, date: date, motion: motion)
         }
         let glow = state.light.amount(Self.fireflies)

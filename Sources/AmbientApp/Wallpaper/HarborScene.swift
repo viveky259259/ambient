@@ -157,7 +157,11 @@ struct HarborScene: SceneRenderer {
         }
 
         for inhabitant in state.inhabitants {
-            boat(&ctx, inhabitant, lantern: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
+            let lift = motion.lifted[inhabitant.id] ?? 0
+            guard lift < 0.99 else { continue }
+            var faded = ctx
+            faded.opacity = 1 - lift
+            boat(&faded, inhabitant, lantern: scenePoint(spot(inhabitant.slot, surface: state.surface), in: size),
                  u: u, t: t, date: date, motion: motion, hull: hull)
         }
     }

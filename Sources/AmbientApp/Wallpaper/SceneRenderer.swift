@@ -7,6 +7,9 @@ struct SceneMotion: Equatable {
     var reduce = false
     /// A still frame: covered, Low Power Mode, a thumbnail, or the lock-screen fallback image.
     var still = false
+    /// How far each inhabitant has lifted into a notch effect: 0 at home, 1 carried off. The world fades its own
+    /// drawing of it by that much, and the effect draws it instead.
+    var lifted: [String: Double] = [:]
 }
 
 /// Where text sits in a scene: the clock and your day top-left, the labels beside inhabitants, and the story
@@ -26,6 +29,15 @@ protocol SceneRenderer {
     func drawLife(_ ctx: inout GraphicsContext, size: CGSize, state: SceneState, date: Date, motion: SceneMotion)
     /// Whether text in `region` needs dark ink: only where it sits on bright sky.
     func darkInk(_ region: SceneTextRegion, light: DayLight) -> Bool
+    /// Where an inhabitant rests, in unit coordinates. Most worlds use its slot; Solar System lays planets out in rows.
+    func spot(for inhabitant: SceneInhabitant, in state: SceneState) -> CGPoint
+    /// Labels centred under each inhabitant instead of beside it.
+    var labelsBelow: Bool { get }
+}
+
+extension SceneRenderer {
+    func spot(for inhabitant: SceneInhabitant, in state: SceneState) -> CGPoint { spot(inhabitant.slot, surface: state.surface) }
+    var labelsBelow: Bool { false }
 }
 
 enum SceneRenderers {
@@ -34,7 +46,7 @@ enum SceneRenderers {
         case .sky: SkyScene()
         case .harbor: HarborScene()
         case .garden: GardenScene()
-        case .solar: SkyScene()
+        case .solar: SolarScene()
         }
     }
 }
