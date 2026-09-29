@@ -6,6 +6,10 @@
   lives as a star, a boat or a plant in the color of what it's doing, with today's story, the latest moments,
   the clock and your next calendar event. It shows at the desk and on the lock screen. Off by default: turn it
   on in Settings › Wallpaper.
+- **Solar System**, a fourth world: agents are planets standing in rows; open the island and they orbit the
+  notch, lit as the sun.
+- **A black hole at the notch** when the island opens, in Sky, Harbor and Garden: agents swing into orbit
+  and dust falls in, then everything drifts home. Turn it off in Settings › Wallpaper.
 
 ## 0.2.1 — 2026-09-28
 
