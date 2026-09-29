@@ -18,6 +18,10 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 - **Dock glow** — light along the Dock's edge of the screen in the color of what your agents are doing
   (the technique from [Orb](https://github.com/nithish6541/orbdock)). With Accessibility access it lights
   up behind the Dock's glass itself.
+- **Living wallpaper** — a sky, a harbor or a garden that follows the time of day, where each session lives
+  as a star, a boat or a plant glowing in the color of what it's doing. Around them: today's story (agent
+  time, tools, turns, how often they needed you), the latest moments, the clock and your next event. On the
+  desktop, and on the lock screen while you're away. Off until you turn it on in Settings › Wallpaper.
 
 Everything stays on your Mac. No accounts, no network, no telemetry.
 
@@ -81,7 +85,8 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.claude/settings.json` | One hook group per Claude Code event, all running `~/.ambient/bin/ambient hook claude` |
 | `~/.codex/hooks.json` | The same for Codex |
 | `~/.gemini/settings.json` | The same for Gemini CLI (hooks named `ambient`) |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
+| `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only when the lock screen can't show the living wallpaper live: while the Mac is locked the scene is set as your wallpaper, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
 permissions, and writes a backup to `~/.ambient/backups/` first. `ambient uninstall` removes only
@@ -93,6 +98,12 @@ Only these fields ever leave the hook process, and only to the local socket: the
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
+
+The living wallpaper keeps today's counts and a timeline of what happened, where and when, in
+`~/.ambient/day.json` — never prompts, summaries or commands — and starts fresh at midnight. On the lock
+screen it hides messages and event titles unless you turn them on. Its calendar line reads only your next
+timed event today, and only after you allow Calendar access. To draw above the lock screen, Ambient uses a
+private macOS window API; if a macOS update breaks it, Ambient falls back to the wallpaper swap above.
 
 ## Command line
 
@@ -119,6 +130,9 @@ log every hook to `~/.ambient/logs/hook.log`.
   the threshold in settings (20 seconds by default).
 - **The Dock glow is only a line along the edge** — that's the no-permission mode (and what an
   auto-hiding Dock looks like). Enable *Light up behind the Dock's glass* to grant Accessibility access.
+- **The living wallpaper isn't on the lock screen** — Settings › Wallpaper says whether it's live, shown as
+  your wallpaper while locked, or not available on this Mac. If Ambient ever quits while the Mac is locked, it
+  puts your wallpaper back the next time it opens; *Restore my wallpaper* shows in Settings until it has.
 - **Uninstall** — `ambient uninstall`, quit Ambient from the menu bar, delete the app and `~/.ambient`.
 
 ## Build from source
@@ -136,7 +150,7 @@ rebuild you may need `tccutil reset Accessibility com.viveky259259.Ambient`.
 | --- | --- |
 | `Sources/AmbientCore` | Everything testable: event model, agent adapters, session reducer, policies, wire format, socket, order-preserving JSON, hook installer |
 | `Sources/ambient` | The CLI, including the hot `hook` path |
-| `Sources/AmbientApp` | The app: socket server, island, notifications and chimes, menu bar, Dock glow, setup |
+| `Sources/AmbientApp` | The app: socket server, island, notifications and chimes, menu bar, Dock glow, living wallpaper, setup |
 | `scripts/` | App bundle, icon rendering, release |
 | `docs/superpowers/` | Design spec and implementation plan |
 

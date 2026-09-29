@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Living wallpaper**: a Sky, Harbor or Garden scene that follows the time of day, where each agent session
+  lives as a star, a boat or a plant in the color of what it's doing, with today's story, the latest moments,
+  the clock and your next calendar event. It shows at the desk and on the lock screen. Off by default: turn it
+  on in Settings › Wallpaper.
+
 ## 0.2.1 — 2026-09-28
 
 - **Real names**: sessions show their chat title from Claude's desktop app or Claude Code, or their
