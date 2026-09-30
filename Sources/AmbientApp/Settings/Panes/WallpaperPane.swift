@@ -21,11 +21,9 @@ struct WallpaperPane: View {
                 SettingsToggleRow(title: "Living wallpaper", isOn: $prefs.wallpaperEnabled)
             }
             Group {
-                SettingsSection(header: "Scene",
-                                footer: "When you open the island, the Solar System's sun lights and its planets orbit. The other scenes can form a black hole at the notch.") {
-                    ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
-                    SettingsDivider()
-                    SettingsRow(title: "Look", subtitle: "Light or dark: with the time of day, with macOS, or always the same.") {
+                SettingsSection(header: "Light and dark",
+                                footer: "The scene is light by day and dark at night unless you choose otherwise. The clock always shows the real time.") {
+                    SettingsRow(title: "Look") {
                         Picker("Look", selection: $prefs.wallpaperLook) {
                             ForEach(SceneLook.allCases, id: \.self) { look in
                                 Text(look.displayName).tag(look.rawValue)
@@ -34,6 +32,10 @@ struct WallpaperPane: View {
                         .labelsHidden()
                         .fixedSize()
                     }
+                }
+                SettingsSection(header: "Scene",
+                                footer: "When you open the island, the Solar System's sun lights and its planets orbit. The other scenes can form a black hole at the notch.") {
+                    ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
                     SettingsDivider()
                     SettingsToggleRow(title: "Black hole when the island opens", isOn: $prefs.wallpaperIslandEffect)
                         .disabled(prefs.sceneChoice == .fixed(.solar))
