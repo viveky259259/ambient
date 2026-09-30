@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 — 2026-09-30
+
+- Maintenance release: no changes from 0.3.0.
+
 ## 0.3.0 — 2026-09-30
 
 - **Living wallpaper**: a Sky, Harbor or Garden scene that follows the time of day, where each agent session
