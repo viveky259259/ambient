@@ -391,7 +391,9 @@ dialog[open] { animation: sheet-in 0.35s var(--spring); }
 .scene-menu .w40 { width: 40%; } .scene-menu .w50 { width: 50%; } .scene-menu .w60 { width: 60%; } .scene-menu .w70 { width: 66%; }
 .scene-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; align-items: center; margin-top: 24px; }
 .scene-controls .chips { margin-top: 0; }
-.wallpaper-features { margin-top: 56px; }
+.wallpaper-features { margin-top: 56px; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 960px) { .wallpaper-features { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .wallpaper-features { grid-template-columns: 1fr; } }
 
 @media (max-width: 760px) {
   section { padding: 76px 0; }
