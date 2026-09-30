@@ -56,5 +56,5 @@ export default async (request: Request, context: Context) => {
 
 export const config: Config = {
   path: "/*",
-  excludedPath: ["/assets/*", "/downloads/*", "/*.css", "/*.js", "/*.txt", "/*.xml"],
+  excludedPath: ["/api/*", "/assets/*", "/downloads/*", "/*.css", "/*.js", "/*.txt", "/*.xml"],
 };
