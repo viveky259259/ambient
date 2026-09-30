@@ -1,11 +1,11 @@
 # Ambient
 
-> Ambient is a free macOS app that shows what Claude Code, Codex and Gemini CLI are doing: a status island at the MacBook notch, notifications with chimes, a menu bar list and a glow along the Dock. It tells you when an agent is working, needs your permission or an answer, has finished, or hit an error, and one click takes you back to the exact chat, terminal tab or tmux pane where the agent runs. Made by yaml.cafe.
+> Ambient is a free macOS app that shows what Claude Code, Codex and Gemini CLI are doing: a status island at the MacBook notch, notifications with chimes, a menu bar list, a glow along the Dock and an optional living wallpaper where each session lives. It tells you when an agent is working, needs your permission or an answer, has finished, or hit an error, and one click takes you back to the exact chat, terminal tab or tmux pane where the agent runs. Made by yaml.cafe.
 
 Key facts:
 
 - Price: free, every feature. No account.
-- Current version: 0.4.0 (September 2026). 2.7 MB universal disk image.
+- Current version: 0.4.0 (September 2026). 3.6 MB universal disk image.
 - Requirements: macOS 14 or later, Apple silicon and Intel. Designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.
 - Agents: Claude Code (terminal, editors and the Claude desktop app), Codex (CLI and the Codex app), Gemini CLI.
 - States: working, needs you, done, error, idle. Across all sessions Ambient shows the most urgent: needs you, then error, then done, then working.
@@ -13,6 +13,7 @@ Key facts:
 - How it connects: one click adds hook entries to `~/.claude/settings.json`, `~/.codex/hooks.json` and `~/.gemini/settings.json`, after backing each file up. Each hook runs the bundled `ambient` command, which reduces the event to a few short fields and sends one line over a Unix socket on the Mac. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully, so they never slow an agent down.
 - Privacy: no accounts, no network requests, no telemetry. Prompts and tool output are never stored.
 - Notifications: banners and soft two-note chimes only for moments that need you. Ambient stays quiet while you are already in the app running the agent and skips turns shorter than 20 seconds by default.
+- Living wallpaper (off by default, Settings › Wallpaper): a Sky, Harbor, Garden or Solar System scene, or a new one each day, that follows the time of day. Each session lives as a star, a boat, a plant or a planet in the color of its state, with the clock, the next calendar event (read locally) and the day's story. When the island opens, a black hole forms at the notch (Sky, Harbor, Garden) or the Solar System's sun lights up, and the agents orbit it under simulated gravity. The look follows the time of day, matches macOS light or dark mode, or stays light or dark. It shows on every display and on the lock screen; it's drawn above the user's own wallpaper, which is untouched (on the lock screen, if a live layer isn't possible, the scene is set while locked and the user's wallpaper is restored on unlock).
 - Uninstall: `ambient uninstall` removes only Ambient's hook entries; then quit the app, delete it and `~/.ambient`.
 - Download: https://yaml.cafe/ (free, no sign-up; the download starts on the first click).
 

@@ -50,15 +50,15 @@
         "@type": "SoftwareApplication",
         "@id": "https://yaml.cafe/#app",
         "name": "Ambient",
-        "description": "A free macOS app that shows what Claude Code, Codex and Gemini CLI are doing: a status island at the notch, notifications with chimes, a menu bar list and a glow along the Dock. One click returns you to the exact chat, terminal tab or tmux pane where the agent runs.",
+        "description": "A free macOS app that shows what Claude Code, Codex and Gemini CLI are doing: a status island at the notch, notifications with chimes, a menu bar list, a glow along the Dock and a living wallpaper where each session lives. One click returns you to the exact chat, terminal tab or tmux pane where the agent runs.",
         "url": "https://yaml.cafe/",
         "image": "https://yaml.cafe/assets/og.png",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "macOS 14 or later",
         "processorRequirements": "Apple silicon or Intel",
         "softwareVersion": "0.4.0",
-        "fileSize": "2.6 MB",
-        "dateModified": "2026-09-26T00:00:00+00:00",
+        "fileSize": "3.6 MB",
+        "dateModified": "2026-09-30T00:00:00+00:00",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "featureList": [
@@ -67,6 +67,10 @@
           "Click to return to the exact Claude chat, Codex thread, Terminal or iTerm2 tab, or tmux pane",
           "Menu bar session list with quiet hours",
           "Dock glow in the color of the current state",
+          "Living wallpaper: Sky, Harbor, Garden or Solar System scenes where each session lives, with the clock, your next event and the day's story",
+          "A black hole or a sun at the notch when the island opens, driven by real gravity",
+          "Wallpaper follows the time of day, matches macOS light or dark mode, or stays light or dark",
+          "Wallpaper on every display and on the lock screen",
           "Works with Claude Code, Codex and Gemini CLI",
           "No accounts, no network requests, no telemetry"
         ],
@@ -83,6 +87,7 @@
           { "@type": "Question", "name": "Does it work with tmux, iTerm2, VS Code and Cursor?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors." } },
           { "@type": "Question", "name": "What does it change on my Mac?", "acceptedAnswer": { "@type": "Answer", "text": "It adds its own hook entries to ~/.claude/settings.json, ~/.codex/hooks.json and ~/.gemini/settings.json, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run ambient uninstall." } },
           { "@type": "Question", "name": "How do I uninstall Ambient?", "acceptedAnswer": { "@type": "Answer", "text": "Run ambient uninstall to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the ~/.ambient folder." } },
+          { "@type": "Question", "name": "Does the living wallpaper replace my wallpaper?", "acceptedAnswer": { "@type": "Answer", "text": "No. It's off until you turn it on in Settings › Wallpaper, and it's drawn above your own wallpaper and below your desktop icons. Turn it off and your wallpaper is simply there. On the lock screen it shows live where macOS allows it; otherwise Ambient sets the scene while the Mac is locked and puts your wallpaper back when you unlock." } },
           { "@type": "Question", "name": "Which Macs does it run on?", "acceptedAnswer": { "@type": "Answer", "text": "macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar." } },
           { "@type": "Question", "name": "Do I need to sign up to download it?", "acceptedAnswer": { "@type": "Answer", "text": "No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional." } }
         ]
@@ -104,6 +109,7 @@
       <a href="#return">Click to return</a>
       <a href="#alerts">Alerts</a>
       <a href="#dock">Dock glow</a>
+      <a href="#wallpaper">Wallpaper</a>
       <a href="#faq">FAQ</a>
       <a href="/guides/">Guides</a>
     </div>
@@ -119,7 +125,7 @@
       <button class="btn" data-download="hero">Download for Mac</button>
       <a class="link-btn" href="#island">See how it works ›</a>
     </div>
-    <p class="fineprint">Free · Version 0.4.0 · macOS 14 or later · Apple silicon and Intel · 2.7&nbsp;MB</p>
+    <p class="fineprint">Free · Version 0.4.0 · macOS 14 or later · Apple silicon and Intel · 3.6&nbsp;MB</p>
 
     <div class="macbook" aria-hidden="true">
       <div class="lid">
@@ -159,7 +165,7 @@
 <section class="alt center" id="island">
   <div class="wrap">
     <h2>Glance. Don't babysit.</h2>
-    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open for a few seconds. Hover to see every session.</p>
+    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open into macOS glass for a few seconds. Hover to see every session.</p>
     <div class="grid states">
       <div class="card" style="--state: var(--claude)"><span class="orb breathe"></span><h3>Working</h3><p>An orb in the agent's color breathes while it thinks and runs tools.</p></div>
       <div class="card" style="--state: var(--waiting)"><span class="orb pulse"></span><h3>Needs you</h3><p>An amber pulse when an agent is waiting for permission or an answer.</p></div>
@@ -228,6 +234,43 @@
   </div>
 </section>
 
+<section class="dark center" id="wallpaper">
+  <div class="wrap">
+    <h2>Your wallpaper, alive with your agents.</h2>
+    <p class="section-lede">Turn your desktop into a scene that follows the time of day, where every session lives as a star, a boat, a plant or a planet, glowing in the color of what it's doing. Open the island and the wallpaper answers.</p>
+    <div class="scene-demo" id="scene-demo">
+      <canvas id="scene-canvas" role="img" aria-label="A living wallpaper: agents as stars in a night sky"></canvas>
+      <div class="scene-island" id="scene-island" aria-hidden="true">
+        <div class="scene-menu">
+          <div class="row"><span class="dot" style="background: var(--waiting)"></span><span class="line w60"></span><span class="line w20"></span></div>
+          <div class="row"><span class="dot" style="background: var(--claude)"></span><span class="line w50"></span><span class="line w20"></span></div>
+          <div class="row"><span class="dot" style="background: var(--codex)"></span><span class="line w70"></span><span class="line w20"></span></div>
+          <div class="row"><span class="dot" style="background: var(--done)"></span><span class="line w40"></span><span class="line w20"></span></div>
+        </div>
+      </div>
+      <div class="scene-notch" aria-hidden="true"></div>
+    </div>
+    <div class="scene-controls">
+      <button class="btn" id="scene-open" aria-pressed="false">Open the island</button>
+      <div class="chips" role="group" aria-label="World">
+        <button class="chip" data-world="sky" aria-pressed="true">Sky</button>
+        <button class="chip" data-world="solar" aria-pressed="false">Solar System</button>
+      </div>
+      <div class="chips" role="group" aria-label="Look">
+        <button class="chip" data-look="dark" aria-pressed="true">Dark</button>
+        <button class="chip" data-look="light" aria-pressed="false">Light</button>
+      </div>
+    </div>
+    <p class="visually-hidden" id="scene-desc">In Sky, opening the island collapses the notch into a black hole: the agents swing into orbits and dust falls in, then everything drifts home. In Solar System the notch lights up as the sun and the planets orbit it.</p>
+    <div class="grid wallpaper-features">
+      <div class="card"><h3>Four worlds</h3><p>Sky, Harbor, Garden and Solar System, or a new one each day. With the clock, your next event and the day's story set into it.</p></div>
+      <div class="card"><h3>Gravity at the notch</h3><p>Open the island and a black hole forms, or the Solar System's sun lights up. Agents orbit, then drift home when it closes.</p></div>
+      <div class="card"><h3>Light and dark</h3><p>Follows the time of day, matches macOS, or stays light or dark. The black hole and the sun follow it too.</p></div>
+      <div class="card"><h3>Every display</h3><p>A full scene on each desktop, still while covered, and on the lock screen while you're away. Off until you turn it on.</p></div>
+    </div>
+  </div>
+</section>
+
 <section class="center agents">
   <div class="wrap">
     <h2>Works with the agents you use.</h2>
@@ -271,6 +314,7 @@
       <details><summary>Does it work with tmux, iTerm2, VS Code and Cursor?</summary><p>Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors.</p></details>
       <details><summary>What does it change on my Mac?</summary><p>It adds its own hook entries to <code>~/.claude/settings.json</code>, <code>~/.codex/hooks.json</code> and <code>~/.gemini/settings.json</code>, keeps a backup of each file, and removes only its own entries when you disconnect an agent or run <code>ambient uninstall</code>.</p></details>
       <details><summary>How do I uninstall Ambient?</summary><p>Run <code>ambient uninstall</code> to remove Ambient's hooks. Your other settings stay exactly as they were. Then quit Ambient from the menu bar and delete the app and the <code>~/.ambient</code> folder.</p></details>
+      <details><summary>Does the living wallpaper replace my wallpaper?</summary><p>No. It's off until you turn it on in Settings › Wallpaper, and it's drawn above your own wallpaper and below your desktop icons. Turn it off and your wallpaper is simply there. On the lock screen it shows live where macOS allows it; otherwise Ambient sets the scene while the Mac is locked and puts your wallpaper back when you unlock.</p></details>
       <details><summary>Which Macs does it run on?</summary><p>macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.</p></details>
       <details><summary>Do I need to sign up to download it?</summary><p>No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional. See the <a href="/privacy.html">privacy notice</a>.</p></details>
     </div>
@@ -323,5 +367,6 @@
 </dialog>
 
 <script src="/main.js" defer></script>
+<script src="/scene.js" defer></script>
 </body>
 </html>
