@@ -8,6 +8,10 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const TAU = Math.PI * 2;
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  // Umami (cookieless) records how the demo is used and how smoothly it runs; it may be blocked, which is fine.
+  const track = (name, data) => { try { window.umami?.track(name, data); } catch { /* ignore */ } };
+  const device = () => (innerWidth < 768 ? "mobile" : innerWidth < 1100 ? "tablet" : "desktop");
+  const perf = { frames: 0, seconds: 0, slow: 0, drawMs: 0, sent: false };
 
   const AGENTS = [
     { name: "Claude · Needs you", color: "#d97757", glow: "#f5a524", x: 0.26, y: 0.52 },
@@ -238,10 +242,15 @@
   }
 
   function frame(now) {
-    const dt = Math.min(0.25, (now - lastFrame) / 1000 || 0); lastFrame = now;
+    const gap = (now - lastFrame) / 1000 || 0, dt = Math.min(0.25, gap); lastFrame = now;
+    const started = performance.now();
     const steps = Math.max(1, Math.ceil(dt / 0.004));
     for (let i = 0; i < steps; i++) step(dt / steps);
     draw();
+    if (gap > 0 && gap < 1) {
+      perf.frames++; perf.seconds += gap; perf.drawMs += performance.now() - started;
+      if (gap > 1 / 40) perf.slow++;   // a frame that took longer than a 40 fps budget
+    }
     if (!reduceMotion && visible && (!settled() || open)) { requestAnimationFrame(frame); } else running = false;
   }
   function kick() {
@@ -287,7 +296,10 @@
   root.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse") return;
     const r = root.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-    if (y < 0.06 && Math.abs(x - 0.5) < 0.1 && !open) { stopTour(); setOpen(true); describe(); }
+    if (y < 0.06 && Math.abs(x - 0.5) < 0.1 && !open) {
+      track("demo-control", { control: "notch-hover", world, device: device() });
+      stopTour("visitor"); setOpen(true); describe();
+    }
   });
 
   let visible = false;
@@ -309,6 +321,7 @@
   let tourStep = 0, tourTimer = null, touring = false, tourStopped = reduceMotion;
   function startTour() {
     if (tourStopped || touring) return;
+    if (!touring && tourStep === 0) track("demo-tour", { action: "started", device: device() });
     touring = true; hint.hidden = false; schedule();
   }
   function schedule() {
@@ -332,16 +345,39 @@
       setTimeout(() => { finger.classList.remove("press"); target.classList.remove("tapping"); }, 220);
       target.click();
       tourStep++;
+      if (tourStep === TOUR.length) track("demo-tour", { action: "watched-loop", device: device() });
       schedule();
     }, 450);
   }
-  function stopTour() {
+  function stopTour(reason) {
+    if (!tourStopped && tourStep > 0) track("demo-tour", { action: "stopped", by: reason, step: tourStep, device: device() });
     tourStopped = true; touring = false; clearTimeout(tourTimer);
     finger.classList.remove("shown", "press"); hint.hidden = true;
   }
   // The visitor's own taps and clicks take over from the tour.
-  controls.addEventListener("click", (e) => { if (e.isTrusted && e.target.closest("button")) stopTour(); }, true);
-  document.getElementById("scene-stop").addEventListener("click", stopTour);
+  controls.addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!e.isTrusted || !button) return;
+    const control = button.id === "scene-open" ? (open ? "close" : "open") : button.dataset.world || button.dataset.look;
+    track("demo-control", { control, world, device: device() });
+    stopTour("visitor");
+  }, true);
+  document.getElementById("scene-stop").addEventListener("click", () => stopTour("stop-link"));
+
+  // How smoothly the demo ran, once per visit, when the visitor leaves the page or hides it.
+  function reportPerf() {
+    if (perf.sent || perf.frames < 60) return;
+    perf.sent = true;
+    track("demo-perf", {
+      fps: Math.round(perf.frames / perf.seconds),
+      slow_pct: Math.round((perf.slow / perf.frames) * 100),
+      draw_ms: Math.round((perf.drawMs / perf.frames) * 10) / 10,
+      seconds: Math.round(perf.seconds),
+      device: device(),
+    });
+  }
+  addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") reportPerf(); });
+  addEventListener("pagehide", reportPerf);
   new ResizeObserver(() => { resize(); draw(); }).observe(root);
   resize(); draw();
 })();
