@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feature requests — Ambient</title>
+  <meta name="description" content="Tell us what Ambient should bring you next, and vote for other people's ideas. No account needed.">
+  <link rel="canonical" href="https://yaml.cafe/requests/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/requests/">
+  <meta property="og:title" content="What should Ambient bring you next?">
+  <meta property="og:description" content="Suggest a feature for Ambient or vote for other people's ideas. No account needed.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/requests/requests.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="module" src="/requests/requests.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://yaml.cafe/requests/#page",
+        "name": "Feature requests",
+        "url": "https://yaml.cafe/requests/",
+        "description": "Suggest a feature for Ambient or vote for other people's ideas.",
+        "isPartOf": { "@id": "https://yaml.cafe/#website" },
+        "about": { "@id": "https://yaml.cafe/#app" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Ambient", "item": "https://yaml.cafe/" },
+          { "@type": "ListItem", "position": 2, "name": "Requests", "item": "https://yaml.cafe/requests/" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="requests-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page rq">
+  <p class="crumbs"><a href="/">Ambient</a> › Requests</p>
+  <h1>What should Ambient bring you next?</h1>
+  <p class="rq-lede">Tell us what would make working with your agents better. Anyone can suggest or vote; no account needed.</p>
+
+  <form id="rq-form" class="rq-suggest" novalidate>
+    <label for="rq-title">Your idea</label>
+    <input id="rq-title" name="title" type="text" autocomplete="off" required placeholder="What would you like Ambient to do for you?">
+    <div id="rq-hint" class="rq-hint" hidden></div>
+    <label for="rq-details">Details <span class="optional">(optional)</span></label>
+    <textarea id="rq-details" name="details" rows="3" placeholder="Why it matters to you (optional)"></textarea>
+    <p class="visually-hidden"><label>Leave this empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+    <p class="rq-error" id="rq-form-error" role="alert"></p>
+    <button class="btn" type="submit" id="rq-submit">Suggest it</button>
+  </form>
+
+  <p id="rq-message" class="rq-message" role="status" aria-live="polite"></p>
+
+  <div class="rq-controls">
+    <div class="rq-tabs" role="group" aria-label="Sort">
+      <button type="button" data-sort="top" aria-pressed="true">Top</button>
+      <button type="button" data-sort="new" aria-pressed="false">New</button>
+    </div>
+    <div class="rq-chips" role="group" aria-label="Status">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="open" aria-pressed="false">Open</button>
+      <button type="button" data-filter="planned" aria-pressed="false">Planned</button>
+      <button type="button" data-filter="in-progress" aria-pressed="false">In progress</button>
+      <button type="button" data-filter="shipped" aria-pressed="false">Shipped</button>
+    </div>
+  </div>
+  <ul id="rq-list" class="rq-list" aria-label="Feature requests"></ul>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>

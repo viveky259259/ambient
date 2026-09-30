@@ -1,0 +1,45 @@
+/* The feature-request board. Colors and type come from styles.css. */
+.rq-lede { font-size: 19px; color: var(--ink-2); margin: -8px 0 28px; }
+.rq-suggest { background: var(--paper-2); border-radius: 22px; padding: 22px; display: grid; gap: 8px; margin: 0 0 12px; }
+.rq-suggest label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.rq-suggest .optional { font-weight: 400; color: var(--ink-2); }
+.rq-suggest input, .rq-suggest textarea {
+  font: inherit; font-size: 16px; width: 100%; padding: 10px 12px; border: 1px solid #d2d2d7;
+  border-radius: 12px; background: #fff; color: var(--ink); resize: vertical;
+}
+.rq-suggest input:focus-visible, .rq-suggest textarea:focus-visible { outline: 3px solid rgba(0, 113, 227, 0.45); outline-offset: 1px; }
+.rq-suggest .btn { justify-self: start; margin-top: 6px; }
+.rq-hint { font-size: 14px; background: #fff; border-radius: 12px; padding: 10px 14px; }
+.rq-hint p { margin: 0 0 4px; color: var(--ink); font-weight: 600; }
+.rq-hint ul { margin: 0; padding-left: 18px; }
+.rq-error { color: #c9302c; font-size: 14px; margin: 0; }
+.rq-error:empty { display: none; }
+.rq-message { color: var(--ink-2); font-size: 15px; margin: 8px 0 20px; min-height: 1.4em; }
+.rq-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin: 0 0 8px; }
+.rq-tabs, .rq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rq-controls button {
+  font: inherit; font-size: 14px; padding: 6px 14px; min-height: 32px; border-radius: 980px;
+  border: 1px solid #d2d2d7; background: #fff; color: var(--ink); cursor: pointer;
+}
+.rq-controls button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.rq-controls button:focus-visible, .rq-vote:focus-visible { outline: 3px solid rgba(0, 113, 227, 0.45); outline-offset: 2px; }
+.rq-list { list-style: none; padding: 0; margin: 0; }
+.page .rq-list li { margin: 0; }
+.rq-item { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--line); }
+.rq-vote {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 56px; min-height: 56px; border-radius: 14px; border: 1px solid #d2d2d7; background: #fff;
+  color: var(--ink); font: inherit; cursor: pointer;
+}
+.rq-vote[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rq-vote:disabled { opacity: 0.6; cursor: progress; }
+.rq-arrow { font-size: 12px; line-height: 1; }
+.rq-count { font-size: 17px; font-weight: 600; }
+.rq-body { min-width: 0; }
+.rq-body h3 { margin: 4px 0; font-size: 17px; overflow-wrap: anywhere; }
+.rq-body p { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.rq-badge { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 980px; }
+.rq-planned { background: #e8f0fe; color: #1a56c4; }
+.rq-in-progress { background: #fff4e0; color: #8a5300; }
+.rq-shipped { background: #e6f6ea; color: #1d6b31; }
+.rq-empty { padding: 24px 0; color: var(--ink-2); border-top: 1px solid var(--line); }
