@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-09-30
 
 - **Living wallpaper**: a Sky, Harbor or Garden scene that follows the time of day, where each agent session
   lives as a star, a boat or a plant in the color of what it's doing, with today's story, the latest moments,
@@ -14,6 +14,7 @@
   notch, lit as the sun.
 - **A black hole at the notch** when the island opens, in Sky, Harbor and Garden: agents swing into orbit
   and dust falls in, then everything drifts home. Turn it off in Settings › Wallpaper.
+- **Glass island**: the open island and its cards are macOS glass; only the notch itself stays black.
 
 ## 0.2.1 — 2026-09-28
 
