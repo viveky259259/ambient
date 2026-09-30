@@ -287,14 +287,61 @@
   root.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse") return;
     const r = root.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-    if (y < 0.06 && Math.abs(x - 0.5) < 0.1 && !open) { setOpen(true); describe(); }
+    if (y < 0.06 && Math.abs(x - 0.5) < 0.1 && !open) { stopTour(); setOpen(true); describe(); }
   });
 
   let visible = false;
   new IntersectionObserver((entries) => {
     visible = entries[0].isIntersecting;
-    if (visible) kick();
+    if (visible) { kick(); startTour(); }
   }).observe(root);
+
+  // A guided tour: a fingertip taps through the controls while the demo is on screen, until the visitor takes over.
+  const controls = document.querySelector(".scene-controls");
+  const hint = document.getElementById("scene-hint");
+  const finger = document.createElement("span");
+  finger.className = "tour-finger"; finger.setAttribute("aria-hidden", "true");
+  controls.appendChild(finger);
+  const TOUR = [
+    ["#scene-open", 1200], ["#scene-open", 6500], ['[data-world="solar"]', 3000], ["#scene-open", 2200],
+    ['[data-look="light"]', 5500], ["#scene-open", 4000], ['[data-world="sky"]', 3500], ['[data-look="dark"]', 1800],
+  ];
+  let tourStep = 0, tourTimer = null, touring = false, tourStopped = reduceMotion;
+  function startTour() {
+    if (tourStopped || touring) return;
+    touring = true; hint.hidden = false; schedule();
+  }
+  function schedule() {
+    const [, delay] = TOUR[tourStep % TOUR.length];
+    tourTimer = setTimeout(tapNext, delay);
+  }
+  function tapNext() {
+    if (tourStopped) return;
+    if (!visible) { touring = false; return; }   // resumes from this step when the demo is back on screen
+    const target = document.querySelector(TOUR[tourStep % TOUR.length][0]);
+    const box = controls.getBoundingClientRect(), t = target.getBoundingClientRect();
+    finger.style.transform = `translate(${t.left - box.left + t.width / 2}px, ${t.top - box.top + t.height / 2}px)`;
+    finger.classList.add("shown");
+    tourTimer = setTimeout(() => {
+      if (tourStopped) return;
+      finger.classList.add("press");
+      target.classList.add("tapping");
+      const ripple = document.createElement("span");
+      ripple.className = "tap-ripple"; target.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+      setTimeout(() => { finger.classList.remove("press"); target.classList.remove("tapping"); }, 220);
+      target.click();
+      tourStep++;
+      schedule();
+    }, 650);
+  }
+  function stopTour() {
+    tourStopped = true; touring = false; clearTimeout(tourTimer);
+    finger.classList.remove("shown", "press"); hint.hidden = true;
+  }
+  // The visitor's own taps and clicks take over from the tour.
+  controls.addEventListener("click", (e) => { if (e.isTrusted && e.target.closest("button")) stopTour(); }, true);
+  document.getElementById("scene-stop").addEventListener("click", stopTour);
   new ResizeObserver(() => { resize(); draw(); }).observe(root);
   resize(); draw();
 })();
