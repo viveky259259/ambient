@@ -15,7 +15,7 @@ struct IslandView: View {
     var body: some View {
         let shape = NotchShape(topRadius: expandedLike ? 10 : 6, bottomRadius: expandedLike ? 22 : 10)
         ZStack(alignment: .top) {
-            IslandBackground(shape: shape, glass: expandedLike, notchHeight: model.geometry.notchHeight)
+            IslandBackground(shape: shape, glass: expandedLike, geometry: model.geometry)
                 .shadow(color: .black.opacity(expandedLike ? 0.35 : 0), radius: 18, y: 8)
             content
                 .frame(width: size.width, height: size.height, alignment: .top)
@@ -241,24 +241,23 @@ private struct FooterButton: View {
 }
 
 /// Black while the island hugs the notch, so it reads as the hardware; frosted glass once it opens into the menu or a
-/// card. Where the open island meets the notch it stays black and fades into the glass.
+/// card. Open, only the hardware notch's own footprint stays black: beside it the glass runs to the top edge.
 struct IslandBackground: View {
     let shape: NotchShape
     let glass: Bool
-    let notchHeight: CGFloat
-
-    private static let fade: CGFloat = 18
+    let geometry: IslandGeometry
 
     var body: some View {
         ZStack(alignment: .top) {
             glassLayer
                 .opacity(glass ? 1 : 0)
-            LinearGradient(stops: [.init(color: .black, location: 0),
-                                   .init(color: .black, location: notchHeight / (notchHeight + Self.fade)),
-                                   .init(color: .black.opacity(0), location: 1)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: notchHeight + Self.fade)
-                .opacity(glass ? 1 : 0)
+            if geometry.hasNotch {
+                // A point wider than the notch, so no glass shows between it and the hardware's edge.
+                UnevenRoundedRectangle(bottomLeadingRadius: 9, bottomTrailingRadius: 9)
+                    .fill(Color.black)
+                    .frame(width: geometry.notchWidth + 2, height: geometry.notchHeight)
+                    .opacity(glass ? 1 : 0)
+            }
             Color.black
                 .opacity(glass ? 0 : 1)
         }
