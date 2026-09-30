@@ -3,8 +3,8 @@ import AppKit
 import Darwin
 import QuartzCore
 
-/// Measures what Ambient costs this Mac and keeps it in memory: CPU and memory every five seconds, how long each
-/// wallpaper and notch-effect frame takes to draw, and how long hook events take to arrive. Nothing leaves the Mac;
+/// Measures what Ambient costs this Mac and keeps it in memory: CPU and memory every five seconds, how steadily the
+/// wallpaper and the notch effect keep their frame rate, and how long hook events take to arrive. Nothing leaves the Mac;
 /// Settings › Performance shows it, and its report can be copied or saved by hand.
 final class PerfMonitor: ObservableObject {
     static let shared = PerfMonitor()
@@ -24,9 +24,10 @@ final class PerfMonitor: ObservableObject {
         self.timer = timer
     }
 
-    /// One drawn frame. Called on the main thread from the scene's canvases; constant time.
-    func frame(ms: Double, source: PerfLog.FrameSource) {
-        log.recordFrame(ms: ms, source: source, at: Date())
+    /// One drawn frame, `interval` seconds after the last one from the same canvas, which meant to draw one every
+    /// `budget` seconds. Called on the main thread; constant time.
+    func frame(interval: Double, budget: Double, source: PerfLog.FrameSource) {
+        log.recordFrame(intervalMs: interval * 1000, budgetMs: budget * 1000, source: source, at: Date())
     }
 
     /// A hook event arrived; `sent` is when the hook stamped it.
@@ -78,5 +79,17 @@ final class PerfMonitor: ObservableObject {
             }
         }
         return result == KERN_SUCCESS ? Double(info.phys_footprint) / 1_048_576 : 0
+    }
+}
+
+/// Times one canvas's frames. SwiftUI draws a canvas later, on the GPU, so the time inside its closure says little;
+/// the gap between one frame and the next says whether it kept its rate.
+final class FrameClock {
+    private var last: CFTimeInterval?
+
+    func tick(budget: Double, source: PerfLog.FrameSource) {
+        let now = CACurrentMediaTime()
+        if let last { PerfMonitor.shared.frame(interval: now - last, budget: budget, source: source) }
+        last = now
     }
 }

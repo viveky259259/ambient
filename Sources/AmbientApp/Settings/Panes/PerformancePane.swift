@@ -32,7 +32,7 @@ struct PerformancePane: View {
                 value("Memory", s.memoryPeakMB == 0 ? "Measuring…" : "\(mb(s.memoryNowMB)) now · \(mb(s.memoryPeakMB)) peak")
             }
             SettingsSection(header: "Drawing",
-                            footer: "Time to draw each frame. A slow frame missed a 60 fps display's budget of 16.7 ms.") {
+                            footer: "Frames a second while it moves: the wallpaper aims for 12 (1 when all is calm), the notch effect for 60. A late frame came more than half a frame after it should have.") {
                 frames("Living wallpaper", s.scene)
                 SettingsDivider()
                 frames("Notch effect", s.effect)
@@ -60,7 +60,7 @@ struct PerformancePane: View {
 
     private func frames(_ title: String, _ f: PerfLog.Frames) -> some View {
         value(title, f.frames == 0 ? "No frames drawn"
-              : "\(f.frames) frames · \(String(format: "%.1f", f.averageMs)) ms average · \(Int((f.slowShare * 100).rounded()))% slow")
+              : "\(f.frames) frames · \(String(format: "%.1f", f.fps)) fps · \(Int((f.lateShare * 100).rounded()))% late")
     }
 
     private func one(_ x: Double) -> String { String(format: "%.1f", x) }

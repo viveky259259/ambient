@@ -1,7 +1,7 @@
 import Foundation
 
-/// What Ambient costs the Mac, measured on the Mac and kept in memory: CPU and memory, the time spent drawing the
-/// wallpaper and the notch effect, and how long hook events take to arrive. Kept as one-minute totals for a day, so
+/// What Ambient costs the Mac, measured on the Mac and kept in memory: CPU and memory, how steadily the wallpaper and
+/// the notch effect keep their frame rate, and how long hook events take to arrive. Kept as one-minute totals for a day, so
 /// recording is constant time and the log stays small.
 public struct PerfLog: Sendable {
     public enum FrameSource: Sendable {
@@ -10,9 +10,10 @@ public struct PerfLog: Sendable {
 
     public struct Frames: Equatable, Sendable {
         public var frames = 0
-        public var averageMs = 0.0
-        /// 0…1: frames that took longer than a 60 fps budget.
-        public var slowShare = 0.0
+        /// Frames a second while drawing.
+        public var fps = 0.0
+        /// 0…1: frames that came more than half a frame late.
+        public var lateShare = 0.0
     }
 
     public struct Hooks: Equatable, Sendable {
@@ -33,13 +34,11 @@ public struct PerfLog: Sendable {
     }
 
     public static let maxMinutes = 24 * 60
-    /// A frame slower than this missed a 60 fps display's budget.
-    public static let slowFrameMs = 1000.0 / 60
 
     private struct FrameTotals {
         var count = 0
-        var totalMs = 0.0
-        var slow = 0
+        var intervalMs = 0.0
+        var late = 0
     }
 
     private struct Minute {
@@ -74,11 +73,15 @@ public struct PerfLog: Sendable {
         }
     }
 
-    public mutating func recordFrame(ms: Double, source: FrameSource, at date: Date) {
+    /// A frame drawn `intervalMs` after the one before it, where the scene meant to draw one every `budgetMs`.
+    /// A gap far longer than the budget is a pause (covered, asleep, nothing moving), not a frame.
+    public mutating func recordFrame(intervalMs: Double, budgetMs: Double, source: FrameSource, at date: Date) {
+        guard intervalMs > 0, intervalMs <= max(1_000, 3 * budgetMs) else { return }
+        let late = intervalMs > 1.5 * budgetMs
         update(at: date) { m in
             switch source {
-            case .scene: Self.add(ms, to: &m.scene)
-            case .effect: Self.add(ms, to: &m.effect)
+            case .scene: Self.add(intervalMs, late: late, to: &m.scene)
+            case .effect: Self.add(intervalMs, late: late, to: &m.effect)
             }
         }
     }
@@ -148,17 +151,17 @@ public struct PerfLog: Sendable {
 
     private static func key(_ date: Date) -> Int { Int((date.timeIntervalSince1970 / 60).rounded(.down)) }
 
-    private static func add(_ ms: Double, to totals: inout FrameTotals) {
+    private static func add(_ intervalMs: Double, late: Bool, to totals: inout FrameTotals) {
         totals.count += 1
-        totals.totalMs += ms
-        if ms > slowFrameMs { totals.slow += 1 }
+        totals.intervalMs += intervalMs
+        if late { totals.late += 1 }
     }
 
     private static func frames(_ totals: [FrameTotals]) -> Frames {
-        let count = totals.reduce(0) { $0 + $1.count }
-        guard count > 0 else { return Frames() }
-        return Frames(frames: count, averageMs: totals.reduce(0) { $0 + $1.totalMs } / Double(count),
-                      slowShare: Double(totals.reduce(0) { $0 + $1.slow }) / Double(count))
+        let count = totals.reduce(0) { $0 + $1.count }, span = totals.reduce(0) { $0 + $1.intervalMs }
+        guard count > 0, span > 0 else { return Frames() }
+        return Frames(frames: count, fps: Double(count) / (span / 1000),
+                      lateShare: Double(totals.reduce(0) { $0 + $1.late }) / Double(count))
     }
 
     /// Nearest-rank percentile.
@@ -171,6 +174,6 @@ public struct PerfLog: Sendable {
     private static func one(_ x: Double) -> String { String(format: "%.1f", x) }
 
     private static func frameLine(_ f: Frames) -> String {
-        "\(f.frames) frames, \(one(f.averageMs)) ms average draw, \(Int((f.slowShare * 100).rounded()))% slow"
+        "\(f.frames) frames, \(one(f.fps)) fps, \(Int((f.lateShare * 100).rounded()))% late"
     }
 }

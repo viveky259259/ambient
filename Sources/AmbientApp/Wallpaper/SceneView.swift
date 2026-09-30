@@ -13,6 +13,8 @@ struct SceneView: View {
     /// The notch effect on the island's display, and whether it's running now.
     var effect: NotchEffectEngine?
     var engaged = false
+    @State private var sceneClock = FrameClock()
+    @State private var effectClock = FrameClock()
 
     var body: some View {
         let renderer = SceneRenderers.renderer(for: state.kind)
@@ -26,22 +28,20 @@ struct SceneView: View {
                 // the effect) and the effect over it.
                 TimelineView(.animation(minimumInterval: 1.0 / 60, paused: false)) { context in
                     Canvas { ctx, size in
-                        let started = CACurrentMediaTime()
+                        effectClock.tick(budget: 1.0 / 60, source: .effect)
                         effect.advance(to: context.date)
                         var lifted = motion
                         lifted.lifted = effect.lifted
                         renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: lifted)
                         NotchEffectDrawing.draw(&ctx, size: size, engine: effect, state: state, date: context.date,
                                                 motion: lifted, showsLabels: showsText)
-                        PerfMonitor.shared.frame(ms: (CACurrentMediaTime() - started) * 1000, source: .effect)
                     }
                 }
             } else if animated {
                 TimelineView(.animation(minimumInterval: Self.frameInterval(state), paused: false)) { context in
                     Canvas { ctx, size in
-                        let started = CACurrentMediaTime()
+                        sceneClock.tick(budget: Self.frameInterval(state), source: .scene)
                         renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: motion)
-                        PerfMonitor.shared.frame(ms: (CACurrentMediaTime() - started) * 1000, source: .scene)
                     }
                 }
             } else {
