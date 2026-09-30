@@ -15,9 +15,8 @@ struct IslandView: View {
     var body: some View {
         let shape = NotchShape(topRadius: expandedLike ? 10 : 6, bottomRadius: expandedLike ? 22 : 10)
         ZStack(alignment: .top) {
-            shape
-                .fill(Color.black)
-                .shadow(color: .black.opacity(expandedLike ? 0.45 : 0), radius: 18, y: 8)
+            IslandBackground(shape: shape, glass: expandedLike, notchHeight: model.geometry.notchHeight)
+                .shadow(color: .black.opacity(expandedLike ? 0.35 : 0), radius: 18, y: 8)
             content
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .clipShape(shape)
@@ -239,4 +238,55 @@ private struct FooterButton: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
     }
+}
+
+/// Black while the island hugs the notch, so it reads as the hardware; frosted glass once it opens into the menu or a
+/// card. Where the open island meets the notch it stays black and fades into the glass.
+struct IslandBackground: View {
+    let shape: NotchShape
+    let glass: Bool
+    let notchHeight: CGFloat
+
+    private static let fade: CGFloat = 18
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            glassLayer
+                .opacity(glass ? 1 : 0)
+            LinearGradient(stops: [.init(color: .black, location: 0),
+                                   .init(color: .black, location: notchHeight / (notchHeight + Self.fade)),
+                                   .init(color: .black.opacity(0), location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: notchHeight + Self.fade)
+                .opacity(glass ? 1 : 0)
+            Color.black
+                .opacity(glass ? 0 : 1)
+        }
+        .clipShape(shape)
+    }
+
+    @ViewBuilder private var glassLayer: some View {
+        if #available(macOS 26.0, *) {
+            // Tinted dark, so the island's white text reads over any wallpaper or window behind it.
+            Color.clear.glassEffect(.regular.tint(.black.opacity(0.35)), in: shape)
+        } else {
+            ZStack {
+                FrostedBackdrop()
+                Color.black.opacity(0.35)
+            }
+        }
+    }
+}
+
+/// The system's behind-window blur, for macOS before Liquid Glass.
+private struct FrostedBackdrop: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .hudWindow
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
