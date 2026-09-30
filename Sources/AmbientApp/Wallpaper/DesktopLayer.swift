@@ -8,7 +8,7 @@ final class DesktopLayer {
     private var windows: [WallpaperWindow] = []
     private var observers: [NSObjectProtocol] = []
     private var checkTimer: Timer?
-    private var lastVisible: [Bool]?
+    private var lastVisible: [CGRect]?
     /// Called when the wallpaper becomes covered or uncovered.
     var onVisibilityChange: (() -> Void)?
 
@@ -16,20 +16,18 @@ final class DesktopLayer {
 
     var isInstalled: Bool { !windows.isEmpty }
 
-    /// Whether any real part of the wallpaper can be seen right now. The menu bar and the Dock always show a strip
-    /// of the desktop, so what counts is each display's visible frame, and whether app windows cover it.
-    var isVisible: Bool {
-        windows.contains { window in
-            guard window.occlusionState.contains(.visible), let screen = window.screen else { return false }
-            return !Self.appWindowsCover(screen.visibleFrame)
+    /// The displays (by frame) whose part of the wallpaper can be seen right now. The menu bar and the Dock always
+    /// show a strip of the desktop, so what counts is each display's visible frame, and whether app windows cover it.
+    var visibleScreens: [CGRect] {
+        windows.compactMap { window in
+            guard window.occlusionState.contains(.visible), let screen = window.screen,
+                  !Self.appWindowsCover(screen.visibleFrame) else { return nil }
+            return screen.frame
         }
     }
 
-    /// Whether the main display's part of the wallpaper can be seen: where the island and its effect live.
-    var isMainVisible: Bool {
-        guard let window = windows.first, window.occlusionState.contains(.visible), let screen = window.screen else { return false }
-        return !Self.appWindowsCover(screen.visibleFrame)
-    }
+    /// Whether any real part of the wallpaper can be seen right now.
+    var isVisible: Bool { !visibleScreens.isEmpty }
 
     /// (Re)creates one window per display.
     func install() {
@@ -40,7 +38,8 @@ final class DesktopLayer {
             window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
             window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             window.isOpaque = true
-            window.contentView = NSHostingView(rootView: SceneHost(feed: feed, surface: .desk, isMain: screen == main))
+            window.contentView = NSHostingView(rootView: SceneHost(feed: feed, surface: .desk, isMain: screen == main,
+                                                                         screen: screen.frame))
             window.orderFrontRegardless()
             windows.append(window)
             observers.append(NotificationCenter.default.addObserver(
@@ -66,7 +65,7 @@ final class DesktopLayer {
     }
 
     private func recheck() {
-        let visible = [isVisible, isMainVisible]
+        let visible = visibleScreens
         guard visible != lastVisible else { return }
         lastVisible = visible
         onVisibilityChange?()

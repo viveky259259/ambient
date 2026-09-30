@@ -6,6 +6,8 @@
   lives as a star, a boat or a plant in the color of what it's doing, with today's story, the latest moments,
   the clock and your next calendar event. It shows at the desk and on the lock screen. Off by default: turn it
   on in Settings › Wallpaper.
+- **Every display**: with an extended display, each desktop shows the full scene and moves only while it can be
+  seen; the notch effect plays on the display with the island.
 - **Look**: the wallpaper follows the time of day, matches macOS's light or dark mode, or stays light or dark
   (Settings › Wallpaper).
 - **Solar System**, a fourth world: agents are planets standing in rows; open the island and they orbit the

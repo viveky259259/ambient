@@ -282,12 +282,15 @@ final class LivingWallpaper: ObservableObject {
     }
 
     /// Sets the notch effect up for the scene now showing: Solar System always lights its sun; the other worlds
-    /// form a black hole if the setting is on. None in Low Power Mode, or when the island isn't on the main display.
+    /// form a black hole if the setting is on. It plays on the display with the island, whichever that is. None in
+    /// Low Power Mode.
     private func configureEffect() {
-        guard let desk = feed.desk, let screen = NSScreen.screens.first, let island,
-              island.screenFrame == screen.frame, !ProcessInfo.processInfo.isLowPowerModeEnabled else {
+        guard let desk = feed.desk, let island, let screen = NSScreen.screens.first(where: { $0.frame == island.screenFrame }),
+              !ProcessInfo.processInfo.isLowPowerModeEnabled else {
+            if feed.effectScreen != nil { feed.effectScreen = nil }
             return feed.effect.configure(mode: nil, geometry: nil, agents: [], reduceMotion: false)
         }
+        if feed.effectScreen != screen.frame { feed.effectScreen = screen.frame }
         let mode: NotchSimulation.Mode? = desk.kind == .solar ? .solar : prefs.wallpaperIslandEffect ? .blackHole : nil
         let size = screen.frame.size
         let geometry = NotchGeometry(screen: Vec2(size.width, size.height),
@@ -318,12 +321,12 @@ final class LivingWallpaper: ObservableObject {
     private func updateMotion() {
         let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let desk = desktop.isVisible && !screensAsleep && !lowPower && !locked
-        let mainDesk = desk && desktop.isMainVisible
+        let visibleDesks = desktop.visibleScreens
+        let desk = !visibleDesks.isEmpty && !screensAsleep && !lowPower && !locked
         let lock = locked && !screensAsleep && !lowPower
         if feed.reduceMotion != reduce { feed.reduceMotion = reduce }
         if feed.deskAnimated != desk { feed.deskAnimated = desk }
-        if feed.mainDeskAnimated != mainDesk { feed.mainDeskAnimated = mainDesk }
+        if feed.visibleDesks != visibleDesks { feed.visibleDesks = visibleDesks }
         if feed.lockAnimated != lock { feed.lockAnimated = lock }
         // Low Power Mode or Reduce Motion switched mid-effect: set it up again at once.
         configureEffect()
