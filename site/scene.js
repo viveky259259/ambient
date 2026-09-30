@@ -303,8 +303,8 @@
   finger.className = "tour-finger"; finger.setAttribute("aria-hidden", "true");
   controls.appendChild(finger);
   const TOUR = [
-    ["#scene-open", 1200], ["#scene-open", 6500], ['[data-world="solar"]', 3000], ["#scene-open", 2200],
-    ['[data-look="light"]', 5500], ["#scene-open", 4000], ['[data-world="sky"]', 3500], ['[data-look="dark"]', 1800],
+    ["#scene-open", 800], ["#scene-open", 3500], ['[data-world="solar"]', 1600], ["#scene-open", 1200],
+    ['[data-look="light"]', 3000], ["#scene-open", 2200], ['[data-world="sky"]', 1800], ['[data-look="dark"]', 1000],
   ];
   let tourStep = 0, tourTimer = null, touring = false, tourStopped = reduceMotion;
   function startTour() {
@@ -333,7 +333,7 @@
       target.click();
       tourStep++;
       schedule();
-    }, 650);
+    }, 450);
   }
   function stopTour() {
     tourStopped = true; touring = false; clearTimeout(tourTimer);
