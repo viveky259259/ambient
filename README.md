@@ -21,7 +21,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 - **Living wallpaper** — a sky, a harbor, a garden or a solar system that follows the time of day, where each
   session lives as a star, a boat, a plant or a planet glowing in the color of what it's doing. Around them: today's story (agent
   time, tools, turns, how often they needed you), the latest moments, the clock and your next event. On the
-  desktop, and on the lock screen while you're away. Off until you turn it on in Settings › Wallpaper.
+  desktop, and on the lock screen while you're away. Light by day and dark at night, or set it to match macOS
+  or stay light or dark. Off until you turn it on in Settings › Wallpaper.
 - **When you open the island, the wallpaper answers** — in Sky, Harbor and Garden the notch collapses into a
   black hole: your agents lift off as light and swing into orbits while loose dust falls in, then drift home
   when it closes. In Solar System the notch lights up as the sun and the six most urgent planets orbit it; the

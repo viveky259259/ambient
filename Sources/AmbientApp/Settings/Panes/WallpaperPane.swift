@@ -9,7 +9,7 @@ struct WallpaperPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             PaneHeader(pane: .wallpaper)
-            WallpaperPreview(enabled: prefs.wallpaperEnabled, choice: prefs.sceneChoice)
+            WallpaperPreview(enabled: prefs.wallpaperEnabled, choice: prefs.sceneChoice, look: prefs.sceneLook)
             if wallpaper.restorePending {
                 SettingsSection(footer: "Ambient showed the scene as your wallpaper while the Mac was locked and hasn't put yours back yet.") {
                     SettingsRow(title: "Restore my wallpaper") {
@@ -24,6 +24,16 @@ struct WallpaperPane: View {
                 SettingsSection(header: "Scene",
                                 footer: "When you open the island, the Solar System's sun lights and its planets orbit. The other scenes can form a black hole at the notch.") {
                     ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
+                    SettingsDivider()
+                    SettingsRow(title: "Look", subtitle: "Light or dark: with the time of day, with macOS, or always the same.") {
+                        Picker("Look", selection: $prefs.wallpaperLook) {
+                            ForEach(SceneLook.allCases, id: \.self) { look in
+                                Text(look.displayName).tag(look.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
                     SettingsDivider()
                     SettingsToggleRow(title: "Black hole when the island opens", isOn: $prefs.wallpaperIslandEffect)
                         .disabled(prefs.sceneChoice == .fixed(.solar))

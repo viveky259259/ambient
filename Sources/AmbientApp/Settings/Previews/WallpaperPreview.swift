@@ -5,12 +5,15 @@ import SwiftUI
 struct WallpaperPreview: View {
     let enabled: Bool
     let choice: SceneChoice
+    var look: SceneLook = .timeOfDay
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         PreviewStage(enabled: enabled) {
             TimelineView(.everyMinute) { context in
-                SceneView(state: Self.state(ScenePolicy.kind(for: choice, on: context.date), now: context.date),
+                SceneView(state: Self.state(ScenePolicy.kind(for: choice, on: context.date), now: context.date,
+                                            look: look, systemDark: colorScheme == .dark),
                           animated: enabled, reduceMotion: reduceMotion)
             }
         }
@@ -18,8 +21,9 @@ struct WallpaperPreview: View {
         .accessibilityLabel("Preview of the living wallpaper")
     }
 
-    static func state(_ kind: SceneKind, now: Date) -> SceneState {
-        SceneState.make(sessions: sessions(now: now), day: DayLog(now: now), now: now, kind: kind, surface: .desk)
+    static func state(_ kind: SceneKind, now: Date, look: SceneLook = .timeOfDay, systemDark: Bool = false) -> SceneState {
+        SceneState.make(sessions: sessions(now: now), day: DayLog(now: now), now: now, kind: kind, surface: .desk,
+                        look: look, systemDark: systemDark)
     }
 
     /// The world alone, for thumbnails.

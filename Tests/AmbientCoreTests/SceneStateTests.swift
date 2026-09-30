@@ -78,6 +78,14 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         #expect(SceneState.maxInhabitants(for: .garden) == SceneState.maxInhabitants)
     }
 
+    @Test func theLookSetsTheSceneLight() {
+        let dark = SceneState.make(sessions: [], day: DayLog(now: evening, calendar: utc), now: evening, kind: .sky,
+                                   surface: .desk, look: .light, calendar: utc, locale: gb)
+        #expect(dark.light.darkInk)
+        #expect(dark.clock == "18:42")
+        #expect(!make([]).light.darkInk)
+    }
+
     @Test func labelsReadNaturally() {
         let s = session("a", .waiting(reason: "permission", message: "Bash: swift test"),
                         cwd: "/x/ambient-notification", title: "Wallpaper that follows agents")

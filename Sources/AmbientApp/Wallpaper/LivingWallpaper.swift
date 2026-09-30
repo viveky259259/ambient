@@ -33,6 +33,7 @@ final class LivingWallpaper: ObservableObject {
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "wallpaper")
     private var cancellables: Set<AnyCancellable> = []
     private var observers: [NSObjectProtocol] = []
+    private var themeObserver: NSObjectProtocol?
     private var minuteTimer: Timer?
     private var swapTimer: Timer?
     private var slots: [String: Int] = [:]
@@ -117,6 +118,10 @@ final class LivingWallpaper: ObservableObject {
                 self?.updateMotion()
             },
         ]
+        // Light or dark mode switched (by hand, or by macOS's Auto schedule): for the "Match macOS" look.
+        themeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main
+        ) { [weak self] _ in self?.refresh() }
         scheduleMinuteTick()
         refresh()
     }
@@ -130,13 +135,15 @@ final class LivingWallpaper: ObservableObject {
         let kind = ScenePolicy.kind(for: prefs.sceneChoice, on: now)
         if prefs.wallpaperCalendar { calendar.start() } else { calendar.stop() }
         let next = prefs.wallpaperCalendar ? calendar.next : nil
+        let look = prefs.sceneLook, dark = Self.systemIsDark
         let desk = SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .desk,
-                                   nextEvent: next, keeping: slots)
+                                   nextEvent: next, keeping: slots, look: look, systemDark: dark)
         slots = Dictionary(uniqueKeysWithValues: desk.inhabitants.map { ($0.id, $0.slot) })
         feed.desk = desk
         feed.lock = prefs.wallpaperOnLockScreen
             ? SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .lock,
-                              lockMessages: prefs.wallpaperLockMessages, nextEvent: next, keeping: slots)
+                              lockMessages: prefs.wallpaperLockMessages, nextEvent: next, keeping: slots,
+                              look: look, systemDark: dark)
             : nil
         if !desktop.isInstalled { desktop.install() }
         updateLockMode()
@@ -296,6 +303,10 @@ final class LivingWallpaper: ObservableObject {
         feed.effect.configure(mode: mode, geometry: geometry, agents: agents,
                               reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
+
+    /// macOS's appearance, for the "Match macOS" look. Read from the global domain, which is already current when
+    /// the appearance-change notification arrives.
+    private static var systemIsDark: Bool { UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark" }
 
     /// Puts the user's own wallpaper back. Settings' "Restore my wallpaper".
     func restoreWallpaper() {

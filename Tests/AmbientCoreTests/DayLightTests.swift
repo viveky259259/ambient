@@ -30,6 +30,17 @@ private func at(_ hour: Int, _ minute: Int, _ second: Int = 0) -> Date {
         #expect(DayLight.at(at(20, 30), calendar: utc) == DayLight(from: .dusk, to: .night, blend: 0.5))
     }
 
+    @Test func theLookCanFollowTheDayTheSystemOrStayPut() {
+        let evening = at(19, 0), noon = at(12, 0)
+        #expect(SceneLook.timeOfDay.light(at: evening, systemDark: false, calendar: utc) == DayLight.at(evening, calendar: utc))
+        #expect(SceneLook.light.light(at: evening, systemDark: true, calendar: utc) == DayLight(from: .day, to: .day, blend: 0))
+        #expect(SceneLook.dark.light(at: noon, systemDark: false, calendar: utc) == DayLight(from: .night, to: .night, blend: 0))
+        #expect(SceneLook.system.light(at: noon, systemDark: true, calendar: utc).dominant == .night)
+        #expect(SceneLook.system.light(at: evening, systemDark: false, calendar: utc).darkInk)
+        #expect(SceneLook(rawValue: "timeOfDay") == .timeOfDay)
+        #expect(SceneLook.allCases.map(\.displayName) == ["Follow the time of day", "Match macOS", "Always light", "Always dark"])
+    }
+
     @Test func darkInkOnlyByDay() {
         #expect(DayLight.at(at(12, 0), calendar: utc).darkInk)
         #expect(DayLight.at(at(17, 59), calendar: utc).darkInk)

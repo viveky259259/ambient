@@ -48,3 +48,32 @@ public struct DayLight: Equatable, Sendable {
         return DayLight(from: .night, to: .night, blend: 0)
     }
 }
+
+/// Whether the scene's light follows the clock, follows macOS's appearance, or stays light or dark.
+public enum SceneLook: String, CaseIterable, Sendable {
+    case timeOfDay, system, light, dark
+
+    public var displayName: String {
+        switch self {
+        case .timeOfDay: "Follow the time of day"
+        case .system: "Match macOS"
+        case .light: "Always light"
+        case .dark: "Always dark"
+        }
+    }
+
+    /// The light to draw at `date`: the day's own, or held at midday (light) or night (dark).
+    public func light(at date: Date, systemDark: Bool, calendar: Calendar = .current) -> DayLight {
+        switch self {
+        case .timeOfDay: DayLight.at(date, calendar: calendar)
+        case .system: systemDark ? .steady(.night) : .steady(.day)
+        case .light: .steady(.day)
+        case .dark: .steady(.night)
+        }
+    }
+}
+
+extension DayLight {
+    /// One phase, not turning into another.
+    public static func steady(_ phase: DayPhase) -> DayLight { DayLight(from: phase, to: phase, blend: 0) }
+}

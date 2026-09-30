@@ -82,6 +82,7 @@ public struct SceneState: Equatable, Sendable {
     public static func make(sessions: [Session], day: DayLog, now: Date, kind: SceneKind, surface: SceneSurface,
                             lockMessages: Bool = false, nextEvent: CalendarEvent? = nil,
                             keeping previousSlots: [String: Int] = [:],
+                            look: SceneLook = .timeOfDay, systemDark: Bool = false,
                             calendar: Calendar = .current, locale: Locale = .current) -> SceneState {
         let freeText = surface == .desk || lockMessages
         let ordered = sessions.sorted {
@@ -95,7 +96,7 @@ public struct SceneState: Equatable, Sendable {
         return SceneState(
             kind: kind,
             surface: surface,
-            light: DayLight.at(now, calendar: calendar),
+            light: look.light(at: now, systemDark: systemDark, calendar: calendar),
             now: now,
             inhabitants: shown.map { inhabitant($0, slot: slots[$0.id] ?? 0, now: now, freeText: freeText) },
             overflow: ordered.count - shown.count,
