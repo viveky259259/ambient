@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Performance** in Settings: what Ambient costs your Mac over the last hour or day (CPU, memory, wallpaper and
+  notch-effect draw times, hook event delays), measured on your Mac and never sent anywhere. Copy or save a
+  report to share it yourself.
+
 ## 0.4.0 — 2026-09-30
 
 - Maintenance release: no changes from 0.3.0.

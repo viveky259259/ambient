@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         dockGlow = DockGlow(model: model, prefs: prefs)
         dockGlow?.start()
+        PerfMonitor.shared.start()
 
         let wallpaper = LivingWallpaper(model: model, prefs: prefs, paths: paths)
         wallpaper.start()

@@ -1,4 +1,5 @@
 import AmbientCore
+import QuartzCore
 import SwiftUI
 
 /// A living wallpaper: one world, its inhabitants, and the text set into it.
@@ -25,17 +26,23 @@ struct SceneView: View {
                 // the effect) and the effect over it.
                 TimelineView(.animation(minimumInterval: 1.0 / 60, paused: false)) { context in
                     Canvas { ctx, size in
+                        let started = CACurrentMediaTime()
                         effect.advance(to: context.date)
                         var lifted = motion
                         lifted.lifted = effect.lifted
                         renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: lifted)
                         NotchEffectDrawing.draw(&ctx, size: size, engine: effect, state: state, date: context.date,
                                                 motion: lifted, showsLabels: showsText)
+                        PerfMonitor.shared.frame(ms: (CACurrentMediaTime() - started) * 1000, source: .effect)
                     }
                 }
             } else if animated {
                 TimelineView(.animation(minimumInterval: Self.frameInterval(state), paused: false)) { context in
-                    Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: motion) }
+                    Canvas { ctx, size in
+                        let started = CACurrentMediaTime()
+                        renderer.drawLife(&ctx, size: size, state: state, date: context.date, motion: motion)
+                        PerfMonitor.shared.frame(ms: (CACurrentMediaTime() - started) * 1000, source: .scene)
+                    }
                 }
             } else {
                 Canvas { ctx, size in renderer.drawLife(&ctx, size: size, state: state, date: state.now, motion: motion) }

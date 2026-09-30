@@ -87,6 +87,8 @@ struct SettingsView: View {
             DockPane(setup: setup, prefs: prefs)
         case .wallpaper:
             WallpaperPane(prefs: prefs, wallpaper: wallpaper, calendar: wallpaper.calendar)
+        case .performance:
+            PerformancePane(monitor: PerfMonitor.shared)
         case .general:
             GeneralPane(setup: setup)
         }

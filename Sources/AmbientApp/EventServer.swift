@@ -25,7 +25,10 @@ final class EventServer {
             }
             switch message {
             case let .event(event):
-                DispatchQueue.main.async { model.value.apply(event) }
+                DispatchQueue.main.async {
+                    PerfMonitor.shared.hookEvent(sent: event.timestamp)
+                    model.value.apply(event)
+                }
                 return nil
             case .statusRequest:
                 let (sessions, mood) = snapshot.get()

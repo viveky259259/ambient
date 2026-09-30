@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The panes of the settings window, in sidebar order.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case welcome, agents, island, alerts, dock, wallpaper, general
+    case welcome, agents, island, alerts, dock, wallpaper, performance, general
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: "Alerts"
         case .dock: "Dock Glow"
         case .wallpaper: "Wallpaper"
+        case .performance: "Performance"
         case .general: "General"
         }
     }
@@ -26,6 +27,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: "bell.badge"
         case .dock: "dock.rectangle"
         case .wallpaper: "photo.artframe"
+        case .performance: "gauge.with.dots.needle.33percent"
         case .general: "gearshape"
         }
     }
@@ -38,6 +40,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: "Banners and chimes for the moments that need you."
         case .dock: "Light along the Dock in the color of what your agents are doing."
         case .wallpaper: "A living world on your desktop and lock screen, where your agents live."
+        case .performance: "What Ambient costs your Mac, measured on your Mac. Nothing is sent anywhere."
         case .general: "Startup, the command-line tool, and version."
         }
     }
