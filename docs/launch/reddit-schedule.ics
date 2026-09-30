@@ -40,10 +40,10 @@ DESCRIPTION:I built a Mac notch island that shows what Claude Code is doing
  app%20%28or%20the%20Terminal%2FiTerm2%20tab%2C%20tmux%20pane%2C%20or%20edi
  tor%20window%29.%20Nothing%20leaves%20your%20Mac.%20Claude%20Code%20also%2
  0helped%20me%20write%20much%20of%20the%20Swift.%0A%0AI%27m%20the%20develop
- er.%20It%27s%20free%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%20would%20you%2
- 0want%20it%20to%20show%20for%20long-running%20sessions%3F\n3. Text post ·
-  flair: Built with Claude\n4. Submit\, then reply to comments in the first
-  hour.
+ er.%20It%27s%20free%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-claudeai%0A%
+ 0AWhat%20would%20you%20want%20it%20to%20show%20for%20long-running%20sessio
+ ns%3F\n3. Text post · flair: Built with Claude\n4. Submit\, then reply to
+  comments in the first hour.
 URL:https://www.reddit.com/r/ClaudeAI/submit?type=TEXT&title=I%20built%20a%
  20Mac%20notch%20island%20that%20shows%20what%20Claude%20Code%20is%20doing%
  20and%20lights%20up%20when%20it%20needs%20permission&text=I%20kept%20losin
@@ -64,8 +64,8 @@ URL:https://www.reddit.com/r/ClaudeAI/submit?type=TEXT&title=I%20built%20a%
  0the%20Terminal%2FiTerm2%20tab%2C%20tmux%20pane%2C%20or%20editor%20window%
  29.%20Nothing%20leaves%20your%20Mac.%20Claude%20Code%20also%20helped%20me%
  20write%20much%20of%20the%20Swift.%0A%0AI%27m%20the%20developer.%20It%27s%
- 20free%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%20would%20you%20want%20it%20
- to%20show%20for%20long-running%20sessions%3F
+ 20free%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-claudeai%0A%0AWhat%20woul
+ d%20you%20want%20it%20to%20show%20for%20long-running%20sessions%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -105,11 +105,11 @@ DESCRIPTION:Stop babysitting Claude Code: a notch indicator for permission
  s%20are%20dropped.%0A-%20The%20installer%20only%20adds%20its%20own%20entri
  es%20to%20~%2F.claude%2Fsettings.json%20and%20keeps%20a%20backup.%0A-%20%6
  0ambient%20doctor%60%20checks%20the%20whole%20chain.%0A%0AI%20built%20it%3
- B%20it%27s%20free%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%0A%0A
- Question%20for%20heavy%20users%3A%20do%20you%20want%20a%20sound%20for%20ev
- ery%20finished%20turn%2C%20or%20only%20for%20permission%20prompts%3F\n3. T
- ext post · flair: Showcase\n4. Submit\, then reply to comments in the fir
- st hour.
+ B%20it%27s%20free%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%2F%3F
+ ref%3Dr-claudecode%0A%0AQuestion%20for%20heavy%20users%3A%20do%20you%20wan
+ t%20a%20sound%20for%20every%20finished%20turn%2C%20or%20only%20for%20permi
+ ssion%20prompts%3F\n3. Text post · flair: Showcase\n4. Submit\, then repl
+ y to comments in the first hour.
 URL:https://www.reddit.com/r/ClaudeCode/submit?type=TEXT&title=Stop%20babys
  itting%20Claude%20Code%3A%20a%20notch%20indicator%20for%20permission%20pro
  mpts%2C%20finished%20turns%20and%20errors&text=If%20you%20run%20Claude%20C
@@ -128,9 +128,10 @@ URL:https://www.reddit.com/r/ClaudeCode/submit?type=TEXT&title=Stop%20babys
  ropped.%0A-%20The%20installer%20only%20adds%20its%20own%20entries%20to%20~
  %2F.claude%2Fsettings.json%20and%20keeps%20a%20backup.%0A-%20%60ambient%20
  doctor%60%20checks%20the%20whole%20chain.%0A%0AI%20built%20it%3B%20it%27s%
- 20free%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%0A%0AQuestion%20
- for%20heavy%20users%3A%20do%20you%20want%20a%20sound%20for%20every%20finis
- hed%20turn%2C%20or%20only%20for%20permission%20prompts%3F
+ 20free%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-cla
+ udecode%0A%0AQuestion%20for%20heavy%20users%3A%20do%20you%20want%20a%20sou
+ nd%20for%20every%20finished%20turn%2C%20or%20only%20for%20permission%20pro
+ mpts%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -166,8 +167,8 @@ DESCRIPTION:My side project: a Mac notch island that tells you when your AI
  27.%0A%0AWhat%20I%27d%20like%20feedback%20on%3A%20the%20landing%20page%20a
  sks%20for%20a%20name%20and%20email%20before%20the%20download%20%28a%20wait
  list%29.%20Would%20that%20stop%20you%20from%20trying%20it%3F%0A%0Ahttps%3A
- %2F%2Fyaml.cafe\n3. Text post\n4. Submit\, then reply to comments in the f
- irst hour.
+ %2F%2Fyaml.cafe%2F%3Fref%3Dr-sideproject\n3. Text post\n4. Submit\, then r
+ eply to comments in the first hour.
 URL:https://www.reddit.com/r/SideProject/submit?type=TEXT&title=My%20side%2
  0project%3A%20a%20Mac%20notch%20island%20that%20tells%20you%20when%20your%
  20AI%20coding%20agent%20needs%20you&text=Ambient%20is%20a%20free%20macOS%2
@@ -182,7 +183,7 @@ URL:https://www.reddit.com/r/SideProject/submit?type=TEXT&title=My%20side%2
  27.%0A%0AWhat%20I%27d%20like%20feedback%20on%3A%20the%20landing%20page%20a
  sks%20for%20a%20name%20and%20email%20before%20the%20download%20%28a%20wait
  list%29.%20Would%20that%20stop%20you%20from%20trying%20it%3F%0A%0Ahttps%3A
- %2F%2Fyaml.cafe
+ %2F%2Fyaml.cafe%2F%3Fref%3Dr-sideproject
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -221,10 +222,10 @@ DESCRIPTION:Ambient: see whether your coding agents are working\, waiting o
  C%20Codex%20thread%2C%20Terminal%2FiTerm2%20tab%2C%20tmux%20or%20cmux%20pa
  ne%2C%20or%20the%20editor%20window.%0A%0ANo%20accounts%2C%20no%20network%2
  C%20no%20telemetry.%20I%27m%20the%20developer%3B%20it%27s%20free%20for%20m
- acOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%0A%0AFeedback%20I%27m%20after%3A
- %20which%20terminals%20or%20editors%20should%20click-to-return%20support%2
- 0next%3F\n3. Text post\n4. Submit\, then reply to comments in the first ho
- ur.
+ acOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-devtools%0A%0AFeedb
+ ack%20I%27m%20after%3A%20which%20terminals%20or%20editors%20should%20click
+ -to-return%20support%20next%3F\n3. Text post\n4. Submit\, then reply to co
+ mments in the first hour.
 URL:https://www.reddit.com/r/devtools/submit?type=TEXT&title=Ambient%3A%20s
  ee%20whether%20your%20coding%20agents%20are%20working%2C%20waiting%20or%20
  done%20without%20switching%20windows%20%28macOS%29&text=The%20problem%3A%2
@@ -242,8 +243,9 @@ URL:https://www.reddit.com/r/devtools/submit?type=TEXT&title=Ambient%3A%20s
  read%2C%20Terminal%2FiTerm2%20tab%2C%20tmux%20or%20cmux%20pane%2C%20or%20t
  he%20editor%20window.%0A%0ANo%20accounts%2C%20no%20network%2C%20no%20telem
  etry.%20I%27m%20the%20developer%3B%20it%27s%20free%20for%20macOS%2014%2B%3
- A%20https%3A%2F%2Fyaml.cafe%0A%0AFeedback%20I%27m%20after%3A%20which%20ter
- minals%20or%20editors%20should%20click-to-return%20support%20next%3F
+ A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-devtools%0A%0AFeedback%20I%27m%20
+ after%3A%20which%20terminals%20or%20editors%20should%20click-to-return%20s
+ upport%20next%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -285,9 +287,9 @@ DESCRIPTION:How should a coding agent ask for your attention without becomi
  2.%20Is%20%22stays%20green%20until%20you%20look%22%20right%2C%20or%20shoul
  d%20done%20decay%20on%20a%20timer%3F%0A%0ADisclosure%3A%20I%20implemented%
  20this%20as%20a%20free%20Mac%20app%2C%20Ambient%20%28https%3A%2F%2Fyaml.ca
- fe%29%2C%20but%20I%27m%20mostly%20interested%20in%20the%20policy.\n3. Text
-  post · flair: Discussion\n4. Submit\, then reply to comments in the firs
- t hour.
+ fe%2F%3Fref%3Dr-ai_agents%29%2C%20but%20I%27m%20mostly%20interested%20in%2
+ 0the%20policy.\n3. Text post · flair: Discussion\n4. Submit\, then reply 
+ to comments in the first hour.
 URL:https://www.reddit.com/r/AI_Agents/submit?type=TEXT&title=How%20should%
  20a%20coding%20agent%20ask%20for%20your%20attention%20without%20becoming%2
  0noise%3F&text=I%27ve%20been%20working%20on%20this%20problem%20for%20agent
@@ -308,8 +310,8 @@ URL:https://www.reddit.com/r/AI_Agents/submit?type=TEXT&title=How%20should%
  h%20happen%3F%0A2.%20Is%20%22stays%20green%20until%20you%20look%22%20right
  %2C%20or%20should%20done%20decay%20on%20a%20timer%3F%0A%0ADisclosure%3A%20
  I%20implemented%20this%20as%20a%20free%20Mac%20app%2C%20Ambient%20%28https
- %3A%2F%2Fyaml.cafe%29%2C%20but%20I%27m%20mostly%20interested%20in%20the%20
- policy.
+ %3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-ai_agents%29%2C%20but%20I%27m%20mostly%20i
+ nterested%20in%20the%20policy.
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -348,9 +350,9 @@ DESCRIPTION:Building an agent notifier taught me the best notification is t
  ith%20a%20redesigned%20settings%20window%20and%20a%20waitlist-gated%20down
  load%20to%20see%20who%20actually%20installs%20it.%0A%0AWhere%20it%20stands
  %3A%20free%2C%20launched%20Sep%2027.%20I%27ll%20post%20what%20the%20waitli
- st%20shows.%0A%0ASite%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%27s%20a%20not
- ification%20rule%20you%20wish%20every%20app%20had%3F\n3. Text post\n4. Sub
- mit\, then reply to comments in the first hour.
+ st%20shows.%0A%0ASite%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-buildinpub
+ lic%0A%0AWhat%27s%20a%20notification%20rule%20you%20wish%20every%20app%20h
+ ad%3F\n3. Text post\n4. Submit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/buildinpublic/submit?type=TEXT&title=Building%
  20an%20agent%20notifier%20taught%20me%20the%20best%20notification%20is%20t
  he%20one%20you%20don%27t%20send&text=I%27m%20building%20Ambient%2C%20a%20M
@@ -368,8 +370,9 @@ URL:https://www.reddit.com/r/buildinpublic/submit?type=TEXT&title=Building%
  ith%20a%20redesigned%20settings%20window%20and%20a%20waitlist-gated%20down
  load%20to%20see%20who%20actually%20installs%20it.%0A%0AWhere%20it%20stands
  %3A%20free%2C%20launched%20Sep%2027.%20I%27ll%20post%20what%20the%20waitli
- st%20shows.%0A%0ASite%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%27s%20a%20not
- ification%20rule%20you%20wish%20every%20app%20had%3F
+ st%20shows.%0A%0ASite%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-buildinpub
+ lic%0A%0AWhat%27s%20a%20notification%20rule%20you%20wish%20every%20app%20h
+ ad%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -432,10 +435,11 @@ DESCRIPTION:A small fix for the worst part of agentic coding: not noticing
  he%20menu%20bar%2C%20plus%20a%20light%20along%20the%20Dock.%0A4.%20Only%20
  notify%20when%20I%27m%20not%20already%20in%20the%20agent%27s%20app.%0A%0AI
  %20packaged%20this%20as%20a%20free%20Mac%20app%20called%20Ambient%20%28I%2
- 7m%20the%20developer%29%3A%20https%3A%2F%2Fyaml.cafe%0A%0AHow%20do%20you%2
- 0keep%20track%20of%20several%20agents%20at%20once%3F%20Terminal%20bells%2C
- %20tmux%20alerts%2C%20something%20else%3F\n3. Text post · flair: Resource
- s And Tips\n4. Submit\, then reply to comments in the first hour.
+ 7m%20the%20developer%29%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-chatgptc
+ oding%0A%0AHow%20do%20you%20keep%20track%20of%20several%20agents%20at%20on
+ ce%3F%20Terminal%20bells%2C%20tmux%20alerts%2C%20something%20else%3F\n3. T
+ ext post · flair: Resources And Tips\n4. Submit\, then reply to comments 
+ in the first hour.
 URL:https://www.reddit.com/r/ChatGPTCoding/submit?type=TEXT&title=A%20small
  %20fix%20for%20the%20worst%20part%20of%20agentic%20coding%3A%20not%20notic
  ing%20when%20the%20agent%20is%20waiting%20on%20you&text=With%20Claude%20Co
@@ -452,9 +456,9 @@ URL:https://www.reddit.com/r/ChatGPTCoding/submit?type=TEXT&title=A%20small
  0bar%2C%20plus%20a%20light%20along%20the%20Dock.%0A4.%20Only%20notify%20wh
  en%20I%27m%20not%20already%20in%20the%20agent%27s%20app.%0A%0AI%20packaged
  %20this%20as%20a%20free%20Mac%20app%20called%20Ambient%20%28I%27m%20the%20
- developer%29%3A%20https%3A%2F%2Fyaml.cafe%0A%0AHow%20do%20you%20keep%20tra
- ck%20of%20several%20agents%20at%20once%3F%20Terminal%20bells%2C%20tmux%20a
- lerts%2C%20something%20else%3F
+ developer%29%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-chatgptcoding%0A%0A
+ How%20do%20you%20keep%20track%20of%20several%20agents%20at%20once%3F%20Ter
+ minal%20bells%2C%20tmux%20alerts%2C%20something%20else%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -497,9 +501,9 @@ DESCRIPTION:Hooking agent CLIs without slowing them down: 15 ms hooks\, a U
  mitations%3A%20Codex%20asks%20you%20to%20trust%20new%20hooks%20via%20%2Fho
  oks%3B%20there%27s%20no%20Windows%20or%20Linux%20version.%0A%0AThe%20app%2
  0is%20Ambient%2C%20free%20%28I%27m%20the%20developer%29%3A%20https%3A%2F%2
- Fyaml.cafe.%20What%20would%20you%20measure%20beyond%20hook%20latency%3F\n3
- . Text post · flair: Tools\n4. Submit\, then reply to comments in the fir
- st hour.
+ Fyaml.cafe%2F%3Fref%3Dr-llmdevs.%20What%20would%20you%20measure%20beyond%2
+ 0hook%20latency%3F\n3. Text post · flair: Tools\n4. Submit\, then reply t
+ o comments in the first hour.
 URL:https://www.reddit.com/r/LLMDevs/submit?type=TEXT&title=Hooking%20agent
  %20CLIs%20without%20slowing%20them%20down%3A%2015%20ms%20hooks%2C%20a%20Un
  ix%20socket%20and%20per-session%20state&text=Implementation%20notes%20from
@@ -521,7 +525,8 @@ URL:https://www.reddit.com/r/LLMDevs/submit?type=TEXT&title=Hooking%20agent
  ions%3A%20Codex%20asks%20you%20to%20trust%20new%20hooks%20via%20%2Fhooks%3
  B%20there%27s%20no%20Windows%20or%20Linux%20version.%0A%0AThe%20app%20is%2
  0Ambient%2C%20free%20%28I%27m%20the%20developer%29%3A%20https%3A%2F%2Fyaml
- .cafe.%20What%20would%20you%20measure%20beyond%20hook%20latency%3F
+ .cafe%2F%3Fref%3Dr-llmdevs.%20What%20would%20you%20measure%20beyond%20hook
+ %20latency%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -557,8 +562,9 @@ DESCRIPTION:Launched Ambient: a free Mac app for people who run AI coding a
  0it.%0A%0AWhat%20I%27d%20love%20feedback%20on%3A%0A1.%20Is%20gating%20a%20
  free%20download%20behind%20a%20waitlist%20form%20going%20to%20kill%20conve
  rsion%3F%0A2.%20Would%20you%20pay%20for%20a%20team%20version%20%28shared%2
- 0agent%20status%29%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe\n3. Text post · flair:
-  Self Promotion\n4. Submit\, then reply to comments in the first hour.
+ 0agent%20status%29%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-indiehacke
+ rs\n3. Text post · flair: Self Promotion\n4. Submit\, then reply to comme
+ nts in the first hour.
 URL:https://www.reddit.com/r/indiehackers/submit?type=TEXT&title=Launched%2
  0Ambient%3A%20a%20free%20Mac%20app%20for%20people%20who%20run%20AI%20codin
  g%20agents&text=Stage%3A%20launched%20Sep%2027%2C%20free%2C%20no%20revenue
@@ -573,7 +579,8 @@ URL:https://www.reddit.com/r/indiehackers/submit?type=TEXT&title=Launched%2
  %20to%20install%20it.%0A%0AWhat%20I%27d%20love%20feedback%20on%3A%0A1.%20I
  s%20gating%20a%20free%20download%20behind%20a%20waitlist%20form%20going%20
  to%20kill%20conversion%3F%0A2.%20Would%20you%20pay%20for%20a%20team%20vers
- ion%20%28shared%20agent%20status%29%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe
+ ion%20%28shared%20agent%20status%29%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe%2F%3Fr
+ ef%3Dr-indiehackers
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -613,9 +620,9 @@ DESCRIPTION:Human-in-the-loop fails when the human doesn't notice the loop\
  d.%20It%20never%20approves%20anything.%20Clicking%20only%20takes%20you%20t
  o%20the%20terminal%20or%20chat%20where%20the%20prompt%20is%2C%20so%20the%2
  0decision%20stays%20with%20you%20and%20stays%20in%20context.%0A%0Ahttps%3A
- %2F%2Fyaml.cafe%0A%0ADo%20you%20think%20better%20visibility%20would%20make
- %20you%20use%20auto-approve%20less%3F\n3. Text post\n4. Submit\, then repl
- y to comments in the first hour.
+ %2F%2Fyaml.cafe%2F%3Fref%3Dr-agentsofai%0A%0ADo%20you%20think%20better%20v
+ isibility%20would%20make%20you%20use%20auto-approve%20less%3F\n3. Text pos
+ t\n4. Submit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/AgentsOfAI/submit?type=TEXT&title=Human-in-the
  -loop%20fails%20when%20the%20human%20doesn%27t%20notice%20the%20loop&text=
  Permission%20prompts%20are%20the%20main%20safety%20control%20in%20coding%2
@@ -634,8 +641,9 @@ URL:https://www.reddit.com/r/AgentsOfAI/submit?type=TEXT&title=Human-in-the
  s%20that%20exact%20command.%20It%20never%20approves%20anything.%20Clicking
  %20only%20takes%20you%20to%20the%20terminal%20or%20chat%20where%20the%20pr
  ompt%20is%2C%20so%20the%20decision%20stays%20with%20you%20and%20stays%20in
- %20context.%0A%0Ahttps%3A%2F%2Fyaml.cafe%0A%0ADo%20you%20think%20better%20
- visibility%20would%20make%20you%20use%20auto-approve%20less%3F
+ %20context.%0A%0Ahttps%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-agentsofai%0A%0ADo%2
+ 0you%20think%20better%20visibility%20would%20make%20you%20use%20auto-appro
+ ve%20less%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -674,9 +682,10 @@ DESCRIPTION:Codex CLI and Codex app: a notch indicator that shows when a Co
  dex%20run%20is%20never%20held%20up%20by%20it.%20It%20also%20works%20with%2
  0Claude%20Code%20and%20Gemini%20CLI.%20I%27m%20the%20developer%2C%20it%20i
  sn%27t%20affiliated%20with%20OpenAI%2C%20and%20it%27s%20free%3A%20https%3A
- %2F%2Fyaml.cafe%0A%0ACodex%20users%3A%20what%20else%20would%20you%20want%2
- 0surfaced%20from%20a%20running%20thread%3F\n3. Text post · flair: Project
- \n4. Submit\, then reply to comments in the first hour.
+ %2F%2Fyaml.cafe%2F%3Fref%3Dr-openai%0A%0ACodex%20users%3A%20what%20else%20
+ would%20you%20want%20surfaced%20from%20a%20running%20thread%3F\n3. Text po
+ st · flair: Project\n4. Submit\, then reply to comments in the first hour
+ .
 URL:https://www.reddit.com/r/OpenAI/submit?type=TEXT&title=Codex%20CLI%20an
  d%20Codex%20app%3A%20a%20notch%20indicator%20that%20shows%20when%20a%20Cod
  ex%20thread%20needs%20you&text=I%20built%20a%20small%20Mac%20app%2C%20Ambi
@@ -694,8 +703,8 @@ URL:https://www.reddit.com/r/OpenAI/submit?type=TEXT&title=Codex%20CLI%20an
  20a%20Codex%20run%20is%20never%20held%20up%20by%20it.%20It%20also%20works%
  20with%20Claude%20Code%20and%20Gemini%20CLI.%20I%27m%20the%20developer%2C%
  20it%20isn%27t%20affiliated%20with%20OpenAI%2C%20and%20it%27s%20free%3A%20
- https%3A%2F%2Fyaml.cafe%0A%0ACodex%20users%3A%20what%20else%20would%20you%
- 20want%20surfaced%20from%20a%20running%20thread%3F
+ https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-openai%0A%0ACodex%20users%3A%20what%2
+ 0else%20would%20you%20want%20surfaced%20from%20a%20running%20thread%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -735,8 +744,9 @@ DESCRIPTION:Feedback wanted: Ambient\, a notch island for AI coding agents
  ils%20with%20an%20I%2FO%20error%2C%20so%20the%20build%20signs%20in%20a%20s
  taging%20folder%20and%20swaps.%0A%0AFeedback%20I%27d%20like%3A%20does%20th
  e%20settings%20window%20feel%20native%20to%20you%3F%20Anything%20that%20lo
- oks%20off%20on%20your%20display%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe\n3. Text p
- ost\n4. Submit\, then reply to comments in the first hour.
+ oks%20off%20on%20your%20display%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe%2F%3Fref%3
+ Dr-appledevelopers\n3. Text post\n4. Submit\, then reply to comments in th
+ e first hour.
 URL:https://www.reddit.com/r/appledevelopers/submit?type=TEXT&title=Feedbac
  k%20wanted%3A%20Ambient%2C%20a%20notch%20island%20for%20AI%20coding%20agen
  ts%20%28SwiftUI%20%2B%20AppKit%2C%20macOS%2014%2B%29&text=What%20it%20is%3
@@ -755,7 +765,8 @@ URL:https://www.reddit.com/r/appledevelopers/submit?type=TEXT&title=Feedbac
  20an%20I%2FO%20error%2C%20so%20the%20build%20signs%20in%20a%20staging%20fo
  lder%20and%20swaps.%0A%0AFeedback%20I%27d%20like%3A%20does%20the%20setting
  s%20window%20feel%20native%20to%20you%3F%20Anything%20that%20looks%20off%2
- 0on%20your%20display%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe
+ 0on%20your%20display%3F%0A%0Ahttps%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-appledev
+ elopers
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -796,8 +807,8 @@ DESCRIPTION:Drawing a Dynamic-Island-style panel around the MacBook notch:
  pen%20question%3A%20has%20anyone%20found%20a%20cleaner%20way%20than%20poll
  ing%20to%20detect%20the%20menu%20bar%20hiding%20in%20full-screen%20apps%3F
  %0A%0A%28This%20is%20from%20Ambient%2C%20a%20free%20app%20I%20made%3A%20ht
- tps%3A%2F%2Fyaml.cafe%29\n3. Text post\n4. Submit\, then reply to comments
-  in the first hour.
+ tps%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-macosprogramming%29\n3. Text post\n4. S
+ ubmit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/macosprogramming/submit?type=TEXT&title=Drawin
  g%20a%20Dynamic-Island-style%20panel%20around%20the%20MacBook%20notch%3A%2
  0what%20worked&text=Notes%20from%20building%20a%20notch%20island%20on%20ma
@@ -817,7 +828,7 @@ URL:https://www.reddit.com/r/macosprogramming/submit?type=TEXT&title=Drawin
  %0A%0AOpen%20question%3A%20has%20anyone%20found%20a%20cleaner%20way%20than
  %20polling%20to%20detect%20the%20menu%20bar%20hiding%20in%20full-screen%20
  apps%3F%0A%0A%28This%20is%20from%20Ambient%2C%20a%20free%20app%20I%20made%
- 3A%20https%3A%2F%2Fyaml.cafe%29
+ 3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-macosprogramming%29
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -847,10 +858,10 @@ DESCRIPTION:I made a notch island for my Mac that tells me when my AI codin
  en%20when%20the%20task%20is%20done.%20There%27s%20also%20a%20glow%20along%
  20the%20Dock%20you%20can%20see%20from%20across%20the%20room.%0A%0AClick%20
  it%20and%20you%27re%20back%20in%20the%20exact%20terminal%20tab%20or%20chat
- .%0A%0AFree%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%0A%0AOne%20
- question%3A%20would%20you%20rather%20it%20show%20only%20the%20agent%20that
- %20needs%20you%2C%20or%20every%20running%20session%3F\n3. Text post\n4. Su
- bmit\, then reply to comments in the first hour.
+ .%0A%0AFree%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3D
+ r-imadethis%0A%0AOne%20question%3A%20would%20you%20rather%20it%20show%20on
+ ly%20the%20agent%20that%20needs%20you%2C%20or%20every%20running%20session%
+ 3F\n3. Text post\n4. Submit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/IMadeThis/submit?type=TEXT&title=I%20made%20a%
  20notch%20island%20for%20my%20Mac%20that%20tells%20me%20when%20my%20AI%20c
  oding%20agents%20need%20me&text=Ambient%20sits%20at%20the%20MacBook%20notc
@@ -859,9 +870,10 @@ URL:https://www.reddit.com/r/IMadeThis/submit?type=TEXT&title=I%20made%20a%
  and%20green%20when%20the%20task%20is%20done.%20There%27s%20also%20a%20glow
  %20along%20the%20Dock%20you%20can%20see%20from%20across%20the%20room.%0A%0
  AClick%20it%20and%20you%27re%20back%20in%20the%20exact%20terminal%20tab%20
- or%20chat.%0A%0AFree%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%0A
- %0AOne%20question%3A%20would%20you%20rather%20it%20show%20only%20the%20age
- nt%20that%20needs%20you%2C%20or%20every%20running%20session%3F
+ or%20chat.%0A%0AFree%20for%20macOS%2014%2B%3A%20https%3A%2F%2Fyaml.cafe%2F
+ %3Fref%3Dr-imadethis%0A%0AOne%20question%3A%20would%20you%20rather%20it%20
+ show%20only%20the%20agent%20that%20needs%20you%2C%20or%20every%20running%2
+ 0session%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -894,8 +906,8 @@ DESCRIPTION:Ambient: your Mac\, aware of your coding agents (free\, macOS)\
  20Dock%20glow%20in%20the%20color%20of%20your%20agents%27%20state.%0A-%20Pr
  ivate%3A%20no%20accounts%2C%20no%20network%2C%20no%20telemetry.%0A%0AFree%
  20for%20macOS%2014%2B.%20I%27m%20the%20developer%3A%20https%3A%2F%2Fyaml.c
- afe%0A%0AWhich%20agent%20should%20I%20support%20next%3F\n3. Text post\n4. 
- Submit\, then reply to comments in the first hour.
+ afe%2F%3Fref%3Dr-launch%0A%0AWhich%20agent%20should%20I%20support%20next%3
+ F\n3. Text post\n4. Submit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/launch/submit?type=TEXT&title=Ambient%3A%20you
  r%20Mac%2C%20aware%20of%20your%20coding%20agents%20%28free%2C%20macOS%29&t
  ext=Ambient%20turns%20what%20Claude%20Code%2C%20Codex%20and%20Gemini%20CLI
@@ -907,8 +919,8 @@ URL:https://www.reddit.com/r/launch/submit?type=TEXT&title=Ambient%3A%20you
  r%20editor%20window.%0A-%20A%20Dock%20glow%20in%20the%20color%20of%20your%
  20agents%27%20state.%0A-%20Private%3A%20no%20accounts%2C%20no%20network%2C
  %20no%20telemetry.%0A%0AFree%20for%20macOS%2014%2B.%20I%27m%20the%20develo
- per%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhich%20agent%20should%20I%20support
- %20next%3F
+ per%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-launch%0A%0AWhich%20agent%20
+ should%20I%20support%20next%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -947,10 +959,10 @@ DESCRIPTION:Automating the "is my agent done yet?" check with hooks and a M
  0ambient%20status%60%20prints%20every%20session%20and%20%60ambient%20open%
  60%20jumps%20to%20the%20one%20that%20needs%20you%20most%2C%20so%20you%20ca
  n%20bind%20it%20to%20a%20hotkey.%0A%0AIt%27s%20a%20free%20Mac%20app%20I%20
- built%2C%20Ambient%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%20other%20long-r
- unning%20jobs%20would%20you%20want%20on%20the%20same%20light%3A%20CI%20run
- s%2C%20builds%2C%20deploys%3F\n3. Text post\n4. Submit\, then reply to com
- ments in the first hour.
+ built%2C%20Ambient%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-automation%0A
+ %0AWhat%20other%20long-running%20jobs%20would%20you%20want%20on%20the%20sa
+ me%20light%3A%20CI%20runs%2C%20builds%2C%20deploys%3F\n3. Text post\n4. Su
+ bmit\, then reply to comments in the first hour.
 URL:https://www.reddit.com/r/automation/submit?type=TEXT&title=Automating%2
  0the%20%22is%20my%20agent%20done%20yet%3F%22%20check%20with%20hooks%20and%
  20a%20Mac%20status%20light&text=A%20small%20automation%20that%20saved%20me
@@ -968,9 +980,9 @@ URL:https://www.reddit.com/r/automation/submit?type=TEXT&title=Automating%2
  o%3A%20%60ambient%20status%60%20prints%20every%20session%20and%20%60ambien
  t%20open%60%20jumps%20to%20the%20one%20that%20needs%20you%20most%2C%20so%2
  0you%20can%20bind%20it%20to%20a%20hotkey.%0A%0AIt%27s%20a%20free%20Mac%20a
- pp%20I%20built%2C%20Ambient%3A%20https%3A%2F%2Fyaml.cafe%0A%0AWhat%20other
- %20long-running%20jobs%20would%20you%20want%20on%20the%20same%20light%3A%2
- 0CI%20runs%2C%20builds%2C%20deploys%3F
+ pp%20I%20built%2C%20Ambient%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-auto
+ mation%0A%0AWhat%20other%20long-running%20jobs%20would%20you%20want%20on%2
+ 0the%20same%20light%3A%20CI%20runs%2C%20builds%2C%20deploys%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -1006,10 +1018,10 @@ DESCRIPTION:My workflow for running several AI coding agents at once withou
  der%20they%20went%20green.%0A%0AFor%20step%202%20I%20built%20Ambient%2C%20
  a%20free%20Mac%20app%20that%20reads%20agent%20hooks%20and%20shows%20state%
  20at%20the%20notch%20and%20in%20the%20menu%20bar%20%28disclosure%3A%20it%2
- 7s%20mine%29%3A%20https%3A%2F%2Fyaml.cafe%0A%0AHow%20do%20you%20split%20at
- tention%20across%20agents%3F%20Do%20you%20cap%20how%20many%20run%20in%20pa
- rallel%3F\n3. Text post\n4. Submit\, then reply to comments in the first h
- our.
+ 7s%20mine%29%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-ai_programming%0A%0
+ AHow%20do%20you%20split%20attention%20across%20agents%3F%20Do%20you%20cap%
+ 20how%20many%20run%20in%20parallel%3F\n3. Text post\n4. Submit\, then repl
+ y to comments in the first hour.
 URL:https://www.reddit.com/r/AI_Programming/submit?type=TEXT&title=My%20wor
  kflow%20for%20running%20several%20AI%20coding%20agents%20at%20once%20witho
  ut%20watching%20terminals&text=I%20usually%20have%20two%20or%20three%20age
@@ -1024,9 +1036,9 @@ URL:https://www.reddit.com/r/AI_Programming/submit?type=TEXT&title=My%20wor
  der%20they%20went%20green.%0A%0AFor%20step%202%20I%20built%20Ambient%2C%20
  a%20free%20Mac%20app%20that%20reads%20agent%20hooks%20and%20shows%20state%
  20at%20the%20notch%20and%20in%20the%20menu%20bar%20%28disclosure%3A%20it%2
- 7s%20mine%29%3A%20https%3A%2F%2Fyaml.cafe%0A%0AHow%20do%20you%20split%20at
- tention%20across%20agents%3F%20Do%20you%20cap%20how%20many%20run%20in%20pa
- rallel%3F
+ 7s%20mine%29%3A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-ai_programming%0A%0
+ AHow%20do%20you%20split%20attention%20across%20agents%3F%20Do%20you%20cap%
+ 20how%20many%20run%20in%20parallel%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
@@ -1062,10 +1074,10 @@ DESCRIPTION:Built a macOS app that shows when Claude Code or Codex needs yo
  0that%20sends%20one%20line%20over%20a%20Unix%20socket%20and%20always%20exi
  ts%20successfully%2C%20and%20the%20app%20repairs%20its%20own%20hook%20entr
  ies%20if%20an%20update%20changes%20them.%0A%0AFree%20for%20macOS%2014%2B%3
- A%20https%3A%2F%2Fyaml.cafe%20%28I%27m%20the%20developer.%29%0A%0AAnyone%2
- 0else%20building%20on%20top%20of%20agent%20CLIs%3F%20What%20broke%20for%20
- you%3F\n3. Text post\n4. Submit\, then reply to comments in the first hour
- .
+ A%20https%3A%2F%2Fyaml.cafe%2F%3Fref%3Dr-indianprogrammers%20%28I%27m%20th
+ e%20developer.%29%0A%0AAnyone%20else%20building%20on%20top%20of%20agent%20
+ CLIs%3F%20What%20broke%20for%20you%3F\n3. Text post\n4. Submit\, then repl
+ y to comments in the first hour.
 URL:https://www.reddit.com/r/IndianProgrammers/submit?type=TEXT&title=Built
  %20a%20macOS%20app%20that%20shows%20when%20Claude%20Code%20or%20Codex%20ne
  eds%20you%3A%20what%20I%20learned%20about%20agent%20hooks&text=I%20build%2
@@ -1080,8 +1092,9 @@ URL:https://www.reddit.com/r/IndianProgrammers/submit?type=TEXT&title=Built
  e%20line%20over%20a%20Unix%20socket%20and%20always%20exits%20successfully%
  2C%20and%20the%20app%20repairs%20its%20own%20hook%20entries%20if%20an%20up
  date%20changes%20them.%0A%0AFree%20for%20macOS%2014%2B%3A%20https%3A%2F%2F
- yaml.cafe%20%28I%27m%20the%20developer.%29%0A%0AAnyone%20else%20building%2
- 0on%20top%20of%20agent%20CLIs%3F%20What%20broke%20for%20you%3F
+ yaml.cafe%2F%3Fref%3Dr-indianprogrammers%20%28I%27m%20the%20developer.%29%
+ 0A%0AAnyone%20else%20building%20on%20top%20of%20agent%20CLIs%3F%20What%20b
+ roke%20for%20you%3F
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
