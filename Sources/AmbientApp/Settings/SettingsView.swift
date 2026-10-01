@@ -38,8 +38,8 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsPane.allCases) { p in
-                SidebarItem(title: p.title, symbol: p.symbol, selected: p == pane) { select(p) }
+            ForEach(SettingsPane.shown) { p in
+                SidebarItem(title: p.title, symbol: p.symbol, selected: p == current) { select(p) }
             }
             Spacer(minLength: 0)
         }
@@ -69,12 +69,15 @@ struct SettingsView: View {
             .padding(.bottom, Theme.Space.xl)
             .frame(maxWidth: .infinity)
         }
-        .id(pane)
+        .id(current)
         .transition(.opacity)
     }
 
+    /// The stored pane, unless this build doesn't show it (Performance, saved by a dev build).
+    private var current: SettingsPane { SettingsPane.shown.contains(pane) ? pane : .welcome }
+
     @ViewBuilder private var paneContent: some View {
-        switch pane {
+        switch current {
         case .welcome:
             WelcomePane(setup: setup, firstRun: firstRun, onDemo: onDemo, onGetStarted: onDone)
         case .agents:
@@ -99,8 +102,8 @@ struct SettingsView: View {
     }
 
     private func move(_ delta: Int) -> KeyPress.Result {
-        let all = SettingsPane.allCases
-        guard let i = all.firstIndex(of: pane) else { return .ignored }
+        let all = SettingsPane.shown
+        guard let i = all.firstIndex(of: current) else { return .ignored }
         if all.indices.contains(i + delta) { select(all[i + delta]) }
         return .handled
     }

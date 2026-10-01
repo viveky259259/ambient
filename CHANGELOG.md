@@ -2,9 +2,8 @@
 
 ## Unreleased
 
-- **Performance** in Settings: what Ambient costs your Mac over the last hour or day (CPU, memory, wallpaper and
-  notch-effect draw times, hook event delays), measured on your Mac and never sent anywhere. Copy or save a
-  report to share it yourself.
+- **Development builds** gain Settings › Performance: CPU, memory, wallpaper and notch-effect frame rate, and hook
+  event delays over the last hour or day, with a report to copy or save. Release builds leave it out.
 
 ## 0.4.0 — 2026-09-30
 

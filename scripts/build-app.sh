@@ -24,10 +24,14 @@ BUILD_NUMBER=${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}
 
 ARCH_FLAGS=()
 (( UNIVERSAL )) && ARCH_FLAGS=(--arch arm64 --arch x86_64)
-swift build -c release "${ARCH_FLAGS[@]}" --product AmbientApp
-swift build -c release "${ARCH_FLAGS[@]}" --product ambient
+# Local ad-hoc builds are dev builds: they include developer tools such as Settings › Performance.
+# Developer ID–signed release builds leave them out.
+DEV_FLAGS=()
+[[ $SIGN_ID == "-" ]] && DEV_FLAGS=(-Xswiftc -DAMBIENT_DEV)
+swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --product AmbientApp
+swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --product ambient
 # Where SwiftPM puts products differs between single- and multi-arch builds and between versions.
-BIN=$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)
+BIN=$(swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --show-bin-path)
 
 # Assemble and sign in a staging folder, then swap it in. build/Ambient.app may be running, and its
 # CLI is what agent hooks execute (~/.ambient/bin/ambient); signing code while it executes fails

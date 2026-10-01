@@ -6,6 +6,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// The panes in the sidebar. Performance is a developer tool, only in dev builds.
+    static var shown: [SettingsPane] { allCases.filter { $0 != .performance || PerfMonitor.isAvailable } }
+
     var title: String {
         switch self {
         case .welcome: "Welcome"

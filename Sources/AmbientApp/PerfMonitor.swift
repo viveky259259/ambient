@@ -6,8 +6,17 @@ import QuartzCore
 /// Measures what Ambient costs this Mac and keeps it in memory: CPU and memory every five seconds, how steadily the
 /// wallpaper and the notch effect keep their frame rate, and how long hook events take to arrive. Nothing leaves the Mac;
 /// Settings › Performance shows it, and its report can be copied or saved by hand.
+///
+/// A developer tool: it's built only into debug builds and local ad-hoc builds (`AMBIENT_DEV`, set by
+/// `scripts/build-app.sh` when it signs ad hoc). Released, Developer ID–signed builds never measure anything.
 final class PerfMonitor: ObservableObject {
     static let shared = PerfMonitor()
+
+    #if DEBUG || AMBIENT_DEV
+    static let isAvailable = true
+    #else
+    static let isAvailable = false
+    #endif
 
     /// Bumped with each sample, so an open Settings pane refreshes.
     @Published private(set) var revision = 0
@@ -16,7 +25,7 @@ final class PerfMonitor: ObservableObject {
     private var lastCPU: (wall: CFTimeInterval, cpu: Double)?
 
     func start() {
-        guard timer == nil else { return }
+        guard Self.isAvailable, timer == nil else { return }
         sample()
         let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in self?.sample() }
         timer.tolerance = 1
@@ -27,11 +36,13 @@ final class PerfMonitor: ObservableObject {
     /// One drawn frame, `interval` seconds after the last one from the same canvas, which meant to draw one every
     /// `budget` seconds. Called on the main thread; constant time.
     func frame(interval: Double, budget: Double, source: PerfLog.FrameSource) {
+        guard timer != nil else { return }
         log.recordFrame(intervalMs: interval * 1000, budgetMs: budget * 1000, source: source, at: Date())
     }
 
     /// A hook event arrived; `sent` is when the hook stamped it.
     func hookEvent(sent: Date) {
+        guard timer != nil else { return }
         let ms = Date().timeIntervalSince(sent) * 1000
         guard ms >= 0, ms < 60_000 else { return }   // a clock change or a replayed event, not latency
         log.recordHookLatency(ms: ms, at: Date())

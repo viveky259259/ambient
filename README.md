@@ -28,8 +28,6 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   when it closes. In Solar System the notch lights up as the sun and the six most urgent planets orbit it; the
   rest fall into the sun until it closes. Real gravity drives both. They follow Reduce Motion, stay off in Low
   Power Mode, and the black hole can be turned off in Settings › Wallpaper.
-- **Performance** — Settings › Performance shows what Ambient costs your Mac (CPU, memory, drawing time, hook
-  delays) over the last hour or day, with a report you can copy or save to share.
 
 Everything stays on your Mac. No accounts, no network, no telemetry.
 
@@ -153,6 +151,11 @@ scripts/release.sh              # universal, Developer ID signed, notarized DMG 
 
 `build-app.sh` signs ad-hoc by default, and macOS ties Accessibility access to the signature, so after a
 rebuild you may need `tccutil reset Accessibility com.viveky259259.Ambient`.
+
+Ad-hoc builds are dev builds: they add **Settings › Performance**, which shows what Ambient costs the Mac over the
+last hour or day (CPU, memory, wallpaper and notch-effect frame rate, hook event delays) and copies or saves a
+report. It's measured locally and kept in memory. Developer ID–signed release builds leave it out, and measure
+nothing.
 
 | Path | Purpose |
 | --- | --- |
