@@ -63,7 +63,7 @@ function row(item) {
   count.className = "rq-count";
   count.textContent = String(item.votes);
   button.append(arrow, count);
-  button.addEventListener("click", () => toggleVote(item, button));
+  button.addEventListener("click", () => toggleVote(item));
   const body = document.createElement("div");
   body.className = "rq-body";
   const heading = document.createElement("h3");
@@ -101,18 +101,33 @@ function syncControls() {
   document.querySelectorAll("[data-filter]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === state.filter)));
 }
 
-async function toggleVote(item, button) {
-  if (button.disabled) return;
-  button.disabled = true;
-  const adding = !voted.has(item.id);
-  const { ok, data } = await safely(api(adding ? "POST" : "DELETE", `/api/requests/${item.id}/vote`, { voter }));
-  button.disabled = false;
-  if (!ok) return say(data.error || "Couldn't save your vote. Try again in a moment.");
-  if (adding) { voted.add(item.id); track("Vote"); } else voted.delete(item.id);
+// A vote shows at once; the server's count replaces the guess when it answers (it can take a second
+// or two), and a failure puts things back. The button stays focusable throughout.
+const pending = new Set();
+
+function applyVote(item, mine, votes) {
+  const hadFocus = !!document.activeElement?.closest?.(`#req-${item.id}`);
+  if (mine) voted.add(item.id); else voted.delete(item.id);
   saveVoted();
-  item.votes = data.votes;
+  item.votes = votes;
   render();
-  document.querySelector(`#req-${item.id} .rq-vote`)?.focus();
+  if (hadFocus) document.querySelector(`#req-${item.id} .rq-vote`)?.focus();
+}
+
+async function toggleVote(item) {
+  if (pending.has(item.id)) return;
+  pending.add(item.id);
+  const adding = !voted.has(item.id);
+  const before = item.votes;
+  applyVote(item, adding, before + (adding ? 1 : -1));
+  const { ok, data } = await safely(api(adding ? "POST" : "DELETE", `/api/requests/${item.id}/vote`, { voter }));
+  pending.delete(item.id);
+  if (!ok) {
+    applyVote(item, !adding, before);
+    return say(data.error || "Couldn't save your vote. Try again in a moment.");
+  }
+  if (adding) track("Vote");
+  applyVote(item, adding, data.votes);
 }
 
 function showHint() {

@@ -1,5 +1,5 @@
 /* The feature-request board. Colors and type come from styles.css. */
-.rq-lede { font-size: 19px; color: var(--ink-2); margin: -8px 0 28px; }
+.page .rq-lede { font-size: 19px; color: var(--ink-2); margin: -8px 0 28px; }
 .rq-suggest { background: var(--paper-2); border-radius: 22px; padding: 22px; display: grid; gap: 8px; margin: 0 0 12px; }
 .rq-suggest label { font-size: 14px; font-weight: 600; color: var(--ink); }
 .rq-suggest .optional { font-weight: 400; color: var(--ink-2); }
@@ -12,9 +12,9 @@
 .rq-hint { font-size: 14px; background: #fff; border-radius: 12px; padding: 10px 14px; }
 .rq-hint p { margin: 0 0 4px; color: var(--ink); font-weight: 600; }
 .rq-hint ul { margin: 0; padding-left: 18px; }
-.rq-error { color: #c9302c; font-size: 14px; margin: 0; }
-.rq-error:empty { display: none; }
-.rq-message { color: var(--ink-2); font-size: 15px; margin: 8px 0 20px; min-height: 1.4em; }
+.page .rq-error { color: #c9302c; font-size: 14px; margin: 0; }
+.page .rq-error:empty { display: none; }
+.page .rq-message { color: var(--ink-2); font-size: 15px; margin: 8px 0 20px; min-height: 1.4em; }
 .rq-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin: 0 0 8px; }
 .rq-tabs, .rq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .rq-controls button {
@@ -32,7 +32,6 @@
   color: var(--ink); font: inherit; cursor: pointer;
 }
 .rq-vote[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.rq-vote:disabled { opacity: 0.6; cursor: progress; }
 .rq-arrow { font-size: 12px; line-height: 1; }
 .rq-count { font-size: 17px; font-weight: 600; }
 .rq-body { min-width: 0; }

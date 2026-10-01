@@ -80,8 +80,8 @@ async function post(request: Request, deps: Deps, secret: string, network: strin
     return json(429, { error: `You've suggested ${LIMITS.post} things today. Thank you! Try again tomorrow.` });
   }
   const item: Item = { id: newId(), ...checked.value, status: "open", created: deps.now.toISOString() };
-  await deps.store.setJSON(`items/${item.id}`, item);
-  await deps.store.set(`votes/${item.id}/${await hash(`${secret}:voter:${voter}`)}`, "1");
+  const voterKey = `votes/${item.id}/${await hash(`${secret}:voter:${voter}`)}`;
+  await Promise.all([deps.store.setJSON(`items/${item.id}`, item), deps.store.set(voterKey, "1")]);
   const { id, title, details, status, created } = item;
   return json(201, { item: { id, title, details, status, created, votes: 1 } });
 }
@@ -89,11 +89,15 @@ async function post(request: Request, deps: Deps, secret: string, network: strin
 async function vote(request: Request, deps: Deps, secret: string, network: string, id: string): Promise<Response> {
   const voter = voterOf(await readBody(request));
   if (!voter) return json(400, { error: "Missing voter." });
-  const target = await deps.store.get(`items/${id}`, { type: "json" }) as Item | null;
-  if (!target || target.removed) return json(404, { error: "That request isn't on the board anymore." });
   const key = `votes/${id}/${await hash(`${secret}:voter:${voter}`)}`;
+  // Independent reads go together: each Blobs call is a round trip from the edge.
+  const [target, existing] = await Promise.all([
+    deps.store.get(`items/${id}`, { type: "json" }) as Promise<Item | null>,
+    deps.store.get(key, { type: "json" }),
+  ]);
+  if (!target || target.removed) return json(404, { error: "That request isn't on the board anymore." });
   if (request.method === "POST") {
-    if ((await deps.store.get(key, { type: "json" })) === null) {
+    if (existing === null) {
       if (!(await useAllowance(deps, network, "vote"))) {
         return json(429, { error: "That's a lot of votes for one day. Thank you! Try again tomorrow." });
       }
