@@ -32,9 +32,13 @@ struct GeneralPane: View {
                     Text(AmbientVersion.current).font(Theme.Fonts.row).foregroundStyle(.secondary)
                 }
                 SettingsDivider()
-                SettingsRow(title: "Source code") {
-                    Link("github.com/viveky259259/ambient",
-                         destination: URL(string: "https://github.com/viveky259259/ambient")!)
+                SettingsRow(title: "Website") {
+                    Link("yaml.cafe", destination: FeatureRequests.website)
+                        .font(Theme.Fonts.row)
+                }
+                SettingsDivider()
+                SettingsRow(title: "Feature requests") {
+                    Link("Suggest or vote", destination: FeatureRequests.url())
                         .font(Theme.Fonts.row)
                 }
                 SettingsDivider()

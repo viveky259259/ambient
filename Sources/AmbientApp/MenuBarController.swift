@@ -119,6 +119,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         menu.addItem(item("Play Demo", #selector(demo)))
         menu.addItem(.separator())
+        menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
         menu.addItem(item("Settings…", #selector(settings), key: ","))
         menu.addItem(item("Quit Ambient", #selector(quit), key: "q"))
     }
@@ -152,6 +153,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func resume() { model.setQuiet(for: nil) }
     @objc private func quietFor(_ sender: NSMenuItem) { model.setQuiet(for: sender.representedObject as? TimeInterval) }
     @objc private func demo() { onDemo() }
+    @objc private func suggestFeature() { NSWorkspace.shared.open(FeatureRequests.url()) }
     @objc private func settings() { onSettings() }
     @objc private func quit() { NSApp.terminate(nil) }
 }
