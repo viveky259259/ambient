@@ -22,6 +22,13 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
+# The homepage in Markdown, for agents. Search engines index the HTML page instead.
+[[headers]]
+  for = "/index.md"
+  [headers.values]
+    Content-Type = "text/markdown; charset=utf-8"
+    Link = "<https://yaml.cafe/>; rel=\"canonical\""
+
 [[redirects]]
   from = "https://www.yaml.cafe/*"
   to = "https://yaml.cafe/:splat"

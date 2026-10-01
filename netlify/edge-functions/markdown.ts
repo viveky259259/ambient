@@ -1,5 +1,6 @@
-// Content negotiation for agents: a request that prefers text/markdown gets llms.txt for the
-// homepage and a Markdown 404 for missing pages. Browsers, which ask for text/html, get HTML.
+// Content negotiation for agents: a request that prefers text/markdown gets index.md (the whole
+// homepage in Markdown) for "/" and a Markdown 404 for missing pages. Browsers, which ask for
+// text/html, get HTML.
 import type { Config, Context } from "https://edge.netlify.com";
 
 const MARKDOWN = "text/markdown; charset=utf-8";
@@ -8,6 +9,7 @@ const NOT_FOUND = `# Page not found
 
 There's no page at this address on yaml.cafe, the site for Ambient, a free Mac app that shows what Claude Code, Codex and Gemini CLI are doing.
 
+- Ambient in full, in Markdown: https://yaml.cafe/index.md
 - About Ambient, for agents: https://yaml.cafe/llms.txt
 - Every page: https://yaml.cafe/sitemap.xml
 - Guides: https://yaml.cafe/guides/
@@ -41,9 +43,11 @@ export default async (request: Request, context: Context) => {
   const url = new URL(request.url);
 
   if (wantsMarkdown && url.pathname === "/") {
-    const llms = await fetch(new URL("/llms.txt", url));
-    if (llms.ok) {
-      return new Response(await llms.text(), { headers: { "Content-Type": MARKDOWN, "Vary": "Accept" } });
+    for (const file of ["/index.md", "/llms.txt"]) {
+      const markdown = await fetch(new URL(file, url));
+      if (markdown.ok) {
+        return new Response(await markdown.text(), { headers: { "Content-Type": MARKDOWN, "Vary": "Accept" } });
+      }
     }
   }
 
@@ -56,5 +60,5 @@ export default async (request: Request, context: Context) => {
 
 export const config: Config = {
   path: "/*",
-  excludedPath: ["/api/*", "/assets/*", "/downloads/*", "/*.css", "/*.js", "/*.txt", "/*.xml"],
+  excludedPath: ["/api/*", "/assets/*", "/downloads/*", "/*.css", "/*.js", "/*.md", "/*.txt", "/*.xml"],
 };

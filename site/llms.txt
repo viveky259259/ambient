@@ -40,6 +40,7 @@ Not a fit: Linux or Windows; agents that run only on a remote machine over SSH (
 ## Site
 
 - [Home](https://yaml.cafe/): what Ambient does, supported agents and apps, FAQ.
+- [Ambient, in full (Markdown)](https://yaml.cafe/index.md): the whole homepage as Markdown, for agents.
 - [Feature requests](https://yaml.cafe/requests/): suggest a feature or vote for other people's ideas; no account needed.
 - [Contact](https://yaml.cafe/contact/): support, privacy requests and feedback.
 - [Privacy](https://yaml.cafe/privacy.html): what the app and the optional update emails collect.
