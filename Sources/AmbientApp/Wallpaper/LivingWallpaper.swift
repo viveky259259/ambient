@@ -52,6 +52,11 @@ final class LivingWallpaper: ObservableObject {
     private static let fallbackBuildKey = "wallpaperLockFallbackBuild"
     /// Debug: `defaults write com.viveky259259.Ambient AmbientForceWallpaperSwap -bool true` uses the fallback.
     private static let forceSwapKey = "AmbientForceWallpaperSwap"
+    /// Experimental, off unless turned on: `defaults write com.viveky259259.Ambient AmbientLiveLockLayer -bool true`.
+    /// The live layer's space floats above the lock screen, and on macOS 27 it can cover the login window's own
+    /// controls (the password field, the user list, the login options). Showing the scene as the wallpaper while
+    /// locked keeps every one of them on top, so that's the default.
+    private static let liveLayerKey = "AmbientLiveLockLayer"
     private static var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
 
     init(model: AppModel, prefs: Preferences, paths: AmbientPaths) {
@@ -165,7 +170,8 @@ final class LivingWallpaper: ObservableObject {
     // MARK: - Lock screen
 
     private var liveLockAvailable: Bool {
-        !UserDefaults.standard.bool(forKey: Self.forceSwapKey) && SkyLight.shared != nil
+        UserDefaults.standard.bool(forKey: Self.liveLayerKey)
+            && !UserDefaults.standard.bool(forKey: Self.forceSwapKey) && SkyLight.shared != nil
             && UserDefaults.standard.string(forKey: Self.fallbackBuildKey) != Self.osBuild
     }
 

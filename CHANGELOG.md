@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed**: with the living wallpaper on the lock screen, the password field and login options could be hidden.
+  While the Mac is locked the scene is now set as your wallpaper, under macOS's own lock-screen controls, and your
+  wallpaper comes back when you unlock.
+
 ## 0.5.0 — 2026-10-01
 
 - **Suggest a Feature…**: a new item in the menu bar menu opens the feature-request board on yaml.cafe, where you
