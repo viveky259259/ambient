@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-10-01
 
+- **Suggest a Feature…**: a new item in the menu bar menu opens the feature-request board on yaml.cafe, where you
+  can tell us what Ambient should bring you next and vote for other people's ideas. No account needed, and the app
+  itself still makes no network requests.
+- **About**: Settings › General now links to yaml.cafe and the feature-request board.
 - **Development builds** gain Settings › Performance: CPU, memory, wallpaper and notch-effect frame rate, and hook
   event delays over the last hour or day, with a report to copy or save. Release builds leave it out.
 
