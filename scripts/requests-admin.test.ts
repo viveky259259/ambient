@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MemoryStore } from "../netlify/edge-functions/lib/memory-store.ts";
-import { createdSince, listBoard, merge, pruneLimits, purge, remove, setStatus } from "./requests-admin.ts";
+import { createdSince, listBoard, merge, printable, pruneLimits, purge, remove, setStatus } from "./requests-admin.ts";
 
 const seeded = async () => {
   const store = new MemoryStore();
@@ -49,4 +49,14 @@ test("pruneLimits drops days before yesterday, or everything with all", async ()
   assert.equal(await pruneLimits(store, new Date("2026-10-01T12:00:00Z")), 1);
   assert.equal(await pruneLimits(store, new Date("2026-10-01T12:00:00Z"), true), 2);
   assert.deepEqual([...store.data.keys()], []);
+});
+
+test("merge records the duplicate on the target, so votes can be counted without a scan", async () => {
+  const store = await seeded();
+  await merge(store, "bbbbbbbb", "aaaaaaaa");
+  assert.deepEqual((await store.get("items/aaaaaaaa"))?.mergedFrom, ["bbbbbbbb"]);
+});
+
+test("printable escapes control and bidi characters for the terminal but keeps emoji", () => {
+  assert.equal(printable("ok\x1b[2K\u202Eend 👩‍💻"), "ok\\u{1b}[2K\\u{202e}end 👩‍💻");
 });

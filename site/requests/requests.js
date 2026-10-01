@@ -3,6 +3,8 @@
 import { similar } from "./similar.js";
 
 const loadedAt = performance.now();
+// The server treats anything sent sooner than 3 s after the page loaded as a bot, so wait at least that long.
+const MIN_WAIT_MS = 3100;
 const params = new URLSearchParams(location.search);
 const source = params.get("from") === "app" ? "app" : "site";
 const version = params.get("v") || "";
@@ -45,24 +47,28 @@ function shown() {
     : (a, b) => b.votes - a.votes || b.created.localeCompare(a.created));
 }
 
+function paintVote(button, item) {
+  const mine = voted.has(item.id);
+  button.setAttribute("aria-pressed", String(mine));
+  button.setAttribute("aria-label", `${mine ? "Take back your vote for" : "Vote for"} ${item.title}. ${plural(item.votes)}.`);
+  button.querySelector(".rq-count").textContent = String(item.votes);
+}
+
 function row(item) {
   const li = document.createElement("li");
   li.className = "rq-item";
   li.id = `req-${item.id}`;
-  const mine = voted.has(item.id);
   const button = document.createElement("button");
   button.type = "button";
   button.className = "rq-vote";
-  button.setAttribute("aria-pressed", String(mine));
-  button.setAttribute("aria-label", `${mine ? "Take back your vote for" : "Vote for"} ${item.title}. ${plural(item.votes)}.`);
   const arrow = document.createElement("span");
   arrow.className = "rq-arrow";
   arrow.setAttribute("aria-hidden", "true");
   arrow.textContent = "▲";
   const count = document.createElement("span");
   count.className = "rq-count";
-  count.textContent = String(item.votes);
   button.append(arrow, count);
+  paintVote(button, item);
   button.addEventListener("click", () => toggleVote(item));
   const body = document.createElement("div");
   body.className = "rq-body";
@@ -102,16 +108,16 @@ function syncControls() {
 }
 
 // A vote shows at once; the server's count replaces the guess when it answers (it can take a second
-// or two), and a failure puts things back. The button stays focusable throughout.
+// or two), and a failure puts things back. Only that row's button changes: the list isn't rebuilt or
+// re-sorted, so rows don't move under the pointer and keyboard focus stays wherever it is.
 const pending = new Set();
 
 function applyVote(item, mine, votes) {
-  const hadFocus = !!document.activeElement?.closest?.(`#req-${item.id}`);
   if (mine) voted.add(item.id); else voted.delete(item.id);
   saveVoted();
   item.votes = votes;
-  render();
-  if (hadFocus) document.querySelector(`#req-${item.id} .rq-vote`)?.focus();
+  const button = document.querySelector(`#req-${item.id} .rq-vote`);
+  if (button) paintVote(button, item);
 }
 
 async function toggleVote(item) {
@@ -167,6 +173,8 @@ form.addEventListener("submit", async (event) => {
   }
   submit.disabled = true;
   submit.textContent = "Sending…";
+  const wait = MIN_WAIT_MS - (performance.now() - loadedAt);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
   const { ok, data } = await safely(api("POST", "/api/requests", {
     title: title.value, details: details.value, source, version, voter,
     website: form.elements.website.value, elapsedMs: Math.round(performance.now() - loadedAt),

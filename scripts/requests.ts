@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Store } from "../netlify/edge-functions/lib/requests-api.ts";
 import { isStatus, type BoardItem } from "../netlify/edge-functions/lib/requests-core.ts";
-import { createdSince, listBoard, merge, pruneLimits, purge, remove, setStatus } from "./requests-admin.ts";
+import { createdSince, listBoard, merge, printable, pruneLimits, purge, remove, setStatus } from "./requests-admin.ts";
 
 const root = join(import.meta.dirname, "..");
 const lastSeenFile = join(root, ".netlify", "requests-last-seen");
@@ -30,8 +30,8 @@ function credentials() {
 function print(items: BoardItem[]) {
   if (!items.length) return console.log("No requests.");
   for (const i of items) {
-    console.log(`${String(i.votes).padStart(4)}  ${i.id}  ${i.status.padEnd(11)}  ${i.title}`);
-    if (i.details) console.log(`${" ".repeat(29)}${i.details}`);
+    console.log(`${String(i.votes).padStart(4)}  ${i.id}  ${i.status.padEnd(11)}  ${printable(i.title)}`);
+    if (i.details) console.log(`${" ".repeat(29)}${printable(i.details)}`);
   }
 }
 

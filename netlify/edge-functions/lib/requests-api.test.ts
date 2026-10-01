@@ -46,7 +46,7 @@ test("invalid ideas and bodies get 400 with a readable message", async () => {
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /at least 3 characters/);
   assert.equal((await call(d, "POST", "/api/requests", idea({ voter: "bad voter!" }))).status, 400);
-  const raw = await handle(new Request("https://yaml.cafe/api/requests", { method: "POST", body: "not json" }), d);
+  const raw = await handle(new Request("https://yaml.cafe/api/requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: "not json" }), d);
   assert.equal(raw.status, 400);
 });
 
@@ -79,7 +79,7 @@ test("a network gets 50 votes a day; repeat votes don't use it up", async () => 
 test("votes for merged items count toward the target; removed or unknown items answer 404", async () => {
   const d = deps();
   const base = { details: "", status: "open", created: NOW.toISOString(), source: "site", version: "" };
-  await d.store.setJSON("items/aaaaaaaa", { id: "aaaaaaaa", title: "Target", ...base });
+  await d.store.setJSON("items/aaaaaaaa", { id: "aaaaaaaa", title: "Target", mergedFrom: ["bbbbbbbb"], ...base });
   await d.store.setJSON("items/bbbbbbbb", { id: "bbbbbbbb", title: "Duplicate", mergedInto: "aaaaaaaa", ...base });
   await d.store.setJSON("items/cccccccc", { id: "cccccccc", title: "Gone", removed: true, ...base });
   assert.deepEqual(await (await call(d, "POST", "/api/requests/bbbbbbbb/vote", { voter: "voter-cccc-3333" })).json(), { votes: 1 });
@@ -110,4 +110,62 @@ test("a missing secret or a failing store answers JSON 500", async () => {
 test("unknown paths and methods", async () => {
   assert.equal((await call(deps(), "PUT", "/api/requests")).status, 405);
   assert.equal((await call(deps(), "GET", "/api/requests/aaaaaaaa/vote")).status, 404);
+});
+
+test("the daily post limit holds under concurrent requests", async () => {
+  const d = deps({ store: new MemoryStore(5) });
+  const results = await Promise.all(Array.from({ length: 20 }, (_, i) =>
+    call(d, "POST", "/api/requests", idea({ title: `Concurrent idea ${i}` }))));
+  assert.equal(results.filter((r) => r.status === 201).length, 3);
+  assert.equal(keys(d).filter((k) => k.startsWith("items/")).length, 3);
+});
+
+test("bodies over 8 KB are refused with 413", async () => {
+  const d = deps();
+  const res = await call(d, "POST", "/api/requests", idea({ details: "d".repeat(9000) }));
+  assert.equal(res.status, 413);
+  assert.deepEqual(keys(d), []);
+});
+
+test("posts and votes must be JSON, so other sites can't send them from a visitor's browser", async () => {
+  const d = deps();
+  const post = await handle(new Request("https://yaml.cafe/api/requests", { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(idea()) }), d);
+  assert.equal(post.status, 415);
+  const vote = await handle(new Request("https://yaml.cafe/api/requests/aaaaaaaa/vote", { method: "POST", body: JSON.stringify({ voter: "voter-aaaa-1111" }) }), d);
+  assert.equal(vote.status, 415);
+  assert.deepEqual(keys(d), []);
+});
+
+test("every vote write, adding or taking back, uses the daily allowance", async () => {
+  const d = deps();
+  await d.store.setJSON("items/aaaaaaaa", { id: "aaaaaaaa", title: "Idea", details: "", status: "open", created: NOW.toISOString(), source: "site", version: "" });
+  const path = "/api/requests/aaaaaaaa/vote";
+  for (let i = 0; i < 25; i++) {
+    assert.equal((await call(d, "POST", path, { voter: "voter-dddd-4444" })).status, 200);
+    assert.equal((await call(d, "DELETE", path, { voter: "voter-dddd-4444" })).status, 200);
+  }
+  assert.equal((await call(d, "POST", path, { voter: "voter-dddd-4444" })).status, 429);
+});
+
+test("a vote counts only that request's votes instead of scanning the board", async () => {
+  const store = new MemoryStore();
+  const d = deps({ store });
+  const { item } = await (await call(d, "POST", "/api/requests", idea())).json();
+  store.listed = [];
+  assert.deepEqual(await (await call(d, "POST", `/api/requests/${item.id}/vote`, { voter: "voter-eeee-5555" })).json(), { votes: 2 });
+  assert.equal(store.listed.includes("items/"), false);
+  assert.equal(store.listed.includes("votes/"), false);
+});
+
+test("GET with a query string is refused, so it can't bypass the edge cache", async () => {
+  assert.equal((await call(deps(), "GET", "/api/requests?x=1")).status, 400);
+});
+
+test("posting deletes daily counts older than yesterday", async () => {
+  const d = deps();
+  await d.store.set("limits/2026-09-28/abc/post/0", "1");
+  await d.store.set("limits/2026-09-30/abc/post/0", "1");
+  assert.equal((await call(d, "POST", "/api/requests", idea())).status, 201);
+  assert.equal(keys(d).includes("limits/2026-09-28/abc/post/0"), false);
+  assert.equal(keys(d).includes("limits/2026-09-30/abc/post/0"), true);
 });

@@ -34,7 +34,7 @@
 .rq-vote[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .rq-arrow { font-size: 12px; line-height: 1; }
 .rq-count { font-size: 17px; font-weight: 600; }
-.rq-body { min-width: 0; }
+.rq-body { min-width: 0; overflow: hidden; }
 .rq-body h3 { margin: 4px 0; font-size: 17px; overflow-wrap: anywhere; }
 .rq-body p { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
 .rq-badge { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 980px; }

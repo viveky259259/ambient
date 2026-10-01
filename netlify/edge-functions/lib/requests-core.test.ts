@@ -74,3 +74,27 @@ test("board survives a merge cycle made by hand", () => {
   const items = [item("aaaaaaaa", { mergedInto: "bbbbbbbb" }), item("bbbbbbbb", { mergedInto: "aaaaaaaa" }), item("cccccccc")];
   assert.deepEqual(board(items, ["votes/aaaaaaaa/v1"]).map((i) => i.id), ["cccccccc"]);
 });
+
+test("cleanText strips control characters and bidi overrides but keeps emoji joiners", () => {
+  assert.equal(cleanText("Nice\x1b[2K\r\x1b]0;pwned\x07 idea"), "Nice[2K ]0;pwned idea");
+  assert.equal(cleanText("abc‮def⁦ghi"), "abcdefghi");
+  assert.equal(cleanText("​​​"), "");
+  assert.equal(cleanText("👩‍💻 ok"), "👩‍💻 ok");
+});
+
+test("cleanText keeps at most two combining marks in a row", () => {
+  assert.equal(cleanText("a" + "́".repeat(20) + "b"), "á́b");
+  assert.equal(cleanText("1️⃣ keycap"), "1️⃣ keycap");
+});
+
+test("validateSubmission rejects titles without three visible characters", () => {
+  assert.equal(validateSubmission({ title: "⠀⠀⠀" }).ok, false);
+  assert.equal(validateSubmission({ title: "​​​" }).ok, false);
+  assert.equal(validateSubmission({ title: "a⠀⠀" }).ok, false);
+});
+
+test("validateSubmission rejects huge raw input before counting characters", () => {
+  const huge = validateSubmission({ title: ("a" + "́".repeat(20000)).repeat(80) });
+  assert.equal(huge.ok, false);
+  assert.equal(validateSubmission({ title: "ok title", details: "d".repeat(5000) }).ok, false);
+});

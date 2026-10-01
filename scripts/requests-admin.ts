@@ -1,6 +1,12 @@
 // Moderation for the feature-request board, over the same Store the edge function uses.
 import { loadItems, type Store } from "../netlify/edge-functions/lib/requests-api.ts";
-import { board, rootOf, type BoardItem, type Item, type Status } from "../netlify/edge-functions/lib/requests-core.ts";
+import { board, INVISIBLE, rootOf, type BoardItem, type Item, type Status } from "../netlify/edge-functions/lib/requests-core.ts";
+
+export { pruneLimits } from "../netlify/edge-functions/lib/requests-api.ts";
+
+/** Visitor text made safe for a terminal: control and bidi characters become visible \u{…} escapes. */
+export const printable = (s: string): string =>
+  s.replace(INVISIBLE, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
 
 async function find(store: Store, id: string): Promise<Item> {
   const item = await store.get(`items/${id}`, { type: "json" }) as Item | null;
@@ -24,10 +30,14 @@ export async function remove(store: Store, id: string): Promise<void> {
 export async function merge(store: Store, from: string, into: string): Promise<void> {
   if (from === into) throw new Error("A request can't be merged into itself.");
   const source = await find(store, from);
-  await find(store, into);
+  const target = await find(store, into);
   const byId = new Map((await loadItems(store)).map((i) => [i.id, i]));
   if (rootOf(into, byId) === from) throw new Error(`${into} is already merged into ${from}.`);
-  await store.setJSON(`items/${from}`, { ...source, mergedInto: into });
+  const mergedFrom = [...new Set([...(target.mergedFrom ?? []), from])];
+  await Promise.all([
+    store.setJSON(`items/${from}`, { ...source, mergedInto: into }),
+    store.setJSON(`items/${into}`, { ...target, mergedFrom }),
+  ]);
 }
 
 /** Deletes a request and its votes outright. For test data; use remove for real requests. */
@@ -39,11 +49,3 @@ export async function purge(store: Store, id: string): Promise<void> {
 
 export const createdSince = (items: BoardItem[], iso: string): BoardItem[] =>
   items.filter((i) => i.created > iso).sort((a, b) => a.created.localeCompare(b.created));
-
-export async function pruneLimits(store: Store, now: Date, all = false): Promise<number> {
-  const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
-  const { blobs } = await store.list({ prefix: "limits/" });
-  const stale = blobs.filter((b) => all || b.key.split("/")[1] < yesterday);
-  await Promise.all(stale.map((b) => store.delete(b.key)));
-  return stale.length;
-}
