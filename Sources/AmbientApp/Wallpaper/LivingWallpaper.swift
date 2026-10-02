@@ -301,7 +301,8 @@ final class LivingWallpaper: ObservableObject {
         let size = screen.frame.size
         let geometry = NotchGeometry(screen: Vec2(size.width, size.height),
                                      notchCenterX: island.centerX - screen.frame.minX,
-                                     notchBottom: island.notchHeight, notchWidth: island.notchWidth,
+                                     notchBottom: island.notchHeight,
+                                     notchWidth: NotchGeometry.effectWidth(notch: island.notchWidth, hasNotch: island.hasNotch),
                                      menu: Vec2(menuSize.width, menuSize.height))
         let renderer = SceneRenderers.renderer(for: desk.kind)
         let agents = desk.inhabitants.map { inhabitant in

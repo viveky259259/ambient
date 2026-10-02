@@ -24,12 +24,15 @@ struct IslandGeometry: Equatable {
         CGRect(x: centerX - size.width / 2, y: screenFrame.maxY - size.height, width: size.width, height: size.height)
     }
 
+    /// The display with the hardware notch if there is one; otherwise the display with the menu bar, which macOS lists
+    /// first (on a Mac Studio or a Mac mini, wherever you put the menu bar in Displays settings).
     static func current() -> IslandGeometry? {
         let screens = NSScreen.screens
-        guard let screen = screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main ?? screens.first else { return nil }
+        let notched = ignoresNotch ? nil : screens.first(where: { $0.safeAreaInsets.top > 0 })
+        guard let screen = notched ?? screens.first else { return nil }
         let frame = screen.frame
 
-        if screen.safeAreaInsets.top > 0, let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+        if notched != nil, let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
             // The auxiliary areas are reported relative to the screen; normalize to global coordinates.
             let offset = left.minX >= frame.minX - 0.5 && left.minX <= frame.minX + 0.5 ? 0 : frame.minX
             let notchLeft = left.maxX + offset, notchRight = right.minX + offset
@@ -41,4 +44,12 @@ struct IslandGeometry: Equatable {
         let height = menuBar > 8 ? menuBar : NSStatusBar.system.thickness
         return IslandGeometry(screenFrame: frame, hasNotch: false, notchWidth: 120, notchHeight: height, centerX: frame.midX)
     }
+
+    #if DEBUG || AMBIENT_DEV
+    /// Dev builds: `defaults write com.viveky259259.Ambient debugVirtualNotch -bool true` lays the island out as on a
+    /// Mac without a notch, to try the Mac Studio and Mac mini layout on a MacBook.
+    private static var ignoresNotch: Bool { UserDefaults.standard.bool(forKey: "debugVirtualNotch") }
+    #else
+    private static let ignoresNotch = false
+    #endif
 }

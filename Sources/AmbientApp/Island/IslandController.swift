@@ -159,7 +159,10 @@ final class IslandController {
 
     private func trackPointer() {
         let point = NSEvent.mouseLocation
-        let active = viewModel.presentation != .hidden || (!viewModel.sessions.isEmpty && viewModel.geometry.hasNotch && prefs.islandEnabled)
+        // Hidden, a notch still opens the island when there are sessions. Without a notch there's nothing to see, so
+        // the top center of the menu bar opens it whenever you hover there, even with no sessions.
+        let active = viewModel.presentation != .hidden
+            || (prefs.islandEnabled && (viewModel.geometry.hasNotch ? !viewModel.sessions.isEmpty : true))
         var hot = viewModel.geometry.screenRect(for: viewModel.currentSize)
         hot.size.height += 2 // include the very top pixel row
         let inside = active && hot.contains(point)

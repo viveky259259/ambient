@@ -63,6 +63,12 @@ let macBook = NotchGeometry(screen: Vec2(1512, 982), notchCenterX: 756, notchBot
         #expect(SolarLayout.orbits(count: 1, geometry: macBook).count == 1)
     }
 
+    @Test func aVirtualNotchDrawsItsEffectsAtLeastMacBookNotchWide() {
+        #expect(NotchGeometry.effectWidth(notch: 200, hasNotch: true) == 200)
+        #expect(NotchGeometry.effectWidth(notch: 120, hasNotch: false) == NotchGeometry.minimumVirtualEffectWidth)
+        #expect(NotchGeometry.effectWidth(notch: 240, hasNotch: false) == 240)
+    }
+
     @Test func urgencyFollowsMood() {
         #expect([Mood.waiting, .error, .working, .done, .idle].map(NotchAgent.urgency(of:)) == [0, 1, 2, 3, 4])
     }

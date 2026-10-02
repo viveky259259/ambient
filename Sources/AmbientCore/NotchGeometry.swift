@@ -41,6 +41,15 @@ public struct NotchGeometry: Equatable, Sendable {
     public var radius: Double { notchWidth / 2 }
     /// 1 on a display 600 points tall; the physics is tuned there and scaled.
     public var unit: Double { screen.y / 600 }
+
+    /// The narrowest notch the effects are drawn for on a display without one, about a MacBook's.
+    public static let minimumVirtualEffectWidth = 180.0
+
+    /// The notch width the effects use. Displays without a notch get a narrow virtual one; the hole and the sun are
+    /// drawn at least a MacBook notch wide there, so they read the same on a Mac Studio as on a MacBook.
+    public static func effectWidth(notch: Double, hasNotch: Bool) -> Double {
+        hasNotch ? notch : max(notch, minimumVirtualEffectWidth)
+    }
 }
 
 /// An agent session taking part in a notch effect.
