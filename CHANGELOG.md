@@ -1,10 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 — 2026-10-03
 
 - **Fixed**: with the living wallpaper on the lock screen, the password field and login options could be hidden.
   While the Mac is locked the scene is now set as your wallpaper, under macOS's own lock-screen controls, and your
   wallpaper comes back when you unlock.
+- **Macs without a notch** (Mac Studio, Mac mini, external displays): the island now sits on the display with the
+  menu bar and follows it when you move the menu bar; hovering the top center of the menu bar opens it even when no
+  agent is running; and the black hole and the sun are drawn as large as on a MacBook.
 
 ## 0.5.0 — 2026-10-01
 
