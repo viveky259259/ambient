@@ -39,7 +39,7 @@ struct PetView: View {
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityHint(model.peekPinned ? "Hides your agent sessions" : "Shows all your agent sessions")
                 .accessibilityAddTraits(.isButton)
-                .accessibilityAction { model.tapPet() }
+                .accessibilityAction { model.onTap() }
                 .accessibilityAction(named: "Show sessions and actions") { model.onShowList() }
                 .offset(x: pet.minX, y: pet.minY)
             PetBurstLayer(bursts: model.bursts)

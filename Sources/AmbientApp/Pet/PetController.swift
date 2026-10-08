@@ -61,6 +61,7 @@ final class PetController {
 
         viewModel.onOpen = { [weak self] session in
             self?.model.open(session)
+            self?.listPinned = false
             // Let the burst start under the pointer before the list folds away.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 self?.hoverSuppressed = true
@@ -75,9 +76,11 @@ final class PetController {
             self.viewModel.quiet = self.prefs.isQuiet
         }
         viewModel.onSettings = { [weak self] in
+            self?.listPinned = false
             self?.setExpanded(false)
             onSettings()
         }
+        viewModel.onTap = { [weak self] in self?.clickPet() }
         viewModel.onHide = { [weak self] in self?.prefs.petEnabled = false }
         viewModel.onShowList = { [weak self] in
             self?.listPinned = true
@@ -101,12 +104,19 @@ final class PetController {
                 self.viewModel.react(reaction)
             }
             .store(in: &cancellables)
-        prefs.objectWillChange
+        // Only the settings the pet reads; the published values change after this fires, so sync() runs a turn later.
+        let changes: [AnyPublisher<Void, Never>] = [
+            prefs.$petEnabled.dropFirst().map { _ in }.eraseToAnyPublisher(),
+            prefs.$petSpecies.dropFirst().map { _ in }.eraseToAnyPublisher(),
+            prefs.$petOrigin.dropFirst().map { _ in }.eraseToAnyPublisher(),
+            prefs.$quietUntil.dropFirst().map { _ in }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(changes)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.sync() }
             .store(in: &cancellables)
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .sink { [weak self] _ in self?.layout() }
+            .sink { [weak self] _ in self?.screensChanged() }
             .store(in: &cancellables)
         sync()
     }
@@ -164,6 +174,10 @@ final class PetController {
         hoverWork?.cancel()
         hoverWork = nil
         listPinned = false
+        hoverSuppressed = false
+        drag = nil
+        dragging = false
+        viewModel.clearBursts()
         viewModel.peekPinned = false
         viewModel.expanded = false
         viewModel.visible = false
@@ -183,6 +197,14 @@ final class PetController {
             trackPointer()
         }
         setExpanded(false)
+    }
+
+    /// A display came or went, or changed size: the default corner moves with the screen, a chosen spot stays put.
+    private func screensChanged() {
+        if prefs.petOrigin == nil, !dragging {
+            origin = PetLayout.defaultOrigin(in: Self.visibleFrame(containing: nil), pet: PetViewModel.petSize)
+        }
+        layout()
     }
 
     /// Keeps the pet on its screen and fits the panel around it.
@@ -219,17 +241,22 @@ final class PetController {
                 // Dropped under the pointer: don't spring the list open again until it leaves.
                 hoverSuppressed = true
             } else {
-                // A click pins the peek; the hovered list gives way to it until the pointer leaves.
-                hoverWork?.cancel()
-                hoverWork = nil
-                hoverSuppressed = true
-                listPinned = false
-                viewModel.tapPet()
-                trackPointer()
+                clickPet()
             }
             drag = nil
             dragging = false
         }
+    }
+
+    /// A click on the pet pins the peek; the hovered list gives way to it until the pointer leaves. VoiceOver's
+    /// default action comes here too.
+    private func clickPet() {
+        hoverWork?.cancel()
+        hoverWork = nil
+        hoverSuppressed = true
+        listPinned = false
+        viewModel.tapPet()
+        trackPointer()
     }
 
     /// Lets clicks through everywhere but the pet and its bubble.

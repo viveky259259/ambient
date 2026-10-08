@@ -43,6 +43,8 @@ final class PetViewModel: ObservableObject {
     /// Opens the list without hovering, for VoiceOver.
     var onShowList: () -> Void = {}
     var onDrag: (DragPhase) -> Void = { _ in }
+    /// A click on the pet, or VoiceOver's default action; the controller settles hover state, then calls `tapPet`.
+    var onTap: () -> Void = {}
 
     /// Points per pixel of art.
     static let pixel: CGFloat = 4
@@ -151,6 +153,8 @@ final class PetViewModel: ObservableObject {
         reaction = r
         reactionCount += 1
     }
+
+    func clearBursts() { bursts = [] }
 
     private func burst(at point: CGPoint, color: RGB) {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
