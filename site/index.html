@@ -111,8 +111,8 @@
   <div class="wrap">
     <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
     <div class="nav-links">
-      <a href="#island">Island</a>
       <a href="#return">Click to return</a>
+      <a href="#island">Island</a>
       <a href="#alerts">Alerts</a>
       <a href="#dock">Dock glow</a>
       <a href="#wallpaper">Wallpaper</a>
@@ -120,7 +120,8 @@
       <a href="/guides/">Guides</a>
       <a href="/requests/">Requests</a>
     </div>
-    <button class="btn small" data-download="nav">Download</button>
+    <button class="btn small desktop-only" data-download="nav">Download</button>
+    <button class="btn small mobile-only hidden" data-copy-link="nav">Copy link</button>
   </div>
 </nav>
 
@@ -128,11 +129,16 @@
   <div class="wrap">
     <h1>Your Mac, aware of your coding agents.</h1>
     <p class="lede">Ambient is a free Mac app that turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
-    <div class="cta-row">
+    <div class="cta-row desktop-only">
       <button class="btn" data-download="hero">Download for Mac</button>
-      <a class="link-btn" href="#island">See how it works ›</a>
+      <a class="link-btn" href="#return">See how it works ›</a>
     </div>
-    <p class="fineprint">Free · Version 0.5.1 · macOS 14 or later · Apple silicon and Intel · 3.6&nbsp;MB</p>
+    <div class="cta-row mobile-only hidden">
+      <button class="btn" id="mobile-copy-hero">Copy link for your Mac</button>
+      <a class="link-btn" href="#return">See how it works ›</a>
+    </div>
+    <p class="fineprint desktop-only">Free · Version 0.5.1 · macOS 14 or later · Apple silicon and Intel · 3.6&nbsp;MB</p>
+    <p class="fineprint mobile-only hidden">Ambient is a Mac app. Save this link and open it on your Mac.</p>
 
     <div class="macbook" aria-hidden="true">
       <div class="lid">
@@ -169,20 +175,7 @@
 </header>
 
 <main>
-<section class="alt center" id="island">
-  <div class="wrap">
-    <h2>Glance. Don't babysit.</h2>
-    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open into macOS glass for a few seconds. Hover to see every session.</p>
-    <div class="grid states">
-      <div class="card" style="--state: var(--claude)"><span class="orb breathe"></span><h3>Working</h3><p>An orb in the agent's color breathes while it thinks and runs tools.</p></div>
-      <div class="card" style="--state: var(--waiting)"><span class="orb pulse"></span><h3>Needs you</h3><p>An amber pulse when an agent is waiting for permission or an answer.</p></div>
-      <div class="card" style="--state: var(--done)"><span class="orb big check"></span><h3>Done</h3><p>Green stays until you look at the session, then settles.</p></div>
-      <div class="card" style="--state: var(--error)"><span class="orb big bang"></span><h3>Error</h3><p>Red when a turn fails, with the reason one hover away.</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="return">
+<section class="alt" id="return">
   <div class="wrap split">
     <div>
       <h2>Click. You're back where the agent runs.</h2>
@@ -196,6 +189,19 @@
       <li><span class="dot" style="background: #86868b"></span>tmux and cmux<span class="where">the exact pane</span></li>
       <li><span class="dot" style="background: var(--gemini)"></span>VS Code, Cursor and others<span class="where">the project's window</span></li>
     </ul>
+  </div>
+</section>
+
+<section class="center" id="island">
+  <div class="wrap">
+    <h2>Glance. Don't babysit.</h2>
+    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open into macOS glass for a few seconds. Hover to see every session.</p>
+    <div class="grid states">
+      <div class="card" style="--state: var(--claude)"><span class="orb breathe"></span><h3>Working</h3><p>An orb in the agent's color breathes while it thinks and runs tools.</p></div>
+      <div class="card" style="--state: var(--waiting)"><span class="orb pulse"></span><h3>Needs you</h3><p>An amber pulse when an agent is waiting for permission or an answer.</p></div>
+      <div class="card" style="--state: var(--done)"><span class="orb big check"></span><h3>Done</h3><p>Green stays until you look at the session, then settles.</p></div>
+      <div class="card" style="--state: var(--error)"><span class="orb big bang"></span><h3>Error</h3><p>Red when a turn fails, with the reason one hover away.</p></div>
+    </div>
   </div>
 </section>
 
@@ -335,7 +341,8 @@
     <img src="/assets/icon-256.png" alt="" style="width: 96px; height: 96px; margin: 0 auto 24px; border-radius: 22px">
     <h2>Let your agents work.<br>Ambient will tell you when.</h2>
     <p class="section-lede">Free for macOS 14 and later.</p>
-    <button class="btn" data-download="closing">Download for Mac</button>
+    <button class="btn desktop-only" data-download="closing">Download for Mac</button>
+    <button class="btn mobile-only hidden" data-copy-link="closing">Copy link for your Mac</button>
   </div>
 </section>
 </main>
