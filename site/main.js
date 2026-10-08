@@ -93,6 +93,38 @@
     }, { threshold: 0.5 }).observe(stage);
   }
 
+  // MARK: - Mobile detection
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    document.body.classList.add("is-mobile");
+    document.querySelectorAll(".desktop-only").forEach((el) => el.classList.add("hidden"));
+    document.querySelectorAll(".mobile-only").forEach((el) => el.classList.remove("hidden"));
+  }
+
+  const copyLink = (btn, place) => {
+    if (btn.dataset.copying) return;
+    btn.dataset.copying = "1";
+    const url = "https://yaml.cafe";
+    const original = btn.textContent;
+    const finish = (label) => {
+      btn.textContent = label;
+      setTimeout(() => { btn.textContent = original; delete btn.dataset.copying; }, 2000);
+    };
+    const done = () => finish("Copied!");
+    const failed = () => finish("Copy failed");
+    try {
+      navigator.clipboard.writeText(url).then(done, failed);
+    } catch { failed(); }
+    track("Copy link", { place, ref: store.get("ambient-ref") || "none" });
+  };
+
+  document.querySelectorAll("[data-copy-link]").forEach((b) => {
+    b.addEventListener("click", () => copyLink(b, b.dataset.copyLink));
+  });
+  const mobileCopyHero = document.getElementById("mobile-copy-hero");
+  if (mobileCopyHero) mobileCopyHero.addEventListener("click", () => copyLink(mobileCopyHero, "hero"));
+
   // MARK: - Download and updates
 
   // The download starts on the first click; the sheet then offers an optional email for new versions.

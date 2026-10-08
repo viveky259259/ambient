@@ -102,7 +102,7 @@ private struct WingLabel: View {
     }
 }
 
-private struct AgentTag: View {
+struct AgentTag: View {
     let agent: AgentKind
 
     var body: some View {
@@ -278,7 +278,7 @@ struct IslandBackground: View {
 }
 
 /// The system's behind-window blur, for macOS before Liquid Glass.
-private struct FrostedBackdrop: NSViewRepresentable {
+struct FrostedBackdrop: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = .hudWindow

@@ -84,6 +84,8 @@ struct SettingsView: View {
             AgentsPane(setup: setup)
         case .island:
             IslandPane(prefs: prefs)
+        case .pet:
+            PetPane(prefs: prefs)
         case .alerts:
             AlertsPane(setup: setup, prefs: prefs, onPreviewSound: onPreviewSound)
         case .dock:

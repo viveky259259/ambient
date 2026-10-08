@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
     private var island: IslandController?
+    private var pet: PetController?
     private var notifier: Notifier?
     private var menuBar: MenuBarController?
     private var dockGlow: DockGlow?
@@ -45,6 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         island = IslandController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
         island?.start()
+
+        pet = PetController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
+        pet?.start()
 
         menuBar = MenuBarController(model: model, prefs: prefs,
                                     onSettings: { [weak self] in self?.showSetup() },
