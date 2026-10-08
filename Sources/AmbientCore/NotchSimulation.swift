@@ -340,7 +340,7 @@ public struct NotchSimulation: Sendable {
 private func clamp(_ x: Double, _ lo: Double = 0, _ hi: Double = 1) -> Double { min(hi, max(lo, x)) }
 
 /// Repeatable randomness (SplitMix64).
-private struct SplitMix: Sendable {
+struct SplitMix: Sendable {
     private var state: UInt64
 
     init(seed: UInt64) { state = seed }

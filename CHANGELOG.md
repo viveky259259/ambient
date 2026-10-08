@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Desktop pet**: an optional pixel-art companion (a blob, a crab or a cat) that you drag anywhere on your desktop.
+  It acts out your most urgent agent session: typing while it works, waving with a "!" when it needs you, cheering
+  when it's done, sweating when it fails, and sleeping when nothing needs you. Its speech bubble says what that
+  session is doing. Hover the pet for your sessions and the island's actions; click it and it reacts with a burst of
+  pixels and pins a quick look at every session; click a session to jump to it. With several sessions, pips under the
+  pet show each one at a glance, the bubble says when another one needs you, and the pet holds up how many are
+  waiting. It shows only sessions worth your attention, and works with or without the notch island.
+  Turn it on in Settings › Desktop Pet or from the menu bar.
+
 ## 0.5.1 — 2026-10-03
 
 - **Fixed**: with the living wallpaper on the lock screen, the password field and login options could be hidden.

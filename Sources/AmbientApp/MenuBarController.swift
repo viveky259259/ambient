@@ -117,6 +117,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             quiet.submenu = sub
             menu.addItem(quiet)
         }
+        let pet = item("Show Desktop Pet", #selector(togglePet))
+        pet.state = prefs.petEnabled ? .on : .off
+        menu.addItem(pet)
         menu.addItem(item("Play Demo", #selector(demo)))
         menu.addItem(.separator())
         menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
@@ -152,6 +155,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func acknowledgeAll() { model.acknowledgeAll() }
     @objc private func resume() { model.setQuiet(for: nil) }
     @objc private func quietFor(_ sender: NSMenuItem) { model.setQuiet(for: sender.representedObject as? TimeInterval) }
+    @objc private func togglePet() { prefs.petEnabled.toggle() }
     @objc private func demo() { onDemo() }
     @objc private func suggestFeature() { NSWorkspace.shared.open(FeatureRequests.url()) }
     @objc private func settings() { onSettings() }

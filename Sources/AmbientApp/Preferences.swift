@@ -27,6 +27,19 @@ final class Preferences: ObservableObject {
     @Published var wallpaperCalendar: Bool { didSet { defaults.set(wallpaperCalendar, forKey: "wallpaperCalendar") } }
     @Published var wallpaperIslandEffect: Bool { didSet { defaults.set(wallpaperIslandEffect, forKey: "wallpaperIslandEffect") } }
     @Published var wallpaperLook: String { didSet { defaults.set(wallpaperLook, forKey: "wallpaperLook") } }
+    @Published var petEnabled: Bool { didSet { defaults.set(petEnabled, forKey: "petEnabled") } }
+    /// A `PetSpecies` raw value.
+    @Published var petSpecies: String { didSet { defaults.set(petSpecies, forKey: "petSpecies") } }
+    /// Where the pet stands, in global screen coordinates; nil for the default corner.
+    @Published var petOrigin: CGPoint? {
+        didSet {
+            if let petOrigin {
+                defaults.set([petOrigin.x, petOrigin.y], forKey: "petOrigin")
+            } else {
+                defaults.removeObject(forKey: "petOrigin")
+            }
+        }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -47,6 +60,8 @@ final class Preferences: ObservableObject {
             "wallpaperCalendar": false,
             "wallpaperIslandEffect": true,
             "wallpaperLook": "timeOfDay",
+            "petEnabled": false,
+            "petSpecies": PetSpecies.blob.rawValue,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -65,6 +80,13 @@ final class Preferences: ObservableObject {
         wallpaperCalendar = defaults.bool(forKey: "wallpaperCalendar")
         wallpaperIslandEffect = defaults.bool(forKey: "wallpaperIslandEffect")
         wallpaperLook = defaults.string(forKey: "wallpaperLook") ?? "timeOfDay"
+        petEnabled = defaults.bool(forKey: "petEnabled")
+        petSpecies = defaults.string(forKey: "petSpecies") ?? PetSpecies.blob.rawValue
+        if let xy = defaults.array(forKey: "petOrigin") as? [Double], xy.count == 2 {
+            petOrigin = CGPoint(x: xy[0], y: xy[1])
+        } else {
+            petOrigin = nil
+        }
     }
 
     var isQuiet: Bool {
@@ -79,4 +101,5 @@ final class Preferences: ObservableObject {
 
     var sceneChoice: SceneChoice { SceneChoice(rawValue: wallpaperScene) ?? .daily }
     var sceneLook: SceneLook { SceneLook(rawValue: wallpaperLook) ?? .timeOfDay }
+    var pet: PetSpecies { PetSpecies(stored: petSpecies) }
 }
