@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code notifications in tmux: make them reach you</title>
+  <meta name="description" content="Get Claude Code alerts when it runs inside tmux: allow-passthrough, the tmux bell flag, a hook that messages tmux, Shift+Enter, and jumping back to the pane.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-tmux-notifications/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-tmux-notifications/">
+  <meta property="og:title" content="How to get Claude Code notifications inside tmux">
+  <meta property="og:description" content="allow-passthrough, the tmux bell flag, a hook that messages tmux, and jumping back to the pane.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-10-09">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/claude-code-tmux-notifications/#article",
+      "headline": "How to get Claude Code notifications inside tmux",
+      "description": "Get Claude Code alerts when it runs inside tmux: allow-passthrough, the tmux bell flag, a hook that messages tmux, Shift+Enter, and jumping back to the pane.",
+      "url": "https://yaml.cafe/guides/claude-code-tmux-notifications/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-tmux-notifications/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-10-09T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Claude Code notifications in tmux",
+          "item": "https://yaml.cafe/guides/claude-code-tmux-notifications/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why don't Claude Code notifications show up in tmux?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "tmux swallows the escape sequences Claude Code uses for notifications. Add set -g allow-passthrough on to ~/.tmux.conf and run tmux source-file ~/.tmux.conf."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does Shift+Enter send my prompt in tmux?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "tmux can't tell Shift+Enter from Enter until extended keys are on. Add set -s extended-keys on and set -as terminal-features 'xterm*:extkeys' to ~/.tmux.conf."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do hooks work inside tmux?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Hooks run as commands from Claude Code itself, not through the terminal, so they work in tmux without extra settings."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-tmux-notifications-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get Claude Code notifications inside tmux</h1>
+    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 4 min read</p>
+
+    <p class="answer">Inside tmux, Claude Code's desktop notifications never reach your terminal until you add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code> and reload it. Hooks don't go through the terminal, so a <code>Stop</code> or <code>PermissionRequest</code> hook works in tmux as it is, and Ambient takes you back to the exact pane.</p>
+
+    <h2>Let notifications through</h2>
+    <p>Add these lines to <code>~/.tmux.conf</code>, then run <code>tmux source-file ~/.tmux.conf</code>:</p>
+    <pre><code>set -g allow-passthrough on
+set -s extended-keys on
+set -as terminal-features 'xterm*:extkeys'</code></pre>
+    <p><code>allow-passthrough</code> lets Claude Code's notifications and progress bar reach the terminal outside tmux. The <code>extended-keys</code> lines make Shift+Enter insert a newline instead of sending your prompt. Your outer terminal still has to show notifications: Ghostty and Kitty do out of the box, iTerm2 after you enable escape-sequence alerts.</p>
+
+    <h2>Let the bell flag the window</h2>
+    <p>With <code>"preferredNotifChannel": "terminal_bell"</code> in <code>~/.claude/settings.json</code>, Claude Code rings the bell when it finishes or waits for permission. tmux flags a window whose pane rang the bell in the status line, so you can see which window wants you even when it's in the background.</p>
+
+    <h2>A hook that tells tmux</h2>
+    <p>A hook runs inside the pane's environment, so it can ask tmux to show a message naming the window:</p>
+    <pre><code>// ~/.claude/settings.json
+{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "[ -n \"$TMUX\" ] &amp;&amp; tmux display-message -t \"$TMUX_PANE\" 'Claude finished in #S:#I' || true", "async": true }] }
+    ]
+  }
+}</code></pre>
+    <p><code>#S:#I</code> becomes the session and window number. Use the same command under <code>PermissionRequest</code> with different text to hear about permission requests the moment they happen.</p>
+
+    <h2>Jump back to the pane</h2>
+    <p>Ambient records the tmux pane each agent runs in. When one needs you, the notch island turns amber, and a click on the island, the banner or the menu bar row selects that exact pane. It works the same for cmux, and for Codex and Gemini CLI sessions.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-tmux-notifications-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Why don&#x27;t Claude Code notifications show up in tmux?</h3>
+    <p>tmux swallows the escape sequences Claude Code uses for notifications. Add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code> and run <code>tmux source-file ~/.tmux.conf</code>.</p>
+    <h3>Why does Shift+Enter send my prompt in tmux?</h3>
+    <p>tmux can't tell Shift+Enter from Enter until extended keys are on. Add <code>set -s extended-keys on</code> and <code>set -as terminal-features 'xterm*:extkeys'</code> to <code>~/.tmux.conf</code>.</p>
+    <h3>Do hooks work inside tmux?</h3>
+    <p>Yes. Hooks run as commands from Claude Code itself, not through the terminal, so they work in tmux without extra settings.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/terminal-config#configure-tmux">Configure tmux</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks-guide">Automate actions with hooks</a>, Claude Code docs</li>
+      <li><a href="https://man.openbsd.org/tmux.1">tmux manual</a>, OpenBSD</li>
+    </ul>
+    <p>More guides: <a href="/guides/multiple-claude-code-sessions-mac/">Multiple Claude Code sessions on Mac</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>

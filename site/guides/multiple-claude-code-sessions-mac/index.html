@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Run multiple Claude Code sessions on a Mac (and keep track)</title>
+  <meta name="description" content="Run several Claude Code sessions at once on a Mac: worktrees so edits don&#x27;t collide, agent view and background sessions, tmux, and seeing which one needs you.">
+  <link rel="canonical" href="https://yaml.cafe/guides/multiple-claude-code-sessions-mac/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/multiple-claude-code-sessions-mac/">
+  <meta property="og:title" content="How to run multiple Claude Code sessions at once on a Mac">
+  <meta property="og:description" content="Worktrees so edits don&#x27;t collide, agent view and background sessions, and seeing which session needs you.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-10-09">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/multiple-claude-code-sessions-mac/#article",
+      "headline": "How to run multiple Claude Code sessions at once on a Mac",
+      "description": "Run several Claude Code sessions at once on a Mac: worktrees so edits don't collide, agent view and background sessions, tmux, and seeing which one needs you.",
+      "url": "https://yaml.cafe/guides/multiple-claude-code-sessions-mac/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/multiple-claude-code-sessions-mac/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-10-09T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Multiple Claude Code sessions on Mac",
+          "item": "https://yaml.cafe/guides/multiple-claude-code-sessions-mac/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Will two Claude Code sessions overwrite each other's files?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "They can if they work in the same checkout. Start each with claude --worktree <name> so each edits its own branch in its own folder."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do parallel sessions share context?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Each session is its own conversation with its own context."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I find the session that's waiting for me?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "In agent view, sessions that need input sit at the top in yellow, and the terminal tab title shows how many are waiting. With Ambient, the notch turns amber and ambient open jumps straight to the session that needs you most."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-multiple-claude-code-sessions-mac-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to run multiple Claude Code sessions at once on a Mac</h1>
+    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 5 min read</p>
+
+    <p class="answer">Give each session its own git worktree with <code>claude --worktree &lt;name&gt;</code>, so their edits don't collide. Then keep track of them in one place: Claude Code's agent view (<code>claude agents</code>) for background sessions, or Ambient's notch island and menu bar for every session, in any terminal, editor or the Claude desktop app, most urgent first.</p>
+
+    <h2>1. Keep their edits apart with worktrees</h2>
+    <p>Two sessions editing the same checkout will trip over each other. A git worktree is a separate checkout on its own branch:</p>
+    <pre><code>claude --worktree feature-auth     # terminal 1
+claude --worktree fix-cache-bug    # terminal 2</code></pre>
+    <p>The repository needs at least one commit first.</p>
+
+    <h2>2. Run some in the background with agent view</h2>
+    <p>Claude Code's agent view (a research preview) is one screen for all your background sessions:</p>
+    <pre><code>claude agents                      # open agent view
+claude --bg "upgrade the test runner"   # start a background session from the shell</code></pre>
+    <p>Inside a session, <code>/bg</code> moves it to the background. Background sessions keep running with no terminal open, move into their own worktree under <code>.claude/worktrees/</code> before editing files, and are grouped by state, with the ones that need input at the top in yellow. The terminal tab title shows a count, such as <em>2 awaiting input</em>, and while agent view is open Claude Code also sends a notification when one needs you, finishes or fails.</p>
+
+    <h2>3. Or one per terminal tab or tmux pane</h2>
+    <p>Plenty of people simply run each session in its own tab or tmux pane. It works, until you're switching tabs to find the one that's waiting.</p>
+
+    <h2>4. See every session at once</h2>
+    <p>Ambient keeps a state for every session and shows the most urgent one at the notch: <em>needs you</em>, then <em>error</em>, then <em>done</em>, then <em>working</em>. Hover the island for the full list, or open the menu bar list. A click takes you to the exact place each one runs:</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>The session runs in</th><th>A click opens</th></tr></thead>
+        <tbody>
+          <tr><td>The Claude desktop app</td><td>The exact chat</td></tr>
+          <tr><td>Terminal or iTerm2</td><td>The exact tab</td></tr>
+          <tr><td>tmux or cmux</td><td>The exact pane</td></tr>
+          <tr><td>VS Code, Cursor and other editors</td><td>The project's window</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>From a terminal, <code>ambient open</code> jumps to the session that needs you most, and <code>ambient status</code> lists them all. Codex and Gemini CLI sessions show up in the same place.</p>
+
+    <h3>Agent view or Ambient?</h3>
+    <p>They answer different questions, and work together. Agent view manages Claude Code's own background sessions inside a terminal. Ambient watches every session you start, foreground or background, in any app, and tells you at a glance without a terminal open.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-multiple-claude-code-sessions-mac-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Will two Claude Code sessions overwrite each other&#x27;s files?</h3>
+    <p>They can if they work in the same checkout. Start each with <code>claude --worktree &lt;name&gt;</code> so each edits its own branch in its own folder.</p>
+    <h3>Do parallel sessions share context?</h3>
+    <p>No. Each session is its own conversation with its own context.</p>
+    <h3>How do I find the session that&#x27;s waiting for me?</h3>
+    <p>In agent view, sessions that need input sit at the top in yellow, and the terminal tab title shows how many are waiting. With Ambient, the notch turns amber and <code>ambient open</code> jumps straight to the session that needs you most.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/common-workflows#run-parallel-sessions-with-worktrees">Run parallel sessions with worktrees</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/agent-view">Agent view</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/worktrees">Worktrees</a>, Claude Code docs</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-tmux-notifications/">Claude Code notifications in tmux</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>

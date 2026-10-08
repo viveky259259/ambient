@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://yaml.cafe/</loc><lastmod>2026-09-30</lastmod></url>
-  <url><loc>https://yaml.cafe/guides/</loc><lastmod>2026-09-27</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://yaml.cafe/guides/claude-code-notifications-mac/</loc><lastmod>2026-09-27</lastmod></url>
   <url><loc>https://yaml.cafe/guides/codex-notifications-mac/</loc><lastmod>2026-09-27</lastmod></url>
   <url><loc>https://yaml.cafe/guides/gemini-cli-notifications-mac/</loc><lastmod>2026-09-27</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/claude-code-sound-when-done/</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/claude-code-permission-notification/</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/multiple-claude-code-sessions-mac/</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/claude-code-tmux-notifications/</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://yaml.cafe/guides/claude-code-notification-apps-mac/</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://yaml.cafe/requests/</loc><lastmod>2026-09-30</lastmod></url>
   <url><loc>https://yaml.cafe/contact/</loc><lastmod>2026-09-27</lastmod></url>
   <url><loc>https://yaml.cafe/privacy.html</loc><lastmod>2026-09-26</lastmod></url>
