@@ -36,6 +36,11 @@ Not a fit: Linux or Windows; agents that run only on a remote machine over SSH (
 - [Claude Code notifications on Mac](https://yaml.cafe/guides/claude-code-notifications-mac/): built-in desktop notifications, the terminal bell, a Notification hook, and Ambient, compared.
 - [Codex notifications on Mac](https://yaml.cafe/guides/codex-notifications-mac/): `tui.notifications`, the `notify` program, Codex hooks, and Ambient, compared.
 - [Gemini CLI notifications on Mac](https://yaml.cafe/guides/gemini-cli-notifications-mac/): `general.enableNotifications`, `AfterAgent` and `Notification` hooks, and Ambient, compared.
+- [Claude Code sound when done](https://yaml.cafe/guides/claude-code-sound-when-done/): A Stop hook with afplay, a different sound for permission requests, and the terminal bell.
+- [Claude Code permission notifications](https://yaml.cafe/guides/claude-code-permission-notification/): Why the built-in alert waits six seconds, and the PermissionRequest hook that doesn't.
+- [Multiple Claude Code sessions on Mac](https://yaml.cafe/guides/multiple-claude-code-sessions-mac/): Worktrees, agent view and background sessions, and seeing which one needs you.
+- [Claude Code notifications in tmux](https://yaml.cafe/guides/claude-code-tmux-notifications/): allow-passthrough, the bell flag, a hook that messages tmux, and Shift+Enter.
+- [Claude Code notification apps compared](https://yaml.cafe/guides/claude-code-notification-apps-mac/): Ambient, Vibe Island, Vibe Notch, Claude Pulse and AI Done Now, side by side.
 
 ## Site
 

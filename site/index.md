@@ -107,6 +107,11 @@ Step-by-step guides for each agent's own options:
 - [Claude Code notifications on Mac](https://yaml.cafe/guides/claude-code-notifications-mac/)
 - [Codex notifications on Mac](https://yaml.cafe/guides/codex-notifications-mac/)
 - [Gemini CLI notifications on Mac](https://yaml.cafe/guides/gemini-cli-notifications-mac/)
+- [Claude Code sound when done](https://yaml.cafe/guides/claude-code-sound-when-done/)
+- [Claude Code permission notifications](https://yaml.cafe/guides/claude-code-permission-notification/)
+- [Multiple Claude Code sessions on Mac](https://yaml.cafe/guides/multiple-claude-code-sessions-mac/)
+- [Claude Code notifications in tmux](https://yaml.cafe/guides/claude-code-tmux-notifications/)
+- [Claude Code notification apps compared](https://yaml.cafe/guides/claude-code-notification-apps-mac/)
 
 ## Questions
 

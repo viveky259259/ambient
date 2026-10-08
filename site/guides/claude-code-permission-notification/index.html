@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code permission notification: know instantly (Mac)</title>
+  <meta name="description" content="Get alerted the moment Claude Code asks for permission on a Mac. Why the built-in alert waits six seconds, the PermissionRequest hook that doesn&#x27;t, and Ambient.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-permission-notification/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-permission-notification/">
+  <meta property="og:title" content="How to get notified the moment Claude Code needs permission">
+  <meta property="og:description" content="Why the built-in alert waits six seconds, the PermissionRequest hook that doesn&#x27;t, and Ambient.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-10-09">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/claude-code-permission-notification/#article",
+      "headline": "How to get notified the moment Claude Code needs permission",
+      "description": "Get alerted the moment Claude Code asks for permission on a Mac. Why the built-in alert waits six seconds, the PermissionRequest hook that doesn't, and Ambient.",
+      "url": "https://yaml.cafe/guides/claude-code-permission-notification/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-permission-notification/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-10-09T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Claude Code permission notification",
+          "item": "https://yaml.cafe/guides/claude-code-permission-notification/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why does Claude Code's permission notification take six seconds?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Claude Code sends the permission_prompt notification only after the prompt has waited about six seconds. A PermissionRequest hook runs as soon as Claude is about to ask."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can a hook approve permissions for me?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. A PermissionRequest hook can return decision.behavior as allow or deny. Use it carefully; permission rules in your settings are usually the safer way to pre-approve tools."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this work in the VS Code or Cursor terminal?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Hooks run in any terminal, because they don't depend on the terminal showing notifications."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-permission-notification-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get notified the moment Claude Code needs permission</h1>
+    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 5 min read</p>
+
+    <p class="answer">Claude Code's permission notification, and a <code>Notification</code> hook with the <code>permission_prompt</code> matcher, only fire after the prompt has waited about six seconds. To hear about it the moment Claude asks, add a <code>PermissionRequest</code> hook to <code>~/.claude/settings.json</code>. Ambient shows an amber <em>needs you</em> pulse at the notch at that same moment, and a click takes you to the waiting tab.</p>
+
+    <h2>Why the usual alert is late</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Signal</th><th>When it fires</th></tr></thead>
+        <tbody>
+          <tr><td>Built-in notification, or a <code>Notification</code> hook with <code>permission_prompt</code></td><td>After the prompt has waited about six seconds</td></tr>
+          <tr><td>A <code>PermissionRequest</code> hook</td><td>The moment Claude is about to ask you</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>A PermissionRequest hook</h2>
+    <pre><code>// ~/.claude/settings.json
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "osascript -e 'display notification \"Claude Code needs your permission\" with title \"Claude Code\"'",
+          "async": true
+        }]
+      }
+    ]
+  }
+}</code></pre>
+    <p>Keep it silent: a <code>PermissionRequest</code> hook that printed a decision would approve or deny for you. A notification command prints nothing, so Claude still asks you as usual. <code>osascript</code> notifications belong to Script Editor, so allow Script Editor in System Settings › Notifications.</p>
+    <p>To alert only for shell commands, add <code>"matcher": "Bash"</code>; it matches tool names the same way <code>PreToolUse</code> does. One gap: Claude Code doesn't run <code>PermissionRequest</code> hooks for a sandboxed command's network request, so keep a <code>permission_prompt</code> notification hook if you use the sandbox.</p>
+
+    <h3>Say what Claude wants to do</h3>
+    <p>The hook receives the request as JSON on its input, with <code>tool_name</code> and <code>tool_input</code>. Save this as <code>~/.claude/hooks/permission-alert.sh</code> (it needs <code>jq</code>, from <code>brew install jq</code>):</p>
+    <pre><code>#!/bin/bash
+tool=$(jq -r '.tool_name')
+osascript -e "display notification \"Claude wants to use $tool\" with title \"Claude Code needs permission\""</code></pre>
+    <p>Then point the hook's <code>"command"</code> at <code>bash ~/.claude/hooks/permission-alert.sh</code>.</p>
+
+    <h2>Ambient: the moment it asks, at the notch</h2>
+    <p>Ambient listens to <code>PermissionRequest</code> too. The notch island turns amber at once, a banner says which project needs you and what for (for example <em>Bash: rm -rf build</em>), and a click opens the exact Terminal or iTerm2 tab, tmux pane or Claude desktop chat where Claude is waiting. Ambient doesn't answer for you: you approve in Claude Code itself. If you'd rather approve from the notch, see <a href="/guides/claude-code-notification-apps-mac/">the apps that can</a>.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-permission-notification-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Why does Claude Code&#x27;s permission notification take six seconds?</h3>
+    <p>Claude Code sends the <code>permission_prompt</code> notification only after the prompt has waited about six seconds. A <code>PermissionRequest</code> hook runs as soon as Claude is about to ask.</p>
+    <h3>Can a hook approve permissions for me?</h3>
+    <p>Yes. A <code>PermissionRequest</code> hook can return <code>decision.behavior</code> as <code>allow</code> or <code>deny</code>. Use it carefully; permission rules in your settings are usually the safer way to pre-approve tools.</p>
+    <h3>Does this work in the VS Code or Cursor terminal?</h3>
+    <p>Yes. Hooks run in any terminal, because they don't depend on the terminal showing notifications.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/hooks#permissionrequest">Hooks reference: PermissionRequest</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks#notification">Hooks reference: Notification</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks-guide">Automate actions with hooks</a>, Claude Code docs</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-sound-when-done/">Claude Code sound when done</a> · <a href="/guides/claude-code-notification-apps-mac/">Claude Code notification apps compared</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>
