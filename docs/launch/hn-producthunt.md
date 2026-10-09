@@ -29,6 +29,7 @@ Leave the text box empty, since a submission with a URL shows no text. Post the 
 > - Each hook runs a small native binary that sends one line over a Unix socket and always exits 0. It takes about 15 ms and runs async for Claude Code and Codex, so it can't slow or fail a session. If the app isn't running, the event is dropped.
 > - For permissions it uses Claude Code's PermissionRequest hook, which fires immediately. The built-in Notification event waits about 6 seconds. Details: https://yaml.cafe/guides/claude-code-permission-notification/
 > - The app makes no network requests, and it has no account and no telemetry. It's Swift, SwiftUI and AppKit, for macOS 14+ on Apple silicon and Intel, and it's notarized.
+> - It's open source under the MIT license: https://github.com/viveky259259/ambient
 >
 > What it doesn't do: you can't approve a permission from the notch; it takes you to the session to answer. The agent also has to run on the same Mac, so it doesn't work over SSH.
 >
@@ -38,10 +39,8 @@ Leave the text box empty, since a submission with a URL shows no text. Post the 
 
 ### Replies to have ready
 
-- **"Is it open source?"** Decide before you post; HN will ask within the hour.
-  - If you make the repo public: "Yes: <repo link>. The hook binary and the installer are the parts worth reading."
-  - If not: "Not right now. The hooks it installs are plain JSON in your settings files, and `ambient uninstall` removes them. Nothing leaves your Mac: the app makes no network requests."
-- **"How is this different from Vibe Island / Claude Island / other notch apps?"** "There are several now. I keep a dated comparison that says where the others do better: https://yaml.cafe/guides/claude-code-notification-apps-mac/. In short, Vibe Island covers many more agents and lets you approve from the notch, but it's paid. Ambient is free, covers Claude Code, Codex and Gemini CLI, and focuses on getting you back to the exact tab or pane."
+- **"Is it open source?"** "Yes, MIT: https://github.com/viveky259259/ambient. The hook binary and the installer are the parts worth reading."
+- **"How is this different from Vibe Island / Vibe Notch (formerly Claude Island) / other notch apps?"** "There are several now. I keep a dated comparison that says where the others do better: https://yaml.cafe/guides/claude-code-notification-apps-mac/. In short, Vibe Island covers many more agents and lets you approve from the notch, but it's paid. Ambient is free, covers Claude Code, Codex and Gemini CLI, and focuses on getting you back to the exact tab or pane."
 - **"Why not terminal-notifier or osascript in a hook?"** "That works, and the guide shows how. Ambient adds state while the agent works, many sessions at once sorted by urgency, and the click back to the exact pane."
 - **"What does the hook send?"** "Agent, state, project name and a trimmed message, over a Unix socket on your Mac. Prompts and tool output aren't stored."
 - **"No notch?"** "On other displays the island sits at the top center of the menu bar."
@@ -86,7 +85,7 @@ Consider launching after the desktop pet ships. Product Hunt rewards things that
 >
 > Across the room, the Dock glows in the same color. And if you like, your desktop becomes a living wallpaper where each session is a star, a boat, a plant or a planet.
 >
-> It's free with every feature, needs no account, and makes no network requests. macOS 14+, Apple silicon and Intel.
+> It's free with every feature and open source (MIT), needs no account, and makes no network requests. macOS 14+, Apple silicon and Intel.
 >
 > What should it do next? Tell me here, or vote on the board: https://yaml.cafe/requests/
 

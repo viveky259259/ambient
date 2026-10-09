@@ -4,10 +4,10 @@ Each entry follows that site's current rules, checked on 2026-10-09. Status: the
 
 | Where | Who submits | Odds | Notes |
 | --- | --- | --- | --- |
-| awesome-mac | Opened 2026-10-09: [#3317](https://github.com/jaywcjlove/awesome-mac/pull/3317) | Good | Lists free closed-source apps; Agent Island, a notch app for Claude Code and Codex, is already in Menu Bar Tools |
+| awesome-mac | Opened 2026-10-09: [#3317](https://github.com/jaywcjlove/awesome-mac/pull/3317) | Good | Agent Island, a notch app for Claude Code and Codex, is already in Menu Bar Tools |
 | AlternativeTo | You (needs an account) | Good | Listed next to Vibe Island and Notch Pilot, it shows up when people look for alternatives to them |
 | MacUpdate | You (developer account) | Fair | Current process unconfirmed; the sources found are old |
-| awesome-claude-code | You, through its web form only | Low for now | Closed source is a review barrier; see the caveats below |
+| awesome-claude-code | You, through its web form only | Fair | Open source since 2026-10-09; see the caveats below |
 
 ## awesome-mac (jaywcjlove/awesome-mac)
 
@@ -16,25 +16,25 @@ Each entry follows that site's current rules, checked on 2026-10-09. Status: the
 **README.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - Notch indicator for Claude Code, Codex, and Gemini CLI sessions, with alerts when an agent needs you and one click back to its terminal tab or chat. ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - Notch indicator for Claude Code, Codex, and Gemini CLI sessions, with alerts when an agent needs you and one click back to its terminal tab or chat. [![Open-Source Software][OSS Icon]](https://github.com/viveky259259/ambient) ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-zh.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - 将 MacBook 刘海变成 Claude Code、Codex 与 Gemini CLI 会话的状态指示器，代理需要你时发出提醒，并可一键回到对应的终端标签页或对话。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - 将 MacBook 刘海变成 Claude Code、Codex 与 Gemini CLI 会话的状态指示器，代理需要你时发出提醒，并可一键回到对应的终端标签页或对话。 [![Open-Source Software][OSS Icon]](https://github.com/viveky259259/ambient) ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-ja.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - MacBookのノッチにClaude Code、Codex、Gemini CLIのセッション状態を表示し、エージェントが応答を待つと通知して、ワンクリックで該当するターミナルタブやチャットに戻れるツール。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - MacBookのノッチにClaude Code、Codex、Gemini CLIのセッション状態を表示し、エージェントが応答を待つと通知して、ワンクリックで該当するターミナルタブやチャットに戻れるツール。 [![Open-Source Software][OSS Icon]](https://github.com/viveky259259/ambient) ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-ko.md**, after AirStats and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - MacBook 노치에 Claude Code, Codex, Gemini CLI 세션 상태를 보여주고, 에이전트가 응답을 기다리면 알려 주며 한 번의 클릭으로 해당 터미널 탭이나 채팅으로 돌아가게 해 주는 도구. ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - MacBook 노치에 Claude Code, Codex, Gemini CLI 세션 상태를 보여주고, 에이전트가 응답을 기다리면 알려 주며 한 번의 클릭으로 해당 터미널 탭이나 채팅으로 돌아가게 해 주는 도구. [![Open-Source Software][OSS Icon]](https://github.com/viveky259259/ambient) ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **PR title:** `Add Ambient to Menu Bar Tools`
@@ -50,10 +50,10 @@ Sign in, then choose **Suggest new application** from the user menu. To appear a
 | Name | Ambient |
 | Website | `https://yaml.cafe/` |
 | Platforms | Mac |
-| License | Free (proprietary) |
+| License | Free, open source (MIT) |
 | Category | Development |
 | Tags | claude-code, ai-coding-agent, notifications, menu-bar, notch, codex, gemini-cli, developer-tools |
-| Alternative to | Vibe Island, Notch Pilot (both listed there today); also Claude Island, Vibe Notch and AI Done Now if they're listed |
+| Alternative to | Vibe Island, Notch Pilot (both listed there today); also Vibe Notch (formerly Claude Island) and AI Done Now if they're listed |
 | Screenshots | The same gallery images as Product Hunt |
 
 **Short description:**
@@ -64,7 +64,7 @@ Sign in, then choose **Suggest new application** from the user menu. To appear a
 
 > Ambient is a free macOS app for people who work with AI coding agents. It listens to the hooks Claude Code, Codex and Gemini CLI already provide and shows each session's state at the notch: working, needs you, done or error. It posts a notification with a soft chime only when you're not already in the agent's app, and a click opens the exact Terminal or iTerm2 tab, tmux or cmux pane, editor window, or chat in the Claude or Codex desktop app. The Dock glows in the color of what your agents are doing, and an optional living wallpaper shows every session as a star, a boat, a plant or a planet.
 >
-> Hooks take about 15 ms and never slow an agent down. No account, no network requests, no telemetry. macOS 14 or later, Apple silicon and Intel.
+> Hooks take about 15 ms and never slow an agent down. No account, no network requests, no telemetry. Open source under the MIT license (https://github.com/viveky259259/ambient). macOS 14 or later, Apple silicon and Intel.
 
 ## MacUpdate
 
@@ -92,17 +92,17 @@ Recommendations go only through the issue form in the web UI, filed by a person.
 
 **Before you file, three caveats:**
 
-1. The maintainer says closed source is a barrier to review, and recommends getting users first and submitting later.
+1. The maintainer recommends getting users first and submitting later; the list is selective.
 2. The checklist asks you to confirm that the resource is specific to Claude Code. Ambient also supports Codex and Gemini CLI. Check that box only if you're comfortable saying so; the guidelines call Claude Code focus a preference, not a rule.
 3. Eligibility is 14 days since the first commit plus active development, or 100 stars. The first commit was 2026-09-26, so it qualifies from 2026-10-10.
 
-My suggestion: file it once the repo is public, or once Ambient has visible users.
+My suggestion: file it after the Show HN, once Ambient has some visible users and stars.
 
 | Field | Value |
 | --- | --- |
 | Display Name | Ambient |
 | Category | Remote Control, Notifications & Voice I/O |
-| Link | `https://yaml.cafe/` (or the GitHub repo, if public) |
+| Link | `https://github.com/viveky259259/ambient` (the form prefers the GitHub repo) |
 | Author Name | Vivek Yadav |
 | Author Link | `https://github.com/viveky259259` |
 
