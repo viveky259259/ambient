@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-10-10
 
 - **Desktop pet**: an optional pixel-art companion (a blob, a crab or a cat) that you drag anywhere on your desktop.
   It acts out your most urgent agent session: typing while it works, waving with a "!" when it needs you, cheering

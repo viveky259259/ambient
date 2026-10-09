@@ -6,7 +6,7 @@ Key facts:
 
 - Price: free, every feature. No account.
 - Source: open source under the MIT license, https://github.com/viveky259259/ambient
-- Current version: 0.5.1 (September 2026). 3.6 MB universal disk image.
+- Current version: 0.6.0 (September 2026). 3.6 MB universal disk image.
 - Requirements: macOS 14 or later, Apple silicon and Intel. Designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.
 - Agents: Claude Code (terminal, editors and the Claude desktop app), Codex (CLI and the Codex app), Gemini CLI.
 - States: working, needs you, done, error, idle. Across all sessions Ambient shows the most urgent: needs you, then error, then done, then working.
