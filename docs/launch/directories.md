@@ -1,47 +1,45 @@
 # Directory and list entries: ready to paste
 
-Each entry follows that site's current rules, checked on 2026-10-09. Nothing here has been submitted. Opening the awesome-mac pull request is the only one Claude can do for you, and only once you say yes; the others need your own account and must be filed by you.
+Each entry follows that site's current rules, checked on 2026-10-09. Status: the awesome-mac pull request is open (approved in chat on 2026-10-09). The others need your own account and must be filed by you.
 
 | Where | Who submits | Odds | Notes |
 | --- | --- | --- | --- |
-| awesome-mac | Claude, with your OK | Good | Lists free closed-source apps; Agent Island, a notch app for Claude Code and Codex, is already in Menu Bar Tools |
+| awesome-mac | Opened 2026-10-09: [#3317](https://github.com/jaywcjlove/awesome-mac/pull/3317) | Good | Lists free closed-source apps; Agent Island, a notch app for Claude Code and Codex, is already in Menu Bar Tools |
 | AlternativeTo | You (needs an account) | Good | Listed next to Vibe Island and Notch Pilot, it shows up when people look for alternatives to them |
 | MacUpdate | You (developer account) | Fair | Current process unconfirmed; the sources found are old |
 | awesome-claude-code | You, through its web form only | Low for now | Closed source is a review barrier; see the caveats below |
 
 ## awesome-mac (jaywcjlove/awesome-mac)
 
-A pull request that adds one line under **Utilities › Menu Bar Tools** in all four READMEs, in alphabetical order. The repo asks for one PR per app, AP title case, and the same entry in each language.
+[Pull request #3317](https://github.com/jaywcjlove/awesome-mac/pull/3317), opened 2026-10-09 from viveky259259/awesome-mac, branch `add-ambient`. It adds one line under **Utilities › Menu Bar Tools** in all four READMEs, in alphabetical order. The repo asks for one PR per app, AP title case, and the same entry in each language.
 
 **README.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - Shows what Claude Code, Codex and Gemini CLI are doing at the MacBook notch, with alerts and one click back to the exact terminal tab or chat. ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - Notch indicator for Claude Code, Codex, and Gemini CLI sessions, with alerts when an agent needs you and one click back to its terminal tab or chat. ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-zh.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - 在 MacBook 刘海处显示 Claude Code、Codex 与 Gemini CLI 的运行状态，配合通知，一键回到对应的终端标签页或对话。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - 将 MacBook 刘海变成 Claude Code、Codex 与 Gemini CLI 会话的状态指示器，代理需要你时发出提醒，并可一键回到对应的终端标签页或对话。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-ja.md**, after AirPoise and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - Claude Code、Codex、Gemini CLIの状態をMacBookのノッチに表示し、通知とワンクリックで該当するターミナルタブやチャットに戻れるアプリ。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - MacBookのノッチにClaude Code、Codex、Gemini CLIのセッション状態を表示し、エージェントが応答を待つと通知して、ワンクリックで該当するターミナルタブやチャットに戻れるツール。 ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **README-ko.md**, after AirStats and before Anvil:
 
 ```markdown
-* [Ambient](https://yaml.cafe/) - MacBook 노치에 Claude Code, Codex, Gemini CLI의 상태를 보여주고, 알림과 한 번의 클릭으로 해당 터미널 탭이나 채팅으로 돌아가게 해 주는 앱. ![Freeware][Freeware Icon] ![Native App][Native Icon]
+* [Ambient](https://yaml.cafe/) - MacBook 노치에 Claude Code, Codex, Gemini CLI 세션 상태를 보여주고, 에이전트가 응답을 기다리면 알려 주며 한 번의 클릭으로 해당 터미널 탭이나 채팅으로 돌아가게 해 주는 도구. ![Freeware][Freeware Icon] ![Native App][Native Icon]
 ```
 
 **PR title:** `Add Ambient to Menu Bar Tools`
 
-**PR body:**
-
-> Adds Ambient, a free native macOS app that shows the state of Claude Code, Codex and Gemini CLI sessions at the notch (on other displays, at the top center of the menu bar), with notifications and one click back to the session. Free with every feature, no account. Added to README.md, README-zh.md, README-ja.md and README-ko.md in alphabetical order. I'm the developer.
+**PR body:** as submitted on the pull request.
 
 ## AlternativeTo
 
