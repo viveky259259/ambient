@@ -117,6 +117,8 @@ Step-by-step guides for each agent's own options:
 
 **Is Ambient free?** Yes, every feature. No account, no sign-up to download.
 
+**Is Ambient open source?** Yes. The [source code is on GitHub](https://github.com/viveky259259/ambient) under the MIT license.
+
 **Will it slow my agent down?** No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped.
 
 **Which Macs does it run on?** macOS 14 or later, on Apple silicon and Intel.
@@ -132,6 +134,7 @@ Step-by-step guides for each agent's own options:
 - [yaml.cafe](https://yaml.cafe/): download and the full page
 - [llms.txt](https://yaml.cafe/llms.txt): key facts, and when Ambient is and isn't a fit
 - [Feature requests](https://yaml.cafe/requests/)
+- [Source code on GitHub](https://github.com/viveky259259/ambient) (MIT license)
 - [Privacy](https://yaml.cafe/privacy.html) · [Contact](https://yaml.cafe/contact/)
 
 Made by yaml.cafe. Claude, Codex and Gemini are trademarks of their owners; Ambient isn't affiliated with Anthropic, OpenAI or Google.
