@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dockGlow: DockGlow?
     private var wallpaper: LivingWallpaper?
     private lazy var speech = SpeechController(prefs: prefs)
+    private lazy var voicePack = VoicePackInstaller(paths: paths)
+    private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
@@ -95,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         model.saveNow()
         server?.stop()
+        kokoro?.shutDown()
     }
 
     /// Opening the app again (Finder, Spotlight, `open -a Ambient`) shows the settings.
@@ -153,7 +156,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .online:
             return OnlineVoice.make(prefs: prefs)
         case .kokoro:
-            throw SpeechFailure(message: "\(kind.displayName) isn't set up yet.", offerMacVoice: true)
+            voicePack.refresh()
+            guard voicePack.status == .installed else {
+                throw SpeechFailure(message: "The offline voice isn't installed. Download it in Settings › Voice.",
+                                    offerMacVoice: true)
+            }
+            let engine = kokoro ?? KokoroVoice(helper: voicePack.helper, pack: voicePack.folder,
+                                               log: paths.logs.appendingPathComponent("voice.log"),
+                                               voice: prefs.kokoroVoice, speed: prefs.speechRate)
+            engine.voice = prefs.kokoroVoice
+            engine.speed = prefs.speechRate
+            kokoro = engine
+            return engine
         }
     }
 
