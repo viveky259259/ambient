@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController?
     private var dockGlow: DockGlow?
     private var wallpaper: LivingWallpaper?
+    private lazy var speech = SpeechController(prefs: prefs)
     private var selectionService: SelectionService?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
@@ -67,10 +68,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             wallpaper?.islandChanged(open: open, menu: menu, island: geometry)
         }
 
-        let selectionService = SelectionService { [weak self] text in
-            self?.log.notice("Speak with Ambient: \(text?.count ?? -1, privacy: .public) characters")
-            NSSound(named: "Tink")?.play()
+        speech.makeEngine = { [weak self] kind in
+            guard let self else { throw SpeechFailure(message: "Ambient is quitting.") }
+            return try self.engine(for: kind)
         }
+        // Until the voice chooser exists, the first use picks the Mac voice.
+        speech.chooseEngine = { [weak self] done in
+            self?.prefs.speechEngine = SpeechEngineKind.mac.rawValue
+            done(true)
+        }
+        let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
         selectionService.register()
         self.selectionService = selectionService
 
@@ -135,6 +142,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupModel?.refresh()
         setupWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate()
+    }
+
+    // MARK: - Speech
+
+    private func engine(for kind: SpeechEngineKind) throws -> SpeechEngine {
+        switch kind {
+        case .mac:
+            return MacVoice(voiceID: prefs.macVoice, rate: prefs.speechRate)
+        case .online, .kokoro:
+            throw SpeechFailure(message: "\(kind.displayName) isn't set up yet.", offerMacVoice: true)
+        }
     }
 
     // MARK: - Demo
