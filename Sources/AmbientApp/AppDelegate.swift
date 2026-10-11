@@ -150,7 +150,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch kind {
         case .mac:
             return MacVoice(voiceID: prefs.macVoice, rate: prefs.speechRate)
-        case .online, .kokoro:
+        case .online:
+            return OnlineVoice.make(prefs: prefs)
+        case .kokoro:
             throw SpeechFailure(message: "\(kind.displayName) isn't set up yet.", offerMacVoice: true)
         }
     }
