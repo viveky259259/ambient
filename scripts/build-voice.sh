@@ -20,8 +20,14 @@ done
 VERSION=$(sed -n 's/.*version = "\(.*\)".*/\1/p' Sources/AmbientCore/Speech/VoicePackPin.swift)
 DD=build/voice-dd
 # MLX's Metal shaders are compiled only by Xcode's build system, not by `swift build`.
-(cd Voice && xcodebuild -scheme AmbientVoice -configuration Release -destination 'platform=macOS,arch=arm64' \
-  -derivedDataPath "../$DD" -skipPackagePluginValidation -skipMacroValidation build) | tail -3
+LOG=build/voice-build.log
+mkdir -p build
+if ! (cd Voice && xcodebuild -scheme AmbientVoice -configuration Release -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath "../$DD" -skipPackagePluginValidation -skipMacroValidation build) > "$LOG" 2>&1; then
+  grep -E "error:" "$LOG" | sort -u >&2 || tail -20 "$LOG" >&2
+  echo "xcodebuild failed; full log in $LOG" >&2
+  exit 1
+fi
 PRODUCTS=$DD/Build/Products/Release
 
 OUT=build/ambient-voice
@@ -34,6 +40,13 @@ if [[ -d $PRODUCTS/PackageFrameworks ]]; then
   cp -R "$PRODUCTS"/PackageFrameworks/*.framework "$OUT/Frameworks/"
   install_name_tool -add_rpath @executable_path/Frameworks "$OUT/ambient-voice" 2>/dev/null || true
 fi
+
+# Each library's own license travels with the helper, and so do Ambient's notices.
+mkdir -p "$OUT/licenses"
+for dir in "$DD"/SourcePackages/checkouts/*(N/); do
+  for f in "$dir"/LICENSE(N) "$dir"/LICENSE.txt(N) "$dir"/LICENSE.md(N); do cp "$f" "$OUT/licenses/${dir:t}.txt"; break; done
+done
+cp THIRD_PARTY_NOTICES.md "$OUT/"
 
 SIGN_FLAGS=(--force --sign "$SIGN_ID")
 [[ $SIGN_ID != "-" ]] && SIGN_FLAGS+=(--options runtime --timestamp)
