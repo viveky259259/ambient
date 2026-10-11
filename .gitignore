@@ -17,3 +17,4 @@ marketing/out/
 /node_modules/
 docs/launch/daily/brief.log
 .superpowers/
+Voice/.build/
