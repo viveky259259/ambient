@@ -23,6 +23,8 @@ public struct AmbientPaths: Equatable, Sendable {
     public var cliLink: URL { binDir.appendingPathComponent("ambient") }
     public var backups: URL { home.appendingPathComponent("backups", isDirectory: true) }
     public var logs: URL { home.appendingPathComponent("logs", isDirectory: true) }
+    /// Downloaded offline voice packs, one folder per version.
+    public var voice: URL { home.appendingPathComponent("voice", isDirectory: true) }
 
     /// Creates the Ambient home, readable only by the user.
     public func ensureHome() throws {
