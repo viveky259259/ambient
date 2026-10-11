@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController?
     private var dockGlow: DockGlow?
     private var wallpaper: LivingWallpaper?
+    private var selectionService: SelectionService?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var demoTimers: [Timer] = []
@@ -65,6 +66,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         island?.onMenuChange = { [weak wallpaper] open, menu, geometry in
             wallpaper?.islandChanged(open: open, menu: menu, island: geometry)
         }
+
+        let selectionService = SelectionService { [weak self] text in
+            self?.log.notice("Speak with Ambient: \(text?.count ?? -1, privacy: .public) characters")
+            NSSound(named: "Tink")?.play()
+        }
+        selectionService.register()
+        self.selectionService = selectionService
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
     }
