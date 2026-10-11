@@ -19,6 +19,7 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
 final class IslandController {
     private let model: AppModel
     private let prefs: Preferences
+    private let speech: SpeechController
     private let viewModel: IslandViewModel
     private let panel: IslandPanel
     private var cancellables: Set<AnyCancellable> = []
@@ -32,10 +33,11 @@ final class IslandController {
     /// Called when the menu opens or closes, with the open menu's size and where the island is.
     var onMenuChange: ((Bool, CGSize, IslandGeometry) -> Void)?
 
-    init?(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void) {
+    init?(model: AppModel, prefs: Preferences, speech: SpeechController, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
         self.model = model
         self.prefs = prefs
+        self.speech = speech
         viewModel = IslandViewModel(geometry: geometry)
 
         panel = IslandPanel(contentRect: geometry.panelFrame, styleMask: [.borderless, .nonactivatingPanel],
@@ -71,6 +73,8 @@ final class IslandController {
             self?.endHover()
             onSettings()
         }
+        viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
+        viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
     }
 
     func start() {
@@ -84,6 +88,15 @@ final class IslandController {
             .store(in: &cancellables)
         model.transitions
             .sink { [weak self] t in self?.handle(t) }
+            .store(in: &cancellables)
+        speech.$state
+            .sink { [weak self] state in
+                self?.viewModel.speech = state
+                self?.refresh()
+            }
+            .store(in: &cancellables)
+        speech.$level
+            .sink { [weak self] in self?.viewModel.speechLevel = $0 }
             .store(in: &cancellables)
         prefs.objectWillChange
             .receive(on: DispatchQueue.main)
@@ -131,6 +144,9 @@ final class IslandController {
         let next: IslandViewModel.Presentation
         if !prefs.islandEnabled {
             next = .hidden
+        } else if viewModel.speech != .idle {
+            // Ahead of hovering, so reaching for the stop button doesn't swap it for the session list.
+            next = .speech
         } else if hovering || UserDefaults.standard.bool(forKey: "debugForceExpanded") {
             next = .expanded
         } else if let id = bloomID, sessions.contains(where: { $0.id == id }) {

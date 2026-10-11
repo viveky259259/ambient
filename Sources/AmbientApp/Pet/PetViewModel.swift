@@ -35,7 +35,12 @@ final class PetViewModel: ObservableObject {
     @Published private(set) var reaction: PetReaction = .hop
     @Published private(set) var reactionCount = 0
 
+    /// Reading a selection aloud: the bubble says so, with a stop button.
+    @Published var speaking = false
+    @Published var speechLevel: Float = 0
+
     var onOpen: (Session) -> Void = { _ in }
+    var onStopSpeech: () -> Void = {}
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
     var onSettings: () -> Void = {}
@@ -108,7 +113,7 @@ final class PetViewModel: ObservableObject {
             let p = peek
             let lines = CGFloat(max(1, p.shown.count)) * Self.peekRowHeight + (p.more > 0 ? Self.moreHeight : 0)
             size = CGSize(width: Self.peekWidth, height: 14 + lines + Self.tail)
-        } else if primary != nil {
+        } else if speaking || primary != nil {
             size = CGSize(width: Self.bubbleSize.width, height: Self.bubbleSize.height + Self.tail)
         } else {
             return nil
@@ -123,6 +128,7 @@ final class PetViewModel: ObservableObject {
     var contentKind: String {
         if expanded { return "list" }
         if peekPinned { return "peek" }
+        if speaking { return "speaking" }
         return "bubble:\(primaryID ?? "")"
     }
 

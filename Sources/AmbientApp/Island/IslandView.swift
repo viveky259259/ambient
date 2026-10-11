@@ -7,7 +7,7 @@ struct IslandView: View {
     private var size: CGSize { model.currentSize }
     private var expandedLike: Bool {
         switch model.presentation {
-        case .bloom, .expanded: true
+        case .bloom, .expanded, .speech: true
         default: false
         }
     }
@@ -39,6 +39,13 @@ struct IslandView: View {
             VStack(spacing: 0) {
                 Color.clear.frame(height: model.geometry.notchHeight)
                 if let s = model.bloomSession { BloomCard(session: s).onTapGesture { model.onOpen(s) } }
+            }
+            .transition(.opacity)
+        case .speech:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                SpeechRow(state: model.speech, level: model.speechLevel,
+                          onStop: model.onStopSpeech, onUseMacVoice: model.onUseMacVoice)
             }
             .transition(.opacity)
         case .expanded:

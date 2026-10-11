@@ -46,13 +46,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notifier.start()
         self.notifier = notifier
 
-        island = IslandController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
+        island = IslandController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         island?.start()
 
-        pet = PetController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
+        pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         pet?.start()
 
-        menuBar = MenuBarController(model: model, prefs: prefs,
+        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech,
                                     onSettings: { [weak self] in self?.showSetup() },
                                     onDemo: { [weak self] in self?.playDemo() })
         menuBar?.start()

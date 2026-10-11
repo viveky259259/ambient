@@ -8,6 +8,7 @@ import SwiftUI
 final class PetController {
     private let model: AppModel
     private let prefs: Preferences
+    private let speech: SpeechController
     private let viewModel: PetViewModel
     private let panel: IslandPanel
     private var cancellables: Set<AnyCancellable> = []
@@ -30,9 +31,10 @@ final class PetController {
     /// Moves under this many points are clicks.
     private static let dragThreshold: CGFloat = 3
 
-    init(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void) {
+    init(model: AppModel, prefs: Preferences, speech: SpeechController, onSettings: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
+        self.speech = speech
         let visible = Self.visibleFrame(containing: prefs.petOrigin)
         origin = PetLayout.clamp(prefs.petOrigin ?? PetLayout.defaultOrigin(in: visible, pet: PetViewModel.petSize),
                                  pet: PetViewModel.petSize, in: visible)
@@ -88,6 +90,7 @@ final class PetController {
             self?.setExpanded(true)
         }
         viewModel.onDrag = { [weak self] phase in self?.handleDrag(phase) }
+        viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
     }
 
     func start() {
@@ -96,6 +99,15 @@ final class PetController {
                 self?.viewModel.sessions = sessions
                 self?.trackPointer()
             }
+            .store(in: &cancellables)
+        speech.$state
+            .sink { [weak self] state in
+                self?.viewModel.speaking = state == .preparing || state == .speaking
+                self?.trackPointer()
+            }
+            .store(in: &cancellables)
+        speech.$level
+            .sink { [weak self] in self?.viewModel.speechLevel = $0 }
             .store(in: &cancellables)
         model.transitions
             .sink { [weak self] t in
