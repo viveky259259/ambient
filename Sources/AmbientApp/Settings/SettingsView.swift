@@ -7,6 +7,9 @@ struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
     let wallpaper: LivingWallpaper
+    let speech: SpeechController
+    let voicePack: VoicePackInstaller
+    let shortcut: String
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
@@ -86,6 +89,8 @@ struct SettingsView: View {
             IslandPane(prefs: prefs)
         case .pet:
             PetPane(prefs: prefs)
+        case .voice:
+            VoicePane(prefs: prefs, voicePack: voicePack, speech: speech, shortcut: shortcut)
         case .alerts:
             AlertsPane(setup: setup, prefs: prefs, onPreviewSound: onPreviewSound)
         case .dock:

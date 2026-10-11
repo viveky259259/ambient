@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wallpaper: LivingWallpaper?
     private lazy var speech = SpeechController(prefs: prefs)
     private lazy var voicePack = VoicePackInstaller(paths: paths)
+    private lazy var voiceChooser = VoiceChooser(prefs: prefs, voicePack: voicePack, speech: speech)
+    /// The "Speak with Ambient" Services shortcut (NSKeyEquivalent "U" in Info.plist).
+    static let speechShortcut = "⌘⇧U"
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
     private var setupWindow: NSWindow?
@@ -74,11 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { throw SpeechFailure(message: "Ambient is quitting.") }
             return try self.engine(for: kind)
         }
-        // Until the voice chooser exists, the first use picks the Mac voice.
-        speech.chooseEngine = { [weak self] done in
-            self?.prefs.speechEngine = SpeechEngineKind.mac.rawValue
-            done(true)
-        }
+        speech.chooseEngine = { [weak self] done in self?.voiceChooser.show(completion: done) }
         let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
         selectionService.register()
         self.selectionService = selectionService
@@ -112,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if setupWindow == nil, let notifier, let wallpaper {
             let setup = SetupModel(paths: paths, notifier: notifier)
             let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
+                                    speech: speech, voicePack: voicePack, shortcut: Self.speechShortcut,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
