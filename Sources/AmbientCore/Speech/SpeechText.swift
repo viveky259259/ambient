@@ -76,6 +76,100 @@ public enum SpeechText {
             .trimmingCharacters(in: .whitespaces)
     }
 
+    /// Chunks of at most `limit` characters, split at sentence ends, then clauses, then words, and only as a last
+    /// resort inside a run with no spaces (never inside a character). Short chunks let audio start quickly.
+    public static func chunks(_ text: String, max limit: Int = 300) -> [String] {
+        guard limit > 0 else { return [] }
+        return pack(sentences(text).flatMap { fit($0, limit) }, limit)
+    }
+
+    static func sentences(_ text: String) -> [String] {
+        var out: [String] = []
+        var current = ""
+        let chars = Array(text)
+        func push() {
+            let s = current.trimmingCharacters(in: .whitespaces)
+            if !s.isEmpty { out.append(s) }
+            current = ""
+        }
+        for (i, c) in chars.enumerated() {
+            if c.isNewline {
+                push()
+                continue
+            }
+            current.append(c)
+            if "。！？".contains(c) {
+                push()
+            } else if ".!?…".contains(c), i + 1 == chars.count || chars[i + 1].isWhitespace {
+                push()
+            }
+        }
+        push()
+        return out
+    }
+
+    static func fit(_ s: String, _ limit: Int) -> [String] {
+        guard s.count > limit else { return [s] }
+        let clauses = split(s, after: ",;:")
+        if clauses.count > 1 { return pack(clauses.flatMap { fit($0, limit) }, limit) }
+        let words = s.split(whereSeparator: \.isWhitespace).map(String.init)
+        if words.count > 1 { return pack(words.flatMap { fit($0, limit) }, limit) }
+        var out: [String] = []
+        var rest = Substring(s)
+        while !rest.isEmpty {
+            out.append(String(rest.prefix(limit)))
+            rest = rest.dropFirst(limit)
+        }
+        return out
+    }
+
+    /// Splits after any of `marks` when whitespace follows; the mark stays with the text before it.
+    static func split(_ s: String, after marks: String) -> [String] {
+        var out: [String] = []
+        var current = ""
+        var afterMark = false
+        func push() {
+            let t = current.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty { out.append(t) }
+            current = ""
+        }
+        for c in s {
+            if afterMark, c.isWhitespace {
+                push()
+                afterMark = false
+                continue
+            }
+            current.append(c)
+            afterMark = marks.contains(c)
+        }
+        push()
+        return out
+    }
+
+    /// Joins pieces with spaces into runs of at most `limit` characters, never splitting a piece. Counts are kept
+    /// rather than recomputed, since `String.count` walks the string.
+    static func pack(_ pieces: [String], _ limit: Int) -> [String] {
+        var out: [String] = []
+        var current = ""
+        var count = 0
+        for piece in pieces {
+            let n = piece.count
+            if count == 0 {
+                current = piece
+                count = n
+            } else if count + 1 + n <= limit {
+                current += " " + piece
+                count += 1 + n
+            } else {
+                out.append(current)
+                current = piece
+                count = n
+            }
+        }
+        if count > 0 { out.append(current) }
+        return out
+    }
+
     /// `Sources/AmbientApp/Speech/SpeechPlayer.swift` → `Speech/SpeechPlayer.swift`. Needs two slashes, so
     /// "and/or" stays.
     static func shortenPaths(_ s: String) -> String {
