@@ -25,7 +25,8 @@ let pack = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let tts = KokoroTTS(modelPath: pack.appendingPathComponent("kokoro-v1_0.safetensors"))
 var voices: [String: MLXArray] = [:]
 
-func voice(_ id: String) throws -> MLXArray {
+/// Top-level code runs on the main actor, and so does this, since it caches into the top-level `voices`.
+@MainActor func voice(_ id: String) throws -> MLXArray {
     if let v = voices[id] { return v }
     guard id.range(of: "^[a-z]{2}_[a-z]{1,20}$", options: .regularExpression) != nil else {
         throw HelperError(description: "unknown voice \(id)")
