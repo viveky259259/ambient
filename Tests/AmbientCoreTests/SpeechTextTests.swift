@@ -47,6 +47,13 @@ import Testing
                 == "really important and snake_case_name, 2 * 3")
     }
 
+    @Test func doubleUnderscoresOutsideEmphasisStay() {
+        #expect(SpeechText.spoken("Run `__init__.py` and my__var, then __dirname")
+                == "Run __init__.py and my__var, then __dirname")
+        #expect(SpeechText.spoken("**bold**, __strong__ and ~~gone~~ text") == "bold, strong and gone text")
+        #expect(SpeechText.spoken("Keep `*args` as is") == "Keep *args as is")
+    }
+
     @Test func emojiAreDropped() {
         #expect(SpeechText.spoken("Done ✅ 🎉 👩‍💻") == "Done")
     }

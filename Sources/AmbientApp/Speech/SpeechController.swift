@@ -44,20 +44,18 @@ final class SpeechController: ObservableObject, @unchecked Sendable {
     /// The shortcut or the Services item. Reads `text`; stops instead when it's empty or already being read.
     func toggle(_ text: String?) {
         let spoken = SpeechText.spoken(text ?? "", readCode: prefs.speechReadsCode)
-        if isActive, spoken.isEmpty || spoken == lastText {
+        let kind = prefs.speechEngineKind
+        switch SpeechToggle.decide(active: isActive, spoken: spoken, last: lastText, hasEngine: kind != nil) {
+        case .stop:
             stop()
-            return
-        }
-        guard !spoken.isEmpty else {
+        case .nothingSelected:
             NSSound(named: "Tink")?.play()
             fail("Select some text first")
-            return
-        }
-        guard let kind = prefs.speechEngineKind else {
+        case .choose:
             chooseEngine { [weak self] chosen in if chosen { self?.toggle(text) } }
-            return
+        case .speak:
+            if let kind { start(spoken, kind: kind) }
         }
-        start(spoken, kind: kind)
     }
 
     /// Reads a sample with `kind` without saving it as the choice.

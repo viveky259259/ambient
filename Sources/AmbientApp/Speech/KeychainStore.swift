@@ -3,8 +3,27 @@ import Foundation
 import Security
 
 /// API keys for online voices, in the login Keychain. Never in files or preferences.
+///
+/// The Keychain can stop to ask the user, so the UI goes through `load` and `save`, which run on one serial queue
+/// off the main thread; ordering on that queue means a read after a save sees the saved key.
 enum KeychainStore {
     static let service = "com.viveky259259.Ambient.voice"
+    static let queue = DispatchQueue(label: "com.viveky259259.Ambient.keychain", qos: .userInitiated)
+
+    /// The stored key, or "" when there is none or it can't be read, delivered on the main thread.
+    static func load(for provider: OnlineProvider, _ done: @escaping (String) -> Void) {
+        queue.async {
+            let key = self.key(for: provider) ?? ""
+            DispatchQueue.main.async { done(key) }
+        }
+    }
+
+    /// Saves a key the user typed; an emptied field forgets it.
+    static func save(_ key: String, for provider: OnlineProvider) {
+        queue.async {
+            if key.isEmpty { deleteKey(for: provider) } else { try? setKey(key, for: provider) }
+        }
+    }
 
     private static func query(_ provider: OnlineProvider) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,

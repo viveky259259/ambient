@@ -8,6 +8,8 @@ struct EngineSection: View {
     @ObservedObject var prefs: Preferences
     @ObservedObject var voicePack: VoicePackInstaller
     @Binding var apiKey: String
+    /// What the Keychain held when the field was filled; a field still holding it is never saved back.
+    @Binding var loadedKey: String
 
     var body: some View {
         switch kind {
@@ -71,7 +73,7 @@ struct EngineSection: View {
             .onChange(of: prefs.onlineProvider) { _, _ in
                 prefs.onlineVoice = prefs.provider.defaultVoice
                 prefs.onlineModel = prefs.provider.defaultModel
-                apiKey = KeychainStore.key(for: prefs.provider) ?? ""
+                Self.loadKey(prefs: prefs, into: $apiKey, loaded: $loadedKey)
             }
             if prefs.provider == .custom {
                 TextField("Server URL", text: $prefs.onlineBaseURL, prompt: Text("http://localhost:8880/v1"))
@@ -114,12 +116,19 @@ struct EngineSection: View {
         }
     }
 
-    /// Saves a typed key; an emptied field forgets it.
-    static func saveKey(_ apiKey: String, prefs: Preferences) {
-        if apiKey.isEmpty {
-            KeychainStore.deleteKey(for: prefs.provider)
-        } else {
-            try? KeychainStore.setKey(apiKey, for: prefs.provider)
+    /// Fills the field from the Keychain, off the main thread.
+    static func loadKey(prefs: Preferences, into apiKey: Binding<String>, loaded: Binding<String>) {
+        KeychainStore.load(for: prefs.provider) { key in
+            apiKey.wrappedValue = key
+            loaded.wrappedValue = key
         }
+    }
+
+    /// Saves the key only if the user changed it, so a Keychain read that failed (and left the field empty) never
+    /// deletes the stored key. An emptied field forgets it.
+    static func saveKey(_ apiKey: String, loaded: Binding<String>, prefs: Preferences) {
+        guard apiKey != loaded.wrappedValue else { return }
+        KeychainStore.save(apiKey, for: prefs.provider)
+        loaded.wrappedValue = apiKey
     }
 }

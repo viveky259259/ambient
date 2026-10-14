@@ -9,6 +9,8 @@ final class FileDownload: NSObject, URLSessionDownloadDelegate, @unchecked Senda
     private var task: URLSessionDownloadTask?
     private var cancelled = false
     private var moveError: Error?
+    /// Touched only on the session's serial delegate queue.
+    private var lastReport = Date.distantPast
 
     private init(destination: URL, progress: @escaping (Int64) -> Void) {
         self.destination = destination
@@ -47,8 +49,12 @@ final class FileDownload: NSObject, URLSessionDownloadDelegate, @unchecked Senda
         task?.cancel()
     }
 
+    /// URLSession reports every few kilobytes; pass it on about ten times a second so the UI isn't flooded.
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
                     totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        let now = Date()
+        guard now.timeIntervalSince(lastReport) >= 0.1 else { return }
+        lastReport = now
         progress(totalBytesWritten)
     }
 

@@ -75,8 +75,12 @@ final class VoicePackInstaller: ObservableObject, @unchecked Sendable {
         work?.cancel()
     }
 
+    /// Called before the pack folder is deleted, so the running helper lets go of the model.
+    var onRemove: () -> Void = {}
+
     func remove() {
         cancel()
+        onRemove()
         try? FileManager.default.removeItem(at: paths.voice.appendingPathComponent(manifest.folderName))
         refresh()
     }
@@ -111,8 +115,13 @@ final class VoicePackInstaller: ObservableObject, @unchecked Sendable {
             try fm.removeItem(at: zip)
             try Self.verifySignature(staging.appendingPathComponent("ambient-voice/ambient-voice"), team: manifest.teamID)
             let target = paths.voice.appendingPathComponent(manifest.folderName, isDirectory: true)
-            try? fm.removeItem(at: target)
-            try fm.moveItem(at: staging, to: target)
+            // On the main thread, where remove() and cancel() run: a Remove or Cancel that came first wins, and the
+            // pack is never moved into place after it.
+            try await MainActor.run {
+                try Task.checkCancellation()
+                try? FileManager.default.removeItem(at: target)
+                try FileManager.default.moveItem(at: staging, to: target)
+            }
             await MainActor.run { self.work = nil; self.refresh() }
         } catch is CancellationError {
             await MainActor.run { self.work = nil; self.refresh() }

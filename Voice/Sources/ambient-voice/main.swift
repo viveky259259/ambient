@@ -16,9 +16,13 @@ guard CommandLine.arguments.count == 2 else {
     FileHandle.standardError.write(Data("usage: ambient-voice <pack folder>\n".utf8))
     exit(64)
 }
+// The protocol gets its own copy of stdout, and fd 1 is pointed at stderr, so a print() anywhere in the libraries
+// lands in the log instead of corrupting the audio stream.
+let protocolFD = dup(STDOUT_FILENO)
+guard protocolFD >= 0, dup2(STDERR_FILENO, STDOUT_FILENO) >= 0 else { exit(71) }
+let out = FileHandle(fileDescriptor: protocolFD, closeOnDealloc: true)
 let pack = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let tts = KokoroTTS(modelPath: pack.appendingPathComponent("kokoro-v1_0.safetensors"))
-let out = FileHandle.standardOutput
 var voices: [String: MLXArray] = [:]
 
 func voice(_ id: String) throws -> MLXArray {

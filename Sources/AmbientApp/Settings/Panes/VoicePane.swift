@@ -9,6 +9,7 @@ struct VoicePane: View {
     let shortcut: String
 
     @State private var apiKey = ""
+    @State private var loadedKey = ""
 
     private var kind: SpeechEngineKind { prefs.speechEngineKind ?? .mac }
 
@@ -37,7 +38,7 @@ struct VoicePane: View {
                     .fixedSize()
                 }
                 SettingsDivider()
-                EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey)
+                EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey, loadedKey: $loadedKey)
                     .padding(.vertical, Theme.Space.xs)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if kind == .kokoro, voicePack.status == .installed {
@@ -61,7 +62,7 @@ struct VoicePane: View {
                         if speech.isActive {
                             speech.stop()
                         } else {
-                            EngineSection.saveKey(apiKey, prefs: prefs)
+                            EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs)
                             speech.preview(kind)
                         }
                     }
@@ -71,10 +72,10 @@ struct VoicePane: View {
             }
         }
         .onAppear {
-            apiKey = KeychainStore.key(for: prefs.provider) ?? ""
+            EngineSection.loadKey(prefs: prefs, into: $apiKey, loaded: $loadedKey)
             voicePack.refresh()
         }
         // Saved when you try it or leave the pane, not on every keystroke.
-        .onDisappear { EngineSection.saveKey(apiKey, prefs: prefs) }
+        .onDisappear { EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs) }
     }
 }

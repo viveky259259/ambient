@@ -80,6 +80,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         speech.chooseEngine = { [weak self] done in self?.voiceChooser.show(completion: done) }
         let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
         selectionService.register()
+        voicePack.onRemove = { [weak self] in
+            self?.speech.stop()
+            self?.kokoro?.shutDown()
+            self?.kokoro = nil
+        }
         self.selectionService = selectionService
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
@@ -164,8 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let engine = kokoro ?? KokoroVoice(helper: voicePack.helper, pack: voicePack.folder,
                                                log: paths.logs.appendingPathComponent("voice.log"),
                                                voice: prefs.kokoroVoice, speed: prefs.speechRate)
-            engine.voice = prefs.kokoroVoice
-            engine.speed = prefs.speechRate
+            engine.configure(voice: prefs.kokoroVoice, speed: prefs.speechRate)
             kokoro = engine
             return engine
         }

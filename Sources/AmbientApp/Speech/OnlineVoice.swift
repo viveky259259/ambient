@@ -25,7 +25,9 @@ final class OnlineVoice: SpeechEngine {
 
     func audio(for text: String) async throws -> PCM {
         // Read here, off the main thread: if the Keychain asks the user first, the island and menu bar keep working.
-        let key = self.key ?? KeychainStore.key(for: provider) ?? ""
+        // On the Keychain queue, so a key saved a moment ago (Preview right after typing it) is already there.
+        let provider = self.provider
+        let key = self.key ?? KeychainStore.queue.sync { KeychainStore.key(for: provider) } ?? ""
         self.key = key
         if provider.needsKey, key.isEmpty {
             throw SpeechFailure(message: "Add your \(provider.displayName) API key in Settings › Voice.", offerMacVoice: true)

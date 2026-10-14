@@ -28,7 +28,9 @@ final class SpeechPlayer: @unchecked Sendable {
     func play(_ pcm: PCM, job: Int) async {
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
             DispatchQueue.main.async {
-                guard job == self.job, let buffer = self.convert(pcm.buffer), self.startEngine() else {
+                // An empty buffer may never report that it played, so it's skipped rather than scheduled.
+                guard job == self.job, pcm.buffer.frameLength > 0, let buffer = self.convert(pcm.buffer),
+                      buffer.frameLength > 0, self.startEngine() else {
                     c.resume()
                     return
                 }

@@ -64,10 +64,10 @@ public enum SpeechText {
         t = t.replacingOccurrences(of: #"\[([^\]]+)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
         t = t.replacingOccurrences(of: #"<?https?://([^/\s>]+)[^\s>]*?>?(?=[.,;:!?)]*(?:\s|$))"#, with: "$1",
                                    options: .regularExpression)
-        t = t.replacingOccurrences(of: "`", with: "")
-        t = t.replacingOccurrences(of: #"(\*\*|__|~~)"#, with: "", options: .regularExpression)
-        t = t.replacingOccurrences(of: #"(?<![\w*])[*_](?=\S)(.+?)(?<=\S)[*_](?![\w*])"#, with: "$1",
-                                   options: .regularExpression)
+        // Inline code (odd segments between backticks) keeps its underscores and asterisks: `__init__.py`, `*args`.
+        t = t.components(separatedBy: "`").enumerated().map { i, part in
+            i.isMultiple(of: 2) ? withoutEmphasis(part) : part
+        }.joined()
         t = shortenPaths(t)
         t = String(String.UnicodeScalarView(t.unicodeScalars.filter {
             !$0.properties.isEmojiPresentation && $0 != "\u{FE0F}" && $0 != "\u{200D}"
@@ -168,6 +168,14 @@ public enum SpeechText {
         }
         if count > 0 { out.append(current) }
         return out
+    }
+
+    /// Drops emphasis markers only where they wrap text, so `my__var` and `__dirname` keep their underscores.
+    static func withoutEmphasis(_ s: String) -> String {
+        s.replacingOccurrences(of: #"(?<![\w*~])(\*\*|__|~~)(?=\S)(.+?)(?<=\S)\1(?![\w*~])"#, with: "$2",
+                               options: .regularExpression)
+            .replacingOccurrences(of: #"(?<![\w*])[*_](?=\S)(.+?)(?<=\S)[*_](?![\w*])"#, with: "$1",
+                                  options: .regularExpression)
     }
 
     /// `Sources/AmbientApp/Speech/SpeechPlayer.swift` → `Speech/SpeechPlayer.swift`. Needs two slashes, so

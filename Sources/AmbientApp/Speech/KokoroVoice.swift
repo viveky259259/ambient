@@ -14,11 +14,13 @@ final class KokoroVoice: SpeechEngine, @unchecked Sendable {
     private var output: FileHandle?
     private var idle: DispatchWorkItem?
     private var nextID = 0
-    /// Set on the main thread between jobs, read when a job starts.
-    var voice: String
-    var speed: Double
+    /// Owned by `queue`, like the rest of the state; changed through `configure`.
+    private var voice: String
+    private var speed: Double
 
     static let idleTimeout: TimeInterval = 300
+    /// A chunk that takes longer than this means the helper is stuck; it's killed so the pipe closes.
+    static let requestTimeout: TimeInterval = 30
 
     init(helper: URL, pack: URL, log: URL, voice: String, speed: Double) {
         self.helper = helper
@@ -30,11 +32,18 @@ final class KokoroVoice: SpeechEngine, @unchecked Sendable {
 
     /// Results of a cancelled request are simply dropped by the pipeline, so the helper isn't interrupted.
     func audio(for text: String) async throws -> PCM {
-        let voice = self.voice, speed = self.speed
-        return try await withCheckedThrowingContinuation { c in
+        try await withCheckedThrowingContinuation { c in
             queue.async {
-                c.resume(with: Result { try self.synthesize(text, voice: voice, speed: speed) })
+                c.resume(with: Result { try self.synthesize(text, voice: self.voice, speed: self.speed) })
             }
+        }
+    }
+
+    /// Applies to requests made after it, since it's queued behind any already waiting.
+    func configure(voice: String, speed: Double) {
+        queue.async {
+            self.voice = voice
+            self.speed = speed
         }
     }
 
@@ -55,6 +64,14 @@ final class KokoroVoice: SpeechEngine, @unchecked Sendable {
             stopProcess()
             throw stopped()
         }
+        // A hung helper never closes its pipe, so the read below would block this queue forever. Killing it closes
+        // the pipe, the read returns end-of-file, and the user gets "Offline voice stopped".
+        let running = process
+        let watchdog = DispatchWorkItem {
+            if let running, running.isRunning { kill(running.processIdentifier, SIGKILL) }
+        }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + Self.requestTimeout, execute: watchdog)
+        defer { watchdog.cancel() }
         var reader = VoiceWire.Reader()
         var samples: [Float] = []
         var sampleRate = 24_000

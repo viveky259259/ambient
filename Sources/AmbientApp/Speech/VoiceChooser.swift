@@ -59,6 +59,7 @@ private struct VoiceChooserView: View {
 
     @State private var kind: SpeechEngineKind = .mac
     @State private var apiKey = ""
+    @State private var loadedKey = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -68,11 +69,11 @@ private struct VoiceChooserView: View {
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
-            EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey)
+            EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey, loadedKey: $loadedKey)
                 .frame(minHeight: 120, alignment: .topLeading)
             HStack {
                 Button("Preview") {
-                    EngineSection.saveKey(apiKey, prefs: prefs)
+                    EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs)
                     onPreview(kind)
                 }
                 .disabled(!ready)
@@ -80,7 +81,7 @@ private struct VoiceChooserView: View {
                 Text("You can change this in Settings › Voice.").font(.caption).foregroundStyle(.secondary)
                 Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
                 Button("Play") {
-                    EngineSection.saveKey(apiKey, prefs: prefs)
+                    EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs)
                     onPlay(kind)
                 }
                 .keyboardShortcut(.defaultAction)
@@ -89,7 +90,7 @@ private struct VoiceChooserView: View {
         }
         .padding(24)
         .frame(width: 520)
-        .onAppear { apiKey = KeychainStore.key(for: prefs.provider) ?? "" }
+        .onAppear { EngineSection.loadKey(prefs: prefs, into: $apiKey, loaded: $loadedKey) }
     }
 
     private var ready: Bool { EngineSection.ready(kind, prefs: prefs, voicePack: voicePack, apiKey: apiKey) }
