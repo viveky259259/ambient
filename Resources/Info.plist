@@ -57,11 +57,6 @@
 			</array>
 			<key>NSRequiredContext</key>
 			<dict/>
-			<key>NSKeyEquivalent</key>
-			<dict>
-				<key>default</key>
-				<string>U</string>
-			</dict>
 		</dict>
 	</array>
 	<key>NSHumanReadableCopyright</key>

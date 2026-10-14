@@ -113,3 +113,16 @@ rejected because it links espeak-ng (GPL-3).
 - Manual: each engine in Claude desktop, the Codex app, Terminal and iTerm2; first-run chooser for each choice;
   stop and re-trigger mid-speech; pack download, cancel, remove; online with no network and with a bad key;
   Reduce Motion and VoiceOver on the chooser and the island row.
+
+## Probe results (2026-10-14)
+
+| App | "Speak with Ambient" in app menu › Services with text selected | Notes |
+| --- | --- | --- |
+| TextEdit | yes | Native text view; also lists Look Up, Search With Google |
+| Claude desktop | no | No text services at all: the chat view doesn't offer its selection to Services |
+| Codex app | not checked | Same Electron setup as Claude |
+| Terminal, iTerm2 | not checked | |
+
+Decision: **hotkey route**. The shortcut is ⌃⌥⌘S, registered by Ambient, reading the selection through Accessibility
+(`AXSelectedText`, then copy-and-restore the clipboard). Services › Speak with Ambient stays, without a shortcut, for
+apps that support it.

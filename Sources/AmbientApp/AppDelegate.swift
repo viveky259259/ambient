@@ -19,10 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var speech = SpeechController(prefs: prefs)
     private lazy var voicePack = VoicePackInstaller(paths: paths)
     private lazy var voiceChooser = VoiceChooser(prefs: prefs, voicePack: voicePack, speech: speech)
-    /// The "Speak with Ambient" Services shortcut (NSKeyEquivalent "U" in Info.plist).
-    static let speechShortcut = "⌘⇧U"
+    /// The read-aloud shortcut, registered by Ambient itself (Claude and Codex don't offer selections to Services).
+    static let speechShortcut = "⌃⌥⌘S"
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
+    private var hotKey: HotKey?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var demoTimers: [Timer] = []
@@ -80,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         speech.chooseEngine = { [weak self] done in self?.voiceChooser.show(completion: done) }
         let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
         selectionService.register()
+        hotKey = HotKey.speakSelection { [weak self] in self?.speakFrontmostSelection() }
         voicePack.onRemove = { [weak self] in
             self?.speech.stop()
             self?.kokoro?.shutDown()
@@ -153,6 +155,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Speech
+
+    /// ⌃⌥⌘S: reads the frontmost app's selection through Accessibility. Same rules as Services › Speak with Ambient:
+    /// the same text (or nothing) stops, new text replaces what's playing.
+    private func speakFrontmostSelection() {
+        guard SelectionReader.isTrusted else {
+            if prefs.speechAccessExplained {
+                speech.fail("This app needs Accessibility to read selections — Settings › Voice")
+            } else {
+                prefs.speechAccessExplained = true
+                let alert = NSAlert()
+                alert.messageText = "Let Ambient read your selection"
+                alert.informativeText = "To read the text you select in Claude, Codex or a terminal, Ambient needs Accessibility access. It reads only the selection, and only when you press the shortcut."
+                alert.addButton(withTitle: "Open Accessibility Settings")
+                alert.addButton(withTitle: "Not Now")
+                NSApp.activate()
+                if alert.runModal() == .alertFirstButtonReturn { SelectionReader.askForAccess() }
+            }
+            return
+        }
+        Task { @MainActor [weak self] in
+            let text = await SelectionReader.selectedText()
+            self?.speech.toggle(text)
+        }
+    }
 
     private func engine(for kind: SpeechEngineKind) throws -> SpeechEngine {
         switch kind {

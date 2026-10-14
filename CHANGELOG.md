@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌘⇧U, or choose Services › Speak
+- **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌃⌥⌘S, or choose Services › Speak
   with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
   blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
   offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,

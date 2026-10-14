@@ -13,7 +13,7 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
   click a session to jump to it. Works with or without the notch island; turn it
   on in Settings › Desktop Pet.
-- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌘⇧U (or the app's menu ›
+- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌃⌥⌘S (or, in apps that support it, the app's menu ›
   Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
   worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
   your own server with your key. The island shows it speaking, with a stop button. Set it up in Settings › Voice.
@@ -122,7 +122,7 @@ timed event today, and only after you allow Calendar access. On the lock screen 
 wallpaper while the Mac is locked, so the password field and login options always stay on top. (An experimental
 live layer drawn above the lock screen with a private macOS window API is off: it can cover those controls.)
 
-Reading aloud uses only the text you select, and only when you press the shortcut or choose Speak with Ambient. With
+Reading aloud uses only the text you select, and only when you press the shortcut or choose Speak with Ambient. The shortcut reads the selection through Accessibility, which you allow once; Ambient uses it for nothing else. With
 a Mac voice or the offline model it never leaves your Mac. With an online voice, each selection is sent to the service
 you chose, with your key, which is kept in your login Keychain. The offline model (Kokoro-82M, about 330 MB, and a
 small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file

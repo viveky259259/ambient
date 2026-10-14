@@ -10,21 +10,24 @@ struct VoicePane: View {
 
     @State private var apiKey = ""
     @State private var loadedKey = ""
+    @State private var accessGranted = SelectionReader.isTrusted
 
     private var kind: SpeechEngineKind { prefs.speechEngineKind ?? .mac }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             PaneHeader(pane: .voice)
-            SettingsSection(footer: "Also in every app's menu under Services › Speak with Ambient.") {
-                SettingsRow(title: "Shortcut", subtitle: "Press it again to stop.") {
-                    HStack {
-                        Text(shortcut).font(.system(.body, design: .rounded).weight(.semibold))
-                        // Services shortcuts are rebound in System Settings › Keyboard › Keyboard Shortcuts › Services.
-                        Button("Change…") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!)
-                        }
-                        .buttonStyle(.pill)
+            SettingsSection(footer: "In apps that support it, also under the app's menu › Services › Speak with Ambient.") {
+                SettingsRow(title: "Shortcut", subtitle: "Select text and press it. Press it again to stop.") {
+                    Text(shortcut).font(.system(.body, design: .rounded).weight(.semibold))
+                }
+                SettingsDivider()
+                SettingsRow(title: "Accessibility",
+                            subtitle: "Lets Ambient read the selection when you press the shortcut, and nothing else.") {
+                    if accessGranted {
+                        StatusBadge("Allowed", .success)
+                    } else {
+                        Button("Allow…") { SelectionReader.askForAccess() }.buttonStyle(.pill)
                     }
                 }
             }
@@ -74,6 +77,11 @@ struct VoicePane: View {
         .onAppear {
             EngineSection.loadKey(prefs: prefs, into: $apiKey, loaded: $loadedKey)
             voicePack.refresh()
+            accessGranted = SelectionReader.isTrusted
+        }
+        // Granted in System Settings, then back here.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            accessGranted = SelectionReader.isTrusted
         }
         // Saved when you try it or leave the pane, not on every keystroke.
         .onDisappear { EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs) }
