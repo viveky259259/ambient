@@ -75,6 +75,18 @@ struct PetView: View {
                 PetSessionList(model: model)
             } else if model.peekPinned {
                 PetPeekList(model: model)
+            } else if model.speaking {
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.wave.2.fill").accessibilityHidden(true)
+                    Text("Reading aloud").font(.system(size: 12, weight: .medium))
+                    Spacer(minLength: 4)
+                    LevelMeter(level: model.speechLevel)
+                    Button(action: model.onStopSpeech) { Image(systemName: "stop.fill") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Stop speaking")
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
             } else if let s = model.primary {
                 PetBubble(session: s, badge: model.badge, urgentBadge: model.badge?.hasSuffix("needs you") == true)
                     .contentShape(Rectangle())

@@ -20,6 +20,10 @@ struct Commands {
         case "open": return open(rest)
         case "link": return link() ? 0 : 1
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
+        // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
+        case "voice-files":
+            for f in VoicePackManifest.current.files { print("\(f.path) \(f.url.absoluteString) \(f.sha256)") }
+            return 0
         case "help", "--help", "-h": return usage()
         default:
             out.error("Unknown command '\(command)'.")

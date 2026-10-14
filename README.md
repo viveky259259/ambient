@@ -13,6 +13,10 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
   click a session to jump to it. Works with or without the notch island; turn it
   on in Settings › Desktop Pet.
+- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌥⎋ (or Read Selection Aloud in the menu bar, or, in apps that support it, the app's menu ›
+  Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
+  worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
+  your own server with your key. The island shows it speaking, with a stop button. Set it up in Settings › Voice.
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.
@@ -34,7 +38,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   rest fall into the sun until it closes. Real gravity drives both. They follow Reduce Motion, stay off in Low
   Power Mode, and the black hole can be turned off in Settings › Wallpaper.
 
-Everything stays on your Mac. No accounts, no network, no telemetry.
+Everything stays on your Mac. No accounts and no telemetry. Ambient goes online only when you ask it to: the one-time
+offline voice download, and the text you select when you choose an online voice.
 
 ## Install
 
@@ -116,6 +121,12 @@ screen it hides messages and event titles unless you turn them on. Its calendar 
 timed event today, and only after you allow Calendar access. On the lock screen the scene is set as your
 wallpaper while the Mac is locked, so the password field and login options always stay on top. (An experimental
 live layer drawn above the lock screen with a private macOS window API is off: it can cover those controls.)
+
+Reading aloud uses only the text you select, and only when you press the shortcut or choose Speak with Ambient. The shortcut reads the selection through Accessibility, which you allow once; Ambient uses it for nothing else. With
+a Mac voice or the offline model it never leaves your Mac. With an online voice, each selection is sent to the service
+you chose, with your key, which is kept in your login Keychain. The offline model (Kokoro-82M, about 330 MB, and a
+small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file
+is checked against a hash built into Ambient before it's used.
 
 ## Command line
 

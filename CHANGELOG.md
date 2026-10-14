@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌥⎋ (Option-Escape; change it in Settings › Voice), or choose Services › Speak
+  with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
+  blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
+  offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
+  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with a stop button, and
+  say why if it can't. Change it any time in Settings › Voice.
+
 ## 0.6.0 — 2026-10-10
 
 - **Desktop pet**: an optional pixel-art companion (a blob, a crab or a cat) that you drag anywhere on your desktop.
