@@ -126,3 +126,10 @@ rejected because it links espeak-ng (GPL-3).
 Decision: **hotkey route**. The shortcut is ⌃⌥⌘S, registered by Ambient, reading the selection through Accessibility
 (`AXSelectedText`, then copy-and-restore the clipboard). Services › Speak with Ambient stays, without a shortcut, for
 apps that support it.
+
+## Shortcut follow-up (2026-10-15)
+
+The default is **⌥⎋** (Option-Escape), macOS's own key for speaking a selection; when macOS's Speak Selection is
+turned on and owns it, Ambient uses ⌃⌥S and says so. Settings › Voice records any shortcut that includes ⌃ or ⌥ (or
+an F-key), refuses ⌥ with a character key, and reports a shortcut another app already holds. The menu bar has Read
+Selection Aloud with the shortcut beside it, and the island shows a one-time hint after an agent first finishes.

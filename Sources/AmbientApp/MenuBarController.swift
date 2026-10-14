@@ -7,16 +7,20 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let model: AppModel
     private let prefs: Preferences
     private let speech: SpeechController
+    private let shortcuts: ShortcutCenter
+    private let onReadSelection: () -> Void
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var cancellables: Set<AnyCancellable> = []
     private let onSettings: () -> Void
     private let onDemo: () -> Void
 
-    init(model: AppModel, prefs: Preferences, speech: SpeechController,
-         onSettings: @escaping () -> Void, onDemo: @escaping () -> Void) {
+    init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter,
+         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
         self.speech = speech
+        self.shortcuts = shortcuts
+        self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
         super.init()
@@ -49,7 +53,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             button.image = NSImage(systemSymbolName: "speaker.slash", accessibilityDescription: "Ambient couldn't read aloud")
             button.title = ""
             return
-        case .idle:
+        case .idle, .hint:
             break
         }
         let mood = model.mood
@@ -103,7 +107,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(NSMenuItem(title: message, action: nil, keyEquivalent: ""))
             if offerMacVoice { menu.addItem(item("Use Mac Voice", #selector(useMacVoice))) }
             menu.addItem(.separator())
-        case .idle:
+        case .idle, .hint:
             break
         }
         let sessions = model.sessions
@@ -147,6 +151,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             quiet.submenu = sub
             menu.addItem(quiet)
         }
+        menu.addItem(readSelectionItem())
         let pet = item("Show Desktop Pet", #selector(togglePet))
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
@@ -155,6 +160,33 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
         menu.addItem(item("Settings…", #selector(settings), key: ","))
         menu.addItem(item("Quit Ambient", #selector(quit), key: "q"))
+    }
+
+    /// Reads the selection in the app you were in (a status menu doesn't take focus from it), and shows the shortcut
+    /// beside it so it's easy to learn.
+    private func readSelectionItem() -> NSMenuItem {
+        let shortcut = shortcuts.shortcut
+        let i = item("Read Selection Aloud", #selector(readSelection))
+        if let key = Self.keyEquivalent(shortcut) {
+            i.keyEquivalent = key
+            var mask: NSEvent.ModifierFlags = []
+            if shortcut.modifiers.contains(.control) { mask.insert(.control) }
+            if shortcut.modifiers.contains(.option) { mask.insert(.option) }
+            if shortcut.modifiers.contains(.shift) { mask.insert(.shift) }
+            if shortcut.modifiers.contains(.command) { mask.insert(.command) }
+            i.keyEquivalentModifierMask = mask
+        } else {
+            i.title += "  \(shortcut.display)"
+        }
+        return i
+    }
+
+    private static func keyEquivalent(_ s: Shortcut) -> String? {
+        if s.keyCode == 53 { return "\u{1b}" }
+        if let n = Int(s.key.dropFirst()), s.key.hasPrefix("F"), (1...20).contains(n) {
+            return String(UnicodeScalar(UInt16(NSF1FunctionKey + n - 1)).map(Character.init) ?? " ")
+        }
+        return s.key.count == 1 ? s.key.lowercased() : nil
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -192,4 +224,5 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func quit() { NSApp.terminate(nil) }
     @objc private func stopSpeaking() { speech.stop() }
     @objc private func useMacVoice() { speech.useMacVoice() }
+    @objc private func readSelection() { onReadSelection() }
 }

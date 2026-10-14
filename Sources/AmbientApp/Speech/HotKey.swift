@@ -1,3 +1,4 @@
+import AmbientCore
 import Carbon
 
 /// A system-wide shortcut through Carbon's hotkey API, which needs no permission to register.
@@ -29,8 +30,13 @@ final class HotKey {
         if let handler { RemoveEventHandler(handler) }
     }
 
-    /// ⌃⌥⌘S.
-    static func speakSelection(_ action: @escaping () -> Void) -> HotKey? {
-        HotKey(keyCode: UInt32(kVK_ANSI_S), modifiers: UInt32(controlKey | optionKey | cmdKey), action: action)
+    /// Nil when macOS won't register it, usually because another app already has it.
+    convenience init?(_ shortcut: Shortcut, action: @escaping () -> Void) {
+        var carbon = 0
+        if shortcut.modifiers.contains(.control) { carbon |= controlKey }
+        if shortcut.modifiers.contains(.option) { carbon |= optionKey }
+        if shortcut.modifiers.contains(.shift) { carbon |= shiftKey }
+        if shortcut.modifiers.contains(.command) { carbon |= cmdKey }
+        self.init(keyCode: shortcut.keyCode, modifiers: UInt32(carbon), action: action)
     }
 }

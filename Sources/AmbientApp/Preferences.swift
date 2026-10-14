@@ -57,6 +57,10 @@ final class Preferences: ObservableObject {
     @Published var speechReadsCode: Bool { didSet { defaults.set(speechReadsCode, forKey: "speechReadsCode") } }
     /// The Accessibility explanation has been shown once (hotkey route only).
     @Published var speechAccessExplained: Bool { didSet { defaults.set(speechAccessExplained, forKey: "speechAccessExplained") } }
+    /// A `Shortcut.stored` value; nil for the default (⌥⎋).
+    @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
+    /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
+    @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -123,6 +127,8 @@ final class Preferences: ObservableObject {
         speechRate = defaults.double(forKey: "speechRate")
         speechReadsCode = defaults.bool(forKey: "speechReadsCode")
         speechAccessExplained = defaults.bool(forKey: "speechAccessExplained")
+        speechShortcut = defaults.string(forKey: "speechShortcut")
+        speechHintShown = defaults.bool(forKey: "speechHintShown")
     }
 
     var isQuiet: Bool {

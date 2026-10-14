@@ -6,7 +6,7 @@ struct VoicePane: View {
     @ObservedObject var prefs: Preferences
     @ObservedObject var voicePack: VoicePackInstaller
     @ObservedObject var speech: SpeechController
-    let shortcut: String
+    @ObservedObject var shortcuts: ShortcutCenter
 
     @State private var apiKey = ""
     @State private var loadedKey = ""
@@ -19,7 +19,7 @@ struct VoicePane: View {
             PaneHeader(pane: .voice)
             SettingsSection(footer: "In apps that support it, also under the app's menu › Services › Speak with Ambient.") {
                 SettingsRow(title: "Shortcut", subtitle: "Select text and press it. Press it again to stop.") {
-                    Text(shortcut).font(.system(.body, design: .rounded).weight(.semibold))
+                    ShortcutRecorder(center: shortcuts)
                 }
                 SettingsDivider()
                 SettingsRow(title: "Accessibility",

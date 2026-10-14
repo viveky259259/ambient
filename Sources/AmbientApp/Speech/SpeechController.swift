@@ -8,6 +8,8 @@ enum SpeechState: Equatable {
     case preparing
     case speaking
     case failed(String, offerMacVoice: Bool)
+    /// A tip, such as which shortcut reads a selection.
+    case hint(String)
 }
 
 /// Reads selected text aloud: one job at a time, the shortcut toggles it, and failures are shown rather than
@@ -15,7 +17,7 @@ enum SpeechState: Equatable {
 /// publish, which is what makes the unchecked Sendable sound.
 final class SpeechController: ObservableObject, @unchecked Sendable {
     @Published private(set) var state: SpeechState = .idle {
-        didSet { if state != oldValue { log.info("speech: \(String(describing: self.state), privacy: .public)") } }
+        didSet { if state != oldValue { log.notice("speech: \(String(describing: self.state), privacy: .public)") } }
     }
     @Published private(set) var level: Float = 0
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "speech")
@@ -74,14 +76,25 @@ final class SpeechController: ObservableObject, @unchecked Sendable {
     }
 
     func fail(_ message: String, offerMacVoice: Bool = false) {
-        state = .failed(message, offerMacVoice: offerMacVoice)
+        show(.failed(message, offerMacVoice: offerMacVoice), for: offerMacVoice ? 10 : 5)
+    }
+
+    /// A one-time tip in the island, for a few seconds; only when nothing is being read.
+    func hint(_ message: String) {
+        guard state == .idle else { return }
+        show(.hint(message), for: 7)
+    }
+
+    /// Shows a failure or hint, then goes back to idle unless something else has happened since.
+    private func show(_ shown: SpeechState, for seconds: TimeInterval) {
+        state = shown
         clearFailure?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            guard let self, case .failed = self.state else { return }
+            guard let self, self.state == shown else { return }
             self.state = .idle
         }
         clearFailure = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + (offerMacVoice ? 10 : 5), execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
     private func start(_ text: String, kind: SpeechEngineKind) {

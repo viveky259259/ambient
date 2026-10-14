@@ -18,11 +18,11 @@ enum SelectionReader {
     @MainActor static func selectedText() async -> String? {
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"
         if let text = accessibilitySelection(), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            log.info("selection: \(text.count) characters from \(app, privacy: .public) via Accessibility")
+            log.notice("selection: \(text.count) characters from \(app, privacy: .public) via Accessibility")
             return text
         }
         let copied = await copySelection()
-        log.info("selection: \(copied?.count ?? 0) characters from \(app, privacy: .public) via copy")
+        log.notice("selection: \(copied?.count ?? 0) characters from \(app, privacy: .public) via copy")
         return copied
     }
 

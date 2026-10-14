@@ -45,7 +45,11 @@ struct SpeechRow: View {
         return false
     }
 
-    private var icon: String { failed ? "exclamationmark.triangle.fill" : "speaker.wave.2.fill" }
+    private var icon: String {
+        if failed { return "exclamationmark.triangle.fill" }
+        if case .hint = state { return "keyboard" }
+        return "speaker.wave.2.fill"
+    }
 
     private var title: String {
         switch state {
@@ -53,6 +57,7 @@ struct SpeechRow: View {
         case .preparing: "Getting ready…"
         case .speaking: "Speaking"
         case .failed(let message, _): message
+        case .hint(let message): message
         }
     }
 }

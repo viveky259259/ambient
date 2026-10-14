@@ -1,5 +1,6 @@
 import AmbientCore
 import AppKit
+import Combine
 import SwiftUI
 import os
 
@@ -19,11 +20,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var speech = SpeechController(prefs: prefs)
     private lazy var voicePack = VoicePackInstaller(paths: paths)
     private lazy var voiceChooser = VoiceChooser(prefs: prefs, voicePack: voicePack, speech: speech)
-    /// The read-aloud shortcut, registered by Ambient itself (Claude and Codex don't offer selections to Services).
-    static let speechShortcut = "⌃⌥⌘S"
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
-    private var hotKey: HotKey?
+    private lazy var shortcuts = ShortcutCenter(prefs: prefs)
+    private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var demoTimers: [Timer] = []
@@ -58,7 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         pet?.start()
 
-        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech,
+        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts,
+                                    onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
                                     onDemo: { [weak self] in self?.playDemo() })
         menuBar?.start()
@@ -81,7 +82,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         speech.chooseEngine = { [weak self] done in self?.voiceChooser.show(completion: done) }
         let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
         selectionService.register()
-        hotKey = HotKey.speakSelection { [weak self] in self?.speakFrontmostSelection() }
+        shortcuts.onPress = { [weak self] in
+            self?.prefs.speechHintShown = true
+            self?.speakFrontmostSelection()
+        }
+        shortcuts.start()
+        showShortcutHintOnce()
         voicePack.onRemove = { [weak self] in
             self?.speech.stop()
             self?.kokoro?.shutDown()
@@ -118,7 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if setupWindow == nil, let notifier, let wallpaper {
             let setup = SetupModel(paths: paths, notifier: notifier)
             let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
-                                    speech: speech, voicePack: voicePack, shortcut: Self.speechShortcut,
+                                    speech: speech, voicePack: voicePack, shortcuts: shortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
@@ -156,7 +162,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Speech
 
-    /// ⌃⌥⌘S: reads the frontmost app's selection through Accessibility. Same rules as Services › Speak with Ambient:
+    /// The first time an agent finishes, after its own bloom has had its moment, the island says how to hear the
+    /// reply. Once shown (or once the shortcut has been used) it never comes back.
+    private func showShortcutHintOnce() {
+        guard !prefs.speechHintShown else { return }
+        hintCancellable = model.transitions
+            .filter { $0.session.mood == .done && $0.previousMood != .done && !$0.removed }
+            .first()
+            .delay(for: .seconds(8), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, !self.prefs.speechHintShown, !self.prefs.isQuiet else { return }
+                self.prefs.speechHintShown = true
+                self.speech.hint("Select part of the reply and press \(self.shortcuts.shortcut.display) to hear it")
+            }
+    }
+
+    /// The read-aloud shortcut (⌥⎋ by default) and Read Selection Aloud in the menu bar: reads the frontmost app's
+    /// selection through Accessibility. Same rules as Services › Speak with Ambient:
     /// the same text (or nothing) stops, new text replaces what's playing.
     private func speakFrontmostSelection() {
         guard SelectionReader.isTrusted else {

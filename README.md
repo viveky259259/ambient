@@ -13,7 +13,7 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
   click a session to jump to it. Works with or without the notch island; turn it
   on in Settings › Desktop Pet.
-- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌃⌥⌘S (or, in apps that support it, the app's menu ›
+- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌥⎋ (or Read Selection Aloud in the menu bar, or, in apps that support it, the app's menu ›
   Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
   worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
   your own server with your key. The island shows it speaking, with a stop button. Set it up in Settings › Voice.
