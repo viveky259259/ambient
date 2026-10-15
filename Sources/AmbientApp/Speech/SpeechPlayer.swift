@@ -10,6 +10,7 @@ final class SpeechPlayer: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private let node = AVAudioPlayerNode()
     private var job = 0
+    private var paused = false
     private var lastLevelAt = Date.distantPast
     /// Loudness 0...1, about 15 times a second while playing, on the main thread.
     var onLevel: (Float) -> Void = { _ in }
@@ -34,7 +35,8 @@ final class SpeechPlayer: @unchecked Sendable {
                     c.resume()
                     return
                 }
-                if !self.node.isPlaying { self.node.play() }
+                // While paused, the chunk is queued behind the paused one rather than starting the player.
+                if !self.node.isPlaying, !self.paused { self.node.play() }
                 // Called when the buffer has played, and also when the player is stopped.
                 self.node.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { _ in c.resume() }
             }
@@ -42,8 +44,21 @@ final class SpeechPlayer: @unchecked Sendable {
     }
 
     /// Stops sound now. A waiting `play` returns.
+    /// Holds the voice where it is; scheduled audio waits, and `resume()` carries on from the same spot.
+    func pause() {
+        paused = true
+        node.pause()
+        onLevel(0)
+    }
+
+    func resume() {
+        paused = false
+        node.play()
+    }
+
     func stop() {
         job = 0
+        paused = false
         node.stop()
         if engine.isRunning {
             engine.mainMixerNode.removeTap(onBus: 0)
@@ -69,7 +84,7 @@ final class SpeechPlayer: @unchecked Sendable {
 
     private func publish(_ level: Float) {
         let now = Date()
-        guard job != 0, now.timeIntervalSince(lastLevelAt) > 1.0 / 15 else { return }
+        guard job != 0, !paused, now.timeIntervalSince(lastLevelAt) > 1.0 / 15 else { return }
         lastLevelAt = now
         onLevel(level)
     }
