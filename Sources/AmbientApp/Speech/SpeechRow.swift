@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// "Speaking" with a level meter and a stop button, or why reading aloud failed.
+/// "Speaking" with a level meter, pause or continue, and stop; or why reading aloud failed.
 struct SpeechRow: View {
     let state: SpeechState
     let level: Float
     let onStop: () -> Void
+    let onPause: () -> Void
+    let onResume: () -> Void
     let onUseMacVoice: () -> Void
 
     var body: some View {
@@ -18,14 +20,9 @@ struct SpeechRow: View {
                 .lineLimit(2)
             Spacer(minLength: 8)
             switch state {
-            case .preparing, .speaking:
+            case .preparing, .speaking, .paused:
                 LevelMeter(level: state == .speaking ? level : 0)
-                Button(action: onStop) {
-                    Image(systemName: "stop.fill").frame(width: 22, height: 22)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .accessibilityLabel("Stop speaking")
+                SpeechControls(state: state, onStop: onStop, onPause: onPause, onResume: onResume)
             case .failed(_, let offerMacVoice) where offerMacVoice:
                 Button("Use Mac voice", action: onUseMacVoice)
                     .buttonStyle(.plain)
@@ -48,6 +45,7 @@ struct SpeechRow: View {
     private var icon: String {
         if failed { return "exclamationmark.triangle.fill" }
         if case .hint = state { return "keyboard" }
+        if state == .paused { return "speaker.fill" }
         return "speaker.wave.2.fill"
     }
 
@@ -56,9 +54,38 @@ struct SpeechRow: View {
         case .idle: ""
         case .preparing: "Getting ready…"
         case .speaking: "Speaking"
+        case .paused: "Paused"
         case .failed(let message, _): message
         case .hint(let message): message
         }
+    }
+}
+
+/// Pause or continue (once audio is playing), then stop. Shared by the island and the pet.
+struct SpeechControls: View {
+    let state: SpeechState
+    let onStop: () -> Void
+    let onPause: () -> Void
+    let onResume: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if state == .speaking {
+                control("pause.fill", "Pause speaking", onPause)
+            } else if state == .paused {
+                control("play.fill", "Continue speaking", onResume)
+            }
+            control("stop.fill", "Stop speaking", onStop)
+        }
+        .foregroundStyle(.white)
+    }
+
+    private func control(_ symbol: String, _ label: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).frame(width: 22, height: 22).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 

@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
     private lazy var shortcuts = ShortcutCenter(prefs: prefs)
+    private lazy var nowPlaying = NowPlaying(speech: speech)
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
@@ -87,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.speakFrontmostSelection()
         }
         shortcuts.start()
+        nowPlaying.start()
         showShortcutHintOnce()
         voicePack.onRemove = { [weak self] in
             self?.speech.stop()

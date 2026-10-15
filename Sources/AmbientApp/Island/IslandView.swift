@@ -45,7 +45,8 @@ struct IslandView: View {
             VStack(spacing: 0) {
                 Color.clear.frame(height: model.geometry.notchHeight)
                 SpeechRow(state: model.speech, level: model.speechLevel,
-                          onStop: model.onStopSpeech, onUseMacVoice: model.onUseMacVoice)
+                          onStop: model.onStopSpeech, onPause: model.onPauseSpeech,
+                          onResume: model.onResumeSpeech, onUseMacVoice: model.onUseMacVoice)
             }
             .transition(.opacity)
         case .expanded:

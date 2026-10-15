@@ -6,8 +6,8 @@
   with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
   blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
   offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
-  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with a stop button, and
-  say why if it can't. Change it any time in Settings › Voice.
+  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with pause, continue
+  and stop (the keyboard's ⏯ key and AirPods or headphones work too), and say why if it can't. Change it any time in Settings › Voice.
 
 ## 0.6.0 — 2026-10-10
 
