@@ -5,6 +5,8 @@
 - **Antigravity**: connect Google Antigravity in Settings › Agents (or `ambient install antigravity`). Ambient adds a
   hook set named `ambient` to `~/.gemini/config/hooks.json` and follows each conversation through prompts, tool calls
   and finished or failed turns. Antigravity has no permission hook, so its sessions never show *needs you*.
+- **Fix**: `ambient status` and `ambient open` no longer say Ambient isn't running when it tracks many sessions. The
+  app cut off any reply longer than 8 KB.
 
 ## 0.6.0 — 2026-10-10
 
