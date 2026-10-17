@@ -67,6 +67,7 @@ private struct AgentRow: View {
         case .claude: "Claude Code"
         case .codex: "Codex CLI"
         case .gemini: "Gemini CLI"
+        case .antigravity: "Antigravity"
         }
     }
 

@@ -14,6 +14,11 @@ private func gemini(_ json: String) -> EventKind? {
     AdapterRegistry.event(agent: .gemini, payload: payload(json), eventHint: nil)?.kind
 }
 
+/// Antigravity's payloads don't name the event; the hook command passes it.
+private func antigravity(_ event: String, _ json: String) -> EventKind? {
+    AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: event)?.kind
+}
+
 @Suite struct ClaudeAdapterTests {
     @Test func sessionStart() {
         #expect(claude(#"{"session_id":"a","hook_event_name":"SessionStart","source":"startup"}"#) == .sessionStarted)
@@ -173,11 +178,61 @@ private func gemini(_ json: String) -> EventKind? {
     }
 }
 
+@Suite struct AntigravityAdapterTests {
+    @Test func sessionIsTheConversationAndProjectTheFirstWorkspace() {
+        let json = #"{"conversationId":"0b1c-22","workspacePaths":["/src/app","/src/lib"],"modelName":"gemini-3-pro"}"#
+        let event = AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: "SessionStart")
+        #expect(event?.sessionId == "0b1c-22")
+        #expect(event?.cwd == "/src/app")
+        #expect(event?.kind == .sessionStarted)
+    }
+
+    @Test func withoutAConversationThereIsNoEvent() {
+        #expect(antigravity("SessionStart", #"{"session_id":"a"}"#) == nil)
+    }
+
+    @Test func onlyTheFirstModelCallOfATurnIsAPrompt() {
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":0,"initialNumSteps":4}"#) == .promptSubmitted)
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":3,"initialNumSteps":4}"#) == nil)
+        #expect(antigravity("PostInvocation", #"{"conversationId":"a","invocationNum":0}"#) == nil)
+    }
+
+    @Test func tools() {
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{"CommandLine":"npm test","Cwd":"/src/app"}},"stepIdx":2}"#)
+                == .toolStarted(name: "run_command", detail: "npm test"))
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"view_file","args":{"AbsolutePath":"/src/app/main.swift"}}}"#)
+                == .toolStarted(name: "view_file", detail: "main.swift"))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":""}"#)
+                == .toolFinished(name: "run_command", failed: false))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":"exit status 1"}"#)
+                == .toolFinished(name: "run_command", failed: true))
+    }
+
+    @Test func stop() {
+        #expect(antigravity("Stop", #"{"conversationId":"a","executionNum":1,"terminationReason":"model_stop","fullyIdle":true}"#)
+                == .turnCompleted(summary: nil))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"error","error":"Quota exceeded"}"#)
+                == .turnFailed(message: "Quota exceeded"))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"max_steps_exceeded"}"#)
+                == .turnFailed(message: "Reached its step limit"))
+    }
+
+    @Test func repliesWithADecisionWhereOneIsRequired() {
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PreToolUse") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "Stop") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PostToolUse") == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .gemini, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .claude, event: "Stop") == nil)
+    }
+}
+
 @Suite struct ToolNameTests {
     @Test func displayNames() {
         #expect(ToolNames.display("Bash") == "Bash")
         #expect(ToolNames.display("mcp__github__create_pull_request") == "github · create_pull_request")
         #expect(ToolNames.display("run_shell_command") == "Shell")
+        #expect(ToolNames.display("replace_file_content") == "Edit")
         #expect(ToolNames.display("apply_patch") == "Patch")
         #expect(ToolNames.display("replace") == "Edit")
     }

@@ -5,9 +5,39 @@ public struct AgentHookSpec: Sendable {
     public let agent: AgentKind
     /// The agent's directory under the user's home; its absence means the agent isn't installed.
     public let agentDirectory: String
+    /// Other directories under the user's home that also mean the agent is installed.
+    let alsoFoundIn: [String]
     public let configFile: String
     public let events: [String]
+    let layout: HookLayout
     let entry: @Sendable (_ command: String, _ event: String) -> JSONValue
+
+    init(agent: AgentKind, agentDirectory: String, alsoFoundIn: [String] = [], configFile: String, events: [String],
+         layout: HookLayout = .shared, entry: @escaping @Sendable (_ command: String, _ event: String) -> JSONValue) {
+        self.agent = agent
+        self.agentDirectory = agentDirectory
+        self.alsoFoundIn = alsoFoundIn
+        self.configFile = configFile
+        self.events = events
+        self.layout = layout
+        self.entry = entry
+    }
+}
+
+/// Where Ambient's hooks live in an agent's config file.
+enum HookLayout: Sendable {
+    /// `"hooks": {event: [{"hooks": [entry]}]}`, next to the user's own groups.
+    case shared
+    /// `name: {event: [entry]}`, a hook set Ambient owns whole. Tool events wrap the entry in a group that
+    /// matches every tool. These agents' payloads don't name the event, so each command does.
+    case hookSet(name: String, toolEvents: Set<String>)
+
+    var key: String {
+        switch self {
+        case .shared: "hooks"
+        case let .hookSet(name, _): name
+        }
+    }
 }
 
 public enum InstallState: Equatable, Sendable {
@@ -89,15 +119,40 @@ public struct HookInstaller: Sendable {
                     .object([.init("name", .string("ambient")), .init("type", .string("command")),
                              .init("command", .string(command)), .init("timeout", .number("1500"))])
                 })
+        case .antigravity:
+            AgentHookSpec(
+                agent: .antigravity, agentDirectory: ".gemini/antigravity",
+                alsoFoundIn: [".gemini/antigravity-ide", ".gemini/antigravity-cli"],
+                configFile: ".gemini/config/hooks.json",
+                events: ["SessionStart", "PreInvocation", "PreToolUse", "PostToolUse", "Stop"],
+                layout: .hookSet(name: "ambient", toolEvents: ["PreToolUse", "PostToolUse"]),
+                entry: { command, _ in
+                    // Antigravity waits for its hooks and times them in seconds.
+                    .object([.init("type", .string("command")), .init("command", .string(command)),
+                             .init("timeout", .number("5"))])
+                })
         }
     }
 
     /// The shell command agents run. Guarded, so a removed app never breaks the agent.
-    public func command(for agent: AgentKind) -> String {
+    public func command(for agent: AgentKind, event: String? = nil) -> String {
         let cli = paths.cliLink.path
         let home = paths.userHome.path.hasSuffix("/") ? paths.userHome.path : paths.userHome.path + "/"
         let shown = cli.hasPrefix(home) ? "$HOME/" + cli.dropFirst(home.count) : cli
-        return #"[ -x "\#(shown)" ] && "\#(shown)" hook \#(agent.rawValue) || true"#
+        let hook = event.map { "\(agent.rawValue) \($0)" } ?? agent.rawValue
+        return #"[ -x "\#(shown)" ] && "\#(shown)" hook \#(hook) || true"#
+    }
+
+    /// Everything under a `.hookSet` key, exactly as Ambient installs it.
+    func hookSet(_ spec: AgentHookSpec) -> JSONValue {
+        guard case let .hookSet(_, toolEvents) = spec.layout else { return .object([]) }
+        return .object(spec.events.map { event in
+            let entry = spec.entry(command(for: spec.agent, event: event), event)
+            let value: JSONValue = toolEvents.contains(event)
+                ? .object([.init("matcher", .string("*")), .init("hooks", .array([entry]))])
+                : entry
+            return JSONValue.Member(event, .array([value]))
+        })
     }
 
     public static func isAmbientCommand(_ command: String) -> Bool {
@@ -109,9 +164,12 @@ public struct HookInstaller: Sendable {
     }
 
     private func agentExists(_ agent: AgentKind) -> Bool {
-        var isDir: ObjCBool = false
-        let dir = paths.userHome.appendingPathComponent(Self.spec(for: agent).agentDirectory).path
-        return FileManager.default.fileExists(atPath: dir, isDirectory: &isDir) && isDir.boolValue
+        let spec = Self.spec(for: agent)
+        return ([spec.agentDirectory] + spec.alsoFoundIn).contains { relative in
+            var isDir: ObjCBool = false
+            let dir = paths.userHome.appendingPathComponent(relative).path
+            return FileManager.default.fileExists(atPath: dir, isDirectory: &isDir) && isDir.boolValue
+        }
     }
 
     // MARK: - Status
@@ -124,6 +182,10 @@ public struct HookInstaller: Sendable {
         do { root = try Self.parseConfig(text) } catch { return .unreadable(String(describing: error)) }
 
         let spec = Self.spec(for: agent)
+        if case .hookSet = spec.layout {
+            guard let set = root[spec.layout.key] else { return .notInstalled }
+            return set == hookSet(spec) ? .installed : .partial
+        }
         let current = command(for: agent)
         var exact = 0, any = false
         for event in spec.events {
@@ -155,8 +217,12 @@ public struct HookInstaller: Sendable {
 
     @discardableResult
     public func install(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
-        try edit(agent, dryRun: dryRun) { hooks in
-            let spec = Self.spec(for: agent)
+        let spec = Self.spec(for: agent)
+        return try edit(agent, dryRun: dryRun) { hooks in
+            if case .hookSet = spec.layout {
+                hooks = hookSet(spec)
+                return
+            }
             let command = command(for: agent)
             hooks = Self.removingAmbientEntries(from: hooks)
             for event in spec.events {
@@ -175,8 +241,9 @@ public struct HookInstaller: Sendable {
 
     @discardableResult
     public func uninstall(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
-        try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
-            hooks = Self.removingAmbientEntries(from: hooks)
+        let owned = if case .hookSet = Self.spec(for: agent).layout { true } else { false }
+        return try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
+            hooks = owned ? .object([]) : Self.removingAmbientEntries(from: hooks)
         }
     }
 
@@ -207,14 +274,15 @@ public struct HookInstaller: Sendable {
             throw InstallerError.unexpectedShape(path: url.path, reason: "the top level isn't an object")
         }
 
-        let hadHooks = root["hooks"] != nil
-        var hooks = root["hooks"] ?? .object([])
+        let key = Self.spec(for: agent).layout.key
+        let hadHooks = root[key] != nil
+        var hooks = root[key] ?? .object([])
         guard case .object = hooks else {
-            throw InstallerError.unexpectedShape(path: url.path, reason: "\"hooks\" isn't an object")
+            throw InstallerError.unexpectedShape(path: url.path, reason: "\"\(key)\" isn't an object")
         }
         try change(&hooks)
         // Drop a hooks object that only ever held Ambient's entries.
-        root["hooks"] = (hooks == .object([]) && !(hadHooks && root["hooks"] == .object([]))) ? nil : hooks
+        root[key] = (hooks == .object([]) && !(hadHooks && root[key] == .object([]))) ? nil : hooks
 
         let indent = JSONValue.detectIndent(original)
         let trailingNewline = original.hasSuffix("\n") ? "\n" : ""

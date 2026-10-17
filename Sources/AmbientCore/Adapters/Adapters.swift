@@ -9,6 +9,13 @@ enum Limits {
 /// Turns one agent's hook payloads into normalized events.
 protocol AgentAdapter {
     static func normalize(event: String, payload: HookPayload) -> EventKind?
+    static func sessionId(_ payload: HookPayload) -> String?
+    static func cwd(_ payload: HookPayload) -> String?
+}
+
+extension AgentAdapter {
+    static func sessionId(_ payload: HookPayload) -> String? { payload.string("session_id") }
+    static func cwd(_ payload: HookPayload) -> String? { payload.string("cwd") }
 }
 
 public enum AdapterRegistry {
@@ -16,15 +23,26 @@ public enum AdapterRegistry {
     /// doesn't affect Ambient.
     public static func event(agent: AgentKind, payload: HookPayload, eventHint: String?,
                              now: Date = Date(), host: HostInfo? = nil) -> AgentEvent? {
-        guard let sessionId = payload.string("session_id"), !sessionId.isEmpty,
-              let name = payload.string("hook_event_name") ?? eventHint else { return nil }
-        let kind: EventKind? = switch agent {
-        case .claude, .codex: ClaudeAdapter.normalize(event: name, payload: payload)
-        case .gemini: GeminiAdapter.normalize(event: name, payload: payload)
+        let adapter: any AgentAdapter.Type = switch agent {
+        case .claude, .codex: ClaudeAdapter.self
+        case .gemini: GeminiAdapter.self
+        case .antigravity: AntigravityAdapter.self
         }
-        guard let kind else { return nil }
-        return AgentEvent(agent: agent, sessionId: sessionId, cwd: payload.string("cwd"),
+        guard let sessionId = adapter.sessionId(payload), !sessionId.isEmpty,
+              let name = payload.string("hook_event_name") ?? eventHint,
+              let kind = adapter.normalize(event: name, payload: payload) else { return nil }
+        return AgentEvent(agent: agent, sessionId: sessionId, cwd: adapter.cwd(payload),
                           kind: kind, timestamp: now, host: host)
+    }
+
+    /// What the hook prints on stdout. Gemini and Antigravity parse it as JSON; Antigravity requires a
+    /// decision before a tool runs and when a turn stops, and "allow" defers to its own permission rules.
+    public static func reply(agent: AgentKind, event: String?) -> String? {
+        switch agent {
+        case .claude, .codex: nil
+        case .gemini: "{}\n"
+        case .antigravity: event == "PreToolUse" || event == "Stop" ? #"{"decision":"allow"}"# + "\n" : "{}\n"
+        }
     }
 
     static func toolStarted(_ p: HookPayload) -> EventKind {
@@ -120,6 +138,39 @@ enum GeminiAdapter: AgentAdapter {
             return .turnCompleted(summary: Trim.clean(p.string("prompt_response"), max: Limits.message))
         case "SessionEnd":
             return .sessionEnded
+        default:
+            return nil
+        }
+    }
+}
+
+/// Google Antigravity. Its payloads are camelCase, name the session by conversation and the project by
+/// workspace, and don't name the event, so each hook command passes it. There's no permission event.
+enum AntigravityAdapter: AgentAdapter {
+    static func sessionId(_ p: HookPayload) -> String? { p.string("conversationId") }
+    static func cwd(_ p: HookPayload) -> String? { p.strings("workspacePaths").first }
+
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        switch event {
+        case "SessionStart":
+            return .sessionStarted
+        case "PreInvocation":
+            // Runs before every model call of a turn; only the first means a new prompt.
+            return (p.string("invocationNum") ?? "0") == "0" ? .promptSubmitted : nil
+        case "PreToolUse":
+            let call = p.object("toolCall")
+            let name = call?.string("name") ?? "tool"
+            return .toolStarted(name: name, detail: ToolNames.detail(name: name, input: call?.object("args")))
+        case "PostToolUse":
+            let failed = p.firstString(["error"]) != nil
+            return .toolFinished(name: p.object("toolCall")?.string("name") ?? "tool", failed: failed)
+        case "Stop":
+            let error = Trim.clean(p.firstString(["error"]), max: Limits.message)
+            switch p.string("terminationReason") {
+            case "error": return .turnFailed(message: error)
+            case "max_steps_exceeded": return .turnFailed(message: error ?? "Reached its step limit")
+            default: return error.map { .turnFailed(message: $0) } ?? .turnCompleted(summary: nil)
+            }
         default:
             return nil
         }

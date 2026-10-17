@@ -84,6 +84,7 @@ public enum Palette {
     public static let claude = RGB(hex: "#D97757")
     public static let codex = RGB(hex: "#10A37F")
     public static let gemini = RGB(hex: "#4F8DF7")
+    public static let antigravity = RGB(hex: "#A371F7")
     public static let waiting = RGB(hex: "#F5A524")
     public static let done = RGB(hex: "#3FB950")
     public static let error = RGB(hex: "#F85149")
@@ -94,6 +95,7 @@ public enum Palette {
         case .claude: claude
         case .codex: codex
         case .gemini: gemini
+        case .antigravity: antigravity
         }
     }
 

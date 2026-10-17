@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Antigravity**: connect Google Antigravity in Settings › Agents (or `ambient install antigravity`). Ambient adds a
+  hook set named `ambient` to `~/.gemini/config/hooks.json` and follows each conversation through prompts, tool calls
+  and finished or failed turns. Antigravity has no permission hook, so its sessions never show *needs you*.
+
 ## 0.6.0 — 2026-10-10
 
 - **Desktop pet**: an optional pixel-art companion (a blob, a crab or a cat) that you drag anywhere on your desktop.

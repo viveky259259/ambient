@@ -32,12 +32,12 @@ struct Commands {
         \(out.bold("ambient")) \(AmbientVersion.current) — ambient desktop status for coding agents
 
         \(out.bold("Usage"))
-          ambient install [claude|codex|gemini ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
-          ambient uninstall [claude|codex|gemini ...] [--dry-run] Remove Ambient's hooks, leaving others alone
+          ambient install [claude|codex|gemini|antigravity ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
+          ambient uninstall [claude|codex|gemini|antigravity ...] [--dry-run] Remove Ambient's hooks, leaving others alone
           ambient status [--json]                                 Show the sessions Ambient is tracking
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
-                 [--agent claude|codex|gemini] [--project NAME] [--message TEXT]
+                 [--agent claude|codex|gemini|antigravity] [--project NAME] [--message TEXT]
           ambient demo                                            Walk through every state
           ambient open [PROJECT|SESSION]                          Jump to a session's chat, tab or window (default: the most urgent)
           ambient ack                                             Mark every finished session as seen
@@ -56,7 +56,7 @@ struct Commands {
         var result: [AgentKind] = []
         for name in names {
             guard let agent = AgentKind(rawValue: name.lowercased()) else {
-                out.error("Unknown agent '\(name)'. Use claude, codex or gemini.")
+                out.error("Unknown agent '\(name)'. Use claude, codex, gemini or antigravity.")
                 return nil
             }
             result.append(agent)
