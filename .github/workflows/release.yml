@@ -4,7 +4,8 @@ name: Release
 # GitHub release, then deploys yaml.cafe with the new DMG.
 on:
   push:
-    tags: ["v*"]
+    # Version tags only (v0.7.0); voice pack releases (voice-1) are published by hand.
+    tags: ["v[0-9]*"]
 
 permissions:
   contents: write

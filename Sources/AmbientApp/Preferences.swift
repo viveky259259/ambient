@@ -41,6 +41,27 @@ final class Preferences: ObservableObject {
         }
     }
 
+    /// A `SpeechEngineKind` raw value; nil until the voice chooser has run.
+    @Published var speechEngine: String? { didSet { defaults.set(speechEngine, forKey: "speechEngine") } }
+    /// An `AVSpeechSynthesisVoice` identifier; empty for the system's default voice.
+    @Published var macVoice: String { didSet { defaults.set(macVoice, forKey: "macVoice") } }
+    @Published var kokoroVoice: String { didSet { defaults.set(kokoroVoice, forKey: "kokoroVoice") } }
+    /// An `OnlineProvider` raw value.
+    @Published var onlineProvider: String { didSet { defaults.set(onlineProvider, forKey: "onlineProvider") } }
+    @Published var onlineVoice: String { didSet { defaults.set(onlineVoice, forKey: "onlineVoice") } }
+    @Published var onlineModel: String { didSet { defaults.set(onlineModel, forKey: "onlineModel") } }
+    /// For `OnlineProvider.custom`: an OpenAI-compatible base URL such as http://localhost:8880/v1.
+    @Published var onlineBaseURL: String { didSet { defaults.set(onlineBaseURL, forKey: "onlineBaseURL") } }
+    /// 1 is normal speed; 0.5 to 2.
+    @Published var speechRate: Double { didSet { defaults.set(speechRate, forKey: "speechRate") } }
+    @Published var speechReadsCode: Bool { didSet { defaults.set(speechReadsCode, forKey: "speechReadsCode") } }
+    /// The Accessibility explanation has been shown once (hotkey route only).
+    @Published var speechAccessExplained: Bool { didSet { defaults.set(speechAccessExplained, forKey: "speechAccessExplained") } }
+    /// A `Shortcut.stored` value; nil for the default (⌥⎋).
+    @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
+    /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
+    @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -62,6 +83,15 @@ final class Preferences: ObservableObject {
             "wallpaperLook": "timeOfDay",
             "petEnabled": false,
             "petSpecies": PetSpecies.blob.rawValue,
+            "macVoice": "",
+            "kokoroVoice": VoicePackManifest.current.defaultVoice,
+            "onlineProvider": OnlineProvider.openAI.rawValue,
+            "onlineVoice": OnlineProvider.openAI.defaultVoice,
+            "onlineModel": OnlineProvider.openAI.defaultModel,
+            "onlineBaseURL": "http://localhost:8880/v1",
+            "speechRate": 1.0,
+            "speechReadsCode": false,
+            "speechAccessExplained": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -87,6 +117,18 @@ final class Preferences: ObservableObject {
         } else {
             petOrigin = nil
         }
+        speechEngine = defaults.string(forKey: "speechEngine")
+        macVoice = defaults.string(forKey: "macVoice") ?? ""
+        kokoroVoice = defaults.string(forKey: "kokoroVoice") ?? VoicePackManifest.current.defaultVoice
+        onlineProvider = defaults.string(forKey: "onlineProvider") ?? OnlineProvider.openAI.rawValue
+        onlineVoice = defaults.string(forKey: "onlineVoice") ?? OnlineProvider.openAI.defaultVoice
+        onlineModel = defaults.string(forKey: "onlineModel") ?? OnlineProvider.openAI.defaultModel
+        onlineBaseURL = defaults.string(forKey: "onlineBaseURL") ?? "http://localhost:8880/v1"
+        speechRate = defaults.double(forKey: "speechRate")
+        speechReadsCode = defaults.bool(forKey: "speechReadsCode")
+        speechAccessExplained = defaults.bool(forKey: "speechAccessExplained")
+        speechShortcut = defaults.string(forKey: "speechShortcut")
+        speechHintShown = defaults.bool(forKey: "speechHintShown")
     }
 
     var isQuiet: Bool {
@@ -102,4 +144,6 @@ final class Preferences: ObservableObject {
     var sceneChoice: SceneChoice { SceneChoice(rawValue: wallpaperScene) ?? .daily }
     var sceneLook: SceneLook { SceneLook(rawValue: wallpaperLook) ?? .timeOfDay }
     var pet: PetSpecies { PetSpecies(stored: petSpecies) }
+    var speechEngineKind: SpeechEngineKind? { speechEngine.flatMap(SpeechEngineKind.init(rawValue:)) }
+    var provider: OnlineProvider { OnlineProvider(rawValue: onlineProvider) ?? .openAI }
 }

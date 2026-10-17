@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The panes of the settings window, in sidebar order.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case welcome, agents, island, pet, alerts, dock, wallpaper, performance, general
+    case welcome, agents, island, pet, voice, alerts, dock, wallpaper, performance, general
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .agents: "Agents"
         case .island: "Notch Island"
         case .pet: "Desktop Pet"
+        case .voice: "Voice"
         case .alerts: "Alerts"
         case .dock: "Dock Glow"
         case .wallpaper: "Wallpaper"
@@ -29,6 +30,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .agents: "terminal"
         case .island: "laptopcomputer"
         case .pet: "pawprint"
+        case .voice: "speaker.wave.2"
         case .alerts: "bell.badge"
         case .dock: "dock.rectangle"
         case .wallpaper: "photo.artframe"
@@ -43,6 +45,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .agents: "Ambient listens to your agents through lightweight hooks."
         case .island: "A quiet status light that grows out of the notch."
         case .pet: "A little companion on your desktop that acts out what your agents are doing."
+        case .voice: "Select text in Claude, Codex or a terminal, press the shortcut, and Ambient reads it aloud."
         case .alerts: "Banners and chimes for the moments that need you."
         case .dock: "Light along the Dock in the color of what your agents are doing."
         case .wallpaper: "A living world on your desktop and lock screen, where your agents live."

@@ -9,6 +9,8 @@ final class IslandViewModel: ObservableObject {
         case collapsed
         /// Announcing a transition of one session.
         case bloom(String)
+        /// Reading a selection aloud, or why it couldn't.
+        case speech
         /// Hovered: every session.
         case expanded
     }
@@ -19,8 +21,12 @@ final class IslandViewModel: ObservableObject {
     @Published var quiet = false
     /// Expanded, list every session rather than the first few.
     @Published var showingAll = false
+    @Published var speech: SpeechState = .idle
+    @Published var speechLevel: Float = 0
 
     var onOpen: (Session) -> Void = { _ in }
+    var onStopSpeech: () -> Void = {}
+    var onUseMacVoice: () -> Void = {}
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
     var onSettings: () -> Void = {}
@@ -55,6 +61,7 @@ final class IslandViewModel: ObservableObject {
         case .hidden: return CGSize(width: geometry.notchWidth, height: h)
         case .collapsed: return CGSize(width: collapsed, height: h)
         case .bloom: return CGSize(width: max(collapsed, 400), height: h + 74)
+        case .speech: return CGSize(width: max(collapsed, 360), height: h + 48)
         case .expanded:
             let rows = CGFloat(min(max(1, listed.count), Self.maxAllRows))
             return CGSize(width: max(collapsed, 440), height: h + 12 + rows * 52 + 44)
