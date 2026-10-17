@@ -71,6 +71,12 @@ final class IslandController {
             self?.endHover()
             onSettings()
         }
+        viewModel.onToggleShowAll = { [weak self] in
+            guard let self else { return }
+            self.viewModel.showingAll.toggle()
+            self.onMenuChange?(true, self.viewModel.size(for: .expanded), self.viewModel.geometry)
+            self.trackPointer()
+        }
     }
 
     func start() {
@@ -142,6 +148,8 @@ final class IslandController {
         }
         if next != viewModel.presentation {
             let wasOpen = viewModel.presentation == .expanded
+            // Each time it opens, the island starts with the short list.
+            if next != .expanded { viewModel.showingAll = false }
             viewModel.presentation = next
             if (next == .expanded) != wasOpen { onMenuChange?(next == .expanded, viewModel.size(for: .expanded), viewModel.geometry) }
         }

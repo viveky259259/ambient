@@ -7,7 +7,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
   an amber pulse means *it needs you*, green means *done*, red means *it hit an error*. When something
-  happens it blooms open for a few seconds; hover to see every session; click to jump back to it.
+  happens it blooms open for a few seconds; hover to see your latest sessions, or *View all* for every one;
+  click to jump back to it.
 - **Desktop pet** — an optional pixel-art blob, crab or cat that you drag anywhere. It types while your agent works,
   waves when it needs you, cheers when it's done and sleeps when nothing needs you, with a speech bubble saying what's
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,

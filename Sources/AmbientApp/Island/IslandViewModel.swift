@@ -17,14 +17,19 @@ final class IslandViewModel: ObservableObject {
     @Published var sessions: [Session] = []
     @Published var geometry: IslandGeometry
     @Published var quiet = false
+    /// Expanded, list every session rather than the first few.
+    @Published var showingAll = false
 
     var onOpen: (Session) -> Void = { _ in }
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
     var onSettings: () -> Void = {}
+    var onToggleShowAll: () -> Void = {}
 
     static let wing: CGFloat = 42
     static let maxRows = 5
+    /// Showing every session, the island grows to this many rows and scrolls the rest.
+    static let maxAllRows = 10
 
     init(geometry: IslandGeometry) {
         self.geometry = geometry
@@ -37,8 +42,11 @@ final class IslandViewModel: ObservableObject {
         return sessions.first { $0.id == id }
     }
 
-    /// Sessions worth listing when expanded: everything but long-idle noise.
-    var listed: [Session] { Array(sessions.prefix(Self.maxRows)) }
+    /// Sessions listed when expanded: the first few, or every one.
+    var listed: [Session] { showingAll ? sessions : Array(sessions.prefix(Self.maxRows)) }
+
+    /// Whether the expanded list leaves sessions out, so it offers to show them all.
+    var hasMore: Bool { sessions.count > Self.maxRows }
 
     func size(for p: Presentation) -> CGSize {
         let h = geometry.notchHeight
@@ -48,7 +56,7 @@ final class IslandViewModel: ObservableObject {
         case .collapsed: return CGSize(width: collapsed, height: h)
         case .bloom: return CGSize(width: max(collapsed, 400), height: h + 74)
         case .expanded:
-            let rows = CGFloat(max(1, listed.count))
+            let rows = CGFloat(min(max(1, listed.count), Self.maxAllRows))
             return CGSize(width: max(collapsed, 440), height: h + 12 + rows * 52 + 44)
         }
     }
