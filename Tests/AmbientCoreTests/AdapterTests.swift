@@ -141,6 +141,56 @@ private func gemini(_ json: String) -> EventKind? {
         #expect(AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil)?.kind
                 == .toolStarted(name: "apply_patch", detail: "parser.rs"))
     }
+
+    // Shaped like the payloads Codex Desktop 26.1013 sent: a turn ends in a saved thread, then the app
+    // forks an unsaved one to predict the next prompt.
+    private static let rollout = "/Users/me/.codex/sessions/2026/10/18/rollout-2026-10-18T03-54-23-01a14bf7-596a-7523-a9db-e5fe30f2e5c8.jsonl"
+    private static let realStop = #"{"session_id":"01a14bf7-596a-7523-a9db-e5fe30f2e5c8","turn_id":"01a14bfc-32bd-7531-bd03-7cb378539d76","transcript_path":"\#(rollout)","cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"Using **internal storage** for the model cache.\n\nThe benchmark is downloading."}"#
+    private static let suggestionThread = [
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","source":"fork"}"#,
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","turn_id":"01a14c04-a2c6-7633-a390-6b536c980c8b","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"UserPromptSubmit","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","prompt":"Predict the user's next message.\n\nReturn only JSON matching this schema: {\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"suggestion\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"required\":[\"suggestion\"],\"additionalProperties\":false}."}"#,
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","turn_id":"01a14c04-a2c6-7633-a390-6b536c980c8b","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"{\"suggestion\":\"Has the download finished? Show me the clip when it's ready.\"}"}"#,
+    ]
+
+    private func codex(_ json: String) -> AgentEvent? {
+        AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil)
+    }
+
+    @Test func realTurnKeepsItsSummary() {
+        #expect(codex(Self.realStop)?.kind
+                == .turnCompleted(summary: "Using **internal storage** for the model cache. The benchmark is downloading."))
+    }
+
+    @Test func suggestionThreadIsIgnored() {
+        for json in Self.suggestionThread { #expect(codex(json) == nil) }
+        let empty = #"{"session_id":"01a14beb-53d4-7d21-bbeb-4a5ce843b3d8","turn_id":"t","transcript_path":null,"cwd":"/Users/me/src/agents","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"default","stop_hook_active":false,"last_assistant_message":"{\"suggestions\":[]}"}"#
+        #expect(codex(empty) == nil)
+    }
+
+    @Test func suggestionThreadEndStillClearsItsRow() {
+        let end = #"{"session_id":"01a14be7-7fce-77a1-aea0-1b954fa0a392","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionEnd","reason":"other"}"#
+        #expect(codex(end)?.kind == .sessionEnded)
+    }
+
+    @Test func forksPeopleMakeAreKept() {
+        let start = #"{"session_id":"01a14c10-0000-7000-8000-000000000001","transcript_path":"/Users/me/.codex/sessions/2026/10/18/rollout-x.jsonl","cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"default","source":"fork"}"#
+        #expect(codex(start)?.kind == .sessionStarted)
+    }
+
+    @Test func suggestionTurnsAddNoRows() {
+        let store = SessionStore()
+        for json in [Self.realStop] + Self.suggestionThread {
+            if let e = codex(json) { store.apply(e) }
+        }
+        #expect(store.sessions.map(\.id) == ["codex:01a14bf7-596a-7523-a9db-e5fe30f2e5c8"])
+        #expect(store.sessions.first?.activity
+                == .done(summary: "Using **internal storage** for the model cache. The benchmark is downloading."))
+    }
+
+    @Test func claudeIgnoresTranscriptPath() {
+        #expect(claude(#"{"session_id":"a","transcript_path":null,"hook_event_name":"Stop","last_assistant_message":"Done"}"#)
+                == .turnCompleted(summary: "Done"))
+    }
 }
 
 @Suite struct GeminiAdapterTests {

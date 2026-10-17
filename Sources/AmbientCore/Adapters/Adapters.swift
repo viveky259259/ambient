@@ -19,7 +19,8 @@ public enum AdapterRegistry {
         guard let sessionId = payload.string("session_id"), !sessionId.isEmpty,
               let name = payload.string("hook_event_name") ?? eventHint else { return nil }
         let kind: EventKind? = switch agent {
-        case .claude, .codex: ClaudeAdapter.normalize(event: name, payload: payload)
+        case .claude: ClaudeAdapter.normalize(event: name, payload: payload)
+        case .codex: CodexAdapter.normalize(event: name, payload: payload)
         case .gemini: GeminiAdapter.normalize(event: name, payload: payload)
         }
         guard let kind else { return nil }
@@ -41,7 +42,7 @@ public enum AdapterRegistry {
     }
 }
 
-/// Claude Code. Codex's hooks use the same event names and fields, so it shares this adapter.
+/// Claude Code. Codex's hooks use the same event names and fields, so CodexAdapter builds on this one.
 enum ClaudeAdapter: AgentAdapter {
     static func normalize(event: String, payload p: HookPayload) -> EventKind? {
         switch event {
@@ -93,6 +94,17 @@ enum ClaudeAdapter: AgentAdapter {
         default:
             return message.map { .notice(message: $0) }
         }
+    }
+}
+
+/// Codex. Codex Desktop also runs one-turn threads of its own through these hooks, e.g. to suggest
+/// the next prompt when a turn ends ({"suggestion":"…"}). It doesn't save them, so their payloads
+/// carry a null transcript_path; threads people work in, forks included, always have one, and so do
+/// `codex exec` runs unless `--ephemeral`. Their SessionEnd still passes, clearing rows from before.
+enum CodexAdapter: AgentAdapter {
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        if p.isNull("transcript_path"), event != "SessionEnd" { return nil }
+        return ClaudeAdapter.normalize(event: event, payload: p)
     }
 }
 

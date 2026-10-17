@@ -32,6 +32,11 @@ public struct HookPayload: @unchecked Sendable {
         return !(v is NSNull)
     }
 
+    /// True when the key is present and holds null.
+    public func isNull(_ key: String) -> Bool {
+        raw[key] is NSNull
+    }
+
     /// The first non-blank string among `keys`.
     public func firstString(_ keys: [String]) -> String? {
         for key in keys {

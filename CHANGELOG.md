@@ -8,6 +8,8 @@
   offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
   ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with a stop button, and
   say why if it can't. Change it any time in Settings › Voice.
+- **Fixed**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
+  sessions finished with JSON like `{"suggestion":"…"}`.
 
 ## 0.6.0 — 2026-10-10
 
