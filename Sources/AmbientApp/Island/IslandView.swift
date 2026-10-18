@@ -26,6 +26,7 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.presentation)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.sessions.count)
+        .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.showingAll)
         .environment(\.colorScheme, .dark)
     }
 
@@ -173,14 +174,21 @@ private struct ExpandedList: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(maxWidth: .infinity, minHeight: 52)
             }
-            ForEach(model.listed) { s in
-                SessionRow(session: s) { model.onOpen(s) }
+            if model.showingAll {
+                ScrollView(.vertical) { rows }
+                    .scrollIndicators(.never)
+            } else {
+                rows
             }
             Spacer(minLength: 0)
             HStack(spacing: 14) {
                 FooterButton(title: model.quiet ? "Resume alerts" : "Quiet 1h",
                              symbol: model.quiet ? "bell" : "bell.slash", action: model.onToggleQuiet)
                 FooterButton(title: "Mark all seen", symbol: "checkmark.circle", action: model.onAcknowledgeAll)
+                if model.hasMore {
+                    FooterButton(title: model.showingAll ? "Show fewer" : "View all \(model.sessions.count)",
+                                 symbol: model.showingAll ? "chevron.up" : "list.bullet", action: model.onToggleShowAll)
+                }
                 Spacer()
                 FooterButton(title: "Settings", symbol: "gearshape", action: model.onSettings)
             }
@@ -188,6 +196,14 @@ private struct ExpandedList: View {
             .frame(height: 40)
         }
         .padding(.top, 8)
+    }
+
+    private var rows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(model.listed) { s in
+                SessionRow(session: s) { model.onOpen(s) }
+            }
+        }
     }
 }
 

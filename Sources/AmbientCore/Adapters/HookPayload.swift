@@ -22,6 +22,11 @@ public struct HookPayload: @unchecked Sendable {
         }
     }
 
+    /// The strings in an array, skipping anything else.
+    public func strings(_ key: String) -> [String] {
+        (raw[key] as? [Any])?.compactMap { $0 as? String } ?? []
+    }
+
     public func object(_ key: String) -> HookPayload? {
         (raw[key] as? [String: Any]).map(HookPayload.init)
     }
