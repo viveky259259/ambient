@@ -2,12 +2,13 @@
 
 **Your Mac, aware of your coding agents.**
 
-Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm, glanceable signals on your
+Ambient turns what Claude Code, Codex, Gemini CLI and Antigravity are doing into calm, glanceable signals on your
 desktop, so you can stop babysitting terminals and still never miss the moment an agent needs you.
 
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
   an amber pulse means *it needs you*, green means *done*, red means *it hit an error*. When something
-  happens it blooms open for a few seconds; hover to see every session; click to jump back to it.
+  happens it blooms open for a few seconds; hover to see your latest sessions, or *View all* for every one;
+  click to jump back to it.
 - **Desktop pet** — an optional pixel-art blob, crab or cat that you drag anywhere. It types while your agent works,
   waves when it needs you, cheers when it's done and sleeps when nothing needs you, with a speech bubble saying what's
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
@@ -102,6 +103,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.claude/settings.json` | One hook group per Claude Code event, all running `~/.ambient/bin/ambient hook claude` |
 | `~/.codex/hooks.json` | The same for Codex |
 | `~/.gemini/settings.json` | The same for Gemini CLI (hooks named `ambient`) |
+| `~/.gemini/config/hooks.json` | A hook set named `ambient` for Antigravity, one hook per event running `~/.ambient/bin/ambient hook antigravity <event>`. Antigravity has no permission event, so its sessions never show *needs you* |
 | `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
@@ -132,8 +134,8 @@ is checked against a hash built into Ambient before it's used.
 ## Command line
 
 ```
-ambient install [claude|codex|gemini …] [--dry-run]    Add Ambient's hooks (default: every agent found)
-ambient uninstall [claude|codex|gemini …] [--dry-run]  Remove them, leaving everything else alone
+ambient install [claude|codex|gemini|antigravity …] [--dry-run]    Add Ambient's hooks (default: every agent found)
+ambient uninstall [claude|codex|gemini|antigravity …] [--dry-run]  Remove them, leaving everything else alone
 ambient status [--json]                                The sessions Ambient is tracking
 ambient doctor                                         Check the app, the hooks and the connection
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)

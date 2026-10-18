@@ -181,6 +181,46 @@ private let foreignSettings = """
         #expect(entry?["async"] == nil)
     }
 
+    @Test func antigravityGetsAHookSetNamedAmbientWithTheEventInEachCommand() throws {
+        let box = try Sandbox()
+        try box.write(".gemini/config/hooks.json", "{\n  \"lint\": {\n    \"Stop\": []\n  }\n}\n")
+        try box.mkdir(".gemini/antigravity")
+        try box.installer.install(.antigravity)
+        let root = try JSONValue.parse(box.read(".gemini/config/hooks.json"))
+        #expect(root.objectKeys == ["lint", "ambient"])
+        let set = root["ambient"]
+        #expect(set?.objectKeys == HookInstaller.spec(for: .antigravity).events)
+        let start = set?["SessionStart"]?[0]
+        #expect(start?["command"]?.stringValue?.hasSuffix(#"hook antigravity SessionStart || true"#) == true)
+        #expect(start?["timeout"] == .number("5"))
+        let tool = set?["PreToolUse"]?[0]
+        #expect(tool?["matcher"] == .string("*"))
+        #expect(tool?["hooks"]?[0]?["command"]?.stringValue?.contains("hook antigravity PreToolUse") == true)
+        #expect(box.installer.status(.antigravity) == .installed)
+    }
+
+    @Test func antigravityIsFoundByAnyOfItsDataDirectories() throws {
+        let box = try Sandbox()
+        #expect(box.installer.status(.antigravity) == .agentMissing)
+        try box.mkdir(".gemini/antigravity-ide")
+        #expect(box.installer.status(.antigravity) == .notInstalled)
+        try box.installer.install(.antigravity)
+        #expect(box.installer.status(.antigravity) == .installed)
+    }
+
+    @Test func antigravityStaleHookSetNeedsUpdateAndUninstallRestoresTheFile() throws {
+        let box = try Sandbox()
+        let original = "{\n  \"lint\": {}\n}\n"
+        try box.write(".gemini/config/hooks.json", original)
+        try box.mkdir(".gemini/antigravity")
+        try box.installer.install(.antigravity)
+        let moved = HookInstaller(paths: AmbientPaths(userHome: box.root, home: box.root.appendingPathComponent("elsewhere")))
+        #expect(moved.status(.antigravity) == .partial)
+        try box.installer.uninstall(.antigravity)
+        #expect(try box.read(".gemini/config/hooks.json") == original)
+        #expect(box.installer.status(.antigravity) == .notInstalled)
+    }
+
     @Test func unparsableConfigIsNeverOverwritten() throws {
         let box = try Sandbox()
         try box.write(".claude/settings.json", "{ nope")

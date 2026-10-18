@@ -66,6 +66,17 @@ final class Inbox<T>: @unchecked Sendable {
         #expect(try reply.map(Wire.decode) == .pong(version: "1.2.3"))
     }
 
+    @Test func repliesLargerThanTheSocketBufferArriveWhole() throws {
+        let path = try shortTempDir().appendingPathComponent("s.sock").path
+        let big = Data(repeating: UInt8(ascii: "a"), count: 300_000)
+        let server = UnixSocketServer(path: path)
+        try server.start { _ in big }
+        defer { server.stop() }
+
+        let reply = try UnixSocket.send(Wire.encode(.statusRequest), to: path, timeout: 1, expectReply: true)
+        #expect(reply?.count == big.count)
+    }
+
     @Test func sendingToNobodyFailsFast() throws {
         let path = try shortTempDir().appendingPathComponent("missing.sock").path
         let start = Date()

@@ -2,13 +2,14 @@ import Foundation
 
 /// A coding agent that Ambient can follow.
 public enum AgentKind: String, Codable, CaseIterable, Sendable {
-    case claude, codex, gemini
+    case claude, codex, gemini, antigravity
 
     public var displayName: String {
         switch self {
         case .claude: "Claude"
         case .codex: "Codex"
         case .gemini: "Gemini"
+        case .antigravity: "Antigravity"
         }
     }
 }

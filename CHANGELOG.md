@@ -7,7 +7,15 @@
   blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
   offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
   ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with pause, continue
-  and stop (the keyboard's ⏯ key and AirPods or headphones work too), and say why if it can't. Change it any time in Settings › Voice.
+  and stop (the keyboard's ⏯ key and AirPods or headphones work too), and say why if it can't. Change it any time
+  in Settings › Voice.
+- **Antigravity**: connect Google Antigravity in Settings › Agents (or `ambient install antigravity`). Ambient adds a
+  hook set named `ambient` to `~/.gemini/config/hooks.json` and follows each conversation through prompts, tool calls
+  and finished or failed turns. Antigravity has no permission hook, so its sessions never show *needs you*.
+- **View all**: with more than five sessions, the hovered island offers *View all*, which lists every session and
+  scrolls past ten.
+- **Fix**: `ambient status` and `ambient open` no longer say Ambient isn't running when it tracks many sessions. The
+  app cut off any reply longer than 8 KB.
 
 ## 0.6.0 — 2026-10-10
 

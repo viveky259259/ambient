@@ -17,7 +17,7 @@ public struct SessionTitles: Sendable {
         switch s.agent {
         case .claude: raw = desktopTitle(s.host?.hostSessionId) ?? transcriptTitle(s.sessionId)
         case .codex: raw = codexThreadName(s.sessionId)
-        case .gemini: raw = nil
+        case .gemini, .antigravity: raw = nil
         }
         guard let raw else { return nil }
         let title = Trim.truncate(raw, max: Self.maxLength)
