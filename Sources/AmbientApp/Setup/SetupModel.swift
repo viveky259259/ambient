@@ -23,7 +23,7 @@ final class SetupModel: ObservableObject {
     }
 
     func refresh() {
-        for agent in AgentKind.allCases { agentStates[agent] = installer.status(agent) }
+        for agent in AgentKind.hooked { agentStates[agent] = installer.status(agent) }
         accessibilityTrusted = DockLocator.isTrusted
         notifier.authorizationStatus { [weak self] in self?.notificationStatus = $0 }
         let status = SMAppService.mainApp.status
@@ -43,7 +43,7 @@ final class SetupModel: ObservableObject {
 
     /// Connects every agent on this Mac that isn't connected yet.
     func installAll() {
-        for agent in AgentKind.allCases where [.notInstalled, .partial].contains(agentStates[agent] ?? .notInstalled) {
+        for agent in AgentKind.hooked where [.notInstalled, .partial].contains(agentStates[agent] ?? .notInstalled) {
             install(agent)
         }
     }

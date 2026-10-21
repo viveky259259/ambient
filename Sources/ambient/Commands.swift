@@ -36,12 +36,15 @@ struct Commands {
         \(out.bold("ambient")) \(AmbientVersion.current) — ambient desktop status for coding agents
 
         \(out.bold("Usage"))
-          ambient install [claude|codex|gemini|antigravity ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
-          ambient uninstall [claude|codex|gemini|antigravity ...] [--dry-run] Remove Ambient's hooks, leaving others alone
+          ambient install [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
+          ambient uninstall [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run] Remove Ambient's hooks, leaving others alone
           ambient status [--json]                                 Show the sessions Ambient is tracking
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
-                 [--agent claude|codex|gemini|antigravity] [--project NAME] [--message TEXT]
+                 [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
+          ambient emit <start|working|waiting|done|error|end> --session ID
+                 [--agent NAME] [--cwd PATH] [--tool NAME] [--detail TEXT] [--message TEXT]
+                                                                  Drive Ambient from any agent or script
           ambient demo                                            Walk through every state
           ambient open [PROJECT|SESSION]                          Jump to a session's chat, tab or window (default: the most urgent)
           ambient ack                                             Mark every finished session as seen
@@ -56,11 +59,11 @@ struct Commands {
 
     private func agents(from args: [String]) -> [AgentKind]? {
         let names = args.filter { !$0.hasPrefix("--") }
-        if names.isEmpty || names == ["all"] { return AgentKind.allCases }
+        if names.isEmpty || names == ["all"] { return AgentKind.hooked }
         var result: [AgentKind] = []
         for name in names {
-            guard let agent = AgentKind(rawValue: name.lowercased()) else {
-                out.error("Unknown agent '\(name)'. Use claude, codex, gemini or antigravity.")
+            guard let agent = AgentKind(rawValue: name.lowercased()), agent != .custom else {
+                out.error("Unknown agent '\(name)'. Use \(AgentKind.hooked.map(\.rawValue).joined(separator: ", ")).")
                 return nil
             }
             result.append(agent)
@@ -170,7 +173,7 @@ struct Commands {
         for s in sessions {
             let clock = Describe.clock(s, now: now) ?? ""
             let title = Trim.truncate(Describe.title(s), max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
-            let agent = s.agent.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
+            let agent = s.agent.rawValue.padding(toLength: 11, withPad: " ", startingAt: 0)
             print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(clock))")
         }
         return 0
@@ -225,7 +228,7 @@ struct Commands {
         }
 
         let installer = HookInstaller(paths: paths)
-        let states = AgentKind.allCases.map { ($0, installer.status($0)) }
+        let states = AgentKind.hooked.map { ($0, installer.status($0)) }
         if !states.contains(where: { $0.1 == .installed || $0.1 == .partial }) {
             problems += 1
             out.error("No agent is connected — run `ambient install`")
@@ -245,7 +248,7 @@ struct Commands {
                 out.skip("\(name): not found")
             case let .unreadable(reason):
                 problems += 1
-                out.error("\(name): can't read \(tilde(installer.configURL(agent).path)): \(reason)")
+                out.error("\(name): can't read \(tilde(installer.configURL(agent)?.path ?? "")): \(reason)")
             }
         }
 
@@ -271,6 +274,7 @@ struct Commands {
     }
 
     private func emit(_ args: [String]) -> Int32 {
+        if let session = option("--session", in: args) { return emitReal(args, session: session) }
         guard let name = args.first, let mood = Demo.mood(named: name) else {
             out.error("Usage: ambient emit <working|waiting|done|error|idle> [--agent A] [--project P] [--message M]")
             return 64
@@ -280,6 +284,25 @@ struct Commands {
         let events = Demo.events(for: mood, agent: agent, project: project, message: option("--message", in: args),
                                  host: HostCapture.current())
         return send(events) ? 0 : 1
+    }
+
+    /// A real session's event from any agent or script, through the same adapter as `ambient hook custom`.
+    /// The return address is wherever the command runs: its terminal tab, tmux pane or app.
+    private func emitReal(_ args: [String], session: String) -> Int32 {
+        guard let event = args.first, CustomAdapter.events.contains(event) else {
+            out.error("Usage: ambient emit <\(CustomAdapter.events.joined(separator: "|"))> --session ID [--agent NAME] [--cwd PATH] [--tool NAME] [--detail TEXT] [--message TEXT]")
+            return 64
+        }
+        var payload: [String: Any] = ["session_id": session, "event": event,
+                                      "cwd": option("--cwd", in: args) ?? FileManager.default.currentDirectoryPath]
+        for (flag, key) in [("--agent", "agent"), ("--tool", "tool"), ("--detail", "detail"), ("--message", "message"), ("--reason", "reason")] {
+            if let value = option(flag, in: args) { payload[key] = value }
+        }
+        guard let e = AdapterRegistry.event(agent: .custom, payload: HookPayload(payload), eventHint: nil, host: HostCapture.current()) else {
+            out.error("That event has no effect.")
+            return 64
+        }
+        return send([e]) ? 0 : 1
     }
 
     private func demo() -> Int32 {

@@ -47,6 +47,8 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var acknowledged: Bool
     /// The name the session has in its agent's own UI (Claude chat title, Codex thread name), when known.
     public var title: String?
+    /// A custom agent's own name, e.g. "Aider".
+    public var agentName: String?
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
 
@@ -65,6 +67,9 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var project: String? {
         AgentEvent(agent: agent, sessionId: sessionId, cwd: cwd, kind: .sessionStarted).project
     }
+
+    /// What to call the agent: a custom agent's own name, or the agent's.
+    public var agentLabel: String { agentName ?? agent.displayName }
 
     public var mood: Mood {
         switch activity {

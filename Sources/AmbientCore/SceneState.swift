@@ -123,7 +123,7 @@ public struct SceneState: Equatable, Sendable {
     }
 
     private static func inhabitant(_ s: Session, slot: Int, now: Date, freeText: Bool) -> SceneInhabitant {
-        var headline = "\(s.agent.displayName) · \(Describe.shortActivity(s.activity))"
+        var headline = "\(s.agentLabel) · \(Describe.shortActivity(s.activity))"
         if let clock = Describe.clock(s, now: now, compact: true) { headline += " · \(clock)" }
         // Short enough that a label never reaches past about a quarter of the screen.
         var place = Trim.truncate(Describe.title(s), max: 36)

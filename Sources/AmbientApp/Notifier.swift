@@ -58,7 +58,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         guard let center else { return }
         let content = UNMutableNotificationContent()
         let title = Describe.title(s)
-        let agent = s.agent.displayName
+        let agent = s.agentLabel
         switch s.activity {
         case let .waiting(reason, message):
             content.title = reason == "permission" ? "\(title) needs your permission" : "\(title) has a question"

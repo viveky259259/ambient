@@ -333,7 +333,7 @@ private struct PetSessionRow: View {
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    AgentTag(agent: session.agent)
+                    AgentTag(agent: session.agent, label: session.agentLabel)
                 }
                 Text(Describe.activity(session.activity))
                     .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)

@@ -4,6 +4,8 @@ import Foundation
 enum Limits {
     static let detail = 80
     static let message = 160
+    static let sessionId = 128
+    static let agentName = 24
 }
 
 /// Turns one agent's hook payloads into normalized events.
@@ -11,11 +13,16 @@ protocol AgentAdapter {
     static func normalize(event: String, payload: HookPayload) -> EventKind?
     static func sessionId(_ payload: HookPayload) -> String?
     static func cwd(_ payload: HookPayload) -> String?
+    static func agentName(_ payload: HookPayload) -> String?
+    /// The event's name, from the payload or else from the hook command.
+    static func eventName(_ payload: HookPayload, hint: String?) -> String?
 }
 
 extension AgentAdapter {
     static func sessionId(_ payload: HookPayload) -> String? { payload.string("session_id") }
     static func cwd(_ payload: HookPayload) -> String? { payload.string("cwd") }
+    static func agentName(_ payload: HookPayload) -> String? { nil }
+    static func eventName(_ payload: HookPayload, hint: String?) -> String? { payload.string("hook_event_name") ?? hint }
 }
 
 public enum AdapterRegistry {
@@ -24,22 +31,27 @@ public enum AdapterRegistry {
     public static func event(agent: AgentKind, payload: HookPayload, eventHint: String?,
                              now: Date = Date(), host: HostInfo? = nil) -> AgentEvent? {
         let adapter: any AgentAdapter.Type = switch agent {
-        case .claude, .codex: ClaudeAdapter.self
+        // OpenCode's events reach Ambient through its plugin, which speaks Claude's format.
+        case .claude, .codex, .opencode: ClaudeAdapter.self
         case .gemini: GeminiAdapter.self
         case .antigravity: AntigravityAdapter.self
+        case .cursor: CursorAdapter.self
+        case .copilot: CopilotAdapter.self
+        case .custom: CustomAdapter.self
         }
         guard let sessionId = adapter.sessionId(payload), !sessionId.isEmpty,
-              let name = payload.string("hook_event_name") ?? eventHint,
+              let name = adapter.eventName(payload, hint: eventHint),
               let kind = adapter.normalize(event: name, payload: payload) else { return nil }
-        return AgentEvent(agent: agent, sessionId: sessionId, cwd: adapter.cwd(payload),
-                          kind: kind, timestamp: now, host: host)
+        return AgentEvent(agent: agent, sessionId: Trim.truncate(sessionId, max: Limits.sessionId),
+                          cwd: adapter.cwd(payload), kind: kind, timestamp: now, host: host,
+                          agentName: adapter.agentName(payload))
     }
 
     /// What the hook prints on stdout. Gemini and Antigravity parse it as JSON; Antigravity requires a
     /// decision before a tool runs and when a turn stops, and "allow" defers to its own permission rules.
     public static func reply(agent: AgentKind, event: String?) -> String? {
         switch agent {
-        case .claude, .codex: nil
+        case .claude, .codex, .cursor, .copilot, .opencode, .custom: nil
         case .gemini: "{}\n"
         case .antigravity: event == "PreToolUse" || event == "Stop" ? #"{"decision":"allow"}"# + "\n" : "{}\n"
         }
@@ -166,11 +178,120 @@ enum AntigravityAdapter: AgentAdapter {
             return .toolFinished(name: p.object("toolCall")?.string("name") ?? "tool", failed: failed)
         case "Stop":
             let error = Trim.clean(p.firstString(["error"]), max: Limits.message)
-            switch p.string("terminationReason") {
+            // The docs spell reasons in lowercase; agy 1.4 sends constants such as NO_TOOL_CALL.
+            switch p.string("terminationReason")?.lowercased() {
             case "error": return .turnFailed(message: error)
             case "max_steps_exceeded": return .turnFailed(message: error ?? "Reached its step limit")
             default: return error.map { .turnFailed(message: $0) } ?? .turnCompleted(summary: nil)
             }
+        default:
+            return nil
+        }
+    }
+}
+
+/// Cursor's agent, in the editor and in cursor-agent where its hooks fire. Ambient registers only hooks that
+/// can't block or approve anything: Cursor treats a before-tool hook's reply as a permission decision.
+/// Without one, a tool shows up when it finishes.
+enum CursorAdapter: AgentAdapter {
+    static func sessionId(_ p: HookPayload) -> String? { p.string("conversation_id") ?? p.string("session_id") }
+    static func cwd(_ p: HookPayload) -> String? { p.strings("workspace_roots").first ?? p.string("cwd") }
+
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        switch event {
+        case "sessionStart":
+            return .sessionStarted
+        case "beforeSubmitPrompt":
+            return .promptSubmitted
+        case "postToolUse":
+            return .toolFinished(name: p.string("tool_name") ?? "tool", failed: false)
+        case "postToolUseFailure":
+            return .toolFinished(name: p.string("tool_name") ?? "tool", failed: true)
+        case "preCompact":
+            return .compactStarted
+        case "stop":
+            return p.string("status") == "error" ? .turnFailed(message: nil) : .turnCompleted(summary: nil)
+        case "sessionEnd":
+            return .sessionEnded
+        default:
+            return nil
+        }
+    }
+}
+
+/// GitHub Copilot CLI. Its camelCase payloads don't always name the event, so each hook command passes it.
+enum CopilotAdapter: AgentAdapter {
+    static func sessionId(_ p: HookPayload) -> String? { p.string("sessionId") ?? p.string("session_id") }
+
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        // The command passes "notification"; the payload itself says "Notification".
+        switch event.lowercased() {
+        case "sessionstart":
+            return .sessionStarted
+        case "userpromptsubmitted":
+            return .promptSubmitted
+        case "pretooluse":
+            let name = p.string("toolName") ?? p.string("tool_name") ?? "tool"
+            let input = p.objectOrJSON("toolArgs") ?? p.object("tool_input")
+            return .toolStarted(name: name, detail: ToolNames.detail(name: name, input: input))
+        case "posttooluse":
+            return .toolFinished(name: p.string("toolName") ?? p.string("tool_name") ?? "tool", failed: false)
+        case "posttoolusefailure":
+            return .toolFinished(name: p.string("toolName") ?? p.string("tool_name") ?? "tool", failed: true)
+        case "agentstop":
+            return .turnCompleted(summary: nil)
+        case "erroroccurred":
+            let message = Trim.clean(p.object("error")?.string("message") ?? p.string("error"), max: Limits.message)
+            if p.raw["recoverable"] as? Bool == true { return message.map { .notice(message: $0) } }
+            return .turnFailed(message: message)
+        case "subagentstart":
+            return .subagentStarted
+        case "subagentstop":
+            return .subagentFinished
+        case "precompact":
+            return .compactStarted
+        case "notification":
+            let message = Trim.clean(p.string("message"), max: Limits.message)
+            switch p.string("notification_type") {
+            case "permission_prompt": return .needsInput(reason: "permission", message: message)
+            case "elicitation_dialog": return .needsInput(reason: "question", message: message)
+            // The turn's end arrives as agentStop; shell completions are noise.
+            case "agent_completed", "agent_idle", "shell_completed", "shell_detached_completed": return nil
+            default: return message.map { .notice(message: $0) }
+            }
+        case "sessionend":
+            return .sessionEnded
+        default:
+            return nil
+        }
+    }
+}
+
+/// Any other agent or script. The event JSON is documented in the README under "Any other agent":
+/// `{"session_id", "event", "agent", "cwd", "tool", "detail", "message", "reason"}`, where `event` is one of
+/// start, working, waiting, done, error or end (idle is an alias for end).
+public enum CustomAdapter: AgentAdapter {
+    public static let events = ["start", "working", "waiting", "done", "error", "end", "idle"]
+
+    static func agentName(_ p: HookPayload) -> String? { Trim.clean(p.string("agent"), max: Limits.agentName) }
+    static func eventName(_ p: HookPayload, hint: String?) -> String? { p.string("event") ?? hint }
+
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        let message = Trim.clean(p.string("message"), max: Limits.message)
+        switch event {
+        case "start":
+            return .sessionStarted
+        case "working":
+            guard let tool = Trim.clean(p.string("tool"), max: Limits.detail) else { return .promptSubmitted }
+            return .toolStarted(name: tool, detail: Trim.clean(p.string("detail"), max: Limits.detail))
+        case "waiting":
+            return .needsInput(reason: p.string("reason") == "permission" ? "permission" : "question", message: message)
+        case "done":
+            return .turnCompleted(summary: message)
+        case "error":
+            return .turnFailed(message: message)
+        case "end", "idle":
+            return .sessionEnded
         default:
             return nil
         }

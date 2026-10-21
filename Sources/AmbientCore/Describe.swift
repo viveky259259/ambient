@@ -33,7 +33,7 @@ public enum Describe {
 
     /// The chat or thread title when known, else the project, else the agent's name.
     public static func title(_ s: Session) -> String {
-        s.title ?? s.project ?? s.agent.displayName
+        s.title ?? s.project ?? s.agentLabel
     }
 
     /// The project folder, when the title is something else and the folder adds information.

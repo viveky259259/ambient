@@ -10,6 +10,16 @@ private func ev(_ kind: EventKind, at seconds: TimeInterval, session: String = "
 }
 
 @Suite struct SessionStoreTests {
+    @Test func aCustomAgentKeepsItsName() {
+        let store = SessionStore()
+        var e = ev(.promptSubmitted, at: 0, agent: .custom)
+        e.agentName = "Aider"
+        store.apply(e)
+        store.apply(ev(.turnCompleted(summary: nil), at: 5, agent: .custom))
+        #expect(store.sessions.first?.agentLabel == "Aider")
+        #expect(Session(agent: .codex, sessionId: "x", at: t0).agentLabel == "Codex")
+    }
+
     @Test func aFullTurnEndsDone() {
         let store = SessionStore()
         store.apply(ev(.sessionStarted, at: 0))

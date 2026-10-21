@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **More agents (beta)**: connect **Cursor**, **GitHub Copilot CLI** and **OpenCode** in Settings › Agents or with
+  `ambient install`, and `ambient doctor` checks each one. They're marked beta until they've run against the
+  real agents; Settings › Agents and the README say what each one shows.
+- **Antigravity**: checked against a real `agy` 1.4 session: sessions, prompts, tools and finished turns all arrive.
+  Turns that end with reasons spelled in capitals (as agy sends them) are now read correctly. Copilot CLI gets a hook file of Ambient's own
+  (`~/.copilot/hooks/ambient.json`), OpenCode a small plugin (`~/.config/opencode/plugins/ambient.js`), and both
+  show *needs you* for permission prompts. Cursor's hooks go next to yours in `~/.cursor/hooks.json`; Ambient uses
+  only hooks that can't block or approve anything, so Cursor sessions show tools as they finish and never show
+  *needs you*.
+- **Any other agent**: `ambient emit <start|working|waiting|done|error|end> --session ID [--agent NAME]` and
+  `ambient hook custom` (one JSON object per event) let any agent or script drive the island, with its own name,
+  a return address to the terminal it runs in, and a session that ends with its process. The README documents
+  the fields, with an example for Aider.
 - **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌥⎋ (Option-Escape; change it in Settings › Voice), or choose Services › Speak
   with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
   blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the

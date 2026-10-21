@@ -2,7 +2,8 @@
 
 **Your Mac, aware of your coding agents.**
 
-Ambient turns what Claude Code, Codex, Gemini CLI and Antigravity are doing into calm, glanceable signals on your
+Ambient turns what Claude Code, Codex, Gemini CLI, Antigravity, Cursor, Copilot CLI and OpenCode (or any agent or
+script you point at it) are doing into calm, glanceable signals on your
 desktop, so you can stop babysitting terminals and still never miss the moment an agent needs you.
 
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
@@ -58,6 +59,28 @@ Or from a terminal, once the app has run once:
 
 **Codex** asks you to trust new hooks: run `/hooks` inside Codex once and approve Ambient's.
 
+### Supported agents
+
+| Agent | How Ambient connects | What Ambient sees |
+| --- | --- | --- |
+| Claude Code (terminal, editors, Claude desktop app) | Hooks in `~/.claude/settings.json` | Everything, including *needs you* |
+| Codex (CLI and the Codex app) | Hooks in `~/.codex/hooks.json`, after you approve them with `/hooks` | Everything, including *needs you* |
+| Gemini CLI | Hooks in `~/.gemini/settings.json` | Everything, including *needs you* |
+| Antigravity | A hook set in `~/.gemini/config/hooks.json` | Prompts, tools, finished or failed turns. Never *needs you*: Antigravity has no permission hook. Tested with the `agy` CLI |
+| Cursor, the editor's agent (beta) | Hooks in `~/.cursor/hooks.json` | Prompts, tools as they finish, finished turns, compaction. Never *needs you*, see below |
+| GitHub Copilot CLI (beta) | Its own hook file, `~/.copilot/hooks/ambient.json` | Prompts, tools, *needs you* for permission prompts and questions, subagents, errors, compaction |
+| OpenCode (beta) | A plugin, `~/.config/opencode/plugins/ambient.js` | Prompts, tools, *needs you* for permission requests, finished or failed turns, compaction |
+| Anything else | [`ambient emit` or `ambient hook custom`](#any-other-agent) | Whatever it reports |
+
+*Beta* connections follow each agent's documented hooks but haven't yet been run against the agent itself.
+
+Cursor reads the reply of a before-tool hook as a permission decision, so Ambient registers none: it only
+uses hooks that can't block or approve anything. Tools show up when they finish, and Cursor's permission
+prompts don't reach Ambient. The `cursor-agent` CLI fires only some of Cursor's hooks so far.
+
+Aider, Amp and other agents without command hooks can drive Ambient themselves; see
+[Any other agent](#any-other-agent).
+
 Requirements: macOS 14 or later. Designed for notched MacBooks; on other displays the island sits at the
 top center of the menu bar.
 
@@ -68,7 +91,8 @@ agent hook ──▶ ambient hook <agent> ──▶ ~/.ambient/ambient.sock ─�
 ```
 
 Ambient registers a hook for each lifecycle event of your agents (prompt submitted, tool started and
-finished, permission requested, turn finished or failed, compaction, subagents, session start and end).
+finished, permission requested, turn finished or failed, compaction, subagents, session start and end), or
+for OpenCode, which has no command hooks, a small plugin that does the same.
 The hook runs the bundled `ambient` command, which reads the event, reduces it to a few short fields,
 sends one line over a private Unix socket, and exits — in about 15 ms, always with success, and in the
 background for Claude Code and Codex, so it never slows your agent down. If Ambient isn't running,
@@ -103,12 +127,53 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.codex/hooks.json` | The same for Codex |
 | `~/.gemini/settings.json` | The same for Gemini CLI (hooks named `ambient`) |
 | `~/.gemini/config/hooks.json` | A hook set named `ambient` for Antigravity, one hook per event running `~/.ambient/bin/ambient hook antigravity <event>`. Antigravity has no permission event, so its sessions never show *needs you* |
+| `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
+| `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
+| `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
 | `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
 permissions, and writes a backup to `~/.ambient/backups/` first. `ambient uninstall` removes only
 Ambient's entries.
+
+### Any other agent
+
+Anything that can run a command can drive the island: another agent, a build script, a long job. Give each
+session an id and send its state as it changes:
+
+```bash
+ambient emit start   --session nightly --agent Build
+ambient emit working --session nightly --tool make --detail "make release"
+make release && ambient emit done  --session nightly --message "Release built" \
+             || ambient emit error --session nightly --message "make failed"
+```
+
+Or pipe one JSON object per event to `ambient hook custom`, the way agent hooks do:
+
+```bash
+echo '{"session_id":"nightly","event":"done","agent":"Build","message":"Release built"}' | ambient hook custom
+```
+
+| Field (`emit` flag) | Meaning |
+| --- | --- |
+| `session_id` (`--session`) | Required. Any id up to 128 characters, stable for the session |
+| `event` (first argument) | `start`, `working`, `waiting`, `done`, `error`, or `end` (`idle` means `end`) |
+| `agent` (`--agent`) | The name shown on the island, up to 24 characters. Default: *Agent* |
+| `cwd` (`--cwd`) | The project folder; the island shows its name. `emit` uses the current folder |
+| `tool`, `detail` (`--tool`, `--detail`) | With `working`: what it's running, e.g. `make` and `make release` |
+| `message` (`--message`) | With `waiting`, `done` or `error`: up to 160 characters for the island and the banner |
+| `reason` (`--reason`) | With `waiting`: `permission`, or anything else for a question |
+
+The return address is wherever the command runs: clicking the session brings back that terminal tab, tmux
+pane or app, and the session disappears once the process that ran the command exits (the nearest one that
+isn't a shell). Fields may be added to this interface but are never renamed or removed.
+
+For example, Aider can say when it's waiting for you:
+
+```bash
+aider --notifications --notifications-command 'ambient emit done --session "aider-$PPID" --agent Aider --message "Aider is waiting for you"'
+```
 
 ### Privacy
 
@@ -133,17 +198,19 @@ is checked against a hash built into Ambient before it's used.
 ## Command line
 
 ```
-ambient install [claude|codex|gemini|antigravity …] [--dry-run]    Add Ambient's hooks (default: every agent found)
-ambient uninstall [claude|codex|gemini|antigravity …] [--dry-run]  Remove them, leaving everything else alone
+ambient install [AGENT …] [--dry-run]                  Add Ambient's hooks (default: every agent found)
+ambient uninstall [AGENT …] [--dry-run]                Remove them, leaving everything else alone
 ambient status [--json]                                The sessions Ambient is tracking
 ambient doctor                                         Check the app, the hooks and the connection
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
+ambient emit <start|working|waiting|done|error|end> --session ID   Drive a session from any agent or script
 ambient demo                                           Walk through every state
 ambient open [PROJECT|SESSION]                         Jump to a session's chat, tab or window (default: most urgent)
 ambient ack                                            Mark every finished session as seen
 ```
 
-Add `~/.ambient/bin` to your `PATH` to use it anywhere. Set `AMBIENT_DEBUG=1` in an agent's environment to
+`AGENT` is `claude`, `codex`, `gemini`, `antigravity`, `cursor`, `copilot` or `opencode`. Add `~/.ambient/bin`
+to your `PATH` to use it anywhere. Set `AMBIENT_DEBUG=1` in an agent's environment to
 log every hook to `~/.ambient/logs/hook.log`.
 
 ## Troubleshooting

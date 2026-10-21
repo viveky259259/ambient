@@ -2,7 +2,9 @@ import Foundation
 
 /// A coding agent that Ambient can follow.
 public enum AgentKind: String, Codable, CaseIterable, Sendable {
-    case claude, codex, gemini, antigravity
+    case claude, codex, gemini, antigravity, cursor, copilot, opencode
+    /// Any other agent or script, driving Ambient through `ambient emit --session` or `ambient hook custom`.
+    case custom
 
     public var displayName: String {
         switch self {
@@ -10,6 +12,21 @@ public enum AgentKind: String, Codable, CaseIterable, Sendable {
         case .codex: "Codex"
         case .gemini: "Gemini"
         case .antigravity: "Antigravity"
+        case .cursor: "Cursor"
+        case .copilot: "Copilot"
+        case .opencode: "OpenCode"
+        case .custom: "Agent"
+        }
+    }
+
+    /// The agents Ambient connects by installing hooks; custom agents connect themselves.
+    public static let hooked: [AgentKind] = allCases.filter { $0 != .custom }
+
+    /// Connected from the agent's documented hooks, but not yet run against the agent itself.
+    public var isBeta: Bool {
+        switch self {
+        case .cursor, .copilot, .opencode: true
+        case .claude, .codex, .gemini, .antigravity, .custom: false
         }
     }
 }
@@ -80,15 +97,18 @@ public struct AgentEvent: Codable, Equatable, Sendable {
     public var kind: EventKind
     public var timestamp: Date
     public var host: HostInfo?
+    /// A custom agent's own name, e.g. "Aider".
+    public var agentName: String?
 
     public init(agent: AgentKind, sessionId: String, cwd: String?, kind: EventKind,
-                timestamp: Date = Date(), host: HostInfo? = nil) {
+                timestamp: Date = Date(), host: HostInfo? = nil, agentName: String? = nil) {
         self.agent = agent
         self.sessionId = sessionId
         self.cwd = cwd
         self.kind = kind
         self.timestamp = timestamp
         self.host = host
+        self.agentName = agentName
     }
 
     /// The project the session works in: the last component of its working directory.

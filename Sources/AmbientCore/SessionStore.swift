@@ -49,6 +49,7 @@ public final class SessionStore {
         let previous = existing?.activity
         if let cwd = e.cwd, !cwd.isEmpty { s.cwd = cwd }
         if let host = e.host { s.host = host }
+        if let name = e.agentName { s.agentName = name }
         s.lastEventAt = e.timestamp
 
         if e.kind == .sessionEnded {

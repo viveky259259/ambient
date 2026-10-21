@@ -21,6 +21,18 @@ public enum ToolNames {
         "exec_command": "Shell",
         "local_shell": "Shell",
         "update_plan": "Plan",
+        // Copilot CLI
+        "bash": "Shell",
+        "view": "Read",
+        "create": "Write",
+        "edit": "Edit",
+        // OpenCode
+        "read": "Read",
+        "write": "Write",
+        "grep": "Grep",
+        "webfetch": "Fetch",
+        "todowrite": "Plan",
+        "task": "Task",
         // Antigravity
         "run_command": "Shell",
         "view_file": "Read",
@@ -58,7 +70,7 @@ public enum ToolNames {
         if let url = input.firstString(["url", "Url"]) {
             return Trim.clean(URL(string: url)?.host ?? url, max: 80)
         }
-        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt", "Query", "Pattern"]), max: 80)
+        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt", "Query", "Pattern", "toolAction"]), max: 80)
     }
 
     private static func basename(_ path: String) -> String {

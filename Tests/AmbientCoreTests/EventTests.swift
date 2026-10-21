@@ -43,6 +43,11 @@ import Testing
         #expect(AgentKind.claude.displayName == "Claude")
         #expect(AgentKind.codex.displayName == "Codex")
         #expect(AgentKind.gemini.displayName == "Gemini")
+        #expect(AgentKind.custom.displayName == "Agent")
+    }
+
+    @Test func connectionsNotYetRunAgainstTheRealAgentAreBeta() {
+        #expect(AgentKind.hooked.filter(\.isBeta) == [.cursor, .copilot, .opencode])
     }
 }
 

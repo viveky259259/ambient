@@ -85,6 +85,10 @@ public enum Palette {
     public static let codex = RGB(hex: "#10A37F")
     public static let gemini = RGB(hex: "#4F8DF7")
     public static let antigravity = RGB(hex: "#A371F7")
+    public static let cursor = RGB(hex: "#39C5CF")
+    public static let copilot = RGB(hex: "#DB61A2")
+    public static let opencode = RGB(hex: "#9DA5FF")
+    public static let custom = RGB(hex: "#B4BCC6")
     public static let waiting = RGB(hex: "#F5A524")
     public static let done = RGB(hex: "#3FB950")
     public static let error = RGB(hex: "#F85149")
@@ -96,6 +100,10 @@ public enum Palette {
         case .codex: codex
         case .gemini: gemini
         case .antigravity: antigravity
+        case .cursor: cursor
+        case .copilot: copilot
+        case .opencode: opencode
+        case .custom: custom
         }
     }
 

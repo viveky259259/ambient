@@ -112,9 +112,10 @@ private struct WingLabel: View {
 
 struct AgentTag: View {
     let agent: AgentKind
+    let label: String
 
     var body: some View {
-        Text(agent.displayName.uppercased())
+        Text(label.uppercased())
             .font(.system(size: 8.5, weight: .bold, design: .rounded))
             .tracking(0.6)
             .foregroundStyle(Palette.agent(agent).color)
@@ -137,7 +138,7 @@ private struct BloomCard: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    AgentTag(agent: session.agent)
+                    AgentTag(agent: session.agent, label: session.agentLabel)
                 }
                 Text(Describe.activity(session.activity))
                     .font(.system(size: 11.5))
@@ -219,7 +220,7 @@ private struct SessionRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(Describe.title(session)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
-                        AgentTag(agent: session.agent)
+                        AgentTag(agent: session.agent, label: session.agentLabel)
                         if session.subagents > 0 {
                             Text("+\(session.subagents) agents").font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                         }

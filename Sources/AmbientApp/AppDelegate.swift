@@ -262,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Repairs hooks the user installed before, e.g. after an update changed the events.
     private func healHooks() {
         let installer = HookInstaller(paths: paths)
-        for agent in AgentKind.allCases where installer.status(agent) == .partial {
+        for agent in AgentKind.hooked where installer.status(agent) == .partial {
             do {
                 try installer.install(agent)
                 log.notice("Updated \(agent.rawValue) hooks")
