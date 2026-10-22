@@ -18,6 +18,8 @@ struct Commands {
         case "demo": return demo()
         case "ack": return ack()
         case "open": return open(rest)
+        case "tasks": return tasks(rest)
+        case "task": return task(rest)
         case "link": return link() ? 0 : 1
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
@@ -39,6 +41,10 @@ struct Commands {
           ambient install [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
           ambient uninstall [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run] Remove Ambient's hooks, leaving others alone
           ambient status [--json]                                 Show the sessions Ambient is tracking
+          ambient tasks [--json]                                  Show the agent task board
+          ambient task upsert --title TEXT [--id ID] [--status STATUS] [--project NAME] [--session SID]
+                                                                  Create or update a board task (STATUS: backlog|inProgress|blocked|done|cancelled)
+          ambient task open ID                                    Jump to a task's linked session
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
@@ -197,6 +203,90 @@ struct Commands {
             out.error("Ambient isn't running.")
             return 1
         }
+        return 0
+    }
+
+    // MARK: - Tasks
+
+    private func tasks(_ args: [String]) -> Int32 {
+        guard case let .tasks(list)? = request(.listTasks) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        if args.contains("--json") {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.dateEncodingStrategy = .iso8601
+            if let data = try? encoder.encode(list) { print(String(decoding: data, as: UTF8.self)) }
+            return 0
+        }
+        if list.isEmpty {
+            print("\(out.bold("Board")) · no tasks")
+            return 0
+        }
+        print("\(out.bold("Board")) · \(list.count) task\(list.count == 1 ? "" : "s")")
+        for t in list {
+            let status = t.status.rawValue.padding(toLength: 10, withPad: " ", startingAt: 0)
+            let project = (t.project ?? "—").padding(toLength: 16, withPad: " ", startingAt: 0)
+            let agents = t.agents.map(\.rawValue).joined(separator: ",")
+            print("  \(status) \(project) \(Trim.truncate(t.title, max: 40))  \(out.dim(agents.isEmpty ? "—" : agents))  \(out.dim(t.id))")
+        }
+        return 0
+    }
+
+    private func task(_ args: [String]) -> Int32 {
+        guard let sub = args.first else {
+            out.error("Usage: ambient task upsert … | ambient task open ID")
+            return 64
+        }
+        let rest = Array(args.dropFirst())
+        switch sub {
+        case "upsert": return taskUpsert(rest)
+        case "open":
+            guard let id = rest.first else {
+                out.error("Usage: ambient task open ID")
+                return 64
+            }
+            guard case let .opened(session)? = request(.openTask(id)) else {
+                out.error("Ambient isn't running.")
+                return 1
+            }
+            guard session != nil else {
+                out.error("No live session linked to task '\(id)'.")
+                return 1
+            }
+            return 0
+        default:
+            out.error("Unknown task command '\(sub)'. Use upsert or open.")
+            return 64
+        }
+    }
+
+    private func taskUpsert(_ args: [String]) -> Int32 {
+        func option(_ name: String) -> String? {
+            guard let i = args.firstIndex(of: name), args.indices.contains(i + 1) else { return nil }
+            return args[i + 1]
+        }
+        guard let title = option("--title"), !title.isEmpty else {
+            out.error("Usage: ambient task upsert --title TEXT [--id ID] [--status STATUS] [--project NAME] [--session SID]")
+            return 64
+        }
+        let statusName = option("--status") ?? "backlog"
+        guard let status = TaskStatus(rawValue: statusName) else {
+            out.error("Unknown status '\(statusName)'. Use backlog, inProgress, blocked, done or cancelled.")
+            return 64
+        }
+        var draft = AgentTask(id: option("--id") ?? AgentTask.makeID(), title: title, status: status,
+                              project: option("--project"), manual: true)
+        if let sid = option("--session") {
+            draft.sessionIds = [sid]
+            draft.lastSessionId = sid
+        }
+        guard case let .upsertTaskResult(saved)? = request(.upsertTask(draft)) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        out.success("Task \(saved.id): \(saved.status.rawValue) — \(saved.title)")
         return 0
     }
 

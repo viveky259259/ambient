@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let paths = AmbientPaths.current()
     private let prefs = Preferences.shared
     private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile, dayURL: paths.dayFile,
+                                      tasksURL: paths.tasksFile,
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
     private var island: IslandController?
@@ -123,7 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func showSetup() {
         if setupWindow == nil, let notifier, let wallpaper {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
+            let view = SettingsView(setup: setup, prefs: prefs, model: model, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },

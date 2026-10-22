@@ -6,6 +6,7 @@ import Combine
 final class AppModel: ObservableObject {
     @Published private(set) var sessions: [Session] = []
     @Published private(set) var mood: Mood = .idle
+    @Published private(set) var tasks: [AgentTask] = []
     /// Today's story, for the living wallpaper.
     @Published private(set) var day = DayLog(now: Date())
     /// Every applied event and sweep result, for surfaces that react to changes.
@@ -15,30 +16,42 @@ final class AppModel: ObservableObject {
     let snapshot = Snapshot()
     private let focuser = Focuser()
     private let store = SessionStore()
+    private let taskStore = TaskStore()
     private let stateURL: URL?
     private let dayURL: URL?
+    private let tasksURL: URL?
     private var daySaveWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
+    private var taskSaveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private let titles: SessionTitles?
     private let titleQueue = DispatchQueue(label: "com.viveky259259.Ambient.titles", qos: .utility)
     private var titleCheckedAt: [String: Date] = [:]
 
-    init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, titles: SessionTitles? = nil) {
+    init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, titles: SessionTitles? = nil) {
         self.prefs = prefs
         self.stateURL = stateURL
         self.dayURL = dayURL
+        self.tasksURL = tasksURL
         self.titles = titles
     }
 
     func start() {
         if let dayURL, let saved = DayLogFile.load(from: dayURL) { day = saved }
         rollOverDay()
+        if let tasksURL {
+            taskStore.load(TaskFile.load(from: tasksURL))
+            publishTasks(save: false)
+        }
         if let stateURL {
             store.load(StateFile.load(from: stateURL))
             store.sweep(now: Date())
             publish(save: false)
+            for s in store.sessions {
+                _ = taskStore.observe(SessionChange(session: s, previous: nil, event: .sessionStarted, removed: false))
+            }
+            publishTasks(save: false)
         }
         refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
@@ -55,6 +68,7 @@ final class AppModel: ObservableObject {
         publish()
         transitions.send(t)
         record(t)
+        observeTask(t)
         refreshTitles()
         if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
@@ -74,19 +88,45 @@ final class AppModel: ObservableObject {
         acknowledge(session.id)
     }
 
+    /// Opens the most urgent linked session for a board task.
+    @discardableResult
+    func openTask(_ id: String) -> Session? {
+        guard let task = taskStore.task(id: id) else { return nil }
+        let linked = task.sessionIds.compactMap { store.session(id: $0) }
+        let match = SessionMatcher.find(nil, in: linked.isEmpty ? store.sessions.filter { task.sessionIds.contains($0.id) } : linked)
+            ?? linked.first
+            ?? task.lastSessionId.flatMap { store.session(id: $0) }
+        guard let match else { return nil }
+        open(match)
+        return match
+    }
+
     func acknowledge(_ id: String) {
         guard store.acknowledge(sessionID: id), let s = store.session(id: id) else { return }
         publish()
-        transitions.send(SessionChange(session: s, previous: s.activity, event: nil, removed: false))
+        let change = SessionChange(session: s, previous: s.activity, event: nil, removed: false)
+        transitions.send(change)
+        observeTask(change)
     }
 
     func acknowledgeAll() {
         for s in store.sessions { acknowledge(s.id) }
     }
 
+    func upsertTask(_ draft: AgentTask) -> AgentTask {
+        let saved = taskStore.upsert(draft)
+        publishTasks()
+        return saved
+    }
+
     func setQuiet(for duration: TimeInterval?) {
         prefs.quietUntil = duration.map { Date().addingTimeInterval($0) }
         objectWillChange.send()
+    }
+
+    private func observeTask(_ change: SessionChange) {
+        _ = taskStore.observe(change)
+        publishTasks()
     }
 
     private func userActivated(_ app: NSRunningApplication) {
@@ -104,7 +144,10 @@ final class AppModel: ObservableObject {
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
         publish()
-        changes.forEach(transitions.send)
+        for change in changes {
+            transitions.send(change)
+            observeTask(change)
+        }
     }
 
     /// Looks up the chat or thread title of each session in the background: when it first appears, then at
@@ -125,7 +168,12 @@ final class AppModel: ObservableObject {
                 guard let self else { return }
                 var changed = false
                 for (id, title) in found where self.store.setTitle(title, sessionID: id) { changed = true }
-                if changed { self.publish() }
+                if changed {
+                    self.publish()
+                    for s in self.store.sessions where found.contains(where: { $0.0 == s.id }) {
+                        self.observeTask(SessionChange(session: s, previous: s.activity, event: nil, removed: false))
+                    }
+                }
             }
         }
     }
@@ -159,8 +207,14 @@ final class AppModel: ObservableObject {
     private func publish(save: Bool = true) {
         sessions = store.sessions
         mood = store.mood
-        snapshot.set(sessions: sessions, mood: mood)
+        snapshot.set(sessions: sessions, mood: mood, tasks: taskStore.tasks)
         if save { scheduleSave() }
+    }
+
+    private func publishTasks(save: Bool = true) {
+        tasks = taskStore.tasks
+        snapshot.set(sessions: sessions, mood: mood, tasks: tasks)
+        if save { scheduleTaskSave() }
     }
 
     /// Writes sessions to disk shortly after they settle; demo sessions aren't worth keeping.
@@ -173,30 +227,49 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
     }
 
+    private func scheduleTaskSave() {
+        guard let tasksURL else { return }
+        taskSaveWork?.cancel()
+        let tasks = self.tasks
+        let work = DispatchWorkItem { try? TaskFile.save(tasks, to: tasksURL) }
+        taskSaveWork = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
     /// Saves immediately, e.g. when quitting.
     func saveNow() {
         daySaveWork?.cancel()
         if let dayURL { try? DayLogFile.save(day, to: dayURL) }
         saveWork?.cancel()
-        guard let stateURL else { return }
-        try? StateFile.save(sessions.filter { !$0.sessionId.hasPrefix("demo-") }, to: stateURL)
+        if let stateURL {
+            try? StateFile.save(sessions.filter { !$0.sessionId.hasPrefix("demo-") }, to: stateURL)
+        }
+        taskSaveWork?.cancel()
+        if let tasksURL { try? TaskFile.save(tasks, to: tasksURL) }
     }
 
-    /// Thread-safe copy of the state, for answering `ambient status` off the main thread.
+    /// Thread-safe copy of the state, for answering `ambient status` / `ambient tasks` off the main thread.
     final class Snapshot: @unchecked Sendable {
         private let lock = NSLock()
         private var sessions: [Session] = []
         private var mood: Mood = .idle
+        private var tasks: [AgentTask] = []
 
-        func set(sessions: [Session], mood: Mood) {
+        func set(sessions: [Session], mood: Mood, tasks: [AgentTask] = []) {
             lock.lock(); defer { lock.unlock() }
             self.sessions = sessions
             self.mood = mood
+            self.tasks = tasks
         }
 
         func get() -> ([Session], Mood) {
             lock.lock(); defer { lock.unlock() }
             return (sessions, mood)
+        }
+
+        func getTasks() -> [AgentTask] {
+            lock.lock(); defer { lock.unlock() }
+            return tasks
         }
     }
 }
