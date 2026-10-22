@@ -39,7 +39,7 @@ struct BoardPane: View {
     private var llmSection: some View {
         SettingsSection(
             header: "Local LLM",
-            footer: "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device. Cloud-tagged models are blocked. If `/Volumes/Models` is missing, run `models-on` after plugging in the SSD. Metadata heuristics still run when the LLM is off or unavailable."
+            footer: "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device. Cloud-tagged models are blocked. Optional one-shot skill pack (`ambient task skill-bootstrap`) teaches better titles via Keychain Anthropic, then runtime stays local. If `/Volumes/Models` is missing, run `models-on`. Metadata heuristics still run when the LLM is off or unavailable."
         ) {
             SettingsToggleRow(
                 title: "Summarize tasks with local LLM",
@@ -68,6 +68,9 @@ struct BoardPane: View {
                 TextField("/Volumes/Models", text: $prefs.taskLLMModelsVolume)
                     .textFieldStyle(.roundedBorder)
                     .font(Theme.Fonts.mono)
+                Text(skillPackCaption)
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
                 HStack {
                     Button("Check status") { model.refreshTaskLLMStatus() }
                         .buttonStyle(.pill)
@@ -84,6 +87,14 @@ struct BoardPane: View {
         case .disabled: .neutral
         case .gatewayDown, .volumeMissing, .modelUnavailable, .cloudModelBlocked, .failed: .warning
         }
+    }
+
+    private var skillPackCaption: String {
+        if TaskSkillStore.exists() {
+            let pack = TaskSkillStore.load()
+            return "Skill pack: \(pack.source) · \(pack.examples.count) examples (~/.ambient/task-skill.json)"
+        }
+        return "Skill pack: bundled seed. Optional: ambient task skill-bootstrap (Keychain Anthropic once)."
     }
 }
 

@@ -84,9 +84,10 @@ project and title. Needs-you sessions land in *Blocked*. Turn on **Summarize tas
 this Mac's local-agent MCP gateway at `http://127.0.0.1:5051/mcp` (LaunchAgent `com.local-agent.mcp`;
 see `local-agents/docs/local-model-mcp.md`). Default model: `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit`
 under `/Volumes/Models` (run `models-on` after plugging in the SSD). Transcript reading is a separate
-opt-in; cloud-tagged models are refused. If the gateway or disk is missing, the board keeps metadata
-heuristics and shows a calm status. `ambient tasks` / `ambient task upsert` / `ambient task open` talk to
-the same board.
+opt-in; cloud-tagged models are refused. Optional one-shot `ambient task skill-bootstrap` learns a few-shot
+pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, then the live path stays
+local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
+`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board.
 
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).

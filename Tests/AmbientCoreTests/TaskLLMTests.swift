@@ -98,3 +98,52 @@ import Testing
         #expect((obj?["result"] as? [String: Any])?["ok"] as? Bool == true)
     }
 }
+
+@Suite struct TaskSkillPackTests {
+    @Test func bundledSeedInjectsExamplesIntoPrompt() {
+        let prompt = TaskSummarizer.prompt(for: "agent: Codex\nmood: Working", skill: .bundledSeed)
+        #expect(prompt.contains("Style rules:"))
+        #expect(prompt.contains("Example 1 JSON:"))
+        #expect(prompt.contains("Session facts:"))
+        #expect(prompt.contains("agent: Codex"))
+    }
+
+    @Test func saveAndLoadRoundTrip() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("ambient-skill-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let paths = AmbientPaths(userHome: tmp, home: tmp)
+        let pack = TaskSkillPack(
+            source: "test",
+            hints: ["Keep titles short"],
+            examples: [
+                .init(facts: "agent: Claude\nmood: Done", title: "Finish docs", summary: "Docs are done.", status: "done"),
+            ]
+        )
+        try TaskSkillStore.save(pack, paths: paths)
+        let loaded = TaskSkillStore.load(paths: paths)
+        #expect(loaded.source == "test")
+        #expect(loaded.examples.count == 1)
+        #expect(loaded.examples[0].title == "Finish docs")
+        let attrs = try FileManager.default.attributesOfItem(atPath: paths.taskSkill.path)
+        let perms = attrs[.posixPermissions] as? NSNumber
+        #expect(perms?.intValue == 0o600)
+    }
+
+    @Test func bootstrapParserAcceptsLabeledJSON() throws {
+        let raw = """
+        {
+          "hints": ["Title ≤50 chars"],
+          "examples": [
+            {"facts":"agent: Codex\\nmood: Needs permission","title":"Approve shell","summary":"Waiting on you.","status":"blocked"},
+            {"facts":"agent: Claude\\nmood: Working","title":"Wire MCP client","summary":"Building the local client.","status":"inProgress"},
+            {"facts":"agent: Cursor\\nmood: Done","title":"Ship board UI","summary":"Board pane is finished.","status":"done"},
+            {"facts":"agent: Gemini\\nmood: Idle","title":"Backlog polish","summary":"Queued for later.","status":"backlog"}
+          ]
+        }
+        """
+        let payload = try TaskSkillBootstrap.parsePayload(raw)
+        #expect(payload.examples.count == 4)
+        #expect(payload.hints.first == "Title ≤50 chars")
+    }
+}

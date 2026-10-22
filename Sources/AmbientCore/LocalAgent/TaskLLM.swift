@@ -86,9 +86,12 @@ public struct TaskSemantics: Equatable, Sendable {
 public struct TaskSummarizer: Sendable {
     public var config: TaskLLMConfig
     public var mcp: LocalAgentMCP
+    /// On-device few-shots from `~/.ambient/task-skill.json` (or bundled seed). Never calls Anthropic.
+    public var skillPack: TaskSkillPack
 
-    public init(config: TaskLLMConfig, mcp: LocalAgentMCP? = nil) {
+    public init(config: TaskLLMConfig, mcp: LocalAgentMCP? = nil, skillPack: TaskSkillPack? = nil) {
         self.config = config
+        self.skillPack = skillPack ?? TaskSkillStore.load()
         if let mcp {
             self.mcp = mcp
         } else if let url = config.mcpEndpoint {
@@ -134,7 +137,7 @@ public struct TaskSummarizer: Sendable {
         if config.refusesCloudModel {
             throw LocalAgentMCP.MCPError.rpc("Cloud models are blocked for board summaries.")
         }
-        let prompt = Self.prompt(for: context)
+        let prompt = Self.prompt(for: context, skill: skillPack)
         let submitted = try await mcp.callTool(name: "submit_inference", arguments: [
             "model_id": config.modelID,
             "prompt": prompt,
@@ -179,8 +182,9 @@ public struct TaskSummarizer: Sendable {
         return models.contains { ($0["id"] as? String) == id }
     }
 
-    public static func prompt(for context: String) -> String {
-        """
+    public static func prompt(for context: String, skill: TaskSkillPack = .bundledSeed) -> String {
+        let skillBlock = skill.promptFragment(maxExamples: 4)
+        return """
         Summarize coding-agent work for a calm local task board. Use only the facts below.
         Reply with ONE JSON object and nothing else. Keys (all required when possible):
         - title: max 50 characters, no quotes inside
@@ -188,6 +192,8 @@ public struct TaskSummarizer: Sendable {
         - status: exactly one of backlog, inProgress, blocked, done, cancelled
         Prefer blocked when the agent needs the user; inProgress when working; done when finished.
         Do not invent files, people, or work not present in the facts.
+
+        \(skillBlock)
 
         Session facts:
         \(context)

@@ -10,7 +10,10 @@ let package = Package(
         .library(name: "AmbientCore", targets: ["AmbientCore"]),
     ],
     targets: [
-        .target(name: "AmbientCore"),
+        .target(
+            name: "AmbientCore",
+            linkerSettings: [.linkedFramework("Security")]
+        ),
         .executableTarget(name: "ambient", dependencies: ["AmbientCore"]),
         .executableTarget(
             name: "AmbientApp",

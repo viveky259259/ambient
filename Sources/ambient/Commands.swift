@@ -45,6 +45,8 @@ struct Commands {
           ambient task upsert --title TEXT [--id ID] [--status STATUS] [--project NAME] [--session SID]
                                                                   Create or update a board task (STATUS: backlog|inProgress|blocked|done|cancelled)
           ambient task open ID                                    Jump to a task's linked session
+          ambient task skill-bootstrap                            Once: learn a local skill pack via Anthropic (Keychain), then local LLM uses it
+          ambient task skill-status                               Show whether ~/.ambient/task-skill.json is present
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
@@ -236,7 +238,7 @@ struct Commands {
 
     private func task(_ args: [String]) -> Int32 {
         guard let sub = args.first else {
-            out.error("Usage: ambient task upsert … | ambient task open ID")
+            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task skill-bootstrap")
             return 64
         }
         let rest = Array(args.dropFirst())
@@ -256,10 +258,52 @@ struct Commands {
                 return 1
             }
             return 0
+        case "skill-bootstrap": return taskSkillBootstrap(rest)
+        case "skill-status": return taskSkillStatus()
         default:
-            out.error("Unknown task command '\(sub)'. Use upsert or open.")
+            out.error("Unknown task command '\(sub)'. Use upsert, open, skill-bootstrap or skill-status.")
             return 64
         }
+    }
+
+    /// One-shot Anthropic learn → writes `~/.ambient/task-skill.json`. Live board stays on local MCP.
+    private func taskSkillBootstrap(_ args: [String]) -> Int32 {
+        if args.contains("--help") || args.contains("-h") {
+            print("""
+            ambient task skill-bootstrap
+
+            Reads Anthropic from the login Keychain (service \(SecretStore.service), account anthropic)
+            or ANTHROPIC_API_KEY, generates a few-shot skill pack, writes \(tilde(paths.taskSkill.path)) (0600).
+            The Board local LLM loads that file; cloud is not used at runtime.
+            """)
+            return 0
+        }
+        guard SecretStore.hasKey(for: .anthropic) else {
+            out.error("No Anthropic key in Keychain or ANTHROPIC_API_KEY. Stash it first, then re-run.")
+            out.note("security add-generic-password -s \(SecretStore.service) -a anthropic -w")
+            return 1
+        }
+        out.line("•", "Bootstrapping local task skill pack (Anthropic once)…")
+        do {
+            let pack = try TaskSkillBootstrap.runSync(paths: paths)
+            out.success("Wrote \(tilde(paths.taskSkill.path)) · \(pack.examples.count) examples · source \(pack.source)")
+            out.note("Enable Settings › Board › Summarize tasks with local LLM. Runtime stays on local-agent MCP.")
+            return 0
+        } catch {
+            out.error(error.localizedDescription)
+            return 1
+        }
+    }
+
+    private func taskSkillStatus() -> Int32 {
+        if TaskSkillStore.exists(paths: paths) {
+            let pack = TaskSkillStore.load(paths: paths)
+            out.success("Skill pack: \(tilde(paths.taskSkill.path))")
+            out.note("source=\(pack.source) examples=\(pack.examples.count) hints=\(pack.hints.count)")
+            return 0
+        }
+        out.warn("No \(tilde(paths.taskSkill.path)) yet — using bundled seed. Run ambient task skill-bootstrap once.")
+        return 0
     }
 
     private func taskUpsert(_ args: [String]) -> Int32 {
