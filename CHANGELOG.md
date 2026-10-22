@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-10-23
+
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of
   agent work — backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day
   sessions; needs-you → blocked). Optional **local LLM** summaries via the local-agent MCP gateway
