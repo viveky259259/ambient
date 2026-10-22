@@ -87,7 +87,7 @@ struct SettingsView: View {
         case .agents:
             AgentsPane(setup: setup)
         case .board:
-            BoardPane(model: model)
+            BoardPane(model: model, prefs: prefs)
         case .island:
             IslandPane(prefs: prefs)
         case .pet:

@@ -7,6 +7,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var sessions: [Session] = []
     @Published private(set) var mood: Mood = .idle
     @Published private(set) var tasks: [AgentTask] = []
+    @Published private(set) var taskLLMStatus: TaskLLMStatus = .disabled
     /// Today's story, for the living wallpaper.
     @Published private(set) var day = DayLog(now: Date())
     /// Every applied event and sweep result, for surfaces that react to changes.
@@ -24,10 +25,14 @@ final class AppModel: ObservableObject {
     private var saveWork: DispatchWorkItem?
     private var taskSaveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
+    private var llmProbeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private let titles: SessionTitles?
     private let titleQueue = DispatchQueue(label: "com.viveky259259.Ambient.titles", qos: .utility)
+    private let llmQueue = DispatchQueue(label: "com.viveky259259.Ambient.taskllm", qos: .utility)
     private var titleCheckedAt: [String: Date] = [:]
+    private var lastSummarizedAt: [String: Date] = [:]
+    private var summarizingTaskIDs = Set<String>()
 
     init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, titles: SessionTitles? = nil) {
         self.prefs = prefs
@@ -56,6 +61,11 @@ final class AppModel: ObservableObject {
         refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer?.tolerance = 1
+        llmProbeTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.refreshTaskLLMStatus()
+        }
+        llmProbeTimer?.tolerance = 5
+        refreshTaskLLMStatus()
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
@@ -125,8 +135,63 @@ final class AppModel: ObservableObject {
     }
 
     private func observeTask(_ change: SessionChange) {
-        _ = taskStore.observe(change)
+        guard let task = taskStore.observe(change) else {
+            publishTasks()
+            return
+        }
         publishTasks()
+        scheduleSummary(for: task, session: change.session)
+    }
+
+    /// Re-probe local-agent MCP / Models volume. Safe to call from Settings.
+    func refreshTaskLLMStatus() {
+        let config = prefs.taskLLMConfig
+        guard config.enabled else {
+            taskLLMStatus = .disabled
+            return
+        }
+        let summarizer = TaskSummarizer(config: config)
+        Swift.Task { [weak self] in
+            let status = await summarizer.probe()
+            await MainActor.run { self?.taskLLMStatus = status }
+        }
+    }
+
+    private func scheduleSummary(for task: AgentTask, session: Session) {
+        let config = prefs.taskLLMConfig
+        guard config.enabled else { return }
+        if session.sessionId.hasPrefix("demo-") { return }
+        let now = Date()
+        if let last = lastSummarizedAt[task.id], now.timeIntervalSince(last) < config.minRefreshSeconds { return }
+        if summarizingTaskIDs.contains(task.id) { return }
+        summarizingTaskIDs.insert(task.id)
+        taskLLMStatus = .summarizing
+        let titles = self.titles
+        let readTranscripts = config.readTranscripts
+        let taskID = task.id
+        llmQueue.async { [weak self] in
+            guard let model = self else { return }
+            let excerpt = readTranscripts ? titles?.excerpt(for: session) : nil
+            let context = SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt)
+            let summarizer = TaskSummarizer(config: config)
+            Swift.Task { @MainActor in
+                defer { model.summarizingTaskIDs.remove(taskID) }
+                do {
+                    let status = await summarizer.probe()
+                    guard status == .ready else {
+                        model.taskLLMStatus = status
+                        return
+                    }
+                    let semantics = try await summarizer.summarize(context: context)
+                    _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: session)
+                    model.lastSummarizedAt[taskID] = Date()
+                    model.publishTasks()
+                    model.taskLLMStatus = .ready
+                } catch {
+                    model.taskLLMStatus = .failed(error.localizedDescription)
+                }
+            }
+        }
     }
 
     private func userActivated(_ app: NSRunningApplication) {

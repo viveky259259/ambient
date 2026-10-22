@@ -45,7 +45,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .welcome: nil
         case .agents: "Ambient listens to your agents through lightweight hooks."
-        case .board: "A local board of agent work, grouped from session metadata — no transcripts."
+        case .board: "A local board of agent work. Optional on-device LLM summaries via local-agent MCP."
         case .island: "A quiet status light that grows out of the notch."
         case .pet: "A little companion on your desktop that acts out what your agents are doing."
         case .voice: "Select text in Claude, Codex or a terminal, press the shortcut, and Ambient reads it aloud."

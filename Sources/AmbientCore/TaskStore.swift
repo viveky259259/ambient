@@ -1,6 +1,7 @@
 import Foundation
 
-/// Folds session activity into board tasks using metadata only (no transcripts).
+/// Folds session activity into board tasks. Metadata heuristics are the baseline;
+/// optional local-LLM semantics overwrite title/summary/status when applied.
 /// Not thread-safe: own it from one queue.
 public final class TaskStore {
     private var byId: [String: AgentTask] = [:]
@@ -38,11 +39,39 @@ public final class TaskStore {
     public func upsert(_ draft: AgentTask, at date: Date = Date()) -> AgentTask {
         var t = draft
         t.manual = true
+        t.summarySource = .manual
         t.updatedAt = date
         if byId[t.id] == nil { t.createdAt = date }
         else if let existing = byId[t.id] { t.createdAt = existing.createdAt }
         for sid in t.sessionIds { sessionIndex[sid] = t.id }
         byId[t.id] = t
+        return t
+    }
+
+    /// Applies local-LLM semantics. Manual titles stay unless empty; needs-you still forces blocked.
+    @discardableResult
+    public func applySemantics(_ semantics: TaskSemantics, toTaskID id: String,
+                               session: Session? = nil, at date: Date = Date()) -> AgentTask? {
+        guard var t = byId[id] else { return nil }
+        if let title = semantics.title, !title.isEmpty, !t.manual || titleLooksGeneric(t.title) {
+            t.title = title
+        }
+        if let summary = semantics.summary, !summary.isEmpty {
+            t.summary = summary
+        }
+        if let status = semantics.status, !t.manual {
+            // Never let a stale LLM reply clear needs-you / blocked.
+            if !(t.status == .blocked && status != .blocked) {
+                t.status = status
+            }
+        }
+        if let session, session.mood == .waiting {
+            t.status = .blocked
+        }
+        t.summarySource = .localLLM
+        t.summarizedAt = date
+        t.updatedAt = date
+        byId[id] = t
         return t
     }
 

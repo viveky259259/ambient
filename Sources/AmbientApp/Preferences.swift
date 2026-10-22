@@ -62,6 +62,16 @@ final class Preferences: ObservableObject {
     /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
     @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
 
+    // MARK: - Task board local LLM (local-agent MCP)
+
+    @Published var taskLLMEnabled: Bool { didSet { defaults.set(taskLLMEnabled, forKey: "taskLLMEnabled") } }
+    /// Streamable HTTP MCP URL for local-agent (default LaunchAgent on this Mac).
+    @Published var taskLLMMCPURL: String { didSet { defaults.set(taskLLMMCPURL, forKey: "taskLLMMCPURL") } }
+    @Published var taskLLMModelID: String { didSet { defaults.set(taskLLMModelID, forKey: "taskLLMModelID") } }
+    /// Opt-in: read local Claude/Codex transcript stores for richer summaries.
+    @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
+    @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -92,6 +102,11 @@ final class Preferences: ObservableObject {
             "speechRate": 1.0,
             "speechReadsCode": false,
             "speechAccessExplained": false,
+            "taskLLMEnabled": false,
+            "taskLLMMCPURL": "http://127.0.0.1:5051/mcp",
+            "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+            "taskLLMReadTranscripts": false,
+            "taskLLMModelsVolume": "/Volumes/Models",
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -129,6 +144,17 @@ final class Preferences: ObservableObject {
         speechAccessExplained = defaults.bool(forKey: "speechAccessExplained")
         speechShortcut = defaults.string(forKey: "speechShortcut")
         speechHintShown = defaults.bool(forKey: "speechHintShown")
+        taskLLMEnabled = defaults.bool(forKey: "taskLLMEnabled")
+        taskLLMMCPURL = defaults.string(forKey: "taskLLMMCPURL") ?? "http://127.0.0.1:5051/mcp"
+        taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
+            ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
+        taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
+    }
+
+    var taskLLMConfig: TaskLLMConfig {
+        TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
+                      readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
     }
 
     var isQuiet: Bool {

@@ -1,13 +1,15 @@
 import AmbientCore
 import SwiftUI
 
-/// Native Kanban-style board of agent tasks (metadata-only grouping).
+/// Native Kanban-style board of agent tasks, with optional local-LLM summaries.
 struct BoardPane: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var prefs: Preferences
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             PaneHeader(pane: .board)
+            llmSection
             if model.tasks.isEmpty {
                 SettingsSection(footer: "Tasks appear as your agents work, grouped by project and title. Or add one with `ambient task upsert --title \"…\"`.") {
                     Text("No tasks yet")
@@ -30,6 +32,57 @@ struct BoardPane: View {
                     .padding(.bottom, Theme.Space.xs)
                 }
             }
+        }
+        .onAppear { model.refreshTaskLLMStatus() }
+    }
+
+    private var llmSection: some View {
+        SettingsSection(
+            header: "Local LLM",
+            footer: "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device. Cloud-tagged models are blocked. If `/Volumes/Models` is missing, run `models-on` after plugging in the SSD. Metadata heuristics still run when the LLM is off or unavailable."
+        ) {
+            SettingsToggleRow(
+                title: "Summarize tasks with local LLM",
+                subtitle: model.taskLLMStatus.label,
+                subtitleStatus: subtitleStatus(model.taskLLMStatus),
+                isOn: $prefs.taskLLMEnabled
+            )
+            .onChange(of: prefs.taskLLMEnabled) { _, _ in model.refreshTaskLLMStatus() }
+            SettingsDivider()
+            SettingsToggleRow(
+                title: "Read local transcripts",
+                subtitle: "Opt-in. When on, Ambient may read Claude project JSONL (and Codex thread names) for richer summaries. Still local only.",
+                isOn: $prefs.taskLLMReadTranscripts
+            )
+            SettingsDivider()
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Model id").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                TextField("hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit", text: $prefs.taskLLMModelID)
+                    .textFieldStyle(.roundedBorder)
+                    .font(Theme.Fonts.mono)
+                Text("MCP URL").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                TextField("http://127.0.0.1:5051/mcp", text: $prefs.taskLLMMCPURL)
+                    .textFieldStyle(.roundedBorder)
+                    .font(Theme.Fonts.mono)
+                Text("Models volume").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                TextField("/Volumes/Models", text: $prefs.taskLLMModelsVolume)
+                    .textFieldStyle(.roundedBorder)
+                    .font(Theme.Fonts.mono)
+                HStack {
+                    Button("Check status") { model.refreshTaskLLMStatus() }
+                        .buttonStyle(.pill)
+                    Spacer()
+                }
+            }
+            .settingsRowPadding()
+        }
+    }
+
+    private func subtitleStatus(_ status: TaskLLMStatus) -> Theme.Status {
+        switch status {
+        case .ready, .summarizing: .success
+        case .disabled: .neutral
+        case .gatewayDown, .volumeMissing, .modelUnavailable, .cloudModelBlocked, .failed: .warning
         }
     }
 }
@@ -58,7 +111,7 @@ private struct BoardColumn: View {
                 }
             }
         }
-        .frame(width: 200, alignment: .topLeading)
+        .frame(width: 220, alignment: .topLeading)
     }
 
     private func linkedSession(_ task: AgentTask) -> Session? {
@@ -80,7 +133,13 @@ private struct BoardCard: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(3)
-                if let project = task.project {
+                if let summary = task.summary, !summary.isEmpty {
+                    Text(summary)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(4)
+                } else if let project = task.project {
                     Text(project)
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
@@ -98,6 +157,12 @@ private struct BoardCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
+                    if task.summarySource == .localLLM {
+                        Image(systemName: "brain")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .help("Summarized by local LLM")
+                    }
                     if let session {
                         Circle()
                             .fill(session.moodTint.color)

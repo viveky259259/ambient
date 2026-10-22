@@ -3,9 +3,12 @@
 ## Unreleased
 
 - **Task board**: Settings › Board (and *Task Board…* in the menu bar) shows a local Kanban of agent work —
-  backlog, in progress, blocked, done — grouped from session metadata only (project, titles, same-day sessions;
-  needs-you → blocked). Persist to `~/.ambient/tasks.json`. CLI: `ambient tasks`, `ambient task upsert`,
-  `ambient task open`.
+  backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day sessions;
+  needs-you → blocked), with optional **local LLM** summaries via the local-agent MCP gateway
+  (`http://127.0.0.1:5051/mcp`, default model `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit` on
+  `/Volumes/Models`). Transcript reading is opt-in; cloud-tagged models are blocked; heuristics remain the
+  fallback when the gateway or SSD is unavailable. Persist to `~/.ambient/tasks.json`. CLI: `ambient tasks`,
+  `ambient task upsert`, `ambient task open`.
 - **Cursor (first-class)**: no longer beta. Installs after-the-fact tool hooks (`afterShellExecution`,
   `afterFileEdit`, `afterMCPExecution`) so the island shows tools while Cursor works; still never uses
   permission-style hooks. Click-to-return prefers the Cursor editor window for the project.

@@ -80,8 +80,13 @@ uses hooks that can't block or approve anything (`postToolUse`, `afterShellExecu
 prompts don't reach Ambient. The `cursor-agent` CLI fires only some of Cursor's hooks so far.
 
 **Task board** — Settings › Board (or *Task Board…* in the menu bar) groups sessions into local tasks by
-project and title (metadata only; no transcript reading). Needs-you sessions land in *Blocked*.
-`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board over the socket.
+project and title. Needs-you sessions land in *Blocked*. Turn on **Summarize tasks with local LLM** to call
+this Mac's local-agent MCP gateway at `http://127.0.0.1:5051/mcp` (LaunchAgent `com.local-agent.mcp`;
+see `local-agents/docs/local-model-mcp.md`). Default model: `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit`
+under `/Volumes/Models` (run `models-on` after plugging in the SSD). Transcript reading is a separate
+opt-in; cloud-tagged models are refused. If the gateway or disk is missing, the board keeps metadata
+heuristics and shows a calm status. `ambient tasks` / `ambient task upsert` / `ambient task open` talk to
+the same board.
 
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).

@@ -22,12 +22,23 @@ public enum TaskStatus: String, Codable, CaseIterable, Sendable {
     public static let boardOrder: [TaskStatus] = [.blocked, .inProgress, .backlog, .done, .cancelled]
 }
 
+/// Where a task's title/summary came from.
+public enum TaskSummarySource: String, Codable, Sendable {
+    case heuristic
+    case localLLM
+    case manual
+}
+
 /// A unit of intended work, linked to one or more live agent sessions.
 /// Named `AgentTask` so it never collides with Swift concurrency's `Task`.
 public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
     public let id: String
     public var title: String
     public var status: TaskStatus
+    /// One- or two-sentence summary from the local LLM (or empty when heuristics-only).
+    public var summary: String?
+    public var summarySource: TaskSummarySource
+    public var summarizedAt: Date?
     /// Last path component of the working directory, when known.
     public var project: String?
     public var cwd: String?
@@ -43,12 +54,16 @@ public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
     public var lastSessionId: String?
 
     public init(id: String = AgentTask.makeID(), title: String, status: TaskStatus = .backlog,
-                project: String? = nil, cwd: String? = nil, agents: [AgentKind] = [],
-                sessionIds: [String] = [], manual: Bool = false, createdAt: Date = Date(),
-                updatedAt: Date = Date(), lastSessionId: String? = nil) {
+                summary: String? = nil, summarySource: TaskSummarySource = .heuristic,
+                summarizedAt: Date? = nil, project: String? = nil, cwd: String? = nil,
+                agents: [AgentKind] = [], sessionIds: [String] = [], manual: Bool = false,
+                createdAt: Date = Date(), updatedAt: Date = Date(), lastSessionId: String? = nil) {
         self.id = id
         self.title = title
         self.status = status
+        self.summary = summary
+        self.summarySource = summarySource
+        self.summarizedAt = summarizedAt
         self.project = project
         self.cwd = cwd
         self.agents = agents
