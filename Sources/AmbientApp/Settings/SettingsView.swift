@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
+    @ObservedObject var model: AppModel
     let wallpaper: LivingWallpaper
     let speech: SpeechController
     let voicePack: VoicePackInstaller
@@ -13,6 +14,7 @@ struct SettingsView: View {
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
+    var onOpenBoard: (() -> Void)? = nil
 
     @AppStorage("settingsPane") private var pane: SettingsPane = .welcome
     @FocusState private var sidebarFocused: Bool
@@ -85,6 +87,8 @@ struct SettingsView: View {
             WelcomePane(setup: setup, firstRun: firstRun, onDemo: onDemo, onGetStarted: onDone)
         case .agents:
             AgentsPane(setup: setup)
+        case .board:
+            BoardPane(model: model, prefs: prefs, onOpenBoard: onOpenBoard)
         case .island:
             IslandPane(prefs: prefs)
         case .pet:

@@ -41,9 +41,29 @@ final class EventServer {
                 let match = SessionMatcher.find(query, in: sessions)
                 if let match { DispatchQueue.main.async { model.value.open(match) } }
                 return try? Wire.encode(.opened(sessionID: match?.id))
+            case .listTasks:
+                return try? Wire.encode(.tasks(snapshot.getTasks()))
+            case let .upsertTask(draft):
+                let box = ReplyBox<AgentTask>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    box.value = model.value.upsertTask(draft)
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 2)
+                return try? Wire.encode(.upsertTaskResult(box.value ?? draft))
+            case let .openTask(id):
+                let box = ReplyBox<String?>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    box.value = model.value.openTask(id)?.id
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 2)
+                return try? Wire.encode(.opened(sessionID: box.value ?? nil))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case .status, .pong, .opened:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult:
                 return nil
             }
         }
@@ -58,4 +78,9 @@ final class EventServer {
 private struct MainThreadBox<T>: @unchecked Sendable {
     let value: T
     init(_ value: T) { self.value = value }
+}
+
+/// Holds a value written from the main thread for a socket reply.
+private final class ReplyBox<T>: @unchecked Sendable {
+    var value: T?
 }

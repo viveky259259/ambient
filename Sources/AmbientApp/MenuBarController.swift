@@ -13,9 +13,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private var cancellables: Set<AnyCancellable> = []
     private let onSettings: () -> Void
     private let onDemo: () -> Void
+    private let onOpenBoard: () -> Void
 
     init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter,
-         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void) {
+         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void,
+         onOpenBoard: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
         self.speech = speech
@@ -23,6 +25,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
+        self.onOpenBoard = onOpenBoard
         super.init()
     }
 
@@ -156,6 +159,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
         menu.addItem(item("Play Demo", #selector(demo)))
+        let boardCount = model.tasks.filter { $0.status == .blocked || $0.status == .inProgress }.count
+        let boardTitle = boardCount == 0 ? "Task Board…" : "Task Board (\(boardCount))…"
+        menu.addItem(item(boardTitle, #selector(openBoard)))
         menu.addItem(.separator())
         menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
         menu.addItem(item("Settings…", #selector(settings), key: ","))
@@ -219,6 +225,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func quietFor(_ sender: NSMenuItem) { model.setQuiet(for: sender.representedObject as? TimeInterval) }
     @objc private func togglePet() { prefs.petEnabled.toggle() }
     @objc private func demo() { onDemo() }
+    @objc private func openBoard() { onOpenBoard() }
     @objc private func suggestFeature() { NSWorkspace.shared.open(FeatureRequests.url()) }
     @objc private func settings() { onSettings() }
     @objc private func quit() { NSApp.terminate(nil) }

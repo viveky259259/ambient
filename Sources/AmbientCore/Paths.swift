@@ -25,6 +25,8 @@ public struct AmbientPaths: Equatable, Sendable {
     public var logs: URL { home.appendingPathComponent("logs", isDirectory: true) }
     /// Downloaded offline voice packs, one folder per version.
     public var voice: URL { home.appendingPathComponent("voice", isDirectory: true) }
+    /// Few-shot skill pack for the local board summarizer (`task-skill.json`, 0600).
+    public var taskSkill: URL { home.appendingPathComponent("task-skill.json") }
 
     /// Creates the Ambient home, readable only by the user.
     public func ensureHome() throws {

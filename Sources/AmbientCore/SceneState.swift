@@ -56,12 +56,33 @@ public struct TimelineLine: Equatable, Sendable {
     }
 }
 
+/// A calm task cue for the living wallpaper — title + status mood, not a Kanban dump.
+public struct SceneBoardCue: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let title: String
+    /// Short status phrase, e.g. "Needs you", "In progress".
+    public let statusLabel: String
+    /// Drives the soft status tint (waiting / working / idle / done).
+    public let mood: Mood
+    public let agent: AgentKind?
+
+    public init(id: String, title: String, statusLabel: String, mood: Mood, agent: AgentKind? = nil) {
+        self.id = id
+        self.title = title
+        self.statusLabel = statusLabel
+        self.mood = mood
+        self.agent = agent
+    }
+}
+
 /// Everything a scene draws, as data. Built once per change and once a minute.
 public struct SceneState: Equatable, Sendable {
     public static let maxInhabitants = 8
     /// How many sessions a world shows. Planets in two rows leave room for ten.
     public static func maxInhabitants(for kind: SceneKind) -> Int { kind == .solar ? 10 : maxInhabitants }
     public static let timelineLength = 4
+    /// Soft board cues on the wallpaper — enough to glance, not a full board.
+    public static let maxBoardCues = 5
 
     public let kind: SceneKind
     public let surface: SceneSurface
@@ -78,11 +99,14 @@ public struct SceneState: Equatable, Sendable {
     public let nextEvent: String?
     public let story: [StoryItem]
     public let timeline: [TimelineLine]
+    /// Opt-in task board cues for the desk wallpaper. Empty when off or no active tasks.
+    public let boardCues: [SceneBoardCue]
 
     public static func make(sessions: [Session], day: DayLog, now: Date, kind: SceneKind, surface: SceneSurface,
                             lockMessages: Bool = false, nextEvent: CalendarEvent? = nil,
                             keeping previousSlots: [String: Int] = [:],
                             look: SceneLook = .timeOfDay, systemDark: Bool = false,
+                            boardTasks: [AgentTask] = [],
                             calendar: Calendar = .current, locale: Locale = .current) -> SceneState {
         let freeText = surface == .desk || lockMessages
         let ordered = sessions.sorted {
@@ -93,6 +117,10 @@ public struct SceneState: Equatable, Sendable {
         let shown = Array(ordered.prefix(maxInhabitants(for: kind)))
         let slots = SceneLayout.slots(for: shown.map(\.id), keeping: previousSlots)
         let time = formatter("jmm", calendar: calendar, locale: locale)
+        // Desk only: lock screen already has its own privacy gate for free text.
+        let cues: [SceneBoardCue] = surface == .desk
+            ? boardCues(from: boardTasks, sessions: sessions, max: maxBoardCues)
+            : []
         return SceneState(
             kind: kind,
             surface: surface,
@@ -108,13 +136,56 @@ public struct SceneState: Equatable, Sendable {
                 return freeText ? "\(Trim.truncate(event.title, max: 40)) at \(start)" : "Next event at \(start)"
             },
             story: story(day, sessions: sessions, now: now),
-            timeline: day.moments.prefix(timelineLength).map { line($0, time: time) })
+            timeline: day.moments.prefix(timelineLength).map { line($0, time: time) },
+            boardCues: cues)
     }
 
     /// The world without inhabitants or text, for displays other than the main one and for thumbnails.
     public func scenery() -> SceneState {
         SceneState(kind: kind, surface: surface, light: light, now: now, inhabitants: [], overflow: 0, marks: [],
-                   clock: nil, date: nil, nextEvent: nil, story: [], timeline: [])
+                   clock: nil, date: nil, nextEvent: nil, story: [], timeline: [], boardCues: [])
+    }
+
+    /// Active tasks only (blocked / in progress), urgency first; hide when the board is quiet.
+    static func boardCues(from tasks: [AgentTask], sessions: [Session], max: Int = maxBoardCues) -> [SceneBoardCue] {
+        let active: Set<TaskStatus> = [.blocked, .inProgress]
+        let ranked = tasks.filter { active.contains($0.status) }.sorted {
+            if $0.status != $1.status {
+                return TaskStatus.boardOrder.firstIndex(of: $0.status)! < TaskStatus.boardOrder.firstIndex(of: $1.status)!
+            }
+            return $0.updatedAt > $1.updatedAt
+        }
+        guard !ranked.isEmpty else { return [] }
+        return Array(ranked.prefix(max)).map { task in
+            let linked = sessions.first { task.sessionIds.contains($0.id) || $0.id == task.lastSessionId }
+            let mood: Mood = {
+                if let linked { return linked.mood }
+                switch task.status {
+                case .blocked: return .waiting
+                case .inProgress: return .working
+                case .done: return .done
+                case .cancelled, .backlog: return .idle
+                }
+            }()
+            return SceneBoardCue(
+                id: task.id,
+                title: Trim.truncate(task.title, max: 42),
+                statusLabel: cueLabel(task.status, mood: mood),
+                mood: mood,
+                agent: task.agents.first ?? linked?.agent
+            )
+        }
+    }
+
+    private static func cueLabel(_ status: TaskStatus, mood: Mood) -> String {
+        if mood == .waiting { return "Needs you" }
+        switch status {
+        case .blocked: return "Blocked"
+        case .inProgress: return "In progress"
+        case .backlog: return "Backlog"
+        case .done: return "Done"
+        case .cancelled: return "Cancelled"
+        }
     }
 
     /// 0 with no tools, 1 at 64 and beyond, on a log scale so the first few tools show.

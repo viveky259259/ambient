@@ -24,6 +24,66 @@ public struct SessionTitles: Sendable {
         return title.isEmpty ? nil : title
     }
 
+    /// Optional short excerpt from a local transcript store for LLM summarization.
+    /// Only called when the user opts into transcript reading. Truncated; never uploads.
+    public func excerpt(for s: Session, maxChars: Int = 1800) -> String? {
+        switch s.agent {
+        case .claude:
+            return claudeExcerpt(s.sessionId, maxChars: maxChars)
+        case .codex:
+            // Codex thread name is metadata-only; full rolls stay out unless Ambient gains a safe reader.
+            return codexThreadName(s.sessionId).map { "thread_name: \($0)" }
+        default:
+            return nil
+        }
+    }
+
+    private func claudeExcerpt(_ id: String, maxChars: Int) -> String? {
+        guard Self.matches(id, "^[A-Za-z0-9-]{1,64}$") else { return nil }
+        for project in Self.directories(in: userHome.appendingPathComponent(".claude/projects", isDirectory: true)) {
+            let file = project.appendingPathComponent(id + ".jsonl")
+            guard let data = try? Data(contentsOf: file, options: .alwaysMapped) else { continue }
+            var snippets: [String] = []
+            var from = data.startIndex
+            let needle = Data(#""type":"assistant""#.utf8)
+            let userNeedle = Data(#""type":"user""#.utf8)
+            while from < data.endIndex, snippets.count < 6 {
+                let nextAssistant = data.range(of: needle, in: from..<data.endIndex)
+                let nextUser = data.range(of: userNeedle, in: from..<data.endIndex)
+                let hit: Range<Data.Index>?
+                if let a = nextAssistant, let u = nextUser {
+                    hit = a.lowerBound < u.lowerBound ? a : u
+                } else {
+                    hit = nextAssistant ?? nextUser
+                }
+                guard let hit else { break }
+                let start = data[..<hit.lowerBound].lastIndex(of: 0x0A).map { $0 + 1 } ?? data.startIndex
+                let end = data[hit.upperBound...].firstIndex(of: 0x0A) ?? data.endIndex
+                if let object = try? JSONSerialization.jsonObject(with: data[start..<end]) as? [String: Any] {
+                    if let text = Self.messageText(object) {
+                        snippets.append(Trim.truncate(text, max: 280))
+                    }
+                }
+                from = end
+            }
+            if !snippets.isEmpty {
+                return Trim.truncate(snippets.suffix(4).joined(separator: "\n---\n"), max: maxChars)
+            }
+        }
+        return nil
+    }
+
+    private static func messageText(_ object: [String: Any]) -> String? {
+        if let message = object["message"] as? [String: Any] {
+            if let content = message["content"] as? String { return content }
+            if let parts = message["content"] as? [[String: Any]] {
+                let texts = parts.compactMap { $0["text"] as? String }
+                if !texts.isEmpty { return texts.joined(separator: " ") }
+            }
+        }
+        return object["text"] as? String
+    }
+
     /// Claude's desktop app keeps a file per Code session: claude-code-sessions/<account>/<org>/<local_id>.json.
     func desktopTitle(_ id: String?) -> String? {
         guard let id, Self.matches(id, "^local_[A-Za-z0-9-]{1,64}$") else { return nil }

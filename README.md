@@ -67,7 +67,7 @@ Or from a terminal, once the app has run once:
 | Codex (CLI and the Codex app) | Hooks in `~/.codex/hooks.json`, after you approve them with `/hooks` | Everything, including *needs you* |
 | Gemini CLI | Hooks in `~/.gemini/settings.json` | Everything, including *needs you* |
 | Antigravity | A hook set in `~/.gemini/config/hooks.json` | Prompts, tools, finished or failed turns. Never *needs you*: Antigravity has no permission hook. Tested with the `agy` CLI |
-| Cursor, the editor's agent (beta) | Hooks in `~/.cursor/hooks.json` | Prompts, tools as they finish, finished turns, compaction. Never *needs you*, see below |
+| Cursor, the editor's agent | Hooks in `~/.cursor/hooks.json` | Prompts, tools as they finish (including shell/file/MCP after-hooks), finished turns, compaction. Never *needs you*, see below |
 | GitHub Copilot CLI (beta) | Its own hook file, `~/.copilot/hooks/ambient.json` | Prompts, tools, *needs you* for permission prompts and questions, subagents, errors, compaction |
 | OpenCode (beta) | A plugin, `~/.config/opencode/plugins/ambient.js` | Prompts, tools, *needs you* for permission requests, finished or failed turns, compaction |
 | Anything else | [`ambient emit` or `ambient hook custom`](#any-other-agent) | Whatever it reports |
@@ -75,8 +75,19 @@ Or from a terminal, once the app has run once:
 *Beta* connections follow each agent's documented hooks but haven't yet been run against the agent itself.
 
 Cursor reads the reply of a before-tool hook as a permission decision, so Ambient registers none: it only
-uses hooks that can't block or approve anything. Tools show up when they finish, and Cursor's permission
+uses hooks that can't block or approve anything (`postToolUse`, `afterShellExecution`, `afterFileEdit`,
+`afterMCPExecution`, and lifecycle hooks). Tools show up as Cursor finishes them, and Cursor's permission
 prompts don't reach Ambient. The `cursor-agent` CLI fires only some of Cursor's hooks so far.
+
+**Task board** — Settings › Board (or *Task Board…* in the menu bar) groups sessions into local tasks by
+project and title. Needs-you sessions land in *Blocked*. Turn on **Summarize tasks with local LLM** to call
+this Mac's local-agent MCP gateway at `http://127.0.0.1:5051/mcp` (LaunchAgent `com.local-agent.mcp`;
+see `local-agents/docs/local-model-mcp.md`). Default model: `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit`
+under `/Volumes/Models` (run `models-on` after plugging in the SSD). Transcript reading is a separate
+opt-in; cloud-tagged models are refused. Optional one-shot `ambient task skill-bootstrap` learns a few-shot
+pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, then the live path stays
+local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
+`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board.
 
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).
@@ -201,6 +212,9 @@ is checked against a hash built into Ambient before it's used.
 ambient install [AGENT …] [--dry-run]                  Add Ambient's hooks (default: every agent found)
 ambient uninstall [AGENT …] [--dry-run]                Remove them, leaving everything else alone
 ambient status [--json]                                The sessions Ambient is tracking
+ambient tasks [--json]                                 The agent task board
+ambient task upsert --title TEXT […]                   Create or update a board task
+ambient task open ID                                   Jump to a task's linked session
 ambient doctor                                         Check the app, the hooks and the connection
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
 ambient emit <start|working|waiting|done|error|end> --session ID   Drive a session from any agent or script
