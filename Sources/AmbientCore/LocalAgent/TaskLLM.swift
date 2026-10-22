@@ -181,12 +181,13 @@ public struct TaskSummarizer: Sendable {
 
     public static func prompt(for context: String) -> String {
         """
-        You summarize coding-agent work for a local task board. Use only the session facts below.
-        Reply with ONE JSON object and no other text. Keys:
-        - title: short task title (max 80 chars)
-        - summary: one or two sentences
+        Summarize coding-agent work for a calm local task board. Use only the facts below.
+        Reply with ONE JSON object and nothing else. Keys (all required when possible):
+        - title: max 50 characters, no quotes inside
+        - summary: max 12 words, one plain sentence
         - status: exactly one of backlog, inProgress, blocked, done, cancelled
         Prefer blocked when the agent needs the user; inProgress when working; done when finished.
+        Do not invent files, people, or work not present in the facts.
 
         Session facts:
         \(context)
@@ -223,8 +224,8 @@ public struct TaskSummarizer: Sendable {
     }
 
     private static func semantics(from obj: [String: Any]) -> TaskSemantics {
-        let title = (obj["title"] as? String).flatMap { Trim.clean($0, max: 80) }
-        let summary = (obj["summary"] as? String).flatMap { Trim.clean($0, max: 280) }
+        let title = (obj["title"] as? String).flatMap { Trim.clean($0, max: 50) }
+        let summary = (obj["summary"] as? String).flatMap { Trim.clean($0, max: 90) }
         let statusName = obj["status"] as? String
         let status = statusName.flatMap(TaskStatus.init(rawValue:))
         return TaskSemantics(title: title, summary: summary, status: status)

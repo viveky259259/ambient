@@ -133,12 +133,12 @@ private struct BoardCard: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(3)
+                // Calm card: one muted summary line (local LLM) or project tag — not a wall of text.
                 if let summary = task.summary, !summary.isEmpty {
-                    Text(summary)
+                    Text(Trim.truncate(summary, max: 60))
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(4)
+                        .lineLimit(1)
                 } else if let project = task.project {
                     Text(project)
                         .font(Theme.Fonts.caption)
@@ -149,24 +149,36 @@ private struct BoardCard: View {
                     ForEach(task.agents, id: \.self) { agent in
                         Circle()
                             .fill(Palette.agent(agent).color)
-                            .frame(width: 8, height: 8)
+                            .frame(width: 6, height: 6)
                             .help(agent.displayName)
                     }
-                    Text(task.agentLabel)
-                        .font(Theme.Fonts.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if let project = task.project, task.summary != nil {
+                        Text(project)
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    } else {
+                        Text(task.agentLabel)
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     Spacer(minLength: 0)
+                    if let session, let clock = Describe.clock(session, now: Date()) {
+                        Text(clock)
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                     if task.summarySource == .localLLM {
                         Image(systemName: "brain")
                             .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                             .help("Summarized by local LLM")
                     }
                     if let session {
                         Circle()
                             .fill(session.moodTint.color)
-                            .frame(width: 8, height: 8)
+                            .frame(width: 6, height: 6)
                             .help(Describe.mood(session.mood))
                     }
                 }

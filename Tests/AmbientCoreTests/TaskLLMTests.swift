@@ -6,12 +6,12 @@ import Testing
     @Test func parsesFencedJSON() {
         let raw = """
         ```json
-        {"title":"Ship board","summary":"Wire local LLM summaries.","status":"inProgress"}
+        {"title":"Ship board","summary":"Wire local LLM summaries on device.","status":"inProgress"}
         ```
         """
         let s = TaskSummarizer.parse(raw)
         #expect(s.title == "Ship board")
-        #expect(s.summary == "Wire local LLM summaries.")
+        #expect(s.summary == "Wire local LLM summaries on device.")
         #expect(s.status == TaskStatus.inProgress)
     }
 
