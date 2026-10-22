@@ -151,7 +151,7 @@ final class AppModel: ObservableObject {
             return
         }
         let summarizer = TaskSummarizer(config: config)
-        Swift.Task { [weak self] in
+        Task { [weak self] in
             let status = await summarizer.probe()
             await MainActor.run { self?.taskLLMStatus = status }
         }
@@ -174,7 +174,7 @@ final class AppModel: ObservableObject {
             let excerpt = readTranscripts ? titles?.excerpt(for: session) : nil
             let context = SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt)
             let summarizer = TaskSummarizer(config: config)
-            Swift.Task { @MainActor in
+            Task { @MainActor in
                 defer { model.summarizingTaskIDs.remove(taskID) }
                 do {
                     let status = await summarizer.probe()
