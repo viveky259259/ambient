@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
+    @ObservedObject var model: AppModel
     let wallpaper: LivingWallpaper
     let speech: SpeechController
     let voicePack: VoicePackInstaller
@@ -85,6 +86,8 @@ struct SettingsView: View {
             WelcomePane(setup: setup, firstRun: firstRun, onDemo: onDemo, onGetStarted: onDone)
         case .agents:
             AgentsPane(setup: setup)
+        case .board:
+            BoardPane(model: model)
         case .island:
             IslandPane(prefs: prefs)
         case .pet:
