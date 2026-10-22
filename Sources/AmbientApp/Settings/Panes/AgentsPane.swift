@@ -88,7 +88,7 @@ private struct AgentRow: View {
         }
         guard agent.isBeta else { return nil }
         return switch agent {
-        case .cursor: "Beta. Prompts, tools as they finish and finished turns; never needs you, as Ambient uses no hook that could block Cursor."
+        case .cursor: "Prompts, tools (as they finish), subagents and finished turns. Never *needs you*: Ambient uses no hook that could block Cursor."
         case .copilot: "Beta. Prompts, tools, permission prompts, questions, subagents and errors."
         case .opencode: "Beta. Prompts, tools, permission requests and finished or failed turns."
         default: nil

@@ -144,10 +144,12 @@ public struct HookInstaller: Sendable {
         case .cursor:
             AgentHookSpec(
                 agent: .cursor, agentDirectory: ".cursor", configFile: ".cursor/hooks.json",
-                // Never preToolUse, beforeShellExecution and the like: Cursor reads their reply as a permission
-                // decision, and an observer has none to give.
-                events: ["sessionStart", "beforeSubmitPrompt", "postToolUse", "postToolUseFailure", "preCompact",
-                         "stop", "sessionEnd"],
+                // Never preToolUse, beforeShellExecution, beforeMCPExecution and the like: Cursor reads their
+                // reply as a permission decision, and an observer has none to give. After-* hooks are safe and
+                // let Ambient show tools while Cursor works.
+                events: ["sessionStart", "beforeSubmitPrompt", "postToolUse", "postToolUseFailure",
+                         "afterShellExecution", "afterFileEdit", "afterMCPExecution",
+                         "preCompact", "stop", "sessionEnd"],
                 layout: .flat,
                 entry: { command, _ in
                     .object([.init("command", .string(command)), .init("timeout", .number("5"))])

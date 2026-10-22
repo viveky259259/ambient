@@ -191,8 +191,8 @@ enum AntigravityAdapter: AgentAdapter {
 }
 
 /// Cursor's agent, in the editor and in cursor-agent where its hooks fire. Ambient registers only hooks that
-/// can't block or approve anything: Cursor treats a before-tool hook's reply as a permission decision.
-/// Without one, a tool shows up when it finishes.
+/// can't block or approve anything: Cursor treats a before-tool / before-shell hook's reply as a permission
+/// decision. After-the-fact hooks map to `toolStarted` so the island shows the last tool until the turn stops.
 enum CursorAdapter: AgentAdapter {
     static func sessionId(_ p: HookPayload) -> String? { p.string("conversation_id") ?? p.string("session_id") }
     static func cwd(_ p: HookPayload) -> String? { p.strings("workspace_roots").first ?? p.string("cwd") }
@@ -203,10 +203,19 @@ enum CursorAdapter: AgentAdapter {
             return .sessionStarted
         case "beforeSubmitPrompt":
             return .promptSubmitted
-        case "postToolUse":
-            return .toolFinished(name: p.string("tool_name") ?? "tool", failed: false)
+        case "postToolUse", "afterShellExecution", "afterMCPExecution":
+            let name = p.string("tool_name") ?? p.string("command") ?? defaultToolName(event)
+            return .toolStarted(name: name, detail: ToolNames.detail(name: name, input: p.object("tool_input") ?? p.object("args")))
+        case "afterFileEdit":
+            let path = p.string("file_path") ?? p.string("path") ?? p.strings("file_paths").first
+            let detail = path.map { URL(fileURLWithPath: $0).lastPathComponent }
+            return .toolStarted(name: "Edit", detail: detail)
         case "postToolUseFailure":
             return .toolFinished(name: p.string("tool_name") ?? "tool", failed: true)
+        case "subagentStart":
+            return .subagentStarted
+        case "subagentStop":
+            return .subagentFinished
         case "preCompact":
             return .compactStarted
         case "stop":
@@ -215,6 +224,14 @@ enum CursorAdapter: AgentAdapter {
             return .sessionEnded
         default:
             return nil
+        }
+    }
+
+    private static func defaultToolName(_ event: String) -> String {
+        switch event {
+        case "afterShellExecution": "Shell"
+        case "afterMCPExecution": "MCP"
+        default: "tool"
         }
     }
 }

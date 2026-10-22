@@ -250,11 +250,17 @@ private func event(_ agent: AgentKind, _ json: String, hint: String? = nil) -> A
         #expect(e?.kind == .promptSubmitted)
     }
 
-    @Test func toolsShowWhenTheyFinish() {
+    @Test func toolsShowAsWorkingWhenTheyFinish() {
+        // After-the-fact hooks map to toolStarted so the island keeps showing the last tool until stop.
         #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUse","tool_name":"Shell","tool_input":{"command":"ls"}}"#)?.kind
-                == .toolFinished(name: "Shell", failed: false))
+                == .toolStarted(name: "Shell", detail: "ls"))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterShellExecution","command":"npm test"}"#)?.kind
+                == .toolStarted(name: "npm test", detail: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterFileEdit","file_path":"/src/web/App.swift"}"#)?.kind
+                == .toolStarted(name: "Edit", detail: "App.swift"))
         #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUseFailure","tool_name":"Shell","failure_type":"error"}"#)?.kind
                 == .toolFinished(name: "Shell", failed: true))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"subagentStart"}"#)?.kind == .subagentStarted)
     }
 
     @Test func stopAndSession() {

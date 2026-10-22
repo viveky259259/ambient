@@ -8,6 +8,7 @@ enum HostActivator {
         "Apple_Terminal": "com.apple.Terminal",
         "iTerm.app": "com.googlecode.iterm2",
         "vscode": "com.microsoft.VSCode",
+        "cursor": "com.todesktop.230313mzl4w4u92",
         "WezTerm": "com.github.wez.wezterm",
         "ghostty": "com.mitchellh.ghostty",
         "WarpTerminal": "dev.warp.Warp-Stable",
@@ -15,6 +16,13 @@ enum HostActivator {
         "Tabby": "org.tabby",
         "kitty": "net.kovidgoyal.kitty",
         "zed": "dev.zed.Zed",
+    ]
+
+    /// Known Cursor desktop bundle ids (stable todesktop id, plus common variants).
+    private static let cursorBundles = [
+        "com.todesktop.230313mzl4w4u92",
+        "com.cursor.Cursor",
+        "com.todesktop.cursor",
     ]
 
     static func app(for host: HostInfo?) -> NSRunningApplication? {
@@ -27,6 +35,20 @@ enum HostActivator {
         }
         if let program = host.termProgram, let id = termPrograms[program] {
             return NSRunningApplication.runningApplications(withBundleIdentifier: id).first
+        }
+        // Cursor hooks often omit TERM_PROGRAM but still pass a todesktop / Cursor bundle id.
+        if let id = host.bundleId,
+           cursorBundles.contains(id) || id.lowercased().contains("cursor"),
+           let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first {
+            return app
+        }
+        return nil
+    }
+
+    /// Prefer a running Cursor app when focusing a Cursor agent session whose host lost its bundle id.
+    static func cursorApp() -> NSRunningApplication? {
+        for id in cursorBundles {
+            if let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first { return app }
         }
         return nil
     }

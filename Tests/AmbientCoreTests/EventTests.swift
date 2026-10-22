@@ -47,7 +47,8 @@ import Testing
     }
 
     @Test func connectionsNotYetRunAgainstTheRealAgentAreBeta() {
-        #expect(AgentKind.hooked.filter(\.isBeta) == [.cursor, .copilot, .opencode])
+        #expect(AgentKind.hooked.filter(\.isBeta) == [.copilot, .opencode])
+        #expect(!AgentKind.cursor.isBeta)
     }
 }
 

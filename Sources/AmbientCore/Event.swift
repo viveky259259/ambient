@@ -25,8 +25,8 @@ public enum AgentKind: String, Codable, CaseIterable, Sendable {
     /// Connected from the agent's documented hooks, but not yet run against the agent itself.
     public var isBeta: Bool {
         switch self {
-        case .cursor, .copilot, .opencode: true
-        case .claude, .codex, .gemini, .antigravity, .custom: false
+        case .copilot, .opencode: true
+        case .claude, .codex, .gemini, .antigravity, .cursor, .custom: false
         }
     }
 }
