@@ -2,7 +2,14 @@
 
 ## Unreleased
 
-- **More agents (beta)**: connect **Cursor**, **GitHub Copilot CLI** and **OpenCode** in Settings › Agents or with
+- **Task board**: Settings › Board (and *Task Board…* in the menu bar) shows a local Kanban of agent work —
+  backlog, in progress, blocked, done — grouped from session metadata only (project, titles, same-day sessions;
+  needs-you → blocked). Persist to `~/.ambient/tasks.json`. CLI: `ambient tasks`, `ambient task upsert`,
+  `ambient task open`.
+- **Cursor (first-class)**: no longer beta. Installs after-the-fact tool hooks (`afterShellExecution`,
+  `afterFileEdit`, `afterMCPExecution`) so the island shows tools while Cursor works; still never uses
+  permission-style hooks. Click-to-return prefers the Cursor editor window for the project.
+- **More agents (beta)**: connect **GitHub Copilot CLI** and **OpenCode** in Settings › Agents or with
   `ambient install`, and `ambient doctor` checks each one. They're marked beta until they've run against the
   real agents; Settings › Agents and the README say what each one shows.
 - **Antigravity**: checked against a real `agy` 1.4 session: sessions, prompts, tools and finished turns all arrive.
