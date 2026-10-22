@@ -43,7 +43,24 @@ import Testing
         #expect(AgentKind.claude.displayName == "Claude")
         #expect(AgentKind.codex.displayName == "Codex")
         #expect(AgentKind.gemini.displayName == "Gemini")
+        #expect(AgentKind.antigravity.displayName == "Antigravity")
+        #expect(AgentKind.cursor.displayName == "Cursor")
+        #expect(AgentKind.copilot.displayName == "Copilot")
+        #expect(AgentKind.opencode.displayName == "OpenCode")
         #expect(AgentKind.custom.displayName == "Agent")
+    }
+
+    @Test func hookedAgentLabelsNeverInheritAForeignAgentName() {
+        // Regression: Cursor (and other hooked agents) must not show as "Codex" when agentName is polluted.
+        var cursor = Session(agent: .cursor, sessionId: "c1", at: Date())
+        cursor.agentName = "Codex"
+        #expect(cursor.agentLabel == "Cursor")
+        var opencode = Session(agent: .opencode, sessionId: "o1", at: Date())
+        opencode.agentName = "Codex"
+        #expect(opencode.agentLabel == "OpenCode")
+        var custom = Session(agent: .custom, sessionId: "x1", at: Date())
+        custom.agentName = "Aider"
+        #expect(custom.agentLabel == "Aider")
     }
 
     @Test func connectionsNotYetRunAgainstTheRealAgentAreBeta() {

@@ -273,6 +273,16 @@ private func event(_ agent: AgentKind, _ json: String, hint: String? = nil) -> A
     @Test func neverRepliesSoItNeverDecidesAnything() {
         #expect(AdapterRegistry.reply(agent: .cursor, event: "beforeSubmitPrompt") == nil)
     }
+
+    @Test func payloadAgentFieldDoesNotRelabelCursorAsCodex() {
+        // Cursor must not share CustomAdapter / ClaudeAdapter naming: ignore payload "agent".
+        let e = event(.cursor, #"{"conversation_id":"c","hook_event_name":"beforeSubmitPrompt","agent":"Codex","model":"codex"}"#)
+        #expect(e?.agent == .cursor)
+        #expect(e?.agentName == nil)
+        var session = Session(agent: .cursor, sessionId: "c", at: Date())
+        session.agentName = e?.agentName
+        #expect(session.agentLabel == "Cursor")
+    }
 }
 
 @Suite struct CopilotAdapterTests {
