@@ -14,6 +14,7 @@ struct SettingsView: View {
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
+    var onOpenBoard: (() -> Void)? = nil
 
     @AppStorage("settingsPane") private var pane: SettingsPane = .welcome
     @FocusState private var sidebarFocused: Bool
@@ -87,7 +88,7 @@ struct SettingsView: View {
         case .agents:
             AgentsPane(setup: setup)
         case .board:
-            BoardPane(model: model, prefs: prefs)
+            BoardPane(model: model, prefs: prefs, onOpenBoard: onOpenBoard)
         case .island:
             IslandPane(prefs: prefs)
         case .pet:

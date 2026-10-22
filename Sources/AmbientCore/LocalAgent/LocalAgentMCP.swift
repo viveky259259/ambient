@@ -15,6 +15,7 @@ public final class LocalAgentMCP: @unchecked Sendable {
 
     public enum MCPError: Error, Equatable, CustomStringConvertible, Sendable {
         case badURL
+        case nonLoopback
         case http(Int)
         case transport(String)
         case rpc(String)
@@ -23,6 +24,7 @@ public final class LocalAgentMCP: @unchecked Sendable {
         public var description: String {
             switch self {
             case .badURL: "Local-agent MCP URL is invalid."
+            case .nonLoopback: "Local-agent MCP URL must be loopback (127.0.0.1 / localhost)."
             case let .http(code): "Local-agent MCP returned HTTP \(code)."
             case let .transport(message): message
             case let .rpc(message): message
@@ -104,6 +106,7 @@ public final class LocalAgentMCP: @unchecked Sendable {
 
     @discardableResult
     private func post(_ body: [String: Any], expectSSE: Bool) async throws -> [String: Any] {
+        guard TaskLLMConfig.isLoopback(config.url) else { throw MCPError.nonLoopback }
         var request = URLRequest(url: config.url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

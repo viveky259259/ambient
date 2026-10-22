@@ -37,6 +37,18 @@ import Testing
         config.modelID = "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
         #expect(!config.refusesCloudModel)
     }
+
+    @Test func acceptsOnlyLoopbackMCPHosts() {
+        #expect(TaskLLMConfig.isLoopback(URL(string: "http://127.0.0.1:5051/mcp")!))
+        #expect(TaskLLMConfig.isLoopback(URL(string: "http://localhost:5051/mcp")!))
+        #expect(TaskLLMConfig.isLoopback(URL(string: "http://[::1]:5051/mcp")!))
+        #expect(!TaskLLMConfig.isLoopback(URL(string: "http://example.com:5051/mcp")!))
+        #expect(!TaskLLMConfig.isLoopback(URL(string: "https://api.openai.com/v1")!))
+        var config = TaskLLMConfig(enabled: true, mcpURL: "http://10.0.0.5:5051/mcp")
+        #expect(config.refusesNonLoopback)
+        config.mcpURL = "http://127.0.0.1:5051/mcp"
+        #expect(!config.refusesNonLoopback)
+    }
 }
 
 @Suite struct SessionContextBuilderTests {
@@ -84,6 +96,48 @@ import Testing
             session: session
         )
         #expect(updated?.status == TaskStatus.blocked)
+    }
+
+    @Test func staleWaitingSessionDoesNotReblockAfterLiveUnblock() {
+        let store = TaskStore()
+        var waiting = Session(agent: .codex, sessionId: "s3", at: Date())
+        waiting.cwd = "/p/app"
+        waiting.activity = .waiting(reason: "permission", message: "ok?")
+        let task = store.observe(SessionChange(session: waiting, previous: .thinking,
+                                               event: .needsInput(reason: "permission", message: "ok?"), removed: false))!
+        #expect(task.status == .blocked)
+
+        var working = waiting
+        working.activity = .thinking
+        let live = store.observe(SessionChange(session: working, previous: .waiting(reason: "permission", message: "ok?"),
+                                               event: .promptSubmitted, removed: false))!
+        #expect(live.status == .inProgress)
+
+        // LLM returns later with a *captured* waiting copy — AppModel must pass the live session instead.
+        let updated = store.applySemantics(
+            TaskSemantics(title: "Keep going", summary: "Still working.", status: .inProgress),
+            toTaskID: task.id,
+            session: working
+        )
+        #expect(updated?.status == TaskStatus.inProgress)
+        #expect(updated?.title == "Keep going")
+    }
+
+    @Test func llmCannotClearBlockedWithoutWaitingSession() {
+        let store = TaskStore()
+        var waiting = Session(agent: .codex, sessionId: "s4", at: Date())
+        waiting.cwd = "/p/app"
+        waiting.activity = .waiting(reason: "permission", message: "ok?")
+        let task = store.observe(SessionChange(session: waiting, previous: .thinking,
+                                               event: .needsInput(reason: "permission", message: "ok?"), removed: false))!
+        #expect(task.status == .blocked)
+        let updated = store.applySemantics(
+            TaskSemantics(title: "Done?", summary: "Maybe finished.", status: .done),
+            toTaskID: task.id,
+            session: nil
+        )
+        #expect(updated?.status == TaskStatus.blocked)
+        #expect(updated?.summary == "Maybe finished.")
     }
 }
 

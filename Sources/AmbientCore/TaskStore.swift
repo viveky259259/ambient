@@ -48,7 +48,9 @@ public final class TaskStore {
         return t
     }
 
-    /// Applies local-LLM semantics. Manual titles stay unless empty; needs-you still forces blocked.
+    /// Applies local-LLM semantics. Manual titles stay unless empty.
+    /// Pass the *current* linked session (not a captured copy): needs-you forces blocked only while
+    /// that live session is still `.waiting`.
     @discardableResult
     public func applySemantics(_ semantics: TaskSemantics, toTaskID id: String,
                                session: Session? = nil, at date: Date = Date()) -> AgentTask? {

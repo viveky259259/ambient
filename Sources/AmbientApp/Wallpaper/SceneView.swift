@@ -99,6 +99,11 @@ struct SceneTextLayer: View {
                     .foregroundStyle(ink(.header))
                     .shadow(color: halo(.header), radius: 6 * u)
             }
+            .overlay(alignment: .topTrailing) {
+                boardPanel
+                    .padding(.trailing, size.width * 0.05)
+                    .padding(.top, size.height * 0.11)
+            }
             .overlay(alignment: .bottomLeading) {
                 story
                     .padding(.leading, size.width * 0.06)
@@ -227,5 +232,60 @@ struct SceneTextLayer: View {
             }
         }
         .opacity(0.65)
+    }
+
+    /// Soft inhabitant-style cues — titles + mood dots, not dense Kanban columns.
+    @ViewBuilder private var boardPanel: some View {
+        if !state.boardCues.isEmpty {
+            VStack(alignment: .trailing, spacing: 8 * u) {
+                Text("Board")
+                    .font(.system(size: 11 * u, weight: .semibold))
+                    .opacity(0.55)
+                    .tracking(0.6)
+                VStack(alignment: .trailing, spacing: 7 * u) {
+                    ForEach(state.boardCues) { cue in
+                        boardCue(cue)
+                    }
+                }
+            }
+            .padding(.horizontal, 14 * u)
+            .padding(.vertical, 12 * u)
+            .background(
+                RoundedRectangle(cornerRadius: 14 * u, style: .continuous)
+                    .fill(panelFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14 * u, style: .continuous)
+                            .strokeBorder(ink(.header).opacity(0.12), lineWidth: 0.5)
+                    )
+            )
+            .shadow(color: halo(.header).opacity(0.35), radius: 10 * u, y: 2 * u)
+            .foregroundStyle(ink(.header))
+        }
+    }
+
+    private func boardCue(_ cue: SceneBoardCue) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8 * u) {
+            VStack(alignment: .trailing, spacing: 2 * u) {
+                Text(cue.title)
+                    .font(.system(size: 12.5 * u, weight: .medium))
+                    .lineLimit(1)
+                Text(cue.statusLabel)
+                    .font(.system(size: 10.5 * u))
+                    .foregroundStyle(cue.mood == .waiting ? waitingInk : ink(.header).opacity(0.65))
+            }
+            Circle()
+                .fill(cueTint(cue))
+                .frame(width: 7 * u, height: 7 * u)
+                .padding(.top, 4 * u)
+        }
+    }
+
+    private var panelFill: Color {
+        dark(.header) ? Color.white.opacity(0.42) : Color.black.opacity(0.28)
+    }
+
+    private func cueTint(_ cue: SceneBoardCue) -> Color {
+        if cue.mood == .waiting { return waitingInk }
+        return Palette.mood(cue.mood, agent: cue.agent ?? .claude).color
     }
 }

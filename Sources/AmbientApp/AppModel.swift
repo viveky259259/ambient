@@ -183,7 +183,10 @@ final class AppModel: ObservableObject {
                         return
                     }
                     let semantics = try await summarizer.summarize(context: context)
-                    _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: session)
+                    // Re-read the live linked session so a stale captured `.waiting` cannot re-block
+                    // after the user has already unblocked.
+                    let live = model.sessions.first { $0.id == session.id }
+                    _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: live)
                     model.lastSummarizedAt[taskID] = Date()
                     model.publishTasks()
                     model.taskLLMStatus = .ready

@@ -2,15 +2,17 @@
 
 ## Unreleased
 
-- **Task board**: Settings › Board (and *Task Board…* in the menu bar) shows a local Kanban of agent work —
-  backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day sessions;
-  needs-you → blocked), with optional **local LLM** summaries via the local-agent MCP gateway
-  (`http://127.0.0.1:5051/mcp`, default model `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit` on
-  `/Volumes/Models`). Transcript reading is opt-in; cloud-tagged models are blocked; heuristics remain the
-  fallback when the gateway or SSD is unavailable. Persist to `~/.ambient/tasks.json`. Optional one-shot
-  `ambient task skill-bootstrap` writes a few-shot skill pack to `~/.ambient/task-skill.json` (Anthropic from
-  Keychain only; never the live path). CLI: `ambient tasks`, `ambient task upsert`, `ambient task open`,
-  `ambient task skill-bootstrap`, `ambient task skill-status`.
+- **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of
+  agent work — backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day
+  sessions; needs-you → blocked). Optional **local LLM** summaries via the local-agent MCP gateway
+  (`http://127.0.0.1:5051/mcp` only — non-loopback URLs refused; default model
+  `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit` on `/Volumes/Models`). LLM options collapse by default in Settings.
+  Transcript reading is opt-in; cloud-tagged models are blocked; heuristics remain the fallback when the gateway or
+  SSD is unavailable. Optional **wallpaper board cues** (Settings › Wallpaper / Board; off by default) draw soft
+  title + status chips on the living wallpaper when tasks are blocked or in progress. Persist to
+  `~/.ambient/tasks.json`. Optional one-shot `ambient task skill-bootstrap` writes a few-shot skill pack to
+  `~/.ambient/task-skill.json` (Anthropic from Keychain only; never the live path). CLI: `ambient tasks`,
+  `ambient task upsert`, `ambient task open`, `ambient task skill-bootstrap`, `ambient task skill-status`.
 - **Cursor (first-class)**: no longer beta. Installs after-the-fact tool hooks (`afterShellExecution`,
   `afterFileEdit`, `afterMCPExecution`) so the island shows tools while Cursor works; still never uses
   permission-style hooks. Click-to-return prefers the Cursor editor window for the project.

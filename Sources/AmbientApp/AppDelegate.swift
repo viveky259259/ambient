@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
+    private var boardWindow: NSWindow?
     private var demoTimers: [Timer] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -62,7 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts,
                                     onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
-                                    onDemo: { [weak self] in self?.playDemo() })
+                                    onDemo: { [weak self] in self?.playDemo() },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
         menuBar?.start()
 
         dockGlow = DockGlow(model: model, prefs: prefs)
@@ -132,7 +134,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                         self?.prefs.setupCompleted = true
                                         self?.setupWindow?.close()
                                         self?.askForNotificationsOnce()
-                                    })
+                                    },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
             let hosting = NSHostingController(rootView: view)
             hosting.sizingOptions = [.minSize, .maxSize]
             let window = NSWindow(contentViewController: hosting)
@@ -158,6 +161,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         setupModel?.refresh()
         setupWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+    }
+
+    // MARK: - Board window
+
+    /// Wider dedicated Board — menu Task Board… and Settings › Board › Open Board.
+    func showBoard() {
+        if boardWindow == nil {
+            let view = BoardWindowView(model: model, prefs: prefs)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "Task Board"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isReleasedWhenClosed = false
+            window.setContentSize(NSSize(width: 980, height: 620))
+            window.center()
+            boardWindow = window
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                if self?.setupWindow?.isVisible != true {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
+        }
+        NSApp.setActivationPolicy(.regular)
+        boardWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
 

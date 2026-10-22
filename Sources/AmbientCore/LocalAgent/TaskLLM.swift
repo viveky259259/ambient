@@ -35,6 +35,20 @@ public struct TaskLLMConfig: Equatable, Sendable {
     public var refusesCloudModel: Bool {
         modelID.lowercased().contains(":cloud") || modelID.lowercased().contains("cloud/")
     }
+
+    /// True when the configured MCP URL is not a loopback http(s) endpoint.
+    public var refusesNonLoopback: Bool {
+        guard let url = mcpEndpoint else { return true }
+        return !Self.isLoopback(url)
+    }
+
+    /// Session text may only go to 127.0.0.1 / localhost / ::1.
+    public static func isLoopback(_ url: URL) -> Bool {
+        let scheme = url.scheme?.lowercased() ?? ""
+        guard scheme == "http" || scheme == "https" else { return false }
+        let host = (url.host ?? "").lowercased()
+        return host == "127.0.0.1" || host == "localhost" || host == "::1"
+    }
 }
 
 /// Calm status for Settings › Board.
@@ -46,6 +60,7 @@ public enum TaskLLMStatus: Equatable, Sendable {
     case volumeMissing(String)
     case modelUnavailable(String)
     case cloudModelBlocked(String)
+    case nonLoopbackBlocked(String)
     case failed(String)
 
     public var label: String {
@@ -57,6 +72,7 @@ public enum TaskLLMStatus: Equatable, Sendable {
         case let .volumeMissing(m): m
         case let .modelUnavailable(m): m
         case let .cloudModelBlocked(m): m
+        case let .nonLoopbackBlocked(m): m
         case let .failed(m): m
         }
     }
@@ -107,8 +123,11 @@ public struct TaskSummarizer: Sendable {
         if config.refusesCloudModel {
             return .cloudModelBlocked("Model \(config.modelID) looks cloud-hosted. Choose a local hf:/ollama: model.")
         }
-        guard config.mcpEndpoint != nil else {
+        guard let endpoint = config.mcpEndpoint else {
             return .gatewayDown("Local-agent MCP URL is invalid.")
+        }
+        if !TaskLLMConfig.isLoopback(endpoint) {
+            return .nonLoopbackBlocked("MCP URL must be loopback (127.0.0.1 / localhost). Session text stays on this Mac.")
         }
         do {
             let storage = try await mcp.callTool(name: "model_storage_status") as? [String: Any]
@@ -137,6 +156,9 @@ public struct TaskSummarizer: Sendable {
         if config.refusesCloudModel {
             throw LocalAgentMCP.MCPError.rpc("Cloud models are blocked for board summaries.")
         }
+        guard let endpoint = config.mcpEndpoint, TaskLLMConfig.isLoopback(endpoint) else {
+            throw LocalAgentMCP.MCPError.nonLoopback
+        }
         let prompt = Self.prompt(for: context, skill: skillPack)
         let submitted = try await mcp.callTool(name: "submit_inference", arguments: [
             "model_id": config.modelID,
@@ -156,7 +178,7 @@ public struct TaskSummarizer: Sendable {
 
     private func waitForText(jobID: String, attempts: Int = 90) async throws -> String {
         for _ in 0..<attempts {
-            try await Swift.Task.sleep(nanoseconds: 500_000_000)
+            try await Task.sleep(nanoseconds: 500_000_000)
             let status = try await mcp.callTool(name: "get_job", arguments: ["job_id": jobID]) as? [String: Any]
             let state = status?["status"] as? String ?? ""
             if state == "failed" || state == "cancelled" {

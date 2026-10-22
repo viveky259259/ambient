@@ -72,9 +72,9 @@ final class LivingWallpaper: ObservableObject {
         // A swap left behind by a crash or a forced quit is put right first.
         perform(swapFlow.launched(locked: LockMonitor.screenIsLocked()))
 
-        model.$sessions.combineLatest(model.$day)
+        model.$sessions.combineLatest(model.$day, model.$tasks)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _, _ in self?.refresh() }
+            .sink { [weak self] _, _, _ in self?.refresh() }
             .store(in: &cancellables)
         // objectWillChange fires before the new value lands; hopping to the next turn of the run loop reads it.
         prefs.objectWillChange
@@ -141,8 +141,10 @@ final class LivingWallpaper: ObservableObject {
         if prefs.wallpaperCalendar { calendar.start() } else { calendar.stop() }
         let next = prefs.wallpaperCalendar ? calendar.next : nil
         let look = prefs.sceneLook, dark = Self.systemIsDark
+        let boardTasks = prefs.wallpaperShowBoard ? model.tasks : []
         let desk = SceneState.make(sessions: model.sessions, day: model.day, now: now, kind: kind, surface: .desk,
-                                   nextEvent: next, keeping: slots, look: look, systemDark: dark)
+                                   nextEvent: next, keeping: slots, look: look, systemDark: dark,
+                                   boardTasks: boardTasks)
         slots = Dictionary(uniqueKeysWithValues: desk.inhabitants.map { ($0.id, $0.slot) })
         feed.desk = desk
         feed.lock = prefs.wallpaperOnLockScreen

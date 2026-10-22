@@ -25,6 +25,8 @@ final class Preferences: ObservableObject {
     @Published var wallpaperOnLockScreen: Bool { didSet { defaults.set(wallpaperOnLockScreen, forKey: "wallpaperOnLockScreen") } }
     @Published var wallpaperLockMessages: Bool { didSet { defaults.set(wallpaperLockMessages, forKey: "wallpaperLockMessages") } }
     @Published var wallpaperCalendar: Bool { didSet { defaults.set(wallpaperCalendar, forKey: "wallpaperCalendar") } }
+    /// Soft task cues on the living wallpaper (off by default — like calendar / lock messages).
+    @Published var wallpaperShowBoard: Bool { didSet { defaults.set(wallpaperShowBoard, forKey: "wallpaperShowBoard") } }
     @Published var wallpaperIslandEffect: Bool { didSet { defaults.set(wallpaperIslandEffect, forKey: "wallpaperIslandEffect") } }
     @Published var wallpaperLook: String { didSet { defaults.set(wallpaperLook, forKey: "wallpaperLook") } }
     @Published var petEnabled: Bool { didSet { defaults.set(petEnabled, forKey: "petEnabled") } }
@@ -89,6 +91,7 @@ final class Preferences: ObservableObject {
             "wallpaperOnLockScreen": true,
             "wallpaperLockMessages": false,
             "wallpaperCalendar": false,
+            "wallpaperShowBoard": false,
             "wallpaperIslandEffect": true,
             "wallpaperLook": "timeOfDay",
             "petEnabled": false,
@@ -123,6 +126,7 @@ final class Preferences: ObservableObject {
         wallpaperOnLockScreen = defaults.bool(forKey: "wallpaperOnLockScreen")
         wallpaperLockMessages = defaults.bool(forKey: "wallpaperLockMessages")
         wallpaperCalendar = defaults.bool(forKey: "wallpaperCalendar")
+        wallpaperShowBoard = defaults.bool(forKey: "wallpaperShowBoard")
         wallpaperIslandEffect = defaults.bool(forKey: "wallpaperIslandEffect")
         wallpaperLook = defaults.string(forKey: "wallpaperLook") ?? "timeOfDay"
         petEnabled = defaults.bool(forKey: "petEnabled")
