@@ -52,6 +52,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             button.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Ambient is reading aloud")
             button.title = ""
             return
+        case .paused:
+            button.image = NSImage(systemSymbolName: "pause.circle", accessibilityDescription: "Ambient's reading is paused")
+            button.title = ""
+            return
         case .failed:
             button.image = NSImage(systemSymbolName: "speaker.slash", accessibilityDescription: "Ambient couldn't read aloud")
             button.title = ""
@@ -103,7 +107,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         switch speech.state {
-        case .preparing, .speaking:
+        case .preparing, .speaking, .paused:
+            if speech.state == .paused {
+                menu.addItem(item("Continue Speaking", #selector(resumeSpeaking)))
+            } else if speech.state == .speaking {
+                menu.addItem(item("Pause Speaking", #selector(pauseSpeaking)))
+            }
             menu.addItem(item("Stop Speaking", #selector(stopSpeaking)))
             menu.addItem(.separator())
         case .failed(let message, let offerMacVoice):
@@ -230,6 +239,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func settings() { onSettings() }
     @objc private func quit() { NSApp.terminate(nil) }
     @objc private func stopSpeaking() { speech.stop() }
+    @objc private func pauseSpeaking() { speech.pause(from: "menu bar") }
+    @objc private func resumeSpeaking() { speech.resume(from: "menu bar") }
     @objc private func useMacVoice() { speech.useMacVoice() }
     @objc private func readSelection() { onReadSelection() }
 }

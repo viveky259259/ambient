@@ -78,12 +78,12 @@ struct PetView: View {
             } else if model.speaking {
                 HStack(spacing: 8) {
                     Image(systemName: "speaker.wave.2.fill").accessibilityHidden(true)
-                    Text("Reading aloud").font(.system(size: 12, weight: .medium))
+                    Text(model.speechState == .paused ? "Paused" : "Reading aloud")
+                        .font(.system(size: 12, weight: .medium))
                     Spacer(minLength: 4)
-                    LevelMeter(level: model.speechLevel)
-                    Button(action: model.onStopSpeech) { Image(systemName: "stop.fill") }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Stop speaking")
+                    LevelMeter(level: model.speechState == .speaking ? model.speechLevel : 0)
+                    SpeechControls(state: model.speechState, onStop: model.onStopSpeech,
+                                   onPause: model.onPauseSpeech, onResume: model.onResumeSpeech)
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)

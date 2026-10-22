@@ -91,6 +91,8 @@ final class PetController {
         }
         viewModel.onDrag = { [weak self] phase in self?.handleDrag(phase) }
         viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
+        viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "pet") }
+        viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "pet") }
     }
 
     func start() {
@@ -102,7 +104,8 @@ final class PetController {
             .store(in: &cancellables)
         speech.$state
             .sink { [weak self] state in
-                self?.viewModel.speaking = state == .preparing || state == .speaking
+                self?.viewModel.speaking = state == .preparing || state == .speaking || state == .paused
+                self?.viewModel.speechState = state
                 self?.trackPointer()
             }
             .store(in: &cancellables)

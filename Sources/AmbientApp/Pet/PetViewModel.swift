@@ -37,10 +37,13 @@ final class PetViewModel: ObservableObject {
 
     /// Reading a selection aloud: the bubble says so, with a stop button.
     @Published var speaking = false
+    @Published var speechState: SpeechState = .idle
     @Published var speechLevel: Float = 0
 
     var onOpen: (Session) -> Void = { _ in }
     var onStopSpeech: () -> Void = {}
+    var onPauseSpeech: () -> Void = {}
+    var onResumeSpeech: () -> Void = {}
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
     var onSettings: () -> Void = {}

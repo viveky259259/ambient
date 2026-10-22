@@ -82,6 +82,8 @@ final class IslandController {
             self.trackPointer()
         }
         viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
+        viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "island") }
+        viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "island") }
         viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
     }
 

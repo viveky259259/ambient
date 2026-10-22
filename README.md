@@ -18,7 +18,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 - **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌥⎋ (or Read Selection Aloud in the menu bar, or, in apps that support it, the app's menu ›
   Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
   worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
-  your own server with your key. The island shows it speaking, with a stop button. Set it up in Settings › Voice.
+  your own server with your key. The island shows it speaking, with pause, continue and stop; the keyboard's ⏯ key
+  and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice.
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.

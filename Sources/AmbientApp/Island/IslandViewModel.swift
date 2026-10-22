@@ -26,6 +26,8 @@ final class IslandViewModel: ObservableObject {
 
     var onOpen: (Session) -> Void = { _ in }
     var onStopSpeech: () -> Void = {}
+    var onPauseSpeech: () -> Void = {}
+    var onResumeSpeech: () -> Void = {}
     var onUseMacVoice: () -> Void = {}
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
