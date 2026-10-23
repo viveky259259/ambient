@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Task board: model path.** Point the board's local LLM at a model folder or `.gguf` file instead of a gateway
+  model id (Settings › Board › *Model & gateway options* › **Choose…**, or `ambient task model PATH`). Ambient
+  reads the files to pick the runtime: a path local-agent already serves runs through the gateway by its id; other
+  MLX / Hugging Face folders run directly with mlx-lm, vision checkpoints with mlx-vlm, Hugging Face cache folders
+  from their pinned snapshot, and GGUF with llama.cpp. Speech, image and video models are refused. Direct runs are
+  offline, one at a time, keep the prompt off the command line, and turn off reasoning models' thinking so the reply
+  is the JSON. Replies that still carry `<think>` blocks are cleaned before parsing. Optional **Python for MLX**;
+  otherwise Ambient reuses local-agent's MLX Python or finds one.
+- **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
+  change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
+
 ## 0.7.0 — 2026-10-23
 
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of

@@ -1,0 +1,156 @@
+import AmbientCore
+import Foundation
+
+/// `ambient mcp`: a stdio MCP server so agents can read and set the task board's model.
+/// One JSON-RPC message per line in each direction; standard output carries nothing else.
+struct MCPServer {
+    /// Sends a message to the running app and returns its reply, nil when the app isn't running.
+    let request: (WireMessage) -> WireMessage?
+
+    static let protocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
+
+    func run() -> Int32 {
+        while let line = readLine() {
+            guard !line.trimmingCharacters(in: .whitespaces).isEmpty, let reply = handle(line) else { continue }
+            FileHandle.standardOutput.write(Data((reply + "\n").utf8))
+        }
+        return 0
+    }
+
+    /// The reply line for one request line; nil for notifications.
+    func handle(_ line: String) -> String? {
+        guard let message = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any] else {
+            return encode(["jsonrpc": "2.0", "id": NSNull(), "error": ["code": -32700, "message": "Parse error"]])
+        }
+        guard let id = message["id"] else { return nil }
+        let params = message["params"] as? [String: Any] ?? [:]
+        switch message["method"] as? String {
+        case "initialize":
+            let asked = params["protocolVersion"] as? String ?? ""
+            return reply(id, [
+                "protocolVersion": Self.protocolVersions.contains(asked) ? asked : Self.protocolVersions[0],
+                "capabilities": ["tools": [String: Any]()],
+                "serverInfo": ["name": "ambient", "version": AmbientVersion.current],
+                "instructions": "Ambient's task board summarizes agent sessions with a model on this Mac. "
+                    + "Use get_task_model to see which model and how it runs; set_task_model_path to point it at "
+                    + "an MLX or Hugging Face folder or a .gguf file. Ambient.app must be running.",
+            ])
+        case "ping":
+            return reply(id, [String: Any]())
+        case "tools/list":
+            return reply(id, ["tools": Self.tools])
+        case "tools/call":
+            let arguments = params["arguments"] as? [String: Any] ?? [:]
+            let (text, isError) = call(params["name"] as? String ?? "", arguments)
+            return reply(id, ["content": [["type": "text", "text": text]], "isError": isError])
+        default:
+            return encode(["jsonrpc": "2.0", "id": id,
+                           "error": ["code": -32601, "message": "Method not found: \(message["method"] ?? "")"]])
+        }
+    }
+
+    static var tools: [[String: Any]] { [
+        [
+            "name": "get_task_model",
+            "description": "Show the model Ambient's task board uses to title and summarize agent tasks, what kind "
+                + "of model it is, and how Ambient runs it: through the local-agent MCP gateway, or directly with "
+                + "mlx-lm, mlx-vlm or llama.cpp.",
+            "inputSchema": ["type": "object", "properties": [String: Any](), "additionalProperties": false],
+            "annotations": ["readOnlyHint": true, "openWorldHint": false],
+        ],
+        [
+            "name": "set_task_model_path",
+            "description": "Point Ambient's task board at a model on this Mac. Accepts an MLX or Hugging Face model "
+                + "folder (config.json with safetensors; one with a vision_config runs with mlx-vlm), a Hugging Face "
+                + "cache folder (models--org--name), or a .gguf file. Ambient runs it through the local-agent gateway "
+                + "when the gateway knows that path, otherwise directly with the matching runtime, offline. "
+                + "Speech, image and video models are refused. An empty path goes back to the gateway model id.",
+            "inputSchema": [
+                "type": "object",
+                "properties": [
+                    "path": ["type": "string", "description": "Absolute path to the model folder or .gguf file (~ allowed). Empty clears it."],
+                    "python": ["type": "string", "description": "Optional Python with mlx-lm / mlx-vlm for direct MLX runs. Empty finds one."],
+                    "enable": ["type": "boolean", "description": "Also turn board summaries on (true) or off (false). Omit to leave as is."],
+                ],
+                "required": ["path"],
+                "additionalProperties": false,
+            ],
+            "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false],
+        ],
+    ] }
+
+    /// Tool result text, and whether it's an error.
+    func call(_ name: String, _ arguments: [String: Any]) -> (String, Bool) {
+        let notRunning = "Ambient isn't running. Open Ambient.app, then try again."
+        switch name {
+        case "get_task_model":
+            guard case let .taskModel(config)? = request(.taskModelRequest) else { return (notRunning, true) }
+            return (Self.render(report(config)), false)
+        case "set_task_model_path":
+            guard let path = arguments["path"] as? String else { return ("path is required.", true) }
+            if let problem = Self.validate(path: path) { return (problem, true) }
+            let python = arguments["python"] as? String
+            if let python, let problem = Self.validate(python: python) { return (problem, true) }
+            let change = TaskModelChange(modelPath: path, pythonPath: python, enabled: arguments["enable"] as? Bool)
+            guard case let .taskModel(config)? = request(.setTaskModel(change)) else { return (notRunning, true) }
+            return (Self.render(report(config)), false)
+        default:
+            return ("Unknown tool: \(name)", true)
+        }
+    }
+
+    /// Why `path` can't be the board's model, or nil when it can. Empty is fine: it clears the path.
+    static func validate(path: String) -> String? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard (trimmed as NSString).expandingTildeInPath.hasPrefix("/") else { return "Use an absolute path." }
+        guard let model = LocalModelPath.inspect(trimmed) else { return "Nothing at \(trimmed)." }
+        guard model.format.writesText else {
+            return "\(model.name): \(model.note ?? model.format.label + " can't write summaries"). Nothing changed."
+        }
+        return nil
+    }
+
+    static func validate(python: String) -> String? {
+        let trimmed = (python.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        guard !trimmed.isEmpty, !FileManager.default.isExecutableFile(atPath: trimmed) else { return nil }
+        return "No executable Python at \(trimmed). Nothing changed."
+    }
+
+    private func report(_ config: TaskLLMConfig) -> TaskModelReport {
+        blocking { await TaskModelReport.make(config) }
+    }
+
+    static func render(_ report: TaskModelReport) -> String {
+        var object: [String: String] = [:]
+        for field in report.fields { object[field.key] = field.value }
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func reply(_ id: Any, _ result: [String: Any]) -> String? {
+        encode(["jsonrpc": "2.0", "id": id, "result": result])
+    }
+
+    private func encode(_ object: [String: Any]) -> String? {
+        // Without .withoutEscapingSlashes paths come out as \/Users\/…, which is valid but noisy.
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.withoutEscapingSlashes]) else { return nil }
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// Waits for async work from the CLI's synchronous code.
+func blocking<T: Sendable>(_ work: @escaping @Sendable () async -> T) -> T {
+    let box = BlockingBox<T>()
+    let done = DispatchSemaphore(value: 0)
+    Task {
+        box.value = await work()
+        done.signal()
+    }
+    done.wait()
+    return box.value!
+}
+
+private final class BlockingBox<T>: @unchecked Sendable {
+    var value: T?
+}

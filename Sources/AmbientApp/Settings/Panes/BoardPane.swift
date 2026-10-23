@@ -1,4 +1,5 @@
 import AmbientCore
+import AppKit
 import SwiftUI
 
 /// Native Kanban-style board of agent tasks, with optional local-LLM summaries.
@@ -69,7 +70,7 @@ struct BoardPane: View {
         SettingsSection(
             header: "Local LLM",
             footer: llmExpanded
-                ? "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device — non-loopback URLs are refused. Cloud-tagged models are blocked. Optional one-shot skill pack (`ambient task skill-bootstrap`) teaches better titles via Keychain Anthropic, then runtime stays local. If `/Volumes/Models` is missing, run `models-on`. Metadata heuristics still run when the LLM is off or unavailable."
+                ? "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device — non-loopback URLs are refused. Cloud-tagged models are blocked. A model path runs through local-agent when it knows that path, otherwise directly with mlx-lm, mlx-vlm or llama.cpp, offline, one model at a time; agents can set it with `ambient mcp`. Optional one-shot skill pack (`ambient task skill-bootstrap`) teaches better titles via Keychain Anthropic, then runtime stays local. If `/Volumes/Models` is missing, run `models-on`. Metadata heuristics still run when the LLM is off or unavailable."
                 : "On-device titles via local-agent MCP. Expand for model, transcripts, and gateway options."
         ) {
             SettingsToggleRow(
@@ -88,10 +89,36 @@ struct BoardPane: View {
                 )
                 SettingsDivider()
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Model id").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                    Text("Model path").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                    HStack(spacing: Theme.Space.xs) {
+                        TextField("Model folder or .gguf file (optional)", text: $prefs.taskLLMModelPath)
+                            .textFieldStyle(.roundedBorder)
+                            .font(Theme.Fonts.mono)
+                            .onSubmit { model.refreshTaskLLMStatus() }
+                        Button("Choose…") { chooseModelPath() }
+                            .buttonStyle(.pill)
+                        if !prefs.taskLLMModelPath.isEmpty {
+                            Button("Clear") {
+                                prefs.taskLLMModelPath = ""
+                                model.refreshTaskLLMStatus()
+                            }
+                            .buttonStyle(.pill)
+                        }
+                    }
+                    Text(modelPathCaption)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                    Text(prefs.taskLLMModelPath.isEmpty ? "Model id" : "Model id (unused while a model path is set)")
+                        .font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     TextField("hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit", text: $prefs.taskLLMModelID)
                         .textFieldStyle(.roundedBorder)
                         .font(Theme.Fonts.mono)
+                        .disabled(!prefs.taskLLMModelPath.isEmpty)
+                    Text("Python for MLX (optional)").font(Theme.Fonts.caption).foregroundStyle(.secondary)
+                    TextField("Found automatically", text: $prefs.taskLLMPython)
+                        .textFieldStyle(.roundedBorder)
+                        .font(Theme.Fonts.mono)
+                        .onSubmit { model.refreshTaskLLMStatus() }
                     Text("MCP URL (loopback only)").font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     TextField("http://127.0.0.1:5051/mcp", text: $prefs.taskLLMMCPURL)
                         .textFieldStyle(.roundedBorder)
@@ -125,6 +152,39 @@ struct BoardPane: View {
         case .disabled: .neutral
         case .gatewayDown, .volumeMissing, .modelUnavailable, .cloudModelBlocked, .nonLoopbackBlocked, .failed: .warning
         }
+    }
+
+    /// What the chosen path is and how it runs: through local-agent when it knows the path, else directly.
+    private var modelPathCaption: String {
+        guard !prefs.taskLLMModelPath.isEmpty else {
+            return "Empty: local-agent runs the model id below. Or choose an MLX or Hugging Face folder, or a .gguf file."
+        }
+        guard let found = LocalModelPath.inspect(prefs.taskLLMModelPath) else { return "Nothing at this path." }
+        if let route = model.taskModelRoute, prefs.taskLLMEnabled {
+            return "\(found.format.label) · runs \(route.label)"
+        }
+        return found.format.writesText
+            ? "\(found.format.label) · runs through local-agent if it knows this path, else directly with \(found.format.runtime ?? "its runtime")"
+            : "\(found.format.label) · can't write summaries"
+    }
+
+    private func chooseModelPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.treatsFilePackagesAsDirectories = true
+        // Hugging Face caches live under ~/.cache.
+        panel.showsHiddenFiles = true
+        panel.prompt = "Use Model"
+        panel.message = "Choose a model folder (config.json and safetensors), a Hugging Face cache folder, or a .gguf file."
+        if !prefs.taskLLMModelPath.isEmpty {
+            panel.directoryURL = URL(fileURLWithPath: (prefs.taskLLMModelPath as NSString).expandingTildeInPath)
+                .deletingLastPathComponent()
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        prefs.taskLLMModelPath = url.path
+        model.refreshTaskLLMStatus()
     }
 
     private var skillPackCaption: String {

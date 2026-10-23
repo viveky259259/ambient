@@ -61,9 +61,22 @@ final class EventServer {
                 }
                 _ = done.wait(timeout: .now() + 2)
                 return try? Wire.encode(.opened(sessionID: box.value ?? nil))
+            case .taskModelRequest, .setTaskModel:
+                let box = ReplyBox<TaskLLMConfig>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    if case let .setTaskModel(change) = message {
+                        box.value = model.value.setTaskModel(change)
+                    } else {
+                        box.value = model.value.prefs.taskLLMConfig
+                    }
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 2)
+                return box.value.flatMap { try? Wire.encode(.taskModel($0)) }
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel:
                 return nil
             }
         }

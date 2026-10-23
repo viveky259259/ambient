@@ -90,6 +90,31 @@ pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, 
 local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
 `ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board.
 
+**Model path** — instead of a gateway model id, point the board at a model on disk: Settings › Board › *Model &
+gateway options* › **Choose…**, `ambient task model PATH`, or an agent through `ambient mcp`. Ambient looks at
+the files to decide how to run it:
+
+| You choose | Ambient runs it |
+| --- | --- |
+| A path local-agent already serves (its `list_models` shows that path) | Through the gateway, by that model's id, so its queue and adapters apply |
+| An MLX or Hugging Face folder (`config.json` + safetensors) | Directly with **mlx-lm** |
+| The same with a `vision_config` (Qwen-VL, Qwen3.5 and similar) | Directly with **mlx-vlm**, text only |
+| A Hugging Face cache folder (`models--org--name`) | Its pinned snapshot, as above |
+| A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion`, or `llama-cli -no-cnv`) |
+| Speech, transcription, image or video weights | Refused: they can't write a summary |
+
+Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, with the prompt on standard input, and ask
+reasoning models (Qwen3 and later) not to think first. Ambient uses **Python for MLX** if you set one, otherwise the
+Python local-agent uses for MLX, otherwise a `python3` that can import the package. To let Claude Code or Codex
+read and set the board's model, add Ambient as an MCP server:
+
+```bash
+claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+```
+
+It offers `get_task_model` and `set_task_model_path` (path, optional `python`, optional `enable`), and needs
+Ambient running.
+
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).
 
@@ -216,6 +241,9 @@ ambient status [--json]                                The sessions Ambient is t
 ambient tasks [--json]                                 The agent task board
 ambient task upsert --title TEXT […]                   Create or update a board task
 ambient task open ID                                   Jump to a task's linked session
+ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]
+                                                       Show or set the board's local model (a folder or .gguf file)
+ambient mcp                                            MCP server (stdio) with get_task_model / set_task_model_path
 ambient doctor                                         Check the app, the hooks and the connection
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
 ambient emit <start|working|waiting|done|error|end> --session ID   Drive a session from any agent or script

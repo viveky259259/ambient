@@ -21,6 +21,7 @@ struct Commands {
         case "tasks": return tasks(rest)
         case "task": return task(rest)
         case "link": return link() ? 0 : 1
+        case "mcp": return MCPServer(request: { request($0) }).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
         case "voice-files":
@@ -47,6 +48,11 @@ struct Commands {
           ambient task open ID                                    Jump to a task's linked session
           ambient task skill-bootstrap                            Once: learn a local skill pack via Anthropic (Keychain), then local LLM uses it
           ambient task skill-status                               Show whether ~/.ambient/task-skill.json is present
+          ambient task model [PATH|--clear] [--python PATH] [--enable|--disable]
+                                                                  Show or set the board's local model: an MLX or Hugging Face
+                                                                  folder, or a .gguf file (default: the gateway model id)
+          ambient mcp                                             Run as an MCP server (stdio) so agents can read and set the
+                                                                  board's model: claude mcp add ambient -- ~/.ambient/bin/ambient mcp
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
@@ -238,7 +244,7 @@ struct Commands {
 
     private func task(_ args: [String]) -> Int32 {
         guard let sub = args.first else {
-            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task skill-bootstrap")
+            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task model [PATH] | ambient task skill-bootstrap")
             return 64
         }
         let rest = Array(args.dropFirst())
@@ -260,8 +266,9 @@ struct Commands {
             return 0
         case "skill-bootstrap": return taskSkillBootstrap(rest)
         case "skill-status": return taskSkillStatus()
+        case "model": return taskModel(rest)
         default:
-            out.error("Unknown task command '\(sub)'. Use upsert, open, skill-bootstrap or skill-status.")
+            out.error("Unknown task command '\(sub)'. Use upsert, open, model, skill-bootstrap or skill-status.")
             return 64
         }
     }
@@ -303,6 +310,51 @@ struct Commands {
             return 0
         }
         out.warn("No \(tilde(paths.taskSkill.path)) yet — using bundled seed. Run ambient task skill-bootstrap once.")
+        return 0
+    }
+
+    /// Shows the board's model, or points it at a model folder or `.gguf` file first.
+    private func taskModel(_ args: [String]) -> Int32 {
+        let usage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
+        var change = TaskModelChange()
+        var rest = args[...]
+        while let arg = rest.popFirst() {
+            switch arg {
+            case "--clear": change.modelPath = ""
+            case "--enable": change.enabled = true
+            case "--disable": change.enabled = false
+            case "--json": continue
+            case "--python":
+                guard let python = rest.popFirst() else { out.error(usage); return 64 }
+                change.pythonPath = python
+            case "--help", "-h": print(usage); return 0
+            default:
+                guard !arg.hasPrefix("--"), change.modelPath == nil else { out.error(usage); return 64 }
+                change.modelPath = arg
+            }
+        }
+        if let path = change.modelPath, let problem = MCPServer.validate(path: path) {
+            out.error(problem)
+            return 1
+        }
+        if let python = change.pythonPath, let problem = MCPServer.validate(python: python) {
+            out.error(problem)
+            return 1
+        }
+        let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
+        guard case let .taskModel(config)? = request(message) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        let report = blocking { await TaskModelReport.make(config) }
+        if args.contains("--json") {
+            print(MCPServer.render(report))
+            return 0
+        }
+        print(out.bold("Board model"))
+        for field in report.fields {
+            print("  \(field.key.padding(toLength: 14, withPad: " ", startingAt: 0)) \(field.key == "status" && report.resolution.route == nil ? out.dim(field.value) : field.value)")
+        }
         return 0
     }
 
