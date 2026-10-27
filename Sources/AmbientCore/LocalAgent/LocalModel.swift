@@ -106,6 +106,18 @@ public struct LocalModelPath: Equatable, Sendable {
         return made(.unknown, note: "No config.json or .gguf file in this folder.")
     }
 
+    /// Why `path` can't be the board's model, or nil when it can. Empty is fine: it clears the path.
+    public static func problem(with path: String) -> String? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard (trimmed as NSString).expandingTildeInPath.hasPrefix("/") else { return "Use an absolute path." }
+        guard let model = inspect(trimmed) else { return "Nothing at \(trimmed)." }
+        guard model.format.writesText else {
+            return "\(model.name): \(model.note ?? model.format.label + " can't write summaries"). Nothing changed."
+        }
+        return nil
+    }
+
     /// The gateway's own name-based split between text and media models.
     static func mediaName(_ name: String) -> Bool {
         let lower = name.lowercased()

@@ -21,7 +21,7 @@ struct Commands {
         case "tasks": return tasks(rest)
         case "task": return task(rest)
         case "link": return link() ? 0 : 1
-        case "mcp": return MCPServer(request: { request($0) }).run()
+        case "mcp": return MCPServer(request: { request($0, timeout: Self.taskModelTimeout) }).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
         case "voice-files":
@@ -162,9 +162,12 @@ struct Commands {
 
     // MARK: - Status
 
-    private func request(_ message: WireMessage) -> WireMessage? {
+    /// Task-model requests wait for the app's main thread for up to 2 seconds; give them longer than that.
+    static let taskModelTimeout: TimeInterval = 3
+
+    private func request(_ message: WireMessage, timeout: TimeInterval = 1) -> WireMessage? {
         guard let data = try? Wire.encode(message),
-              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 1, expectReply: true),
+              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: timeout, expectReply: true),
               !reply.isEmpty else { return nil }
         return try? Wire.decode(reply)
     }
@@ -326,14 +329,14 @@ struct Commands {
             case "--json": continue
             case "--python":
                 guard let python = rest.popFirst() else { out.error(usage); return 64 }
-                change.pythonPath = python
+                change.pythonPath = MCPServer.absolute(python)
             case "--help", "-h": print(usage); return 0
             default:
                 guard !arg.hasPrefix("--"), change.modelPath == nil else { out.error(usage); return 64 }
                 change.modelPath = arg
             }
         }
-        if let path = change.modelPath, let problem = MCPServer.validate(path: path) {
+        if let path = change.modelPath, let problem = LocalModelPath.problem(with: path) {
             out.error(problem)
             return 1
         }
@@ -342,8 +345,9 @@ struct Commands {
             return 1
         }
         let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
-        guard case let .taskModel(config)? = request(message) else {
-            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+        let reply = request(message, timeout: Self.taskModelTimeout)
+        guard case let .taskModel(config)? = reply else {
+            out.error(MCPServer.noConfig(reply, changing: message != .taskModelRequest))
             return 1
         }
         let report = blocking { await TaskModelReport.make(config) }

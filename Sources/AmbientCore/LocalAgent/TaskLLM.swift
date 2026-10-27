@@ -374,9 +374,13 @@ public struct TaskSummarizer: Sendable {
             return content
         }
         if let text = result["text"] as? String { return text }
+        // Only a text output, as `writesText` expects, and only a regular file: a FIFO or device would block or never end,
+        // and a symlink could point anywhere.
         guard let file = (result["files"] as? [String])?.first,
-              let size = (try? FileManager.default.attributesOfItem(atPath: file))?[.size] as? NSNumber,
-              size.intValue <= 256 * 1024,
+              textOutputs.contains(URL(fileURLWithPath: file).pathExtension.lowercased()),
+              let attributes = try? FileManager.default.attributesOfItem(atPath: file),
+              attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? NSNumber, size.intValue <= 256 * 1024,
               let data = FileManager.default.contents(atPath: file) else { return nil }
         return String(data: data, encoding: .utf8)
     }
@@ -396,12 +400,15 @@ public struct TaskSummarizer: Sendable {
         }
     }
 
+    /// Output file extensions read as a summary.
+    static let textOutputs: Set<String> = ["txt", "json", "md"]
+
     /// Chat and vision models write text; a `command` model does when its configured output is a text file.
     static func writesText(_ entry: [String: Any]) -> Bool {
         switch entry["kind"] as? String {
         case "chat", "vision": true
         case "custom":
-            ["txt", "json", "md"].contains(URL(fileURLWithPath: entry["output_name"] as? String ?? "").pathExtension.lowercased())
+            textOutputs.contains(URL(fileURLWithPath: entry["output_name"] as? String ?? "").pathExtension.lowercased())
         default: false
         }
     }

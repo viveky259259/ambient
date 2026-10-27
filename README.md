@@ -103,8 +103,9 @@ the files to decide how to run it:
 | A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion`, or `llama-cli -no-cnv`) |
 | Speech, transcription, image or video weights | Refused: they can't write a summary |
 
-Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, with the prompt on standard input, and ask
-reasoning models (Qwen3 and later) not to think first. Ambient uses **Python for MLX** if you set one, otherwise the
+Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, and ask reasoning models (Qwen3 and later) not to
+think first. MLX runs get the prompt on standard input. llama.cpp reads it from a temporary file that only you can
+read (`0600`), deleted when the run ends. Ambient uses **Python for MLX** if you set one, otherwise the
 Python local-agent uses for MLX, otherwise a `python3` that can import the package. To let Claude Code or Codex
 read and set the board's model, add Ambient as an MCP server:
 

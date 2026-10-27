@@ -183,6 +183,14 @@ struct BoardPane: View {
                 .deletingLastPathComponent()
         }
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        // Keep a working path rather than swap in something that can't write summaries.
+        if let problem = LocalModelPath.problem(with: url.path) {
+            let alert = NSAlert()
+            alert.messageText = "Ambient can't use this model"
+            alert.informativeText = problem
+            alert.runModal()
+            return
+        }
         prefs.taskLLMModelPath = url.path
         model.refreshTaskLLMStatus()
     }

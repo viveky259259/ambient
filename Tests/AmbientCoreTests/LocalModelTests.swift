@@ -33,6 +33,19 @@ private final class Scratch {
         #expect(LocalModelPath.inspect("   ") == nil)
     }
 
+    @Test func problemsWithAChosenPath() throws {
+        let s = try Scratch()
+        try s.file("qwen/config.json", #"{"model_type":"qwen2"}"#)
+        try s.file("qwen/model.safetensors")
+        try s.file("whisper-large/config.json", #"{"model_type":"whisper"}"#)
+        try s.file("whisper-large/model.safetensors")
+        #expect(LocalModelPath.problem(with: " ") == nil)
+        #expect(LocalModelPath.problem(with: s.url.appendingPathComponent("qwen").path) == nil)
+        #expect(LocalModelPath.problem(with: "models/qwen") == "Use an absolute path.")
+        #expect(LocalModelPath.problem(with: "/nonexistent/ambient/model") == "Nothing at /nonexistent/ambient/model.")
+        #expect(LocalModelPath.problem(with: s.url.appendingPathComponent("whisper-large").path)?.hasSuffix("Nothing changed.") == true)
+    }
+
     @Test func mlxTextAndVisionFolders() throws {
         let s = try Scratch()
         try s.file("qwen/config.json", #"{"model_type":"qwen2"}"#)
@@ -127,6 +140,23 @@ private final class Scratch {
         let out = try s.file("job/output.txt", #"{"title":"From a command"}"#)
         #expect(TaskSummarizer.text(fromResult: ["files": [out.path]]) == #"{"title":"From a command"}"#)
         #expect(TaskSummarizer.text(fromResult: ["files": ["/nonexistent/out.txt"]]) == nil)
+    }
+
+    @Test func readsOnlyRegularTextOutputs() throws {
+        let s = try Scratch()
+        let key = try s.file("job/id_ed25519", "secret")
+        #expect(TaskSummarizer.text(fromResult: ["files": [key.path]]) == nil)
+        try FileManager.default.createSymbolicLink(atPath: s.url.appendingPathComponent("job/link.txt").path,
+                                                   withDestinationPath: key.path)
+        #expect(TaskSummarizer.text(fromResult: ["files": [s.url.appendingPathComponent("job/link.txt").path]]) == nil)
+        // A FIFO would block the read forever.
+        let fifo = s.url.appendingPathComponent("job/pipe.txt").path
+        #expect(mkfifo(fifo, 0o600) == 0)
+        #expect(TaskSummarizer.text(fromResult: ["files": [fifo]]) == nil)
+        try s.file("job/folder.txt/x")
+        #expect(TaskSummarizer.text(fromResult: ["files": [s.url.appendingPathComponent("job/folder.txt").path]]) == nil)
+        let upper = try s.file("job/OUT.TXT", "upper")
+        #expect(TaskSummarizer.text(fromResult: ["files": [upper.path]]) == "upper")
     }
 }
 
@@ -253,5 +283,6 @@ private final class Scratch {
         #expect(try Wire.decode(Wire.encode(change)) == change)
         let reply = WireMessage.taskModel(TaskLLMConfig(enabled: true, modelPath: "/models/qwen", pythonPath: "/py"))
         #expect(try Wire.decode(Wire.encode(reply)) == reply)
+        #expect(try Wire.decode(Wire.encode(.taskModelTimedOut)) == .taskModelTimedOut)
     }
 }

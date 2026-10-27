@@ -21,6 +21,8 @@ public enum WireMessage: Codable, Equatable, Sendable {
     /// Change them (`ambient task model`, `ambient mcp`); the reply is `taskModel` with the result.
     case setTaskModel(TaskModelChange)
     case taskModel(TaskLLMConfig)
+    /// Reply when the app didn't get to a task-model request in time; a change may still apply.
+    case taskModelTimedOut
     case ping
     case pong(version: String)
 }

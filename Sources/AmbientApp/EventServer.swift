@@ -72,11 +72,14 @@ final class EventServer {
                     }
                     done.signal()
                 }
-                _ = done.wait(timeout: .now() + 2)
-                return box.value.flatMap { try? Wire.encode(.taskModel($0)) }
+                // The CLI waits longer than this, so it hears either the settings or that they may still change.
+                guard done.wait(timeout: .now() + 2) == .success, let config = box.value else {
+                    return try? Wire.encode(.taskModelTimedOut)
+                }
+                return try? Wire.encode(.taskModel(config))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut:
                 return nil
             }
         }

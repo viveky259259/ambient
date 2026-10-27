@@ -194,13 +194,16 @@ final class AppModel: ObservableObject {
             let summarizer = TaskSummarizer(config: config)
             Task { @MainActor in
                 defer { model.summarizingTaskIDs.remove(taskID) }
+                // Settings changed while this ran (another model, or summaries off): its answer and status no longer count.
+                func stale() -> Bool { model.prefs.taskLLMConfig != config }
                 do {
                     let resolution = await summarizer.resolve()
                     guard case let .ready(route) = resolution else {
-                        model.taskLLMStatus = resolution.status
+                        if !stale() { model.taskLLMStatus = resolution.status }
                         return
                     }
                     let semantics = try await summarizer.summarize(context: context, via: route)
+                    if stale() { return }
                     // Re-read the live linked session so a stale captured `.waiting` cannot re-block
                     // after the user has already unblocked.
                     let live = model.sessions.first { $0.id == session.id }
@@ -209,7 +212,7 @@ final class AppModel: ObservableObject {
                     model.publishTasks()
                     model.taskLLMStatus = .ready
                 } catch {
-                    model.taskLLMStatus = .failed(error.localizedDescription)
+                    if !stale() { model.taskLLMStatus = .failed(error.localizedDescription) }
                 }
             }
         }

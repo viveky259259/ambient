@@ -81,40 +81,44 @@ struct MCPServer {
 
     /// Tool result text, and whether it's an error.
     func call(_ name: String, _ arguments: [String: Any]) -> (String, Bool) {
-        let notRunning = "Ambient isn't running. Open Ambient.app, then try again."
         switch name {
         case "get_task_model":
-            guard case let .taskModel(config)? = request(.taskModelRequest) else { return (notRunning, true) }
+            let reply = request(.taskModelRequest)
+            guard case let .taskModel(config)? = reply else { return (Self.noConfig(reply, changing: false), true) }
             return (Self.render(report(config)), false)
         case "set_task_model_path":
             guard let path = arguments["path"] as? String else { return ("path is required.", true) }
-            if let problem = Self.validate(path: path) { return (problem, true) }
-            let python = arguments["python"] as? String
+            if let problem = LocalModelPath.problem(with: path) { return (problem, true) }
+            let python = (arguments["python"] as? String).map(Self.absolute)
             if let python, let problem = Self.validate(python: python) { return (problem, true) }
             let change = TaskModelChange(modelPath: path, pythonPath: python, enabled: arguments["enable"] as? Bool)
-            guard case let .taskModel(config)? = request(.setTaskModel(change)) else { return (notRunning, true) }
+            let reply = request(.setTaskModel(change))
+            guard case let .taskModel(config)? = reply else { return (Self.noConfig(reply, changing: true), true) }
             return (Self.render(report(config)), false)
         default:
             return ("Unknown tool: \(name)", true)
         }
     }
 
-    /// Why `path` can't be the board's model, or nil when it can. Empty is fine: it clears the path.
-    static func validate(path: String) -> String? {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        guard (trimmed as NSString).expandingTildeInPath.hasPrefix("/") else { return "Use an absolute path." }
-        guard let model = LocalModelPath.inspect(trimmed) else { return "Nothing at \(trimmed)." }
-        guard model.format.writesText else {
-            return "\(model.name): \(model.note ?? model.format.label + " can't write summaries"). Nothing changed."
-        }
-        return nil
+    /// `path` with `~` expanded and made absolute against the current directory, since the app runs from elsewhere.
+    /// Symlinks stay as they are: a venv's python finds its packages through its own path. Empty stays empty.
+    static func absolute(_ path: String) -> String {
+        let trimmed = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        guard !trimmed.isEmpty else { return "" }
+        return URL(fileURLWithPath: trimmed).standardizedFileURL.path
     }
 
+    /// Expects a path from `absolute(_:)`.
     static func validate(python: String) -> String? {
-        let trimmed = (python.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
-        guard !trimmed.isEmpty, !FileManager.default.isExecutableFile(atPath: trimmed) else { return nil }
-        return "No executable Python at \(trimmed). Nothing changed."
+        guard !python.isEmpty, !FileManager.default.isExecutableFile(atPath: python) else { return nil }
+        return "No executable Python at \(python). Nothing changed."
+    }
+
+    /// Why a task-model request brought back no settings.
+    static func noConfig(_ reply: WireMessage?, changing: Bool) -> String {
+        guard case .taskModelTimedOut? = reply else { return "Ambient isn't running. Open Ambient.app, then try again." }
+        return changing ? "Ambient didn't confirm the change in time. It may still apply; check the model again in a moment."
+            : "Ambient didn't answer in time. Try again in a moment."
     }
 
     private func report(_ config: TaskLLMConfig) -> TaskModelReport {
