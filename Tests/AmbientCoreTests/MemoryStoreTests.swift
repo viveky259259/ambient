@@ -201,6 +201,7 @@ import Testing
         let loose = dir.appendingPathComponent("loose")
         try FileManager.default.createDirectory(at: loose, withIntermediateDirectories: true)
         #expect(MemoryProject.root(for: loose.path) == loose.resolvingSymlinksInPath().path)
+        #expect(MemoryProject.root(for: "/") == "/")
     }
 
     // MARK: - Files

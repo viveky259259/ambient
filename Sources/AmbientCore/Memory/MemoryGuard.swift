@@ -56,15 +56,16 @@ public enum MemoryProject {
     /// The repository's root for a folder inside it, with git worktrees mapped to the main checkout so they share
     /// memory. Outside a repository, the folder itself.
     public static func root(for folder: String, fileManager: FileManager = .default) -> String {
-        let start = URL(fileURLWithPath: (folder as NSString).expandingTildeInPath).standardizedFileURL.resolvingSymlinksInPath()
+        let start = URL(fileURLWithPath: (folder as NSString).expandingTildeInPath).standardizedFileURL
+            .resolvingSymlinksInPath().path
         var dir = start
         while true {
-            let git = dir.appendingPathComponent(".git")
+            let git = (dir as NSString).appendingPathComponent(".git")
             var isDirectory: ObjCBool = false
-            if fileManager.fileExists(atPath: git.path, isDirectory: &isDirectory) {
-                if isDirectory.boolValue { return dir.path }
+            if fileManager.fileExists(atPath: git, isDirectory: &isDirectory) {
+                if isDirectory.boolValue { return dir }
                 // A worktree's .git is a file: "gitdir: /repo/.git/worktrees/<name>".
-                if let text = try? String(contentsOf: git, encoding: .utf8),
+                if let text = try? String(contentsOfFile: git, encoding: .utf8),
                    let line = text.split(separator: "\n").first(where: { $0.hasPrefix("gitdir:") }) {
                     let gitdir = line.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces)
                     if let range = gitdir.range(of: "/.git/worktrees/") {
@@ -72,10 +73,12 @@ public enum MemoryProject {
                             .resolvingSymlinksInPath().path
                     }
                 }
-                return dir.path
+                return dir
             }
-            let parent = dir.deletingLastPathComponent()
-            if parent.path == dir.path { return start.path }
+            // Paths, not URLs: on older macOS, URL's deletingLastPathComponent() turns "/" into "/..", so a
+            // folder outside any repository would be walked up forever.
+            let parent = (dir as NSString).deletingLastPathComponent
+            if parent == dir || parent.isEmpty { return start }
             dir = parent
         }
     }
