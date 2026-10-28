@@ -39,6 +39,7 @@ public final class SessionStore {
 
     public func session(id: String) -> Session? { byId[id] }
 
+    /// A local hook's event, from the Unix socket.
     @discardableResult
     public func apply(_ e: AgentEvent) -> SessionChange? {
         let id = "\(e.agent.rawValue):\(e.sessionId)"
@@ -46,23 +47,52 @@ public final class SessionStore {
         if let existing, e.timestamp < existing.lastEventAt { return nil }
 
         var s = existing ?? Session(agent: e.agent, sessionId: e.sessionId, at: e.timestamp)
-        let previous = existing?.activity
         if let cwd = e.cwd, !cwd.isEmpty { s.cwd = cwd }
         if let host = e.host { s.host = host }
         // Only custom agents may carry a display override; hooked kinds keep AgentKind.displayName
         // (so Cursor never inherits a Codex/Claude payload name).
         if e.agent == .custom, let name = e.agentName { s.agentName = name }
-        s.lastEventAt = e.timestamp
+        return commit(s, previous: existing?.activity, kind: e.kind, at: e.timestamp)
+    }
 
-        if e.kind == .sessionEnded {
-            byId[id] = nil
-            return SessionChange(session: s, previous: previous, event: e.kind, removed: true)
+    /// A remote machine's event, already through `RemoteEventDecoder`. Quarantined: the session is keyed by
+    /// (machine, session id), ordered by `seq` rather than the remote clock, and never gets a `HostInfo`, so no
+    /// focus route, pid check, tty or script ever runs for it. `date` is when to record it: the remote time, or
+    /// the hub's when the clocks disagree.
+    @discardableResult
+    public func apply(_ e: RemoteEvent, from machine: MachineRef, at date: Date) -> SessionChange? {
+        let id = Session.remoteID(machine: machine.id, agent: e.agent, sessionId: e.session)
+        let existing = byId[id]
+        if let last = existing?.origin?.lastSeq, e.seq <= last { return nil }
+
+        var s = existing ?? Session(agent: e.agent, sessionId: e.session, at: date, origin: RemoteOrigin(machine: machine))
+        s.host = nil
+        s.origin?.machine.label = machine.label
+        s.origin?.lastSeq = e.seq
+        if let project = e.project { s.origin?.project = project }
+        if let title = e.title { s.title = title }
+        let at = max(date, existing?.lastEventAt ?? date)
+        guard let kind = e.eventKind else {
+            // A title change: no new state, and not worth a transition unless the name changed.
+            guard existing != nil else { return nil }
+            byId[id] = s
+            return s.title == existing?.title ? nil : SessionChange(session: s, previous: s.activity, event: nil, removed: false)
+        }
+        return commit(s, previous: existing?.activity, kind: kind, at: at)
+    }
+
+    private func commit(_ session: Session, previous: Activity?, kind: EventKind, at date: Date) -> SessionChange {
+        var s = session
+        s.lastEventAt = date
+        if kind == .sessionEnded {
+            byId[s.id] = nil
+            return SessionChange(session: s, previous: previous, event: kind, removed: true)
         }
 
-        reduce(&s, e.kind, at: e.timestamp)
-        if s.activity != previous { s.activitySince = e.timestamp }
-        byId[id] = s
-        return SessionChange(session: s, previous: previous, event: e.kind, removed: false)
+        reduce(&s, kind, at: date)
+        if s.activity != previous { s.activitySince = date }
+        byId[s.id] = s
+        return SessionChange(session: s, previous: previous, event: kind, removed: false)
     }
 
     private func reduce(_ s: inout Session, _ kind: EventKind, at date: Date) {
@@ -139,7 +169,7 @@ public final class SessionStore {
     /// Marks every session hosted by an app as seen, e.g. when the user switches to it.
     @discardableResult
     public func acknowledge(hostBundleId: String) -> [String] {
-        let ids = byId.values.filter { $0.host?.bundleId == hostBundleId }.map(\.id).sorted()
+        let ids = byId.values.filter { $0.origin == nil && $0.host?.bundleId == hostBundleId }.map(\.id).sorted()
         return ids.filter { acknowledge(sessionID: $0) }
     }
 
@@ -151,7 +181,8 @@ public final class SessionStore {
             let quiet = now.timeIntervalSince(s.lastEventAt)
             let previous = s.activity
 
-            if let pid = s.host?.agentPid, !isAlive(pid) {
+            // A remote session's liveness comes from its machine's `follow`; its pids mean nothing here.
+            if s.origin == nil, let pid = s.host?.agentPid, !isAlive(pid) {
                 byId[id] = nil
                 changes.append(SessionChange(session: s, previous: previous, event: nil, removed: true))
                 continue
@@ -180,6 +211,11 @@ public final class SessionStore {
 
     /// Replaces all state, e.g. when restoring. Used by tests and the app's status snapshot.
     public func load(_ sessions: [Session]) {
+        let sessions = sessions.map { s in
+            var s = s
+            if s.origin != nil { s.host = nil }
+            return s
+        }
         byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
     }
 
