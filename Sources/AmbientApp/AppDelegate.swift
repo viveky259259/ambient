@@ -9,7 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let paths = AmbientPaths.current()
     private let prefs = Preferences.shared
     private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile, dayURL: paths.dayFile,
-                                      tasksURL: paths.tasksFile,
+                                      tasksURL: paths.tasksFile, memoryURL: paths.memoryFile,
+                                      memoryBlobs: MemoryBlobStore(root: paths.memoryBlobs),
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
     private var island: IslandController?

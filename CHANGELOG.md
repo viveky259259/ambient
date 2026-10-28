@@ -12,6 +12,12 @@
   otherwise Ambient reuses local-agent's MLX Python or finds one.
 - **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
   change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
+- **Working memory**: agents share data with each other through `ambient mcp` — `memory_write` (text or JSON under a
+  key), `memory_write_file` (a read-only copy of a file), `memory_read`, `memory_list` and `memory_forget`. Entries
+  belong to a project (its git worktrees included) or are global, last 7 days by default, and can end with the session
+  that wrote them; Ambient tells which session is asking from the agent process. The server's instructions list what's
+  already shared for the project. `ambient memory` does the same from a terminal. Secrets, `.env` and key files, and
+  `~/.ssh`, `~/.aws` and `~/.gnupg` are refused. Kept in `~/.ambient/memory.json` and `~/.ambient/memory/`.
 
 ## 0.7.0 — 2026-10-23
 

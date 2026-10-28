@@ -20,12 +20,16 @@ final class AppModel: ObservableObject {
     private let focuser = Focuser()
     private let store = SessionStore()
     private let taskStore = TaskStore()
+    private let memoryStore = MemoryStore()
     private let stateURL: URL?
     private let dayURL: URL?
     private let tasksURL: URL?
+    private let memoryURL: URL?
+    private let memoryBlobs: MemoryBlobStore?
     private var daySaveWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var taskSaveWork: DispatchWorkItem?
+    private var memorySaveWork: DispatchWorkItem?
     private var sweepTimer: Timer?
     private var llmProbeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -37,11 +41,14 @@ final class AppModel: ObservableObject {
     private var summarizingTaskIDs = Set<String>()
     private var llmProbeGeneration = 0
 
-    init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, titles: SessionTitles? = nil) {
+    init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, memoryURL: URL? = nil,
+         memoryBlobs: MemoryBlobStore? = nil, titles: SessionTitles? = nil) {
         self.prefs = prefs
         self.stateURL = stateURL
         self.dayURL = dayURL
         self.tasksURL = tasksURL
+        self.memoryURL = memoryURL
+        self.memoryBlobs = memoryBlobs
         self.titles = titles
     }
 
@@ -60,6 +67,13 @@ final class AppModel: ObservableObject {
                 _ = taskStore.observe(SessionChange(session: s, previous: nil, event: .sessionStarted, removed: false))
             }
             publishTasks(save: false)
+        }
+        if let memoryURL {
+            memoryStore.load(MemoryFile.load(from: memoryURL))
+            // Sessions that ended while Ambient was closed take what they kept only for themselves.
+            memoryStore.retainSessions(Set(store.sessions.map(\.id)))
+            memoryStore.sweep()
+            scheduleMemorySave()
         }
         refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
@@ -82,6 +96,7 @@ final class AppModel: ObservableObject {
         transitions.send(t)
         record(t)
         observeTask(t)
+        endSessionMemory(t)
         refreshTitles()
         if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
@@ -130,6 +145,20 @@ final class AppModel: ObservableObject {
         let saved = taskStore.upsert(draft)
         publishTasks()
         return saved
+    }
+
+    /// Answers `ambient memory` and the memory tools of `ambient mcp`.
+    func memory(_ request: MemoryRequest) -> MemoryReply {
+        let revision = memoryStore.revision
+        let reply = memoryStore.answer(request, sessions: store.sessions, blobs: memoryBlobs)
+        if memoryStore.revision != revision { scheduleMemorySave() }
+        return reply
+    }
+
+    /// Drops what an ended session kept only for itself.
+    private func endSessionMemory(_ change: SessionChange) {
+        guard change.removed, !memoryStore.sessionEnded(change.session.id).isEmpty else { return }
+        scheduleMemorySave()
     }
 
     func setQuiet(for duration: TimeInterval?) {
@@ -229,6 +258,7 @@ final class AppModel: ObservableObject {
     private func sweep() {
         refreshTitles()
         rollOverDay()
+        if !memoryStore.sweep().isEmpty { scheduleMemorySave() }
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
@@ -236,6 +266,7 @@ final class AppModel: ObservableObject {
         for change in changes {
             transitions.send(change)
             observeTask(change)
+            endSessionMemory(change)
         }
     }
 
@@ -325,6 +356,19 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
     }
 
+    /// Saves shared memory shortly after it settles, then deletes shared files nothing refers to any more.
+    private func scheduleMemorySave() {
+        guard let memoryURL else { return }
+        memorySaveWork?.cancel()
+        let entries = memoryStore.entries, blobs = memoryBlobs
+        let work = DispatchWorkItem {
+            try? MemoryFile.save(entries, to: memoryURL)
+            blobs?.collect(keeping: entries.compactMap(\.file), changedBefore: Date().addingTimeInterval(-300))
+        }
+        memorySaveWork = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
     /// Saves immediately, e.g. when quitting.
     func saveNow() {
         daySaveWork?.cancel()
@@ -335,6 +379,8 @@ final class AppModel: ObservableObject {
         }
         taskSaveWork?.cancel()
         if let tasksURL { try? TaskFile.save(tasks, to: tasksURL) }
+        memorySaveWork?.cancel()
+        if let memoryURL { try? MemoryFile.save(memoryStore.entries, to: memoryURL) }
     }
 
     /// Thread-safe copy of the state, for answering `ambient status` / `ambient tasks` off the main thread.

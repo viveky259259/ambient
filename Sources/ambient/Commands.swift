@@ -21,7 +21,10 @@ struct Commands {
         case "tasks": return tasks(rest)
         case "task": return task(rest)
         case "link": return link() ? 0 : 1
-        case "mcp": return MCPServer(request: { request($0, timeout: Self.taskModelTimeout) }).run()
+        case "memory": return memory(rest)
+        case "mcp":
+            let send: (WireMessage) -> WireMessage? = { request($0, timeout: Self.taskModelTimeout) }
+            return MCPServer(request: send, memory: MemoryClient(paths: paths, request: send)).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
         case "voice-files":
@@ -51,8 +54,16 @@ struct Commands {
           ambient task model [PATH|--clear] [--python PATH] [--enable|--disable]
                                                                   Show or set the board's local model: an MLX or Hugging Face
                                                                   folder, or a .gguf file (default: the gateway model id)
-          ambient mcp                                             Run as an MCP server (stdio) so agents can read and set the
-                                                                  board's model: claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+          ambient memory [list] [--global|--project] [--in FOLDER] [--json]
+                                                                  What agents have shared in working memory here and globally
+          ambient memory get KEY [--global|--project] [--in FOLDER]
+                                                                  Print a shared entry's text, or a shared file's path
+          ambient memory set KEY [VALUE|--file PATH] [--description TEXT] [--global] [--ttl MINUTES] [--in FOLDER]
+                                                                  Share text (VALUE, or standard input) or a file with other agents
+          ambient memory rm KEY [--global|--project] [--in FOLDER]
+                                                                  Remove a shared entry
+          ambient mcp                                             Run as an MCP server (stdio) so agents can share working memory
+                                                                  and set the board's model: claude mcp add ambient -- ~/.ambient/bin/ambient mcp
           ambient doctor                                          Check the app, the hooks and the connection
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
@@ -388,6 +399,97 @@ struct Commands {
         }
         out.success("Task \(saved.id): \(saved.status.rawValue) — \(saved.title)")
         return 0
+    }
+
+    // MARK: - Memory
+
+    private func memory(_ args: [String]) -> Int32 {
+        let usage = "Usage: ambient memory [list|get KEY|set KEY [VALUE|--file PATH]|rm KEY] [--global|--project] [--in FOLDER]"
+        var positional: [String] = []
+        var scope: String?, folder: String?, file: String?, description: String?, ttl: Int?
+        var json = false
+        var rest = args[...]
+        while let arg = rest.popFirst() {
+            switch arg {
+            case "--global": scope = "global"
+            case "--project": scope = "project"
+            case "--json": json = true
+            case "--in", "--file", "--description", "--ttl":
+                guard let value = rest.popFirst() else { out.error(usage); return 64 }
+                switch arg {
+                case "--in": folder = value
+                case "--file": file = value
+                case "--description": description = value
+                default:
+                    guard let minutes = Int(value) else { out.error("--ttl takes minutes, e.g. --ttl 60."); return 64 }
+                    ttl = minutes
+                }
+            case "--help", "-h": print(usage); return 0
+            default:
+                guard !arg.hasPrefix("--") || arg == "-" else { out.error(usage); return 64 }
+                positional.append(arg)
+            }
+        }
+        let client = MemoryClient(paths: paths, request: { request($0, timeout: Self.taskModelTimeout) })
+        let sub = positional.first ?? "list"
+        let key = positional.dropFirst().first
+        let reply: MemoryReply
+        switch (sub, key) {
+        case ("list", _), ("ls", _):
+            reply = client.list(scope: scope, folder: folder)
+        case let ("get", key?):
+            reply = client.read(key: key, scope: scope, folder: folder)
+        case let ("rm", key?), let ("forget", key?):
+            reply = client.forget(key: key, scope: scope, folder: folder)
+        case let ("set", key?):
+            var value = positional.dropFirst(2).first
+            if file == nil, value == nil || value == "-" {
+                value = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+            }
+            reply = client.write(key: key, value: file == nil ? value : nil, filePath: file, description: description,
+                                 scope: scope, ttlMinutes: ttl, untilSessionEnds: false, folder: folder)
+        default:
+            out.error(usage)
+            return 64
+        }
+
+        let now = Date()
+        switch reply {
+        case let .failed(message):
+            out.error(message)
+            return 1
+        case let .entry(entry) where sub == "get" && !json:
+            // Raw, so it can be piped or redirected: the text itself, or the shared file's path.
+            if let value = entry.value { print(value, terminator: value.hasSuffix("\n") ? "" : "\n") }
+            else if let blob = entry.file { print(MemoryBlobStore(root: paths.memoryBlobs).url(for: blob).path) }
+            return 0
+        case let .entry(entry), let .forgotten(entry):
+            if json { printJSON(client.fields(entry, now: now)); return 0 }
+            let verb = sub == "set" ? "Shared" : "Forgot"
+            out.success("\(verb) \(entry.key) (\(entry.scope == .global ? "global" : entry.scope.label))")
+            if sub == "set", let expires = entry.expiresAt {
+                out.note("Expires \(expires.formatted(date: .abbreviated, time: .shortened)).")
+            }
+            return 0
+        case let .entries(entries):
+            if json { printJSON(["entries": entries.map { client.fields($0, now: now) }]); return 0 }
+            let project = client.project(folder)
+            print("\(out.bold("Memory")) · \(MemoryScope.project(project).label) · \(entries.count) entr\(entries.count == 1 ? "y" : "ies")")
+            for e in entries {
+                let key = Trim.truncate(e.key, max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
+                let scope = (e.scope == .global ? "global" : "project").padding(toLength: 8, withPad: " ", startingAt: 0)
+                let kind = e.file.map { "file \($0.name)" } ?? ByteCountFormatter.string(fromByteCount: Int64(e.size), countStyle: .file)
+                let by = "\(e.author?.label ?? "—"), \(MemoryClient.age(e.updatedAt, now: now))"
+                print("  \(key) \(scope) \(Trim.truncate(e.description ?? kind, max: 48))  \(out.dim(by))")
+            }
+            return 0
+        }
+    }
+
+    private func printJSON(_ object: Any) {
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        else { return }
+        print(String(decoding: data, as: UTF8.self))
     }
 
     // MARK: - Doctor

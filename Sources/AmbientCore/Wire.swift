@@ -23,6 +23,9 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case taskModel(TaskLLMConfig)
     /// Reply when the app didn't get to a task-model request in time; a change may still apply.
     case taskModelTimedOut
+    /// Shared working memory (`ambient memory`, `ambient mcp`); the reply is `memoryReply`.
+    case memory(MemoryRequest)
+    case memoryReply(MemoryReply)
     case ping
     case pong(version: String)
 }
