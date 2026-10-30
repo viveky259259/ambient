@@ -181,6 +181,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             boardWindow = window
             NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                // Let its views go: kept, they re-render every card on every agent event with nobody looking.
+                self?.boardWindow = nil
                 if self?.setupWindow?.isVisible != true {
                     NSApp.setActivationPolicy(.accessory)
                 }
