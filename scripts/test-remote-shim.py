@@ -56,7 +56,7 @@ for line in lines:
         problems.append(f"invalid spool line ({error}): {line[:120]}")
 
 seqs = [e["seq"] for e in events]
-expect(seqs == list(range(1, len(seqs) + 1)), f"seqs aren't contiguous: {seqs}")
+expect(seqs == list(range(1, len(seqs) + 1)), f"seqs aren't contiguous: {len(seqs) - len(set(seqs))} repeat in {len(seqs)}, last {seqs[-1]}")
 expect(len(set(e["id"] for e in events)) == len(events), "event ids repeat")
 for e in events:
     expect(re.fullmatch(r"[0-9a-f]{32}", e["id"]), f"bad id {e['id']}")
@@ -73,7 +73,8 @@ done = next(e for e in events if e["kind"] == "turnCompleted")
 expect(0 < len(done["message"].encode()) <= 480, "a long message is cut to its cap")
 expect("�" not in done["message"], "a cut never lands inside a character")
 expect(any(e["kind"] == "toolFinished" and e["tool"] == "Read" for e in events), "a huge payload still parses")
-expect(sum(e["session"] == "s-2" for e in events) == 20, "every parallel emit arrived")
+burst = [e["kind"] for e in events if e["session"] == "s-2"]
+expect(len(burst) == 200, f"every parallel emit arrived: { {k: burst.count(k) for k in sorted(set(burst))} }")
 expect(any(e["kind"] == "sessionEnded" for e in events), "session end")
 expect(any(e["kind"] == "agentExited" and e["session"] == "ghost-1" for e in events), "agent exit reported")
 

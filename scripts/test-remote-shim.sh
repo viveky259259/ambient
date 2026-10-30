@@ -54,7 +54,7 @@ check() {
     big=$(awk 'BEGIN { for (i = 0; i < 5000; i++) printf "line of \\\"quoted\\\" output\\n" }')
     emit '{"session_id":"s-1","cwd":"/x","hook_event_name":"PostToolUse","tool_name":"Read","tool_response":{"stdout":"'"$big"'"}}'
     i=0
-    while [ "$i" -lt 20 ]; do
+    while [ "$i" -lt 200 ]; do
         emit '{"session_id":"s-2","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}' &
         i=$((i + 1))
     done
@@ -100,6 +100,6 @@ if command -v dash > /dev/null 2>&1; then check dash-system dash "$SYSTEM_PATH";
 if command -v bash > /dev/null 2>&1; then check bash-system "bash --posix" "$SYSTEM_PATH"; else missing bash-system; fi
 if command -v mawk > /dev/null 2>&1; then check dash-mawk dash "$(with_awk mawk)"; else missing dash-mawk; fi
 if command -v gawk > /dev/null 2>&1; then check bash-gawk bash "$(with_awk gawk)"; else missing bash-gawk; fi
-if command -v busybox > /dev/null 2>&1; then check busybox "busybox ash" "$(busybox_path):"; else missing busybox; fi
+if command -v busybox > /dev/null 2>&1; then check busybox "$(command -v busybox) ash" "$(busybox_path):"; else missing busybox; fi
 
 [ "$failures" -eq 0 ] && echo "All good." || { echo "$failures failed."; exit 1; }
