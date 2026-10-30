@@ -52,12 +52,15 @@ public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
     public var updatedAt: Date
     /// Most recently active linked session.
     public var lastSessionId: String?
+    /// The remote machine this task's sessions run on; nil for local work. Tasks never mix machines.
+    public var machine: MachineRef?
 
     public init(id: String = AgentTask.makeID(), title: String, status: TaskStatus = .backlog,
                 summary: String? = nil, summarySource: TaskSummarySource = .heuristic,
                 summarizedAt: Date? = nil, project: String? = nil, cwd: String? = nil,
                 agents: [AgentKind] = [], sessionIds: [String] = [], manual: Bool = false,
-                createdAt: Date = Date(), updatedAt: Date = Date(), lastSessionId: String? = nil) {
+                createdAt: Date = Date(), updatedAt: Date = Date(), lastSessionId: String? = nil,
+                machine: MachineRef? = nil) {
         self.id = id
         self.title = title
         self.status = status
@@ -72,6 +75,7 @@ public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.lastSessionId = lastSessionId
+        self.machine = machine
     }
 
     public static func makeID() -> String {

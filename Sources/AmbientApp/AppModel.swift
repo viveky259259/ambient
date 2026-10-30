@@ -12,6 +12,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var taskModelRoute: TaskModelRoute?
     /// Today's story, for the living wallpaper.
     @Published private(set) var day = DayLog(now: Date())
+    /// Paired machines and how their links are doing, sorted by name.
+    @Published private(set) var remoteLinks: [RemoteLinkStatus] = []
     /// Every applied event and sweep result, for surfaces that react to changes.
     let transitions = PassthroughSubject<SessionChange, Never>()
 
@@ -36,6 +38,9 @@ final class AppModel: ObservableObject {
     private var lastSummarizedAt: [String: Date] = [:]
     private var summarizingTaskIDs = Set<String>()
     private var llmProbeGeneration = 0
+    /// How far each machine has been applied. Saved with the sessions, in the same file.
+    private var remoteCursors: [String: RemoteCursor] = [:]
+    private var unreachableWork: [String: DispatchWorkItem] = [:]
 
     init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, titles: SessionTitles? = nil) {
         self.prefs = prefs
@@ -54,6 +59,7 @@ final class AppModel: ObservableObject {
         }
         if let stateURL {
             store.load(StateFile.load(from: stateURL))
+            remoteCursors = StateFile.loadCursors(from: stateURL)
             store.sweep(now: Date())
             publish(save: false)
             for s in store.sessions {
@@ -95,9 +101,128 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // MARK: - Remote machines
+
+    func remoteCursor(_ machine: String) -> RemoteCursor {
+        remoteCursors[machine] ?? RemoteCursor()
+    }
+
+    /// Events from a machine's link. Remote input arrives only here, already through `RemoteIngest`.
+    func applyRemote(_ batch: [RemoteDelivery], cursor: RemoteCursor, from machine: MachineRef) {
+        // Already queued when the machine was unpaired: the allowlist wins.
+        guard remoteLinks.contains(where: { $0.machine.id == machine.id }) else { return }
+        let (changes, saveFirst) = store.apply(batch, from: machine, saved: remoteCursor(machine.id), cursor: cursor)
+        remoteCursors[machine.id] = cursor
+        if let i = remoteLinks.firstIndex(where: { $0.machine.id == machine.id }) {
+            remoteLinks[i].lastEventAt = Date()
+        }
+        // Anything about to be announced reaches the disk first, with its cursor: see `SessionStore.apply(_:from:)`.
+        if saveFirst, let stateURL {
+            saveWork?.cancel()
+            try? StateFile.save(savedSessions(store.sessions), cursors: remoteCursors, to: stateURL)
+        }
+        publish(save: !saveFirst)
+        for t in changes {
+            transitions.send(t)
+            record(t)
+            observeTask(t)
+        }
+    }
+
+    func setRemoteHealth(_ health: RemoteHealth, machine: Machine, hello: RemoteHello?, updateAvailable: Bool) {
+        guard var status = remoteLinks.first(where: { $0.machine.id == machine.id }) else { return }
+        status.health = health
+        if let hello {
+            status.shim = hello.shim
+            status.level = hello.level
+            status.updateAvailable = updateAvailable
+        }
+        setRemoteStatus(status)
+
+        switch health {
+        case .connected:
+            cancelUnreachable(machine.id)
+            markUnreachable(false, machine: machine.id)
+        case .connecting, .stopped:
+            break
+        case .reconnecting:
+            // A blip that heals on its own shouldn't blank a machine's sessions. Every retry reports here, so a
+            // pending countdown is left running: restarting it would put off "unknown" for as long as the outage.
+            guard unreachableWork[machine.id] == nil else { break }
+            let work = DispatchWorkItem { [weak self] in self?.markUnreachable(true, machine: machine.id) }
+            unreachableWork[machine.id] = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: work)
+        case .signInNeeded, .revoked, .upgradeNeeded:
+            cancelUnreachable(machine.id)
+            markUnreachable(true, machine: machine.id)
+        }
+    }
+
+    private func cancelUnreachable(_ machine: String) {
+        unreachableWork[machine]?.cancel()
+        unreachableWork[machine] = nil
+    }
+
+    private func setRemoteStatus(_ status: RemoteLinkStatus) {
+        var next = remoteLinks.filter { $0.machine.id != status.machine.id }
+        next.append(status)
+        remoteLinks = next.sorted { $0.machine.id < $1.machine.id }
+    }
+
+    private func markUnreachable(_ unreachable: Bool, machine: String) {
+        let changes = store.setUnreachable(unreachable, machine: machine)
+        guard !changes.isEmpty else { return }
+        publish()
+        for change in changes {
+            transitions.send(change)
+            observeTask(change)
+        }
+    }
+
+    /// `machines` is the allowlist: anything from a machine that's no longer on it goes.
+    func keepMachines(_ machines: [Machine]) {
+        let paired = Set(machines.map(\.id))
+        let known = Set(store.sessions.compactMap(\.origin?.machine.id)).union(remoteCursors.keys).union(remoteLinks.map(\.machine.id))
+        for id in known where !paired.contains(id) {
+            cancelUnreachable(id)
+            remoteCursors[id] = nil
+            for change in store.remove(machine: id) {
+                transitions.send(change)
+                observeTask(change)
+            }
+        }
+        remoteLinks = remoteLinks.filter { paired.contains($0.machine.id) }.map { status in
+            var status = status
+            if let machine = machines.first(where: { $0.id == status.machine.id }) {
+                status = RemoteLinkStatus(machine: machine, health: status.health, shim: status.shim, level: status.level,
+                                          lastEventAt: status.lastEventAt, updateAvailable: status.updateAvailable)
+            }
+            return status
+        }
+        for machine in machines where !remoteLinks.contains(where: { $0.machine.id == machine.id }) {
+            setRemoteStatus(RemoteLinkStatus(machine: machine))
+        }
+        publish()
+    }
+
+    /// Deletes everything a machine left in memory. `RemotePurge` handles the files.
+    func purge(machine id: String) {
+        for change in store.remove(machine: id) { transitions.send(change) }
+        remoteCursors[id] = nil
+        if taskStore.remove(machine: id) { publishTasks() }
+        var next = day
+        next.removeMoments(machine: id)
+        if next != day {
+            day = next
+            scheduleDaySave()
+        }
+        publish()
+    }
+
     /// Takes the user to the session — its chat, tab or window — and marks its result as seen.
     func open(_ session: Session) {
-        focuser.focus(session)
+        // There's nothing local to bring forward for a remote session; opening it marks it seen.
+        if session.origin == nil { focuser.focus(session) }
         acknowledge(session.id)
     }
 
@@ -179,6 +304,11 @@ final class AppModel: ObservableObject {
         let config = prefs.taskLLMConfig
         guard config.enabled else { return }
         if session.sessionId.hasPrefix("demo-") { return }
+        // Remote text goes to the local LLM only by a separate opt-in, and only ever to loopback.
+        if session.isRemote {
+            guard let url = config.mcpEndpoint,
+                  RemoteEgress.allows(session, to: .localLLM(url), remoteSummaries: prefs.remoteSummaries) else { return }
+        }
         let now = Date()
         if let last = lastSummarizedAt[task.id], now.timeIntervalSince(last) < config.minRefreshSeconds { return }
         if summarizingTaskIDs.contains(task.id) { return }
@@ -223,7 +353,7 @@ final class AppModel: ObservableObject {
 
     private func userActivated(_ app: NSRunningApplication) {
         let ids = store.sessions.filter { s in
-            guard let host = s.host else { return false }
+            guard s.origin == nil, let host = s.host else { return false }
             return host.bundleId == app.bundleIdentifier || host.pids.contains(app.processIdentifier)
         }.map(\.id)
         for id in ids { acknowledge(id) }
@@ -248,7 +378,7 @@ final class AppModel: ObservableObject {
         guard let titles else { return }
         let now = Date()
         let due = store.sessions.filter {
-            !$0.sessionId.hasPrefix("demo-") && now.timeIntervalSince(titleCheckedAt[$0.id] ?? .distantPast) >= 60
+            !$0.isRemote && !$0.sessionId.hasPrefix("demo-") && now.timeIntervalSince(titleCheckedAt[$0.id] ?? .distantPast) >= 60
         }
         guard !due.isEmpty else { return }
         for s in due { titleCheckedAt[s.id] = now }
@@ -313,10 +443,15 @@ final class AppModel: ObservableObject {
     private func scheduleSave() {
         guard let stateURL else { return }
         saveWork?.cancel()
-        let sessions = self.sessions.filter { !$0.sessionId.hasPrefix("demo-") }
-        let work = DispatchWorkItem { try? StateFile.save(sessions, to: stateURL) }
+        let sessions = savedSessions(self.sessions)
+        let cursors = remoteCursors
+        let work = DispatchWorkItem { try? StateFile.save(sessions, cursors: cursors, to: stateURL) }
         saveWork = work
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
+    private func savedSessions(_ sessions: [Session]) -> [Session] {
+        sessions.filter { !$0.sessionId.hasPrefix("demo-") }
     }
 
     private func scheduleTaskSave() {
@@ -334,7 +469,7 @@ final class AppModel: ObservableObject {
         if let dayURL { try? DayLogFile.save(day, to: dayURL) }
         saveWork?.cancel()
         if let stateURL {
-            try? StateFile.save(sessions.filter { !$0.sessionId.hasPrefix("demo-") }, to: stateURL)
+            try? StateFile.save(savedSessions(sessions), cursors: remoteCursors, to: stateURL)
         }
         taskSaveWork?.cancel()
         if let tasksURL { try? TaskFile.save(tasks, to: tasksURL) }

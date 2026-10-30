@@ -42,6 +42,29 @@ public enum Describe {
         return project
     }
 
+    /// The machine a remote session runs on, for showing beside its agent. Nil for local sessions.
+    public static func machine(_ s: Session) -> String? {
+        s.origin?.machine.label
+    }
+
+    /// What a remote session's state amounts to, when its last activity can't be taken at face value.
+    public static func remoteState(_ s: Session) -> String? {
+        guard let origin = s.origin else { return nil }
+        if origin.unreachable { return "Unknown" }
+        if origin.missed, case .waiting = s.activity { return "Missed" }
+        return nil
+    }
+
+    /// `activity`, with a remote session's caveat first: "Unknown · Thinking", "Missed · Needs permission".
+    public static func status(_ s: Session) -> String {
+        join(remoteState(s) ?? activity(s.activity), remoteState(s) == nil ? nil : activity(s.activity))
+    }
+
+    /// `shortActivity`, for tight spaces: the caveat alone when there is one.
+    public static func shortStatus(_ s: Session) -> String {
+        remoteState(s) ?? shortActivity(s.activity)
+    }
+
     /// The time that matters for the session's state: how long the turn has run while working, how long
     /// it has been waiting for you, or how long ago it finished or failed. Nil when idle.
     public static func clock(_ s: Session, now: Date, compact: Bool = false) -> String? {

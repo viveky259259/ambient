@@ -1,7 +1,16 @@
 # Security
 
 Ambient runs locally. Its attack surface is the Unix socket at `~/.ambient/ambient.sock` (mode 0600 inside a 0700
-directory) and the agent config files it edits.
+directory), the agent config files it edits, and, if you pair remote machines, what those machines send back.
+
+## Remote machines
+
+Ambient follows only machines you pair, over a transport you configure (your own `ssh` by default). It never forwards
+or exposes the socket, opens no listening port, and stores no remote credentials. A paired machine's output goes
+through a separate, strict decoder and can only become display data: it can't reach the socket, and no focus route, pid
+check, tty, tmux or AppleScript ever runs for a remote session. A remote machine you don't trust can show you false
+states and text, and nothing more. The threat model is in
+[the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md#threat-model-stride-er-40).
 
 ## Network
 
@@ -16,6 +25,9 @@ Ambient makes network requests only for reading aloud, and only when you choose 
   `com.viveky259259.Ambient.voice`, never in files or preferences.
 
 With a Mac voice or the installed offline model, reading aloud makes no network requests.
+
+Separately, paired remote machines are reached through the transport command you chose. Ambient runs that command and
+makes no other connection for them.
 
 Please report vulnerabilities privately through GitHub's *Report a vulnerability* on this repository
 rather than in a public issue. You'll get a reply within a week.

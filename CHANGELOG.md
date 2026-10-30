@@ -12,6 +12,15 @@
   otherwise Ambient reuses local-agent's MLX Python or finds one.
 - **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
   change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
+- **Remote agents**: follow Claude Code and Codex on your other machines from this Mac, over your own `ssh` or any
+  other transport, with no accounts, no relay and no open ports. `ambient remote add NAME` copies a small POSIX `sh`
+  shim from the app, checks its SHA-256, installs hooks and pins the machine's identity; `remove`, `purge`, `list` and
+  `ambient doctor --remote NAME` look after it, and Settings › Remote shows each link. Sessions carry their machine's
+  label in the island, menu bar, pet, notifications and board. Redaction (`metadata`, `standard` by default, or `full`)
+  happens on the machine; remote text never reaches online voices or any non-loopback address. Remote events go
+  through their own strict decoder and can't touch the app's socket, focus routes or pid checks. Events wait in a
+  bounded spool while your Mac sleeps; old prompts show as *missed* with no chime, and sessions on an unreachable
+  machine show as *unknown*. A local audit log records what happened, with no event content.
 
 ## 0.7.0 — 2026-10-23
 
