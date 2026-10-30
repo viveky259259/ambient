@@ -1,16 +1,13 @@
 import Darwin
 import Foundation
 
-/// What Ambient remembers about the agents it connected, in ~/.ambient/agents.json, shared by the app and the
-/// CLI: which agents the user connected, so hooks an agent update removed show up as a problem rather than as
-/// "not connected", and a fingerprint of each agent's executable, so an update is noticed.
+/// The agents the user connected through Ambient, in ~/.ambient/agents.json, shared by the app and the CLI, so
+/// hooks an agent update removed show up as a problem rather than as "not connected".
 public struct AgentRecord: Codable, Equatable, Sendable {
     public var connected: Set<AgentKind> = []
-    public var fingerprints: [AgentKind: String] = [:]
 
-    public init(connected: Set<AgentKind> = [], fingerprints: [AgentKind: String] = [:]) {
+    public init(connected: Set<AgentKind> = []) {
         self.connected = connected
-        self.fingerprints = fingerprints
     }
 
     /// Nil when nothing was ever recorded, as before Ambient kept this record.
@@ -209,6 +206,7 @@ extension ProcessTree {
         var timebase = mach_timebase_info_data_t()
         mach_timebase_info(&timebase)
         var found: [AgentProcess] = []
+        var parents: [Int32: Int32] = [:]
         var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
         for kp in procs where ttyName(device: kp.kp_eproc.e_tdev) != nil {
             let pid = kp.kp_proc.p_pid
@@ -225,10 +223,18 @@ extension ProcessTree {
                     return ticks * Double(timebase.numer) / Double(timebase.denom) / 1_000_000_000
                 }
             }
+            parents[pid] = kp.kp_eproc.e_ppid
             found.append(AgentProcess(agent: agent, pid: pid,
                                       started: Date(timeIntervalSince1970: TimeInterval(start.tv_sec) + TimeInterval(start.tv_usec) / 1_000_000),
                                       cpuSeconds: cpu, interactive: true))
         }
-        return found
+        return sessions(found, parents: parents)
+    }
+
+    /// One process per session: a helper an agent starts from its own executable shares its terminal, but its hooks
+    /// run under the session, never under the helper.
+    static func sessions(_ processes: [AgentProcess], parents: [Int32: Int32]) -> [AgentProcess] {
+        let pids = Set(processes.map(\.pid))
+        return processes.filter { !pids.contains(parents[$0.pid] ?? 0) }
     }
 }

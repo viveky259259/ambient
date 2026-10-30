@@ -258,7 +258,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         guard let advice = hookDoctor.fix(problem) else { return }
         let alert = NSAlert()
         alert.messageText = problem.summary
-        alert.informativeText = advice + " Ambient rewrote its hooks in case they'd been changed; `ambient doctor` checks the whole chain."
+        alert.informativeText = advice + " `ambient doctor` checks the whole chain."
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
     }

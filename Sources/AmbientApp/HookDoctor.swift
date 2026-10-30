@@ -53,10 +53,9 @@ final class HookDoctor: ObservableObject {
                 log.error("Couldn't update \(agent.rawValue, privacy: .public) hooks: \(String(describing: error), privacy: .public)")
             }
         }
-        // Installing records the agent as connected; keep that, and the executables as they are now.
+        // Installing records the agent as connected; keep that.
         record.connected.formUnion(AgentRecord.load(paths)?.connected ?? [])
         fingerprints = currentFingerprints()
-        record.fingerprints = fingerprints
         connected = record.connected
         try? record.save(paths)
         configDates = currentConfigDates()
@@ -77,9 +76,9 @@ final class HookDoctor: ObservableObject {
             return nil
         case let .silent(agent):
             // Rewriting can't hurt and fixes a hook that was edited; the rest happens in the agent.
-            _ = try? installer.install(agent)
+            let rewrote = (try? installer.install(agent)) != nil
             silent.remove(agent)
-            return problem.remedy + "."
+            return problem.remedy + "." + (rewrote ? " Ambient also rewrote its hooks, in case they'd been changed." : "")
         }
     }
 

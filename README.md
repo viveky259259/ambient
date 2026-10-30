@@ -158,7 +158,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, and `agents.json`: which agents you connected and a fingerprint of each one's executable, to notice updates |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, and `agents.json`: which agents you connected |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
@@ -213,8 +213,9 @@ runs in. Your prompts and tool output are never read beyond that and never store
 To notice hooks that stopped firing, Ambient looks once a minute at the processes on your Mac that are agent
 sessions in a terminal (Claude Code, Codex, `agy`): their process id, executable path, start time, CPU time used
 and whether a terminal is attached. Nothing else about them, never their arguments, environment or output, and
-only to compare with the hooks it has heard from. `~/.ambient/agents.json` keeps which agents you connected and,
-to notice updates, each one's executable path, size and modification date. None of it leaves your Mac.
+only to compare with the hooks it has heard from. To notice updates it checks each agent's executable path, size and
+modification date, and keeps those in memory only. `~/.ambient/agents.json` keeps which agents you connected. None
+of it leaves your Mac.
 
 The living wallpaper keeps today's counts and a timeline of what happened, where and when, in
 `~/.ambient/day.json` — never prompts, summaries or commands — and starts fresh at midnight. On the lock

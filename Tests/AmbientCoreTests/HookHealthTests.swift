@@ -43,11 +43,9 @@ private func sandbox() throws -> AmbientPaths {
 
     @Test func roundTrips() throws {
         let paths = try sandbox()
-        let record = AgentRecord(connected: [.codex, .gemini], fingerprints: [.codex: "/opt/homebrew/bin/codex 12 34"])
+        let record = AgentRecord(connected: [.codex, .gemini])
         try record.save(paths)
         #expect(AgentRecord.load(paths) == record)
-        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: paths.agentRecord)) as? [String: Any]
-        #expect((json?["fingerprints"] as? [String: String])?["codex"] == "/opt/homebrew/bin/codex 12 34")
     }
 }
 
@@ -102,6 +100,15 @@ private func sandbox() throws -> AmbientPaths {
         #expect(ProcessTree.agent(forExecutable: "/Users/me/.local/bin/agy") == .antigravity)
         #expect(ProcessTree.agent(forExecutable: "/opt/homebrew/bin/node") == nil)
         #expect(ProcessTree.agent(forExecutable: "/usr/bin/codex-code-mode-host") == nil)
+    }
+
+    @Test func helpersOfASessionAreNotSessions() {
+        func process(_ pid: Int32, _ agent: AgentKind = .claude) -> AgentProcess {
+            AgentProcess(agent: agent, pid: pid, started: Date(), cpuSeconds: 30, interactive: true)
+        }
+        // 10 is a session in a shell, 11 a helper it started, 20 another session.
+        let found = ProcessTree.sessions([process(10), process(11), process(20, .codex)], parents: [10: 5, 11: 10, 20: 5])
+        #expect(found.map(\.pid) == [10, 20])
     }
 
     @Test func listingTerminalSessionsWorks() {

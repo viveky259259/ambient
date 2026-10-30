@@ -11,8 +11,8 @@ keeps them on your Mac:
 - **Agent processes**, once a minute: for agent sessions attached to a terminal (Claude Code, Codex, `agy`), the
   process id, executable path, start time, CPU time and whether a terminal is attached, to spot a busy session
   whose hooks never reached Ambient. Never arguments, environment or output.
-- **Agent executables**: the path, size and modification date of each agent's executable, saved with the agents
-  you connected in `~/.ambient/agents.json`, to notice when an agent updates.
+- **Agent executables**: the path, size and modification date of each agent's executable, held in memory only, to
+  notice when an agent updates. `~/.ambient/agents.json` stores only which agents you connected.
 
 ## Network
 
