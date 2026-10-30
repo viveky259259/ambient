@@ -98,7 +98,7 @@ public enum HookHealth {
 // MARK: - Updates
 
 /// Where each agent's executable usually lives, to notice when it's updated. Not exhaustive: an agent found
-/// nowhere here simply isn't watched for updates, and Ambient still re-checks its hooks every few minutes.
+/// nowhere here simply isn't watched for updates, and Ambient still re-checks its hooks every ten minutes.
 public enum AgentExecutable {
     static func candidates(_ agent: AgentKind, home: String) -> [String] {
         let bins = ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", "\(home)/.npm-global/bin", "\(home)/.bun/bin"]
@@ -176,8 +176,10 @@ public struct SilenceDetector: Sendable {
         }.map(\.agent))
     }
 
-    /// Forgets processes that have exited.
+    /// Forgets processes that have exited. A scan that found nothing may simply have failed, and forgetting then
+    /// would report every live session as silent.
     public mutating func keep(only live: Set<Int32>) {
+        guard !live.isEmpty else { return }
         for agent in heard.keys { heard[agent]?.formIntersection(live) }
     }
 }

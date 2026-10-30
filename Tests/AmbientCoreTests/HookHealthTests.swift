@@ -158,4 +158,11 @@ private func sandbox() throws -> AmbientPaths {
         detector.keep(only: [7])
         #expect(detector.silent([process()], now: now, since: [.claude: since]) == [.claude])
     }
+
+    @Test func aScanThatFoundNothingForgetsNothing() {
+        var detector = SilenceDetector()
+        detector.heard(from: .claude, host: HostInfo(pids: [42], agentPid: 42))
+        detector.keep(only: [])
+        #expect(detector.silent([process()], now: now, since: [.claude: since]).isEmpty)
+    }
 }

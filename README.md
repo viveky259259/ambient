@@ -129,7 +129,8 @@ the menu bar, which gets a **!** and an item with a one-click fix:
   were in place, yet not one hook reached Ambient. For Codex that usually means its hooks await approval
   (`/hooks`); otherwise restart the session, since agents read their hooks when they start.
 
-`ambient doctor` runs the same checks from a terminal.
+`ambient doctor` runs the same checks from a terminal, except for hooks that stopped firing: only the running app
+sees those.
 
 ### Click to return
 
