@@ -209,18 +209,19 @@ is checked against a hash built into Ambient before it's used.
 
 ### Performance
 
-Ambient costs next to nothing when nothing happens. Measured on an Apple M5 Max (macOS 27.0.1, Ambient 0.7.0) with
-`scripts/measure-perf.sh`, which runs a separate copy of the app for 45 seconds per case; CPU is percent of one
-core, energy impact is macOS's own figure (as in Activity Monitor):
+Ambient costs next to nothing when nothing happens. Measured on an Apple M5 Max (macOS 27.0.1, the code after Ambient
+0.7.0) with `scripts/measure-perf.sh`, which runs a separate copy of the app for 45 seconds per case; CPU is percent
+of one core, energy impact is macOS's own figure (as in Activity Monitor). Other work kept every core busy during this
+run, so a quiet Mac may read a little differently:
 
 | Case | CPU, average | CPU, peak | Energy impact | Memory |
 | --- | --- | --- | --- | --- |
-| Island only, nothing happening | 0.2% | 0.6% | 0.2 | 21 MB |
-| Island only, agents working (an event every 2 s) | 0.5% | 0.9% | 0.5 | 23 MB |
-| Island and Dock glow, agents working | 0.5% | 0.5% | 0.4 | 23 MB |
-| Island and living wallpaper, nothing happening | 0.0% | 0.0% | 0.0 | 37 MB |
-| Island and desktop pet, nothing happening | 0.1% | 0.1% | 0.0 | 22 MB |
-| Everything on, agents working | 2.0% | 2.1% | 1.9 | 49 MB |
+| Island only, nothing happening | 0.1% | 0.3% | 0.1 | 21 MB |
+| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 23 MB |
+| Island and Dock glow, agents working | 0.4% | 0.6% | 0.3 | 23 MB |
+| Island and living wallpaper, nothing happening | 0.2% | 0.3% | 0.1 | 41 MB |
+| Island and desktop pet, nothing happening | 0.3% | 0.6% | 0.3 | 23 MB |
+| Everything on, agents working | 1.2% | 1.4% | 1.2 | 50 MB |
 
 The task board adds to that as it grows. With 1,626 tasks and an event every two seconds, Ambient used 1.6% of a core
 and 90 MB with the board closed, and 4.2% and 96 MB with it open.
