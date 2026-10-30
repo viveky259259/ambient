@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       tasksURL: paths.tasksFile,
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
+    private lazy var permissions = PermissionDesk(model: model, prefs: prefs)
     private lazy var hookDoctor = HookDoctor(paths: paths, model: model)
     private var remote: RemoteCoordinator?
     private var island: IslandController?
@@ -51,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hookDoctor.start()
 
         model.start()
-        let server = EventServer(paths: paths, model: model)
+        let server = EventServer(paths: paths, model: model, permissions: permissions)
         do { try server.start() } catch { log.error("Socket server failed: \(String(describing: error))") }
         self.server = server
 
@@ -63,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notifier.start()
         self.notifier = notifier
 
-        island = IslandController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
+        island = IslandController(model: model, prefs: prefs, speech: speech, permissions: permissions) { [weak self] in self?.showSetup() }
         island?.start()
 
         pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }

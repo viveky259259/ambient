@@ -468,6 +468,11 @@ struct Commands {
             }
         }
 
+        let permissions = installer.permissions
+        if permissions.enabled {
+            out.line("•", "Permission prompts: the island answers for Claude Code and Codex, waiting \(permissions.wait)s before the agent asks")
+        }
+
         print(problems == 0 ? out.dim("Everything looks good.") : out.dim("\(problems) problem\(problems == 1 ? "" : "s") found."))
         return problems == 0 ? 0 : 1
     }

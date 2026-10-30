@@ -63,6 +63,12 @@ final class Preferences: ObservableObject {
     @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
     /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
     @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
+    /// Answer Claude Code and Codex permission prompts from the island. Kept in ~/.ambient/permissions.json,
+    /// which the hooks read, rather than in UserDefaults.
+    @Published var answerPermissions: Bool { didSet { savePermissions() } }
+    /// Seconds the island waits for an answer before the agent asks in its own way.
+    @Published var permissionWait: Int { didSet { savePermissions() } }
+    private let paths: AmbientPaths
 
     // MARK: - Task board local LLM (local-agent MCP)
 
@@ -83,8 +89,12 @@ final class Preferences: ObservableObject {
     /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
     @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
+        self.paths = paths
+        let permissions = PermissionSettings.load(paths)
+        answerPermissions = permissions.enabled
+        permissionWait = permissions.wait
         defaults.register(defaults: [
             "islandEnabled": true,
             "islandShowsWorking": true,
@@ -175,6 +185,14 @@ final class Preferences: ObservableObject {
         TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
                       modelPath: taskLLMModelPath, pythonPath: taskLLMPython,
                       readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
+    }
+
+    var permissionSettings: PermissionSettings {
+        PermissionSettings(enabled: answerPermissions, wait: permissionWait)
+    }
+
+    private func savePermissions() {
+        try? permissionSettings.save(paths)
     }
 
     var isQuiet: Bool {

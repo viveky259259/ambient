@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Answer permission prompts from the island** (off by default; Settings › Island): Claude Code and Codex tool
+  requests open a card at the notch with the agent, the project and the command, file or host, and *Allow once*
+  or *Deny*. Ambient never answers for you: a prompt you don't answer within the wait you choose (20 seconds by
+  default), or one you'd rather answer in the agent's own app, goes back to the agent, which asks as usual.
+  Several prompts queue in order, and the buttons ignore clicks for the first moment so a card that appears under
+  the pointer can't be approved by accident. Only the permission hook waits, and only with the setting on;
+  Codex asks you to approve the changed hook once with `/hooks`.
 - **Hooks that keep working**: Ambient re-checks each connected agent's hooks at launch, every ten minutes, and as
   soon as the agent updates or its settings change, and rewrites out-of-date hooks with the usual backup. What it
   can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it

@@ -59,7 +59,8 @@ public enum ToolNames {
     static func detail(name: String, input: HookPayload?) -> String? {
         guard let input, !name.hasPrefix("mcp__") else { return nil }
         if name == "apply_patch", let patch = input.firstString(["input", "patch"]) {
-            return patchedFile(patch).map(basename)
+            let files = patchedFiles(patch).map(basename)
+            return files.first.map { files.count > 1 ? "\($0) +\(files.count - 1) more" : $0 }
         }
         if let command = input.firstString(["command", "cmd", "CommandLine"]) {
             return Trim.clean(command, max: 80)
@@ -78,12 +79,12 @@ public enum ToolNames {
         return name.isEmpty ? path : name
     }
 
-    private static func patchedFile(_ patch: String) -> String? {
-        for line in patch.split(separator: "\n") {
+    private static func patchedFiles(_ patch: String) -> [String] {
+        patch.split(separator: "\n").compactMap { line in
             for marker in ["*** Update File: ", "*** Add File: ", "*** Delete File: "] where line.hasPrefix(marker) {
                 return String(line.dropFirst(marker.count)).trimmingCharacters(in: .whitespaces)
             }
+            return nil
         }
-        return nil
     }
 }
