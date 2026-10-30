@@ -28,6 +28,9 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case memoryReply(MemoryReply)
     case ping
     case pong(version: String)
+    /// A permission prompt the island may answer; the hook waits for `permissionAnswer`.
+    case permissionRequest(PermissionAsk)
+    case permissionAnswer(PermissionAnswer)
 }
 
 public enum Wire {

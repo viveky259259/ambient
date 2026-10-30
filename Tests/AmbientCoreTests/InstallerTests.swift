@@ -324,6 +324,54 @@ private let foreignSettings = """
         #expect(!AgentKind.hooked.contains(.custom))
     }
 
+    @Test func answeringFromTheIslandMakesOnlyThePermissionHookWait() throws {
+        let box = try Sandbox()
+        try box.mkdir(".claude")
+        try box.mkdir(".codex")
+        let on = PermissionSettings(enabled: true, wait: 30)
+        let answering = HookInstaller(paths: box.paths, permissions: on)
+        try answering.install(.claude)
+        try answering.install(.codex)
+        for (agent, file) in [(AgentKind.claude, ".claude/settings.json"), (.codex, ".codex/hooks.json")] {
+            let root = try JSONValue.parse(box.read(file))
+            let permission = root["hooks"]?["PermissionRequest"]?[0]?["hooks"]?[0]
+            #expect(permission?["async"] == nil)
+            #expect(permission?["timeout"] == .number("70"))
+            // Another wait leaves the hook as it is, so Codex needn't approve it again.
+            #expect(HookInstaller(paths: box.paths, permissions: PermissionSettings(enabled: true, wait: 10)).status(agent) == .installed)
+            #expect(permission?["command"]?.stringValue?.hasSuffix("hook \(agent.rawValue) --answer || true") == true)
+            let other = root["hooks"]?["PreToolUse"]?[0]?["hooks"]?[0]
+            #expect(other?["async"] == .bool(true))
+            #expect(other?["command"]?.stringValue?.contains("--answer") == false)
+            #expect(answering.status(agent) == .installed)
+            // Turned off again, the waiting hook is out of date until reinstalled in the background.
+            let off = HookInstaller(paths: box.paths, permissions: PermissionSettings())
+            #expect(off.status(agent) == .partial)
+            try off.install(agent)
+            let restored = try JSONValue.parse(box.read(file))["hooks"]?["PermissionRequest"]?[0]?["hooks"]?[0]
+            #expect(restored?["async"] == .bool(true))
+            #expect(off.status(agent) == .installed)
+        }
+    }
+
+    @Test func anInstallerFindsTheSavedSettingByItself() throws {
+        // Hook repair builds its installer this way: missing the setting, it would undo answering from the island.
+        let box = try Sandbox()
+        try box.mkdir(".claude")
+        let on = PermissionSettings(enabled: true)
+        try on.save(box.paths)
+        try HookInstaller(paths: box.paths, permissions: on).install(.claude)
+        #expect(HookInstaller(paths: box.paths).status(.claude) == .installed)
+    }
+
+    @Test func agentsWithoutDecisionsAreUnaffected() throws {
+        let box = try Sandbox()
+        try box.mkdir(".gemini")
+        try HookInstaller(paths: box.paths, permissions: PermissionSettings(enabled: true)).install(.gemini)
+        #expect(!(try box.read(".gemini/settings.json")).contains("--answer"))
+        #expect(HookInstaller(paths: box.paths, permissions: PermissionSettings()).status(.gemini) == .installed)
+    }
+
     @Test func unparsableConfigIsNeverOverwritten() throws {
         let box = try Sandbox()
         try box.write(".claude/settings.json", "{ nope")

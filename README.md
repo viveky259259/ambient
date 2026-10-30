@@ -163,13 +163,53 @@ finished, permission requested, turn finished or failed, compaction, subagents, 
 for OpenCode, which has no command hooks, a small plugin that does the same.
 The hook runs the bundled `ambient` command, which reads the event, reduces it to a few short fields,
 sends one line over a private Unix socket, and exits — in about 15 ms, always with success, and in the
-background for Claude Code and Codex, so it never slows your agent down. If Ambient isn't running,
+background for Claude Code and Codex, so it never slows your agent down (the one exception is the opt-in
+[permission hook](#answer-permission-prompts-from-the-island)). If Ambient isn't running,
 the event is simply dropped.
 
 The app folds events into a state per session and picks the most urgent across all of them:
 **needs you** › **error** › **done** › **working** › **idle**. A finished session stays green until you
 look at it — switch to its terminal or editor, or click it — and then settles. Sessions whose agent
 process exits disappear on their own.
+
+### Answer permission prompts from the island
+
+Off unless you turn it on in **Settings › Island**. For Claude Code and Codex, a tool request then opens a
+card at the notch with the agent, the project and what it wants to run (the command, file or host), and two
+buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds a rule.
+
+- **Ambient never answers for you.** If you don't answer within the wait you choose (20 seconds by default), the
+  prompt goes back to the agent, which asks you as usual. The same happens when the agent's app is already in
+  front, when the island is off, and when the agent moves on (you answered in its own window, say).
+- **The agent waits too.** In a terminal, Claude Code and Codex show their own prompt only after the island hands
+  it back, so a prompt you ignore arrives up to that many seconds later. In Claude's desktop app and editors,
+  the island and the app's own dialog race, and whichever you answer first wins.
+- **Nothing hidden.** The card wraps what it shows rather than trim it. A command over 80 characters is cut, and MCP
+  tools show no details at all, and in both cases the card says so and offers to take you to the agent to read it.
+- **One at a time, none lost.** Several prompts queue in order, each with its own time limit, and the card says
+  how many are waiting.
+- **No stray clicks.** The buttons ignore clicks for the first moment the card is on screen, so a card that
+  appears under your pointer can't be approved by a click meant for something else.
+- Only this hook ever makes an agent wait: with the setting on, Ambient installs the permission hook in the
+  foreground. Codex asks you to approve the changed hook once with `/hooks`. Every other hook stays in the
+  background. Other agents aren't affected: their permission prompts stay in their own windows.
+
+### Keeping hooks working
+
+Agents change: an update can rewrite their settings or the shape of their hooks. Ambient re-checks every
+connected agent's hooks when it starts, every ten minutes, and as soon as an agent's executable or settings
+file changes. Out-of-date hooks are rewritten on the spot (with the usual backup). What it can't fix shows in
+the menu bar, which gets a **!** and an item with a one-click fix:
+
+- **Hooks were removed** — you connected the agent, but its hooks are gone. *Reconnect* puts them back.
+- **Can't read the settings** — the file isn't valid JSON; *Show File* opens it in Finder. Ambient never
+  overwrites a file it can't read.
+- **Hooks stopped firing** — a session has been busy in a terminal for two minutes, started after its hooks
+  were in place, yet not one hook reached Ambient. For Codex that usually means its hooks await approval
+  (`/hooks`); otherwise restart the session, since agents read their hooks when they start.
+
+`ambient doctor` runs the same checks from a terminal, except for hooks that stopped firing: only the running app
+sees those.
 
 ### Click to return
 
@@ -198,7 +238,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, and what agents share through working memory (`memory.json`, and copies of shared files in `memory/`) |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected), `permissions.json` (the island's permission setting), and what agents share through working memory (`memory.json`, and copies of shared files in `memory/`) |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
@@ -258,6 +298,13 @@ can read it, so Ambient refuses text that looks like an API token or a private k
 files, and anything in `~/.ssh`, `~/.aws` or `~/.gnupg`. Entries expire, a week by default, and their file copies go
 with them. Agents are told that entries are data other agents wrote, not instructions. It never leaves your Mac.
 
+To notice hooks that stopped firing, Ambient looks once a minute at the processes on your Mac that are agent
+sessions in a terminal (Claude Code, Codex, `agy`): their process id, executable path, start time, CPU time used
+and whether a terminal is attached. Nothing else about them, never their arguments, environment or output, and
+only to compare with the hooks it has heard from. To notice updates it checks each agent's executable path, size and
+modification date, and keeps those in memory only. `~/.ambient/agents.json` keeps which agents you connected. None
+of it leaves your Mac.
+
 The living wallpaper keeps today's counts and a timeline of what happened, where and when, in
 `~/.ambient/day.json` — never prompts, summaries or commands — and starts fresh at midnight. On the lock
 screen it hides messages and event titles unless you turn them on. Its calendar line reads only your next
@@ -280,12 +327,12 @@ run, so a quiet Mac may read a little differently:
 
 | Case | CPU, average | CPU, peak | Energy impact | Memory |
 | --- | --- | --- | --- | --- |
-| Island only, nothing happening | 0.1% | 0.3% | 0.1 | 21 MB |
-| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 23 MB |
-| Island and Dock glow, agents working | 0.4% | 0.6% | 0.3 | 23 MB |
-| Island and living wallpaper, nothing happening | 0.2% | 0.3% | 0.1 | 41 MB |
-| Island and desktop pet, nothing happening | 0.3% | 0.6% | 0.3 | 23 MB |
-| Everything on, agents working | 1.2% | 1.4% | 1.2 | 50 MB |
+| Island only, nothing happening | 0.1% | 0.2% | 0.0 | 22 MB |
+| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 24 MB |
+| Island and Dock glow, agents working | 0.6% | 0.7% | 0.5 | 24 MB |
+| Island and living wallpaper, nothing happening | 0.0% | 0.1% | 0.0 | 41 MB |
+| Island and desktop pet, nothing happening | 0.2% | 0.5% | 0.1 | 23 MB |
+| Everything on, agents working | 1.9% | 2.4% | 1.8 | 53 MB |
 
 The task board adds to that as it grows. With 1,626 tasks and an event every two seconds, Ambient used 1.6% of a core
 and 90 MB with the board closed, and 4.2% and 96 MB with it open.
