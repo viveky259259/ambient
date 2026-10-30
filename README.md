@@ -293,12 +293,12 @@ run, so a quiet Mac may read a little differently:
 
 | Case | CPU, average | CPU, peak | Energy impact | Memory |
 | --- | --- | --- | --- | --- |
-| Island only, nothing happening | 0.1% | 0.3% | 0.1 | 21 MB |
-| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 23 MB |
-| Island and Dock glow, agents working | 0.4% | 0.6% | 0.3 | 23 MB |
-| Island and living wallpaper, nothing happening | 0.2% | 0.3% | 0.1 | 41 MB |
-| Island and desktop pet, nothing happening | 0.3% | 0.6% | 0.3 | 23 MB |
-| Everything on, agents working | 1.2% | 1.4% | 1.2 | 50 MB |
+| Island only, nothing happening | 0.1% | 0.2% | 0.0 | 22 MB |
+| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 24 MB |
+| Island and Dock glow, agents working | 0.6% | 0.7% | 0.5 | 24 MB |
+| Island and living wallpaper, nothing happening | 0.0% | 0.1% | 0.0 | 41 MB |
+| Island and desktop pet, nothing happening | 0.2% | 0.5% | 0.1 | 23 MB |
+| Everything on, agents working | 1.9% | 2.4% | 1.8 | 53 MB |
 
 The task board adds to that as it grows. With 1,626 tasks and an event every two seconds, Ambient used 1.6% of a core
 and 90 MB with the board closed, and 4.2% and 96 MB with it open.
