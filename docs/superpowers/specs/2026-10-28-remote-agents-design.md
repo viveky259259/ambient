@@ -1,8 +1,8 @@
 # Remote agents: one hub Mac for agents on any machine
 
 Date: 2026-10-28
-Status: P0 (foundations) is built on `feat/remote-agents-p0`. P1 follows on a stacked branch. P2 and P3 are not
-started.
+Status: P0 and P1 are built. P2 and P3 are not started. The threat model (ER-40) still needs its review by someone
+other than its author before P1 ships.
 
 ## Problem
 
@@ -103,7 +103,9 @@ Phase tags: **P0** foundations, **P1** v1, **P2** managed deployment, **P3** ass
 - **ER-12 (P1, P2)** Redaction levels, applied on the remote machine:
   - `metadata`: state, agent, project, machine and times.
   - `standard`: adds tool names and short titles.
-  - `full`: adds prompt and message text.
+  - `full`: adds message text: up to 160 characters of the agent's final message, a permission prompt or an error.
+    Prompts stay on the machine at every level (a P1 decision: nothing on the hub shows them, and local sessions
+    don't send them either).
 
   The default is `standard` (decided 2026-10-28). Admins can lock a minimum level. P2 adds regex secret
   scrubbing (tokens, keys) for `full`.
@@ -262,6 +264,88 @@ The fingerprint is the SHA-256 fingerprint of the remote's SSH host key as `foll
 handshake, or, where the shim can't read a host key (containers), the random install id it generated. See the
 threat model for what that pin does and does not prove.
 
+## How P1 is built
+
+### The shim
+
+`Resources/ambient-remote` ships at `Contents/Resources/ambient-remote` and is sealed by the app's signature.
+
+- `emit` forks only `awk`, `mkdir` and `rm`, and reads hook payloads through one `awk` tokenizer that needs nothing
+  beyond POSIX. Measured on an arm64 MacBook under dash: 12 ms at p50 for a small payload, 20 ms for 200 KB of tool
+  output, 38 ms for 200 KB of nothing but escaped quotes. Those numbers include about 3.5 ms per process that Linux
+  doesn't pay. Claude Code and Codex run these hooks in the background (`async`), except `SessionEnd`.
+- `seq` is assigned under a `mkdir` lock, so file order and `seq` always agree. A lock whose holder is gone is taken
+  over after about 200 ms. An event that can't get the lock in about 600 ms is dropped: hooks never wait longer.
+- `follow` polls the `seq` file once a second, so a "needs you" arrives within about a second plus the transport's
+  latency. It sends a heartbeat every 15 s.
+- Agent exit: `emit` records the agent's pid (first ancestor that isn't a shell) once per session in
+  `spool/live/`, and `follow` reports `agentExited` when it's gone. The pid never leaves the machine.
+- Titles: `follow` reads the agent's own title (Claude's `custom-title` transcript entry, Codex's
+  `session_index.jsonl`) every 30 s and spools `titleChanged`, so `emit` never scans a file. Off at `metadata`.
+- Malformed spool lines are forwarded once, after a later event seals them, so the hub can reject and record them. A
+  line still being appended is never mistaken for one.
+- Retention runs whenever the shim runs: on every 64th event, when `follow` starts and every 10 minutes while it
+  runs. There's no daemon (ER-10), so an idle machine with no hub keeps its spool until the next event or connection.
+  `follow` never sends a line past the age limit.
+- `install` edits agent configs with `python3`, the one place the shim needs more than coreutils (a refinement of
+  ER-32): rewriting a user's JSON from `awk` isn't safe enough. It keeps a backup, leaves the user's own entries alone,
+  and without `python3` writes a fresh file or prints the snippet and exits 3.
+
+### The transport contract
+
+The transport is an argv. Ambient appends one argument, a shell string for the machine's login shell, the way `ssh`
+takes it. Stdin is `/dev/null` while following, so the hub can't send anything. `ambient remote add NAME` builds
+`ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 NAME`.
+
+### Delivery
+
+- `RemoteLink` owns one thread per machine, and `RemoteIngest` makes every decision about the stream, with no I/O
+  beyond the audit log.
+- `follow`'s handshake and heartbeats are `RemoteLine` control lines with their own allowlist. `hello` carries the
+  shim's version, protocol, capabilities, level, head `seq`, spool `epoch`, identity and clock.
+- A new `epoch`, or a `seq` lower than the cursor, means the spool was replaced: the cursor resets and the link starts
+  over. Without this a rebuilt machine would look silent forever.
+- Events at or below the handshake's `seq` are a replay. A replayed `needsInput`, `turnCompleted` or `turnFailed` older
+  than 10 minutes is *missed*: shown, never chimed, and kept past the usual waiting timeout until it's seen.
+- **No lost or duplicated alerts:** the cursor lives in `state.json` with the sessions, so they can't disagree. A batch
+  that would alert saves both *before* anyone is told. A hub killed earlier replays the batch and alerts then; killed
+  later, it restarts past it. Everything else saves on the usual debounce, and replays harmlessly. The one window left
+  is between the save and the notification itself, microseconds wide, where an alert can be lost but not repeated.
+- **Rate limit:** a token bucket per machine (50 events/s, burst 500) holds events back rather than dropping them, so a
+  flood delays only its own machine. Replays run free, since the spool's cap already bounds them.
+- Clocks further apart than 2 minutes at the handshake are corrected for (ER-21).
+- A link that hears nothing for 45 s is dead. Backoff doubles from 1 s to 60 s with 20% jitter, and resets after 30 s
+  up. A refused sign-in retries once a minute.
+- Sessions show as *unknown* after 30 s of failed reconnects, or at once for sign-in, identity and upgrade failures.
+
+### What the hub keeps
+
+- `~/.ambient/remote/machines.json`: the allowlist (ER-4). The CLI writes it and the app polls it every 5 s, so pairing
+  needs no new `WireMessage`.
+- `~/.ambient/remote/audit.jsonl`: rejections are written at most once a minute per reason, with a count, so garbage
+  can't fill it. It rotates at 5 MB.
+- Remote sessions in `state.json` and tasks in `tasks.json`. Tasks never merge across machines.
+- The day log counts remote turns, but keeps only "Claude on Devbox" as the place: no titles or projects.
+- `ambient remote remove` drops the sessions and cursor. `purge` also deletes the board tasks and today's moments,
+  edits the files directly, and leaves a marker for a running app to clear what it holds in memory.
+
+### Egress
+
+`RemoteEgress` is the rule, and `AppModel` applies it where session text can leave: the board's summarizer, behind
+`remoteSummaries` (off by default) and a loopback check. `skill-bootstrap` sends a fixed prompt and no session text,
+and online voices read only what the user selects in another app; Ambient's own session text can't be selected. Both
+are allowed for no remote session.
+
+### Tests
+
+`RemoteEndToEndTests` run the real shim through a `sh -c` transport: pairing, redaction, a hub killed at five points
+mid-stream, the hook's latency, a malformed spool line, replays, identity changes, reconnects, a rebuilt spool, agent
+exit, `doctor` and purge. `AMBIENT_TEST_SSHD=1` adds the same path over a throwaway `sshd` on loopback.
+
+`scripts/test-remote-shim.sh` runs the shim itself under every shell and `awk` it finds, and checks its output with a
+strict JSON parser. CI runs it on Linux with dash, bash, busybox ash, mawk and gawk (ER-35). The 25-machine targets
+(ER-37) wait for P3.
+
 ## Threat model (STRIDE, ER-40)
 
 Assets: the hub Mac (code execution, the user's files, the Ambient socket), the remote machine, and session
@@ -337,7 +421,12 @@ The load test against the ER-37 targets, the SBOM, the whitepaper and the extern
 - A push listener on the Mac.
 - A Windows hub.
 
+## Decided in P1
+
+- The board's local LLM doesn't summarize remote sessions unless the user turns that on.
+
 ## Open questions
 
-- Should the board's local LLM summarize remote sessions by default?
 - Is native Windows needed on the remote side, beyond WSL2?
+- Should the pin bind to the key the transport verified? Today the machine reports its own host key. Parsing it from
+  `ssh -v` would hold against a malicious machine, but only for ssh, and only by reading debug output.
