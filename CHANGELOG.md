@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.0% CPU with the island
+  alone when nothing happens, 0.6% while agents work, 2.1% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
+  reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.
+
 ## 0.7.0 — 2026-10-23
 
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of

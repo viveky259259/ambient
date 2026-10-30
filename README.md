@@ -207,6 +207,30 @@ you chose, with your key, which is kept in your login Keychain. The offline mode
 small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file
 is checked against a hash built into Ambient before it's used.
 
+### Performance
+
+Ambient costs next to nothing when nothing happens. Measured on an Apple M5 Max (macOS 27.0.1) with
+`scripts/measure-perf.sh`, which runs a separate copy of the app for 45 seconds per case; CPU is percent of one
+core, energy impact is macOS's own figure (as in Activity Monitor):
+
+| Case | CPU, average | CPU, peak | Energy impact | Memory |
+| --- | --- | --- | --- | --- |
+| Island only, nothing happening | 0.0% | 0.0% | 0.0 | 21 MB |
+| Island only, agents working (an event every 2 s) | 0.6% | 0.7% | 0.5 | 23 MB |
+| Island and Dock glow, agents working | 0.6% | 0.6% | 0.5 | 23 MB |
+| Island and living wallpaper, nothing happening | 0.0% | 0.2% | 0.0 | 47 MB |
+| Island and desktop pet, nothing happening | 0.1% | 0.1% | 0.1 | 22 MB |
+| Everything on, agents working | 2.1% | 2.4% | 2.0 | 241 MB |
+
+In daily use, with everything on, 25 agent sessions open and agents working, Ambient averaged 2.7% of one core over
+two minutes (20-second samples from 1.1% to 6.5%) and about 95 MB.
+
+What these numbers leave out: the living wallpaper pauses where windows cover it, so the figure above is for a
+mostly covered desktop, as while you work; a bare desktop costs more. The Dock glow was measured without
+Accessibility access (its edge-line mode). The black hole or sun when the island opens wasn't measured; it runs only
+while the island is open and stops in Low Power Mode. Run `scripts/measure-perf.sh` to measure your Mac; it
+changes nothing in the Ambient you use, and nothing it measures leaves your Mac.
+
 ## Command line
 
 ```
