@@ -111,6 +111,23 @@ private struct WingLabel: View {
     }
 }
 
+/// The machine a remote session runs on. Remote text is plain text, and a label is the user's own.
+struct MachineTag: View {
+    let session: Session
+
+    var body: some View {
+        if let machine = Describe.machine(session) {
+            HStack(spacing: 3) {
+                Image(systemName: "network").font(.system(size: 8, weight: .semibold)).accessibilityHidden(true)
+                Text(verbatim: machine).lineLimit(1)
+            }
+            .font(.system(size: 9.5, weight: .medium))
+            .foregroundStyle(.white.opacity(0.55))
+            .accessibilityLabel("on \(machine)")
+        }
+    }
+}
+
 struct AgentTag: View {
     let agent: AgentKind
     let label: String
@@ -140,8 +157,9 @@ private struct BloomCard: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     AgentTag(agent: session.agent, label: session.agentLabel)
+                    MachineTag(session: session)
                 }
-                Text(Describe.activity(session.activity))
+                Text(Describe.status(session))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.72))
                     .lineLimit(2)
@@ -222,11 +240,12 @@ private struct SessionRow: View {
                     HStack(spacing: 6) {
                         Text(Describe.title(session)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
                         AgentTag(agent: session.agent, label: session.agentLabel)
+                        MachineTag(session: session)
                         if session.subagents > 0 {
                             Text("+\(session.subagents) agents").font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                         }
                     }
-                    Text([Describe.place(session), Describe.activity(session.activity)].compactMap { $0 }.joined(separator: " · "))
+                    Text([Describe.place(session), Describe.status(session)].compactMap { $0 }.joined(separator: " · "))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
                 }
                 Spacer(minLength: 6)
