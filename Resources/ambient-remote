@@ -1,0 +1,841 @@
+#!/bin/sh
+# ambient-remote: the part of Ambient that runs on a remote machine.
+#
+# Agent hooks call `emit`, which redacts the event and appends it to a private spool. The hub Mac dials
+# in over the user's own transport and runs `follow`, which streams the spool as JSON lines on stdout.
+# Nothing here listens on a port, runs as a daemon, needs root or talks to anything but this spool.
+#
+# Plain POSIX sh, reviewable as text. `emit` and `follow` need only awk and coreutils. `install` uses
+# python3 to edit agent config files safely, and prints a snippet to add by hand when it can't.
+#
+# Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
+
+AR_VERSION=1.0.0
+AR_PROTO=1
+AR_CAPS=exit,title,heartbeat
+
+LC_ALL=C
+export LC_ALL
+
+AR_HOME=$HOME/.ambient
+AR_BIN=$AR_HOME/bin/ambient-remote
+AR_CONF=$AR_HOME/remote.conf
+AR_ID=$AR_HOME/remote.id
+AR_SPOOL=$AR_HOME/spool
+AR_EVENTS=$AR_SPOOL/events.jsonl
+AR_OLD=$AR_SPOOL/events.1.jsonl
+AR_SEQ=$AR_SPOOL/seq
+AR_EPOCH=$AR_SPOOL/epoch
+AR_LOCK=$AR_SPOOL/lock
+AR_LIVE=$AR_SPOOL/live
+
+AR_HOOK_MARKER=.ambient/bin/ambient-remote
+AR_CLAUDE_EVENTS='SessionStart UserPromptSubmit PreToolUse PostToolUse PostToolUseFailure PermissionRequest Notification PreCompact PostCompact SubagentStart SubagentStop Stop StopFailure SessionEnd'
+AR_CODEX_EVENTS='SessionStart UserPromptSubmit PreToolUse PostToolUse PermissionRequest PreCompact PostCompact SubagentStart SubagentStop Stop SessionEnd'
+
+NL='
+'
+
+# Reads remote.conf without sourcing it: key=value lines, unknown keys and bad values ignored.
+read_conf() {
+    AR_LEVEL=standard
+    AR_MAX_BYTES=5242880
+    AR_MAX_AGE=86400
+    [ -r "$AR_CONF" ] || return 0
+    while IFS='=' read -r conf_key conf_value; do
+        case $conf_key in
+            redaction)
+                case $conf_value in metadata|standard|full) AR_LEVEL=$conf_value ;; esac ;;
+            spool_max_bytes)
+                case $conf_value in ''|*[!0-9]*) ;; *) AR_MAX_BYTES=$conf_value ;; esac ;;
+            spool_max_age)
+                case $conf_value in ''|*[!0-9]*) ;; *) AR_MAX_AGE=$conf_value ;; esac ;;
+        esac
+    done < "$AR_CONF"
+}
+
+random_hex() {
+    od -An -N"$1" -tx1 /dev/urandom 2>/dev/null | tr -d ' \n'
+}
+
+ensure_spool() {
+    [ -d "$AR_LIVE" ] || { mkdir -p "$AR_LIVE" && chmod 700 "$AR_HOME" "$AR_SPOOL" "$AR_LIVE"; } || return 1
+    [ -s "$AR_EPOCH" ] || random_hex 8 > "$AR_EPOCH"
+}
+
+# --- The spool. Every write happens under this lock, so seq and file order always agree. ------------
+
+spool_lock() {
+    lock_tries=0
+    while ! mkdir "$AR_LOCK" 2>/dev/null; do
+        lock_tries=$((lock_tries + 1))
+        if [ "$lock_tries" -eq 20 ]; then
+            # The lock is held for about a millisecond. After this long, a holder that's gone left it behind.
+            lock_holder=
+            read -r lock_holder 2>/dev/null < "$AR_LOCK/pid"
+            if [ -z "$lock_holder" ] || ! kill -0 "$lock_holder" 2>/dev/null; then
+                rm -rf "$AR_LOCK"
+                continue
+            fi
+        fi
+        [ "$lock_tries" -lt 50 ] || return 1
+        sleep 0.01 2>/dev/null || sleep 1
+    done
+    echo "$$" > "$AR_LOCK/pid"
+}
+
+spool_unlock() {
+    rm -rf "$AR_LOCK"
+}
+
+# The seq file is "<last seq> <bytes in events.jsonl>". If it's lost, the spool itself says where it was.
+read_seq() {
+    AR_N=
+    AR_BYTES=
+    read -r AR_N AR_BYTES 2>/dev/null < "$AR_SEQ"
+    case $AR_BYTES in ''|*[!0-9]*) AR_BYTES=0 ;; esac
+    case $AR_N in
+        ''|*[!0-9]*)
+            AR_N=0
+            for seq_file in "$AR_OLD" "$AR_EVENTS"; do
+                [ -s "$seq_file" ] || continue
+                seq_line=$(tail -n 1 "$seq_file" 2>/dev/null)
+                seq_line=${seq_line#*\"seq\":}
+                seq_line=${seq_line%%,*}
+                case $seq_line in ''|*[!0-9]*) ;; *) [ "$seq_line" -gt "$AR_N" ] && AR_N=$seq_line ;; esac
+            done
+            ;;
+    esac
+}
+
+# Appends one event, whose body is everything after "seq". $1 = body, $2 = now.
+spool_append() {
+    spool_lock || return 1
+    read_seq
+    AR_N=$((AR_N + 1))
+    append_line="{\"v\":$AR_PROTO,\"seq\":$AR_N,$1}"
+    printf '%s\n' "$append_line" >> "$AR_EVENTS"
+    AR_BYTES=$((AR_BYTES + ${#append_line} + 1))
+    if [ "$AR_BYTES" -gt $((AR_MAX_BYTES / 2)) ]; then
+        mv -f "$AR_EVENTS" "$AR_OLD"
+        AR_BYTES=0
+    fi
+    [ $((AR_N % 64)) -ne 0 ] || spool_expire "$2"
+    printf '%s %s\n' "$AR_N" "$AR_BYTES" > "$AR_SEQ"
+    spool_unlock
+}
+
+# Drops lines past the age limit. Call under the lock. $1 = now.
+spool_expire() {
+    expire_cutoff=$(($1 - AR_MAX_AGE))
+    for expire_file in "$AR_OLD" "$AR_EVENTS"; do
+        [ -s "$expire_file" ] || continue
+        expire_first=
+        read -r expire_first < "$expire_file"
+        expire_ts=${expire_first#*\"ts\":}
+        expire_ts=${expire_ts%%,*}
+        case $expire_ts in ''|*[!0-9]*) expire_ts=0 ;; esac
+        [ "$expire_ts" -lt "$expire_cutoff" ] || continue
+        awk -v cutoff="$expire_cutoff" '
+            match($0, /"ts":[0-9]+/) && substr($0, RSTART + 5, RLENGTH - 5) + 0 >= cutoff
+        ' "$expire_file" > "$expire_file.tmp" && mv -f "$expire_file.tmp" "$expire_file"
+    done
+    if [ -f "$AR_EVENTS" ]; then
+        set -- $(wc -c < "$AR_EVENTS")
+        AR_BYTES=$1
+    else
+        AR_BYTES=0
+    fi
+}
+
+# --- JSON. Only ever reads top-level fields, by splitting on quotes so large payloads stay cheap. -----
+
+AWK_LIB='
+# Whether a piece of JSON text ends in an unfinished escape, so the quote after it is part of the string.
+function ends_escaped(s,    n, count) {
+    n = length(s)
+    count = 0
+    while (n > 0 && substr(s, n, 1) == "\\") {
+        count++
+        n--
+    }
+    return count % 2 == 1
+}
+
+# Splits JSON on quotes. Each token is a run of pieces, lo[k] to hi[k]: text outside strings ("O") or a
+# string with its escaped quotes still in it ("S"). Strings stay in pieces because a tool result can hold
+# thousands of quotes, and joining them all would make this quadratic.
+function tokenize(s,    n, i, first) {
+    n = split(s, piece, "\"")
+    ntok = 1
+    lo[1] = 1
+    hi[1] = 1
+    typ[1] = "O"
+    i = 2
+    while (i <= n) {
+        first = i
+        while (i < n && ends_escaped(piece[i])) i++
+        ntok++
+        lo[ntok] = first
+        hi[ntok] = i
+        typ[ntok] = "S"
+        i++
+        if (i <= n) {
+            ntok++
+            lo[ntok] = i
+            hi[ntok] = i
+            typ[ntok] = "O"
+            i++
+        }
+    }
+}
+
+# The text of token k, still escaped. Nothing Ambient keeps is longer than this.
+function token(k,    s, i) {
+    s = piece[lo[k]]
+    for (i = lo[k] + 1; i <= hi[k] && length(s) < 4096; i++) s = s "\"" piece[i]
+    return s
+}
+
+function nesting_change(t,    opened, closed) {
+    opened = gsub(/[[{]/, "", t)
+    closed = gsub(/[]}]/, "", t)
+    return opened - closed
+}
+
+# Fills F[key] with the top-level string fields of a JSON object, still escaped.
+function fields(s,    k, depth, key, rest) {
+    tokenize(s)
+    depth = 0
+    for (k = 1; k <= ntok; k++) {
+        if (typ[k] == "O") {
+            depth += nesting_change(piece[lo[k]])
+        } else if (depth == 1 && k < ntok && piece[lo[k + 1]] ~ /^[ \t\r\n]*:/) {
+            key = token(k)
+            rest = piece[lo[k + 1]]
+            sub(/^[ \t\r\n]*:[ \t\r\n]*/, "", rest)
+            if (rest == "" && k + 2 <= ntok && typ[k + 2] == "S" && !(key in F)) F[key] = token(k + 2)
+        }
+    }
+}
+
+# Cuts escaped text to at most max bytes, never inside an escape or a UTF-8 character.
+function cut(s, max,    out, i, c, step, n) {
+    n = length(s)
+    if (n <= max) return s
+    out = ""
+    i = 1
+    while (i <= n) {
+        c = substr(s, i, 1)
+        if (c == "\\") step = substr(s, i + 1, 1) == "u" ? 6 : 2
+        else if (c < "\300") step = 1
+        else if (c < "\340") step = 2
+        else if (c < "\360") step = 3
+        else step = 4
+        if (i + step - 1 > max) break
+        out = out substr(s, i, step)
+        i += step
+    }
+    return out
+}
+
+# 16 random bytes as hex, read here rather than through od because every process costs milliseconds.
+function random_id(    i, line, id, urandom) {
+    for (i = 1; i < 256; i++) hex[sprintf("%c", i)] = sprintf("%02x", i)
+    urandom = "/dev/urandom"
+    id = ""
+    while (length(id) < 32 && (getline line < urandom) > 0) {
+        for (i = 1; i <= length(line) && length(id) < 32; i++) id = id hex[substr(line, i, 1)]
+    }
+    close(urandom)
+    return id
+}
+
+function now_seconds(    t) {
+    srand()
+    t = srand()
+    if (t < 1000000000 || t > 100000000000) {
+        "date +%s" | getline t
+    }
+    return int(t)
+}
+'
+
+# Normalizes one Claude Code or Codex hook payload, as the hub's ClaudeAdapter does, and applies the
+# redaction level. Prints the fields the shell needs, one per line, then the event body. Prints nothing
+# for events that do not concern Ambient.
+AWK_EMIT='
+{ if (length(buf) < 65536) buf = buf $0 "\n" }
+END {
+    if (buf == "") exit
+    fields(substr(buf, 1, 65536))
+    agent = ENVIRON["AR_AGENT"]
+    level = ENVIRON["AR_LEVEL"]
+    event = F["hook_event_name"]
+    sid = F["session_id"]
+    if (sid == "" || length(sid) > 128 || sid !~ /^[A-Za-z0-9._:@-]+$/) exit
+
+    kind = ""
+    reason = ""
+    message = ""
+    if (event == "SessionStart") kind = F["source"] == "compact" || F["reason"] == "compact" ? "compactFinished" : "sessionStarted"
+    else if (event == "UserPromptSubmit") kind = "promptSubmitted"
+    else if (event == "PreToolUse") kind = "toolStarted"
+    else if (event == "PostToolUse") kind = "toolFinished"
+    else if (event == "PostToolUseFailure") kind = "toolFailed"
+    else if (event == "PermissionRequest") { kind = "needsInput"; reason = "permission"; message = F["tool_name"] }
+    else if (event == "Notification") {
+        type = F["notification_type"]
+        message = F["message"]
+        if (type == "permission_prompt") { kind = "needsInput"; reason = "permission" }
+        else if (type == "elicitation_dialog" || type == "elicitation_url_dialog" || type == "agent_needs_input") {
+            kind = "needsInput"
+            reason = "question"
+        }
+        else if (type != "idle_prompt" && message != "" && level == "full") kind = "notice"
+    }
+    else if (event == "PreCompact") kind = "compactStarted"
+    else if (event == "PostCompact") kind = "compactFinished"
+    else if (event == "SubagentStart") kind = "subagentStarted"
+    else if (event == "SubagentStop") kind = "subagentFinished"
+    else if (event == "Stop") { kind = "turnCompleted"; message = F["last_assistant_message"] }
+    else if (event == "StopFailure") {
+        kind = "turnFailed"
+        message = F["error_message"]
+        if (message == "") message = F["error"]
+        if (message == "") message = F["error_type"]
+    }
+    else if (event == "SessionEnd") kind = "sessionEnded"
+    if (kind == "") exit
+
+    now = now_seconds()
+    id = random_id()
+    if (length(id) != 32) {
+        srand(now + ENVIRON["AR_PID"])
+        id = ""
+        while (length(id) < 32) id = id sprintf("%04x", int(rand() * 65536))
+    }
+
+    project = F["cwd"]
+    gsub(/\\\//, "/", project)
+    sub(/\/+$/, "", project)
+    sub(/.*\//, "", project)
+
+    body = "\"id\":\"" id "\",\"ts\":" now ",\"agent\":\"" agent "\",\"session\":\"" sid "\",\"kind\":\"" kind "\""
+    if (project != "") body = body ",\"project\":\"" cut(project, 192) "\""
+    if (level != "metadata" && kind ~ /^tool/ && F["tool_name"] != "") body = body ",\"tool\":\"" cut(F["tool_name"], 192) "\""
+    if (reason != "") body = body ",\"reason\":\"" reason "\""
+    if (level == "full" && message != "") body = body ",\"message\":\"" cut(message, 480) "\""
+
+    transcript = F["transcript_path"]
+    gsub(/\\\//, "/", transcript)
+    if (transcript !~ /^\/[^\\"]*$/) transcript = ""
+
+    print kind
+    print sid
+    print now
+    print transcript
+    print cut(project, 192)
+    print body
+}
+'
+
+# Prints spool lines after seq "from", up to and including "to". A line that does not look like ours is
+# held until a later event seals it, then passed on so the hub can reject and record it exactly once.
+AWK_STREAM='
+function release() {
+    if (held != "" && last >= from) printf "%s", held
+    held = ""
+}
+{
+    if (match($0, /^\{"v":[0-9]+,"seq":[0-9]+,/)) {
+        seq = substr($0, 1, RLENGTH)
+        sub(/^\{"v":[0-9]+,"seq":/, "", seq)
+        seq += 0
+        if (seq > to) next
+        release()
+        last = seq
+        if (seq <= from) next
+        if (cutoff > 0 && match($0, /"ts":[0-9]+/) && substr($0, RSTART + 5, RLENGTH - 5) + 0 < cutoff) next
+        print
+    } else if ($0 != "" && length(held) < 131072) {
+        held = held substr($0, 1, 65537) "\n"
+    }
+}
+'
+
+# Prints the top-level string field named by ENVIRON["AR_KEY"] from one JSON line.
+AWK_FIELD='
+{ if (length(buf) < 65536) buf = buf $0 "\n" }
+END {
+    fields(substr(buf, 1, 65536))
+    print cut(F[ENVIRON["AR_KEY"]], 240)
+}
+'
+
+# --- emit ------------------------------------------------------------------------------------------
+
+# Prints the agent process: the first ancestor that is not a shell. 0 when it cannot be told.
+agent_pid() {
+    pid_at=$PPID
+    pid_steps=0
+    while [ "$pid_steps" -lt 8 ] && [ "$pid_at" -gt 1 ] 2>/dev/null; do
+        pid_name=
+        pid_parent=
+        if [ -r "/proc/$pid_at/stat" ]; then
+            pid_stat=
+            read -r pid_stat < "/proc/$pid_at/stat"
+            pid_name=${pid_stat#*\(}
+            pid_name=${pid_name%\)*}
+            pid_stat=${pid_stat##*) }
+            set -- $pid_stat
+            pid_parent=$2
+        else
+            set -- $(ps -o ppid= -o comm= -p "$pid_at" 2>/dev/null)
+            pid_parent=$1
+            pid_name=${2##*/}
+        fi
+        case ${pid_name#-} in
+            sh|ash|bash|dash|zsh|fish|ksh|tcsh|env|nohup|timeout|busybox) pid_at=$pid_parent ;;
+            '') break ;;
+            *) echo "$pid_at"; return ;;
+        esac
+        pid_steps=$((pid_steps + 1))
+    done
+    echo 0
+}
+
+cmd_emit() {
+    exec 2>/dev/null
+    emit_agent=$1
+    case $emit_agent in
+        claude|codex) ;;
+        *) cat > /dev/null; return 0 ;;
+    esac
+    umask 077
+    read_conf
+    emit_out=$(AR_AGENT=$emit_agent AR_LEVEL=$AR_LEVEL AR_PID=$$ awk "$AWK_LIB$AWK_EMIT") || return 0
+    [ -n "$emit_out" ] || return 0
+
+    emit_kind=${emit_out%%"$NL"*}; emit_out=${emit_out#*"$NL"}
+    emit_session=${emit_out%%"$NL"*}; emit_out=${emit_out#*"$NL"}
+    emit_now=${emit_out%%"$NL"*}; emit_out=${emit_out#*"$NL"}
+    emit_transcript=${emit_out%%"$NL"*}; emit_out=${emit_out#*"$NL"}
+    emit_project=${emit_out%%"$NL"*}; emit_body=${emit_out#*"$NL"}
+
+    ensure_spool || return 0
+    spool_append "$emit_body" "$emit_now" || return 0
+
+    # Remembers the agent process once per session, for `follow` to watch. The pid never leaves this machine.
+    emit_live=$AR_LIVE/$emit_agent.$emit_session
+    if [ "$emit_kind" = sessionEnded ]; then
+        rm -f "$emit_live"
+    elif [ ! -f "$emit_live" ]; then
+        printf '%s\n%s\n%s\n\n' "$(agent_pid)" "$emit_transcript" "$emit_project" > "$emit_live"
+    fi
+}
+
+# --- follow ----------------------------------------------------------------------------------------
+
+identity() {
+    if command -v ssh-keygen > /dev/null 2>&1; then
+        for identity_key in ${AMBIENT_REMOTE_HOSTKEYS:-/etc/ssh/ssh_host_ed25519_key.pub /etc/ssh/ssh_host_ecdsa_key.pub /etc/ssh/ssh_host_rsa_key.pub}; do
+            [ -r "$identity_key" ] || continue
+            identity_line=$(ssh-keygen -lf "$identity_key" 2>/dev/null) || continue
+            set -- $identity_line
+            case $2 in SHA256:*) echo "$2"; return ;; esac
+        done
+    fi
+    [ -s "$AR_ID" ] || random_hex 16 > "$AR_ID"
+    identity_id=
+    read -r identity_id < "$AR_ID"
+    echo "id:$identity_id"
+}
+
+# The fields shared by the handshake and `status`.
+hello_fields() {
+    read_seq
+    hello_epoch=
+    read -r hello_epoch 2>/dev/null < "$AR_EPOCH"
+    printf '"v":%s,"type":"%s","shim":"%s","proto":%s,"caps":"%s","level":"%s","seq":%s,"epoch":"%s","identity":"%s","ts":%s' \
+        "$AR_PROTO" "$1" "$AR_VERSION" "$AR_PROTO" "$AR_CAPS" "$AR_LEVEL" "$AR_N" "$hello_epoch" "$(identity)" "$(date +%s)"
+}
+
+# Reports sessions whose agent process is gone without having said so.
+check_live() {
+    for live_file in "$AR_LIVE"/*; do
+        [ -f "$live_file" ] || continue
+        live_pid=
+        live_transcript=
+        live_project=
+        {
+            read -r live_pid
+            read -r live_transcript
+            read -r live_project
+        } < "$live_file"
+        case $live_pid in ''|0|*[!0-9]*) continue ;; esac
+        kill -0 "$live_pid" 2>/dev/null && continue
+
+        live_name=${live_file##*/}
+        # Claiming the file first means two hubs following this machine report the exit once.
+        mv "$live_file" "$AR_LIVE/.exiting.$live_name" 2>/dev/null || continue
+        live_body="\"id\":\"$(random_hex 16)\",\"ts\":$(date +%s),\"agent\":\"${live_name%%.*}\",\"session\":\"${live_name#*.}\",\"kind\":\"agentExited\""
+        [ -z "$live_project" ] || live_body="$live_body,\"project\":\"$live_project\""
+        spool_append "$live_body" "$(date +%s)"
+        rm -f "$AR_LIVE/.exiting.$live_name"
+    done
+}
+
+# The name the agent's own UI gives a session. Costs a file scan, so it lives here rather than in `emit`.
+agent_title() {
+    case $1 in
+        claude)
+            [ -n "$3" ] && [ -f "$3" ] || return 0
+            title_line=$(grep -F '"custom-title"' "$3" 2>/dev/null | tail -n 1)
+            title_key=customTitle
+            ;;
+        codex)
+            [ -f "$HOME/.codex/session_index.jsonl" ] || return 0
+            title_line=$(grep -F "\"$2\"" "$HOME/.codex/session_index.jsonl" 2>/dev/null | tail -n 1)
+            title_key=thread_name
+            ;;
+        *) return 0 ;;
+    esac
+    [ -n "$title_line" ] || return 0
+    printf '%s\n' "$title_line" | AR_KEY=$title_key awk "$AWK_LIB$AWK_FIELD"
+}
+
+check_titles() {
+    [ "$AR_LEVEL" != metadata ] || return 0
+    for title_file in "$AR_LIVE"/*; do
+        [ -f "$title_file" ] || continue
+        title_pid=
+        title_transcript=
+        title_project=
+        title_known=
+        {
+            read -r title_pid
+            read -r title_transcript
+            read -r title_project
+            IFS= read -r title_known
+        } < "$title_file"
+        title_name=${title_file##*/}
+        title_agent=${title_name%%.*}
+        title_session=${title_name#*.}
+        title_now=$(agent_title "$title_agent" "$title_session" "$title_transcript")
+        [ -n "$title_now" ] && [ "$title_now" != "$title_known" ] || continue
+        printf '%s\n%s\n%s\n%s\n' "$title_pid" "$title_transcript" "$title_project" "$title_now" > "$title_file"
+        title_time=$(date +%s)
+        spool_append "\"id\":\"$(random_hex 16)\",\"ts\":$title_time,\"agent\":\"$title_agent\",\"session\":\"$title_session\",\"kind\":\"titleChanged\",\"title\":\"$title_now\"" "$title_time"
+    done
+}
+
+cmd_follow() {
+    follow_since=0
+    follow_heartbeat=15
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --since) follow_since=$2; shift 2 ;;
+            --heartbeat) follow_heartbeat=$2; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+    case $follow_since in ''|*[!0-9]*) echo "ambient-remote: --since takes a number" >&2; exit 64 ;; esac
+    case $follow_heartbeat in ''|0|*[!0-9]*) follow_heartbeat=15 ;; esac
+
+    umask 077
+    read_conf
+    ensure_spool || { echo "ambient-remote: can't create $AR_SPOOL" >&2; exit 1; }
+    follow_now=$(date +%s)
+    if spool_lock; then
+        read_seq
+        spool_expire "$follow_now"
+        printf '%s %s\n' "$AR_N" "$AR_BYTES" > "$AR_SEQ"
+        spool_unlock
+    fi
+    printf '{%s}\n' "$(hello_fields hello)" || exit 0
+
+    follow_last=$follow_since
+    follow_tick=0
+    while :; do
+        read_seq
+        if [ "$AR_N" -gt "$follow_last" ]; then
+            # awk stops at a file that isn't there, and reads stdin when it's given none.
+            set --
+            [ ! -f "$AR_OLD" ] || set -- "$AR_OLD"
+            [ ! -f "$AR_EVENTS" ] || set -- "$@" "$AR_EVENTS"
+            if [ $# -gt 0 ]; then
+                awk -v from="$follow_last" -v to="$AR_N" -v cutoff=$(($(date +%s) - AR_MAX_AGE)) "$AWK_STREAM" \
+                    "$@" 2>/dev/null || exit 0
+            fi
+            follow_last=$AR_N
+        elif [ "$AR_N" -lt "$follow_last" ]; then
+            # The spool was reset under us. Hang up: the handshake on the next connection tells the hub.
+            exit 0
+        fi
+        [ $((follow_tick % 5)) -ne 0 ] || check_live
+        [ $((follow_tick % 30)) -ne 0 ] || check_titles
+        if [ $((follow_tick % follow_heartbeat)) -eq 0 ]; then
+            printf '{"v":%s,"type":"heartbeat","seq":%s}\n' "$AR_PROTO" "$follow_last" || exit 0
+        fi
+        if [ $((follow_tick % 600)) -eq 599 ] && spool_lock; then
+            read_seq
+            spool_expire "$(date +%s)"
+            printf '%s %s\n' "$AR_N" "$AR_BYTES" > "$AR_SEQ"
+            spool_unlock
+        fi
+        follow_tick=$((follow_tick + 1))
+        sleep 1
+    done
+}
+
+# --- install, uninstall, status --------------------------------------------------------------------
+
+# Double quotes only: this travels in a single-quoted shell string.
+PY_MERGE='
+import json, os, sys, time
+
+path, mode, command, backups = sys.argv[1:5]
+events = sys.argv[5:]
+marker = ".ambient/bin/ambient-remote"
+
+try:
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+except FileNotFoundError:
+    text = ""
+try:
+    data = json.loads(text) if text.strip() else {}
+except ValueError:
+    print("unreadable")
+    sys.exit(4)
+hooks = data.get("hooks", {}) if isinstance(data, dict) else None
+if not isinstance(hooks, dict) or not all(isinstance(v, list) for v in hooks.values()):
+    print("unreadable")
+    sys.exit(4)
+before = json.dumps(data, sort_keys=True)
+
+def without_ours(groups):
+    kept = []
+    for group in groups:
+        if isinstance(group, dict) and isinstance(group.get("hooks"), list):
+            entries = [e for e in group["hooks"] if not (isinstance(e, dict) and marker in str(e.get("command", "")))]
+            if group["hooks"] and not entries:
+                continue
+            group = dict(group, hooks=entries)
+        kept.append(group)
+    return kept
+
+for event in list(hooks):
+    hooks[event] = without_ours(hooks[event])
+    if not hooks[event]:
+        del hooks[event]
+if mode == "install":
+    for event in events:
+        entry = {"type": "command", "command": command}
+        if event != "SessionEnd":
+            entry["async"] = True
+        entry["timeout"] = 5
+        hooks.setdefault(event, []).append({"hooks": [entry]})
+if hooks:
+    data["hooks"] = hooks
+else:
+    data.pop("hooks", None)
+if json.dumps(data, sort_keys=True) == before:
+    print("unchanged")
+    sys.exit(0)
+
+if text.strip():
+    os.makedirs(backups, mode=0o700, exist_ok=True)
+    name = "%s.%d" % (os.path.basename(path), int(time.time()))
+    with open(os.path.join(backups, name), "w", encoding="utf-8") as f:
+        f.write(text)
+tmp = path + ".ambient-tmp"
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+if os.path.exists(path):
+    os.chmod(tmp, os.stat(path).st_mode & 0o777)
+os.replace(tmp, path)
+print("changed")
+'
+
+hook_command() {
+    printf '[ -x "$HOME/%s" ] && "$HOME/%s" emit %s || true' "$AR_HOOK_MARKER" "$AR_HOOK_MARKER" "$1"
+}
+
+# The hooks as JSON, for a fresh config file and for adding them by hand.
+hook_snippet() {
+    snippet_first=1
+    printf '{\n  "hooks": {\n'
+    for snippet_event in $2; do
+        [ "$snippet_first" = 1 ] || printf ',\n'
+        snippet_first=0
+        if [ "$snippet_event" = SessionEnd ]; then snippet_async=; else snippet_async=' "async": true,'; fi
+        printf '    "%s": [{"hooks": [{"type": "command", "command": "%s",%s "timeout": 5}]}]' \
+            "$snippet_event" "$(hook_command "$1" | sed 's/["\\]/\\&/g')" "$snippet_async"
+    done
+    printf '\n  }\n}\n'
+}
+
+# Sets AR_FILE and AR_EVENTS_FOR for an agent.
+agent_config() {
+    case $1 in
+        claude) AR_FILE=$HOME/.claude/settings.json; AR_EVENTS_FOR=$AR_CLAUDE_EVENTS ;;
+        codex) AR_FILE=$HOME/.codex/hooks.json; AR_EVENTS_FOR=$AR_CODEX_EVENTS ;;
+    esac
+}
+
+# $1 = agent, $2 = install or uninstall. Returns 0 when done, 3 when it needs doing by hand, 1 on failure.
+edit_hooks() {
+    agent_config "$1"
+    if command -v python3 > /dev/null 2>&1 && python3 -c 'import json' 2>/dev/null; then
+        # shellcheck disable=SC2086
+        edit_result=$(python3 -c "$PY_MERGE" "$AR_FILE" "$2" "$(hook_command "$1")" "$AR_HOME/backups" $AR_EVENTS_FOR)
+        edit_status=$?
+        case $edit_status:$edit_result in
+            0:changed) echo "ok $1: hooks $([ "$2" = install ] && echo added to || echo removed from) $AR_FILE" ;;
+            0:unchanged) echo "ok $1: already up to date in $AR_FILE" ;;
+            4:*) echo "error $1: $AR_FILE isn't a valid config; it was left untouched" >&2; return 1 ;;
+            *) echo "error $1: couldn't update $AR_FILE" >&2; return 1 ;;
+        esac
+        return 0
+    fi
+    if [ "$2" = install ] && [ ! -s "$AR_FILE" ]; then
+        hook_snippet "$1" "$AR_EVENTS_FOR" > "$AR_FILE" && echo "ok $1: hooks installed in $AR_FILE" && return 0
+        return 1
+    fi
+    echo "manual $1: python3 isn't available, so $AR_FILE can't be edited safely."
+    if [ "$2" = install ]; then
+        echo "Add these hooks to it by hand:"
+        hook_snippet "$1" "$AR_EVENTS_FOR"
+    else
+        echo "Remove the hooks that mention $AR_HOOK_MARKER from it by hand."
+    fi
+    return 3
+}
+
+agent_dir() {
+    case $1 in
+        claude) echo "$HOME/.claude" ;;
+        codex) echo "$HOME/.codex" ;;
+    esac
+}
+
+cmd_install() {
+    install_agents=
+    install_level=
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --agents) install_agents=$(printf '%s' "$2" | tr ',' ' '); shift 2 ;;
+            --redaction) install_level=$2; shift 2 ;;
+            *) echo "ambient-remote: unknown option $1" >&2; exit 64 ;;
+        esac
+    done
+    case $install_level in
+        ''|metadata|standard|full) ;;
+        *) echo "ambient-remote: redaction is metadata, standard or full" >&2; exit 64 ;;
+    esac
+    install_explicit=1
+    [ -n "$install_agents" ] || { install_agents='claude codex'; install_explicit=0; }
+
+    umask 077
+    mkdir -p "$AR_HOME/bin" "$AR_HOME/backups" "$AR_LIVE" || exit 1
+    chmod 700 "$AR_HOME" "$AR_HOME/bin" "$AR_HOME/backups" "$AR_SPOOL" "$AR_LIVE" || exit 1
+    ensure_spool || exit 1
+    [ -s "$AR_ID" ] || random_hex 16 > "$AR_ID"
+    read_conf
+    {
+        echo "redaction=${install_level:-$AR_LEVEL}"
+        echo "spool_max_bytes=$AR_MAX_BYTES"
+        echo "spool_max_age=$AR_MAX_AGE"
+    } > "$AR_CONF"
+
+    install_result=0
+    for install_agent in $install_agents; do
+        case $install_agent in
+            claude|codex) ;;
+            *) echo "error $install_agent: unknown agent" >&2; install_result=1; continue ;;
+        esac
+        if [ ! -d "$(agent_dir "$install_agent")" ]; then
+            if [ "$install_explicit" = 1 ]; then
+                echo "error $install_agent: $(agent_dir "$install_agent") not found" >&2
+                install_result=1
+            else
+                echo "skip $install_agent: not found"
+            fi
+            continue
+        fi
+        edit_hooks "$install_agent" install
+        install_status=$?
+        [ "$install_status" -eq 0 ] || [ "$install_result" -eq 1 ] || install_result=$install_status
+    done
+    exit "$install_result"
+}
+
+cmd_uninstall() {
+    uninstall_result=0
+    for uninstall_agent in claude codex; do
+        [ -d "$(agent_dir "$uninstall_agent")" ] || continue
+        edit_hooks "$uninstall_agent" uninstall
+        uninstall_status=$?
+        [ "$uninstall_status" -eq 0 ] || uninstall_result=$uninstall_status
+    done
+    [ "$uninstall_result" -eq 0 ] || exit "$uninstall_result"
+    rm -rf "$AR_SPOOL"
+    rm -f "$AR_CONF" "$AR_ID" "$AR_BIN"
+    echo "ok removed the spool, settings and shim"
+    exit 0
+}
+
+hook_state() {
+    [ -d "$(agent_dir "$1")" ] || { echo absent; return; }
+    agent_config "$1"
+    set -- $AR_EVENTS_FOR
+    state_wanted=$#
+    state_found=$(grep -c "$AR_HOOK_MARKER" "$AR_FILE" 2>/dev/null)
+    case $state_found in
+        ''|0) echo missing ;;
+        *) if [ "$state_found" -ge "$state_wanted" ]; then echo installed; else echo partial; fi ;;
+    esac
+}
+
+spool_perms() {
+    for perms_path in "$AR_HOME" "$AR_SPOOL"; do
+        [ -d "$perms_path" ] || continue
+        case $(ls -ld "$perms_path") in drwx------*) ;; *) echo bad; return ;; esac
+    done
+    for perms_path in "$AR_EVENTS" "$AR_OLD" "$AR_SEQ"; do
+        [ -f "$perms_path" ] || continue
+        case $(ls -l "$perms_path") in -rw-------*) ;; *) echo bad; return ;; esac
+    done
+    echo ok
+}
+
+cmd_status() {
+    read_conf
+    ensure_spool || { echo "ambient-remote: can't create $AR_SPOOL" >&2; exit 1; }
+    status_bytes=0
+    for status_file in "$AR_EVENTS" "$AR_OLD"; do
+        [ -f "$status_file" ] || continue
+        set -- $(wc -c < "$status_file")
+        status_bytes=$((status_bytes + $1))
+    done
+    printf '{%s,"spoolBytes":%s,"spoolPerms":"%s","claude":"%s","codex":"%s"}\n' "$(hello_fields status)" \
+        "$status_bytes" "$(spool_perms)" "$(hook_state claude)" "$(hook_state codex)"
+}
+
+case ${1:-} in
+    emit) shift; cmd_emit "$@"; exit 0 ;;
+    follow) shift; cmd_follow "$@" ;;
+    install) shift; cmd_install "$@" ;;
+    uninstall) shift; cmd_uninstall "$@" ;;
+    status) cmd_status ;;
+    version|--version) echo "ambient-remote $AR_VERSION (protocol $AR_PROTO)" ;;
+    *)
+        echo "usage: ambient-remote emit <claude|codex> | follow --since SEQ | status | version"
+        echo "       ambient-remote install [--agents claude,codex] [--redaction metadata|standard|full]"
+        echo "       ambient-remote uninstall"
+        exit 64
+        ;;
+esac
