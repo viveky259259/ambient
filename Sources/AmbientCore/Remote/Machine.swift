@@ -24,7 +24,11 @@ public struct Machine: Codable, Equatable, Hashable, Sendable {
     public var ref: MachineRef { MachineRef(id: id, label: label) }
 
     /// The user's own ssh, with their `~/.ssh/config`: ProxyJump, certificates, agents and ControlMaster all apply.
-    public static func defaultTransport(host: String) -> [String] { ["ssh", host] }
+    /// `BatchMode` makes a sign-in failure an error rather than a prompt nobody can see.
+    public static func defaultTransport(host: String) -> [String] {
+        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=15",
+         "-o", "ServerAliveCountMax=3", host]
+    }
 
     /// Lowercase letters, digits, `.`, `_` and `-`; starts with a letter or digit; at most 32 characters.
     public static func isValidID(_ id: String) -> Bool {
@@ -56,10 +60,27 @@ public struct RemoteOrigin: Codable, Equatable, Sendable {
     public var project: String?
     /// The highest `seq` applied to this session; older or repeated events are ignored.
     public var lastSeq: Int64
+    /// A prompt or result replayed long after it happened: it stays on screen, but it never chimes.
+    public var missed: Bool
+    /// The machine can't be reached, so what's shown may be out of date.
+    public var unreachable: Bool
 
-    public init(machine: MachineRef, project: String? = nil, lastSeq: Int64 = 0) {
+    public init(machine: MachineRef, project: String? = nil, lastSeq: Int64 = 0, missed: Bool = false, unreachable: Bool = false) {
         self.machine = machine
         self.project = project
         self.lastSeq = lastSeq
+        self.missed = missed
+        self.unreachable = unreachable
+    }
+
+    private enum CodingKeys: String, CodingKey { case machine, project, lastSeq, missed, unreachable }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        machine = try c.decode(MachineRef.self, forKey: .machine)
+        project = try c.decodeIfPresent(String.self, forKey: .project)
+        lastSeq = try c.decode(Int64.self, forKey: .lastSeq)
+        missed = try c.decodeIfPresent(Bool.self, forKey: .missed) ?? false
+        unreachable = try c.decodeIfPresent(Bool.self, forKey: .unreachable) ?? false
     }
 }

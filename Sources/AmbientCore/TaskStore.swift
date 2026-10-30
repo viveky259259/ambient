@@ -77,6 +77,15 @@ public final class TaskStore {
         return t
     }
 
+    /// Deletes every task from a machine. Returns whether anything went.
+    @discardableResult
+    public func remove(machine: String) -> Bool {
+        let ids = byId.values.filter { $0.machine?.id == machine }.map(\.id)
+        for id in ids { byId[id] = nil }
+        sessionIndex = sessionIndex.filter { byId[$0.value] != nil }
+        return !ids.isEmpty
+    }
+
     /// Applies a session change: link, retitle heuristically, and mirror needs-you → blocked.
     @discardableResult
     public func observe(_ change: SessionChange, calendar: Calendar = .current, now: Date = Date()) -> AgentTask? {
@@ -111,7 +120,8 @@ public final class TaskStore {
             manual: false,
             createdAt: now,
             updatedAt: now,
-            lastSessionId: s.id
+            lastSessionId: s.id,
+            machine: s.origin?.machine
         )
         if s.mood == .idle { t.status = .backlog }
         byId[t.id] = t
@@ -165,6 +175,8 @@ public final class TaskStore {
         let day = calendar.startOfDay(for: now)
         let title = normalize(heuristicTitle(s))
         return byId.values.first { t in
+            // The same folder name on two machines is two pieces of work.
+            guard t.machine?.id == s.origin?.machine.id else { return false }
             guard calendar.startOfDay(for: t.updatedAt) == day || calendar.startOfDay(for: t.createdAt) == day else {
                 return false
             }

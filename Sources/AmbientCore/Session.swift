@@ -91,9 +91,12 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var mood: Mood {
-        switch activity {
+        // Whatever this session last said may no longer be true: never "working" forever, and no alerts.
+        if origin?.unreachable == true { return .idle }
+        return switch activity {
         // A prompt the user has looked at: they've probably answered it and the agent is running again.
-        case .waiting: acknowledged ? .working : .waiting
+        // A missed one is from the past, so seeing it is the end of it.
+        case .waiting: acknowledged ? (origin?.missed == true ? .idle : .working) : .waiting
         case .error: acknowledged ? .idle : .error
         case .done: acknowledged ? .idle : .done
         case .thinking, .tool, .compacting: .working

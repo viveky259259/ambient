@@ -137,12 +137,20 @@ public enum RemoteEventDecoder {
     static let reasons: Set<String> = ["permission", "question"]
 
     public static func decode(_ line: Data) throws(RemoteRejection) -> RemoteEvent {
+        try event(from: try flatFields(try members(of: line), allowed: allowed))
+    }
+
+    /// The top-level members of a line, after the checks every remote line goes through first.
+    static func members(of line: Data) throws(RemoteRejection) -> [JSONValue.Member] {
         guard line.count <= maxLineBytes else { throw .tooLong(bytes: line.count) }
         guard nesting(of: line) <= 2 else { throw .tooDeep }
         let root: JSONValue
         do { root = try JSONValue.parse(line) } catch { throw .notJSON }
         guard case let .object(members) = root else { throw .notAnObject }
+        return members
+    }
 
+    static func flatFields(_ members: [JSONValue.Member], allowed: Set<String>) throws(RemoteRejection) -> [String: JSONValue] {
         var fields: [String: JSONValue] = [:]
         for m in members {
             guard allowed.contains(m.key) else { throw .unknownField(m.key) }
@@ -152,6 +160,10 @@ public enum RemoteEventDecoder {
             default: fields[m.key] = m.value
             }
         }
+        return fields
+    }
+
+    static func event(from fields: [String: JSONValue]) throws(RemoteRejection) -> RemoteEvent {
         for key in required where fields[key] == nil || fields[key] == .null { throw .missingField(key) }
 
         let v = try integer(fields, "v", in: 0...Int64(Int32.max))
@@ -216,7 +228,7 @@ public enum RemoteEventDecoder {
         return deepest
     }
 
-    private static func string(_ fields: [String: JSONValue], _ key: String) throws(RemoteRejection) -> String? {
+    static func string(_ fields: [String: JSONValue], _ key: String) throws(RemoteRejection) -> String? {
         switch fields[key] {
         case nil, .null?: return nil
         case let .string(s)?: return s
@@ -228,14 +240,14 @@ public enum RemoteEventDecoder {
         try string(fields, key).flatMap { plainText($0, max: max) }
     }
 
-    private static func integer(_ fields: [String: JSONValue], _ key: String,
-                                in range: ClosedRange<Int64>) throws(RemoteRejection) -> Int64 {
+    static func integer(_ fields: [String: JSONValue], _ key: String,
+                        in range: ClosedRange<Int64>) throws(RemoteRejection) -> Int64 {
         guard case let .number(raw)? = fields[key] else { throw .wrongType(key) }
         guard let n = Int64(raw), range.contains(n) else { throw .invalid(key) }
         return n
     }
 
-    private static func timestamp(_ fields: [String: JSONValue]) throws(RemoteRejection) -> Date {
+    static func timestamp(_ fields: [String: JSONValue]) throws(RemoteRejection) -> Date {
         guard case let .number(raw)? = fields["ts"] else { throw .wrongType("ts") }
         // Unix seconds up to the year 5138; a remote clock that's merely wrong is handled by the hub.
         guard let seconds = Double(raw), seconds.isFinite, seconds >= 0, seconds < 1e11 else { throw .invalid("ts") }
