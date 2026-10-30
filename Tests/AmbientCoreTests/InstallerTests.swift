@@ -354,6 +354,16 @@ private let foreignSettings = """
         }
     }
 
+    @Test func anInstallerFindsTheSavedSettingByItself() throws {
+        // Hook repair builds its installer this way: missing the setting, it would undo answering from the island.
+        let box = try Sandbox()
+        try box.mkdir(".claude")
+        let on = PermissionSettings(enabled: true)
+        try on.save(box.paths)
+        try HookInstaller(paths: box.paths, permissions: on).install(.claude)
+        #expect(HookInstaller(paths: box.paths).status(.claude) == .installed)
+    }
+
     @Test func agentsWithoutDecisionsAreUnaffected() throws {
         let box = try Sandbox()
         try box.mkdir(".gemini")
