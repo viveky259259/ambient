@@ -193,7 +193,11 @@ final class AppModel: ObservableObject {
             let context = SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt)
             let summarizer = TaskSummarizer(config: config)
             Task { @MainActor in
-                defer { model.summarizingTaskIDs.remove(taskID) }
+                defer {
+                    model.summarizingTaskIDs.remove(taskID)
+                    // Failures count too: a model that can't run mustn't reload on every session event.
+                    model.lastSummarizedAt[taskID] = Date()
+                }
                 // Settings changed while this ran (another model, or summaries off): its answer and status no longer count.
                 func stale() -> Bool { model.prefs.taskLLMConfig != config }
                 do {
@@ -208,7 +212,6 @@ final class AppModel: ObservableObject {
                     // after the user has already unblocked.
                     let live = model.sessions.first { $0.id == session.id }
                     _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: live)
-                    model.lastSummarizedAt[taskID] = Date()
                     model.publishTasks()
                     model.taskLLMStatus = .ready
                 } catch {

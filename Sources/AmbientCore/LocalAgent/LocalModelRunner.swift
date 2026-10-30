@@ -21,7 +21,7 @@ public enum TaskModelRoute: Equatable, Sendable {
 /// Runs a model on disk directly, without the local-agent gateway. One model at a time, like the gateway's queue,
 /// so two summaries never load two copies of the weights.
 public enum LocalModelRunner {
-    public enum RunError: Error, Equatable, CustomStringConvertible, Sendable {
+    public enum RunError: LocalizedError, Equatable, CustomStringConvertible, Sendable {
         case launch(String)
         case timedOut
         case failed(String)
@@ -35,6 +35,8 @@ public enum LocalModelRunner {
             case .noOutput: "The local model returned no text."
             }
         }
+
+        public var errorDescription: String? { description }
     }
 
     private static let queue = DispatchQueue(label: "com.viveky259259.Ambient.localmodel", qos: .utility)

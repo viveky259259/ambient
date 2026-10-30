@@ -64,12 +64,13 @@ struct MCPServer {
                 + "folder (config.json with safetensors; one with a vision_config runs with mlx-vlm), a Hugging Face "
                 + "cache folder (models--org--name), or a .gguf file. Ambient runs it through the local-agent gateway "
                 + "when the gateway knows that path, otherwise directly with the matching runtime, offline. "
-                + "Speech, image and video models are refused. An empty path goes back to the gateway model id.",
+                + "Speech, image and video models are refused, and so are folders that declare their own Python code "
+                + "(model_file in config.json). An empty path goes back to the gateway model id.",
             "inputSchema": [
                 "type": "object",
                 "properties": [
                     "path": ["type": "string", "description": "Absolute path to the model folder or .gguf file (~ allowed). Empty clears it."],
-                    "python": ["type": "string", "description": "Optional Python with mlx-lm / mlx-vlm for direct MLX runs. Empty finds one."],
+                    // No `python` here: Ambient runs whatever that names, so the choice stays with the person, in Settings or the CLI.
                     "enable": ["type": "boolean", "description": "Also turn board summaries on (true) or off (false). Omit to leave as is."],
                 ],
                 "required": ["path"],
@@ -89,29 +90,13 @@ struct MCPServer {
         case "set_task_model_path":
             guard let path = arguments["path"] as? String else { return ("path is required.", true) }
             if let problem = LocalModelPath.problem(with: path) { return (problem, true) }
-            let python = (arguments["python"] as? String).map(Self.absolute)
-            if let python, let problem = Self.validate(python: python) { return (problem, true) }
-            let change = TaskModelChange(modelPath: path, pythonPath: python, enabled: arguments["enable"] as? Bool)
+            let change = TaskModelChange(modelPath: path, enabled: arguments["enable"] as? Bool)
             let reply = request(.setTaskModel(change))
             guard case let .taskModel(config)? = reply else { return (Self.noConfig(reply, changing: true), true) }
             return (Self.render(report(config)), false)
         default:
             return ("Unknown tool: \(name)", true)
         }
-    }
-
-    /// `path` with `~` expanded and made absolute against the current directory, since the app runs from elsewhere.
-    /// Symlinks stay as they are: a venv's python finds its packages through its own path. Empty stays empty.
-    static func absolute(_ path: String) -> String {
-        let trimmed = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
-        guard !trimmed.isEmpty else { return "" }
-        return URL(fileURLWithPath: trimmed).standardizedFileURL.path
-    }
-
-    /// Expects a path from `absolute(_:)`.
-    static func validate(python: String) -> String? {
-        guard !python.isEmpty, !FileManager.default.isExecutableFile(atPath: python) else { return nil }
-        return "No executable Python at \(python). Nothing changed."
     }
 
     /// Why a task-model request brought back no settings.

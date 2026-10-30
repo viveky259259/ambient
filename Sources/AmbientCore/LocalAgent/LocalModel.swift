@@ -1,7 +1,7 @@
 import Foundation
 
 /// What a model on disk is, judged only from its files, and so which runtime can run it.
-public enum LocalModelFormat: String, Codable, Equatable, Sendable {
+public enum LocalModelFormat: Equatable, Sendable {
     /// `config.json` with safetensors weights: an MLX (or MLX-loadable Hugging Face) text model, run with mlx-lm.
     case mlxText
     /// The same with a `vision_config`: run with mlx-vlm, text only for board summaries.
@@ -58,10 +58,13 @@ public struct LocalModelPath: Equatable, Sendable {
         guard fm.fileExists(atPath: requested, isDirectory: &isDir) else { return nil }
         let url = URL(fileURLWithPath: requested)
         if !isDir.boolValue {
-            let format: LocalModelFormat = url.pathExtension.lowercased() == "gguf" ? .gguf
-                : mediaName(url.lastPathComponent) ? .media : .unknown
+            let name = url.lastPathComponent
+            let gguf = url.pathExtension.lowercased() == "gguf"
+            // Names first: speech and image weights ship as GGUF too.
+            let format: LocalModelFormat = mediaName(name) ? .media : gguf && !projector(name) ? .gguf : .unknown
+            let note = gguf ? "A vision projector, not a model. Choose the main .gguf file." : "Choose a model folder or a .gguf file."
             return LocalModelPath(requested: requested, resolved: requested, format: format,
-                                  note: format == .unknown ? "Choose a model folder or a .gguf file." : nil)
+                                  note: format == .unknown ? note : nil)
         }
         let folder = snapshot(of: url, fileManager: fm) ?? url
         var model = classify(folder, fileManager: fm)
@@ -89,22 +92,31 @@ public struct LocalModelPath: Equatable, Sendable {
         let parent = folder.deletingLastPathComponent()
         let repo = parent.lastPathComponent == "snapshots" ? parent.deletingLastPathComponent().lastPathComponent : ""
         if mediaName(folder.lastPathComponent) || mediaName(repo) { return made(.media) }
+        // Split GGUFs load from their first shard; a vision projector (mmproj) isn't the model.
+        let ggufs = files.filter { $0.lowercased().hasSuffix(".gguf") && !projector($0) }.sorted()
         let config = (try? Data(contentsOf: folder.appendingPathComponent("config.json")))
             .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
         if let config {
             if let type = config["model_type"] as? String, mediaName(type) { return made(.media) }
-            guard files.contains(where: { $0.hasSuffix(".safetensors") || $0 == "model.safetensors.index.json" }) else {
+            if files.contains(where: { $0.hasSuffix(".safetensors") || $0 == "model.safetensors.index.json" }) {
+                // mlx-vlm imports this file from the model folder with no opt-in, so a folder must never get that far.
+                if config["model_file"] != nil {
+                    return made(.unknown, note: "It runs its own Python code (model_file in config.json), which Ambient won't load.")
+                }
+                return made(config["vision_config"] is [String: Any] ? .mlxVision : .mlxText)
+            }
+            // GGUF repos often carry a config.json too.
+            guard !ggufs.isEmpty else {
                 return made(.unknown, note: "No safetensors weights next to config.json; convert it with mlx_lm.convert.")
             }
-            return made(config["vision_config"] != nil ? .mlxVision : .mlxText)
         }
-        // Split GGUFs load from their first shard; a vision projector (mmproj) isn't the model.
-        let ggufs = files.filter { $0.lowercased().hasSuffix(".gguf") && !$0.lowercased().contains("mmproj") }.sorted()
         if let first = ggufs.first {
             return made(.gguf, folder.appendingPathComponent(first))
         }
         return made(.unknown, note: "No config.json or .gguf file in this folder.")
     }
+
+    private static func projector(_ name: String) -> Bool { name.lowercased().contains("mmproj") }
 
     /// Why `path` can't be the board's model, or nil when it can. Empty is fine: it clears the path.
     public static func problem(with path: String) -> String? {
@@ -113,7 +125,7 @@ public struct LocalModelPath: Equatable, Sendable {
         guard (trimmed as NSString).expandingTildeInPath.hasPrefix("/") else { return "Use an absolute path." }
         guard let model = inspect(trimmed) else { return "Nothing at \(trimmed)." }
         guard model.format.writesText else {
-            return "\(model.name): \(model.note ?? model.format.label + " can't write summaries"). Nothing changed."
+            return "\(model.name): \(model.note ?? model.format.label + " can't write summaries.") Nothing changed."
         }
         return nil
     }

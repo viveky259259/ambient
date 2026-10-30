@@ -9,6 +9,8 @@ struct BoardPane: View {
     /// Opens the dedicated full Board window (Settings keeps a compact pane).
     var onOpenBoard: (() -> Void)? = nil
     @State private var llmExpanded = false
+    /// What was last found at the model path.
+    @State private var inspected: (path: String, model: LocalModelPath?)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -94,20 +96,17 @@ struct BoardPane: View {
                         TextField("Model folder or .gguf file (optional)", text: $prefs.taskLLMModelPath)
                             .textFieldStyle(.roundedBorder)
                             .font(Theme.Fonts.mono)
-                            .onSubmit { model.refreshTaskLLMStatus() }
                         Button("Choose…") { chooseModelPath() }
                             .buttonStyle(.pill)
                         if !prefs.taskLLMModelPath.isEmpty {
-                            Button("Clear") {
-                                prefs.taskLLMModelPath = ""
-                                model.refreshTaskLLMStatus()
-                            }
-                            .buttonStyle(.pill)
+                            Button("Clear") { prefs.taskLLMModelPath = "" }
+                                .buttonStyle(.pill)
                         }
                     }
                     Text(modelPathCaption)
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
+                        .task(id: prefs.taskLLMModelPath) { await inspectModelPath() }
                     Text(prefs.taskLLMModelPath.isEmpty ? "Model id" : "Model id (unused while a model path is set)")
                         .font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     TextField("hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit", text: $prefs.taskLLMModelID)
@@ -159,13 +158,26 @@ struct BoardPane: View {
         guard !prefs.taskLLMModelPath.isEmpty else {
             return "Empty: local-agent runs the model id below. Or choose an MLX or Hugging Face folder, or a .gguf file."
         }
-        guard let found = LocalModelPath.inspect(prefs.taskLLMModelPath) else { return "Nothing at this path." }
+        guard let inspected, inspected.path == prefs.taskLLMModelPath else { return "Checking…" }
+        guard let found = inspected.model else { return "Nothing at this path." }
         if let route = model.taskModelRoute, prefs.taskLLMEnabled {
             return "\(found.format.label) · runs \(route.label)"
         }
         return found.format.writesText
             ? "\(found.format.label) · runs through local-agent if it knows this path, else directly with \(found.format.runtime ?? "its runtime")"
             : "\(found.format.label) · can't write summaries"
+    }
+
+    /// Once typing pauses, reads what's at the path off the main thread (models often live on an external disk) and
+    /// re-probes, so the caption and status describe this path whether or not Return was pressed.
+    private func inspectModelPath() async {
+        let path = prefs.taskLLMModelPath
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        guard !Task.isCancelled else { return }
+        let found = await Task.detached(priority: .utility) { LocalModelPath.inspect(path) }.value
+        guard !Task.isCancelled else { return }
+        inspected = (path, found)
+        model.refreshTaskLLMStatus()
     }
 
     private func chooseModelPath() {
@@ -192,7 +204,6 @@ struct BoardPane: View {
             return
         }
         prefs.taskLLMModelPath = url.path
-        model.refreshTaskLLMStatus()
     }
 
     private var skillPackCaption: String {
