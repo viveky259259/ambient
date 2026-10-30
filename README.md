@@ -41,7 +41,7 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   rest fall into the sun until it closes. Real gravity drives both. They follow Reduce Motion, stay off in Low
   Power Mode, and the black hole can be turned off in Settings › Wallpaper.
 
-Everything stays on your Mac. No accounts and no telemetry. Ambient goes online only when you ask it to: the one-time
+Everything stays on your Mac and on the machines you connect yourself, over your own ssh. No accounts and no telemetry. Ambient goes online only when you ask it to: the one-time
 offline voice download, and the text you select when you choose an online voice.
 
 ## Install
@@ -189,6 +189,8 @@ aider --notifications --notifications-command 'ambient emit done --session "aide
 
 ### Privacy
 
+This covers agents on your Mac. Agents on other machines have [their own section](#remote-agents).
+
 Only these fields ever leave the hook process, and only to the local socket: the agent, session id,
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
@@ -207,6 +209,76 @@ you chose, with your key, which is kept in your login Keychain. The offline mode
 small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file
 is checked against a hash built into Ambient before it's used.
 
+## Remote agents
+
+Coding agents run on devboxes, cloud VMs and the Mac mini in the closet too. Pair a machine, and its sessions show up
+on your Mac beside the local ones, labeled with the machine's name, in the island, menu bar, pet, notifications and
+board.
+
+```bash
+ambient remote add devbox                 # ssh devbox, with your own ~/.ssh/config
+```
+
+That copies a small shell script, `ambient-remote`, from inside the app to `~/.ambient/bin` on the machine, checks its
+SHA-256 there, adds background hooks for Claude Code and Codex, and pins the machine's identity. It needs no account,
+no server, no root, no daemon and no sshd changes. Use `--host HOST` when the ssh name differs, `--redaction metadata|standard|full` to choose how much text leaves the machine, and
+`-- COMMAND...` for any other way in. Anything that runs a command on the machine works, with the command as its last
+argument:
+
+```bash
+ambient remote add build --label "Build box" -- ssh -J bastion build.internal
+```
+
+**How it works.** Hooks on the machine only append to a private spool file. Your Mac dials out over your transport and
+runs `ambient-remote follow`, which streams the spool back as JSON lines. Nothing is sent the other way, and your Mac
+opens no port. If it sleeps or loses the network, events wait in the spool and arrive on reconnect, and a prompt that
+waited longer than 10 minutes shows as *missed*, without a chime. While a machine can't be reached its sessions show
+as *unknown* rather than working forever. Links reconnect by themselves, and the menu bar and Settings › Remote show
+how each one is doing.
+
+**What it can do.** A remote machine can only send display data. It can't reach the app's socket, run anything, or
+touch a window, tab, tmux pane or process on your Mac. Remote sessions don't jump to a terminal when you click them,
+since there's nothing local to open: clicking marks them as seen. Remote events go through their own strict decoder,
+and if a machine's identity changes the link stops until you pair it again. Ambient can't answer or approve anything
+on the remote machine.
+
+**What leaves the machine.** Redaction happens there, before anything is written to the spool:
+
+| | `metadata` | `standard` (default) | `full` |
+|---|---|---|---|
+| Agent, session id, event id, state, time | ✓ | ✓ | ✓ |
+| Project: the folder's name, never its path | ✓ | ✓ | ✓ |
+| Whether a prompt is a permission request or a question | ✓ | ✓ | ✓ |
+| Tool names | | ✓ | ✓ |
+| The session's title in its agent | | ✓ | ✓ |
+| Up to 160 characters of the agent's final message, a permission prompt or an error | | | ✓ |
+
+Your prompts, tool input and output, commands, file paths and transcripts are never sent at any level. Neither are the
+agent's process id, terminal or tmux pane, which `follow` uses on the machine to tell when the agent has exited.
+
+**Where it's kept.** On the machine, in `~/.ambient/spool` (folder `0700`, files `0600`), capped at 5 MB and 24 hours;
+set `spool_max_bytes` and `spool_max_age` in `~/.ambient/remote.conf` to change that. The limits are enforced whenever
+the shim runs, since it has no daemon. On your Mac, remote sessions live with local ones in `~/.ambient/state.json`, on
+the board in `~/.ambient/tasks.json`, and in the day log with no titles or projects. `~/.ambient/remote/audit.jsonl` records
+pairing, unpairing, fingerprint changes, link changes and rejected lines, and never any event content.
+
+**Where it goes.** Text from a remote machine stays on your Mac. It's never sent to an online voice, to `ambient task
+skill-bootstrap` or to any address but your Mac's own, and the local LLM summarizes remote sessions only if you turn
+that on in Settings › Remote. Your transport is the only thing that touches the network.
+
+```bash
+ambient remote list                       # Paired machines
+ambient doctor --remote devbox            # Transport, shim version and checksum, spool, hooks, cursor
+ambient remote remove devbox --uninstall  # Unpair, and clear the hooks, spool and shim from the machine
+ambient remote purge devbox               # Delete everything from it on this Mac
+```
+
+The shim is plain POSIX `sh` you can read at [`Resources/ambient-remote`](Resources/ambient-remote). Hooks and streaming
+need only `awk` and coreutils. `ambient remote add` uses `python3` on the machine to edit agent config files safely,
+and prints the hooks to add by hand if it isn't there. On Codex, run `/hooks` on the machine once to approve the new
+hooks. The design and threat model are in
+[the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md).
+
 ## Command line
 
 ```
@@ -216,7 +288,11 @@ ambient status [--json]                                The sessions Ambient is t
 ambient tasks [--json]                                 The agent task board
 ambient task upsert --title TEXT […]                   Create or update a board task
 ambient task open ID                                   Jump to a task's linked session
-ambient doctor                                         Check the app, the hooks and the connection
+ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [-- COMMAND…]   Follow agents on another machine
+ambient remote remove NAME [--uninstall]               Stop following it; --uninstall also clears the machine
+ambient remote purge NAME                              Delete everything from it on this Mac
+ambient remote list                                    Show paired machines
+ambient doctor [--remote NAME]                         Check the app, the hooks and the connection, or one machine
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
 ambient emit <start|working|waiting|done|error|end> --session ID   Drive a session from any agent or script
 ambient demo                                           Walk through every state

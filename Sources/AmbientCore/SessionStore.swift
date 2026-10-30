@@ -60,7 +60,7 @@ public final class SessionStore {
     /// focus route, pid check, tty or script ever runs for it. `date` is when to record it: the remote time, or
     /// the hub's when the clocks disagree.
     @discardableResult
-    public func apply(_ e: RemoteEvent, from machine: MachineRef, at date: Date) -> SessionChange? {
+    public func apply(_ e: RemoteEvent, from machine: MachineRef, at date: Date, missed: Bool = false) -> SessionChange? {
         let id = Session.remoteID(machine: machine.id, agent: e.agent, sessionId: e.session)
         let existing = byId[id]
         if let last = existing?.origin?.lastSeq, e.seq <= last { return nil }
@@ -69,6 +69,8 @@ public final class SessionStore {
         s.host = nil
         s.origin?.machine.label = machine.label
         s.origin?.lastSeq = e.seq
+        s.origin?.unreachable = false
+        if e.eventKind != nil { s.origin?.missed = missed }
         if let project = e.project { s.origin?.project = project }
         if let title = e.title { s.title = title }
         let at = max(date, existing?.lastEventAt ?? date)
@@ -79,6 +81,54 @@ public final class SessionStore {
             return s.title == existing?.title ? nil : SessionChange(session: s, previous: s.activity, event: nil, removed: false)
         }
         return commit(s, previous: existing?.activity, kind: kind, at: at)
+    }
+
+    /// A batch from one machine, and whether the state must reach disk before anyone hears about it. Alerts go out
+    /// only after the sessions and the cursor are saved together, so a hub killed at any point replays the events
+    /// it hasn't saved: none lost, none announced twice. A batch that doesn't follow `saved` comes from a rebuilt spool,
+    /// whose `seq` started over, so what the machine's sessions remember no longer compares.
+    public func apply(_ batch: [RemoteDelivery], from machine: MachineRef, saved: RemoteCursor = RemoteCursor(),
+                      cursor: RemoteCursor = RemoteCursor()) -> (changes: [SessionChange], saveFirst: Bool) {
+        if let first = batch.first?.event.seq, saved.epoch != cursor.epoch || first <= saved.seq {
+            for var s in byId.values where s.origin?.machine.id == machine.id {
+                s.origin?.lastSeq = 0
+                byId[s.id] = s
+            }
+        }
+        var changes: [SessionChange] = []
+        var saveFirst = false
+        for delivery in batch {
+            guard let change = apply(delivery.event, from: machine, at: delivery.at, missed: delivery.missed) else { continue }
+            changes.append(change)
+            if !change.removed, change.session.origin?.missed != true, AlertPolicy.attentionMoods.contains(change.session.mood),
+               change.session.mood != change.previousMood {
+                saveFirst = true
+            }
+        }
+        return (changes, saveFirst)
+    }
+
+    /// Marks a machine's sessions as out of reach, or back. Returns the changes for surfaces to show.
+    @discardableResult
+    public func setUnreachable(_ unreachable: Bool, machine: String) -> [SessionChange] {
+        var changes: [SessionChange] = []
+        for var s in byId.values where s.origin?.machine.id == machine && s.origin?.unreachable != unreachable {
+            s.origin?.unreachable = unreachable
+            byId[s.id] = s
+            changes.append(SessionChange(session: s, previous: s.activity, event: nil, removed: false))
+        }
+        return changes
+    }
+
+    /// Forgets every session from a machine, e.g. when it's unpaired.
+    @discardableResult
+    public func remove(machine: String) -> [SessionChange] {
+        var changes: [SessionChange] = []
+        for s in byId.values where s.origin?.machine.id == machine {
+            byId[s.id] = nil
+            changes.append(SessionChange(session: s, previous: s.activity, event: nil, removed: true))
+        }
+        return changes
     }
 
     private func commit(_ session: Session, previous: Activity?, kind: EventKind, at date: Date) -> SessionChange {
@@ -190,7 +240,8 @@ public final class SessionStore {
 
             if s.activity.isBusy, quiet > timeouts.busy {
                 s.activity = .idle
-            } else if case .waiting = s.activity, quiet > timeouts.waiting {
+            } else if case .waiting = s.activity, quiet > timeouts.waiting, s.origin?.missed != true {
+                // A missed prompt is old by definition; it stays until the user has seen it.
                 s.activity = .idle
             } else if !s.acknowledged, s.mood == .done || s.mood == .error, quiet > timeouts.unacknowledged {
                 s.acknowledged = true

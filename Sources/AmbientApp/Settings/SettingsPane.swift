@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The panes of the settings window, in sidebar order.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case welcome, agents, board, island, pet, voice, alerts, dock, wallpaper, performance, general
+    case welcome, agents, remote, board, island, pet, voice, alerts, dock, wallpaper, performance, general
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .welcome: "Welcome"
         case .agents: "Agents"
+        case .remote: "Remote"
         case .board: "Board"
         case .island: "Notch Island"
         case .pet: "Desktop Pet"
@@ -29,6 +30,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .welcome: "sparkles"
         case .agents: "terminal"
+        case .remote: "network"
         case .board: "rectangle.split.3x1"
         case .island: "laptopcomputer"
         case .pet: "pawprint"
@@ -45,6 +47,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .welcome: nil
         case .agents: "Ambient listens to your agents through lightweight hooks."
+        case .remote: "Agents on your other machines, over your own ssh. No accounts, no relay, no open ports."
         case .board: "A local board of agent work. Optional on-device LLM summaries via local-agent MCP."
         case .island: "A quiet status light that grows out of the notch."
         case .pet: "A little companion on your desktop that acts out what your agents are doing."
