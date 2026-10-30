@@ -53,6 +53,7 @@ check() {
     emit '{"session_id":"s-1","cwd":"/x","hook_event_name":"Stop","last_assistant_message":"'"$long"'"}'
     big=$(awk 'BEGIN { for (i = 0; i < 5000; i++) printf "line of \\\"quoted\\\" output\\n" }')
     emit '{"session_id":"s-1","cwd":"/x","hook_event_name":"PostToolUse","tool_name":"Read","tool_response":{"stdout":"'"$big"'"}}'
+    # Far more than any machine sees, so a lock that lets two writers in shows up on every run.
     i=0
     while [ "$i" -lt 200 ]; do
         emit '{"session_id":"s-2","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}' &
@@ -67,9 +68,20 @@ check() {
     printf '%s\n' 'this line is not json' >> "$home/.ambient/spool/events.jsonl"
     emit '{"session_id":"s-1","cwd":"/x","hook_event_name":"SessionEnd"}'
     printf '%s\n%s\n%s\n\n' 999999 '' ghost > "$home/.ambient/spool/live/claude.ghost-1"
+    printf '%s\n%s\n%s\n\n' "$$" '' alive > "$home/.ambient/spool/live/claude.alive-1"
     sleep 7
     kill "$follower" 2> /dev/null || :
     wait "$follower" 2> /dev/null || :
+
+    # A live holder keeps the lock for as long as it takes; one that's gone loses it.
+    ln -s "$$" "$home/.ambient/spool/lock.holder"
+    emit '{"session_id":"s-4","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}' &
+    sleep 1
+    grep -c '"s-4"' "$home/.ambient/spool/events.jsonl" > "$home/held" || :
+    rm "$home/.ambient/spool/lock.holder"
+    wait
+    ln -s 999999 "$home/.ambient/spool/lock.holder"
+    emit '{"session_id":"s-5","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}'
 
     cp "$home/.ambient/spool/events.jsonl" "$home/events"
     sed 's/spool_max_bytes=.*/spool_max_bytes=2048/' "$home/.ambient/remote.conf" > "$home/conf"
@@ -87,8 +99,14 @@ check() {
         echo "FAIL $name"
         failures=$((failures + 1))
     fi
-    remote uninstall > /dev/null || { echo "FAIL $name: uninstall"; failures=$((failures + 1)); }
-    [ ! -e "$home/.ambient/spool" ] || { echo "FAIL $name: spool left behind"; failures=$((failures + 1)); }
+    # Without python3 the hooks are the user's to remove, which is status 3. Everything else still goes.
+    want=0
+    (PATH=$path; command -v python3) > /dev/null 2>&1 || want=3
+    got=0
+    remote uninstall > /dev/null || got=$?
+    [ "$got" -eq "$want" ] || { echo "FAIL $name: uninstall exited $got, not $want"; failures=$((failures + 1)); }
+    [ ! -e "$home/.ambient/spool" ] && [ ! -e "$home/.ambient/bin/ambient-remote" ] ||
+        { echo "FAIL $name: spool or shim left behind"; failures=$((failures + 1)); }
 }
 
 missing() {

@@ -270,12 +270,18 @@ threat model for what that pin does and does not prove.
 
 `Resources/ambient-remote` ships at `Contents/Resources/ambient-remote` and is sealed by the app's signature.
 
-- `emit` forks only `awk`, `mkdir` and `rm`, and reads hook payloads through one `awk` tokenizer that needs nothing
-  beyond POSIX. Measured on an arm64 MacBook under dash: 12 ms at p50 for a small payload, 20 ms for 200 KB of tool
-  output, 38 ms for 200 KB of nothing but escaped quotes. Those numbers include about 3.5 ms per process that Linux
+- `emit` forks only `awk`, `ln` and `rm`, and reads hook payloads through one `awk` tokenizer that needs nothing
+  beyond POSIX. Measured on an arm64 MacBook under dash: 7 ms at p50 for a small payload, 10 ms for 200 KB of tool
+  output, 25 ms for 200 KB of nothing but escaped quotes. Those numbers include about 3.5 ms per process that Linux
   doesn't pay. Claude Code and Codex run these hooks in the background (`async`), except `SessionEnd`.
-- `seq` is assigned under a `mkdir` lock, so file order and `seq` always agree. A lock whose holder is gone is taken
-  over after about 200 ms. An event that can't get the lock in about 600 ms is dropped: hooks never wait longer.
+- `seq` is assigned under a lock, so file order and `seq` always agree. The lock is a symlink to the holder's pid,
+  because creating one is atomic and names the holder in the same step: a `mkdir` lock with a pid file inside has a
+  moment with no owner, and waiters took a live lock for a stale one and let two writers in. Only a holder that died
+  holding the lock loses it, after about 250 ms, and one waiter at a time clears it. A holder killed but not yet reaped
+  still counts as alive, which only matters to a parent that doesn't reap its children.
+- An event that can't get the lock in about 3 s is dropped. That takes hundreds of simultaneous hooks: 400 at once all
+  arrive, and the shim's test keeps 200 at once in every run. It stays under the hooks' own 5 s timeout, and only
+  `SessionEnd` makes an agent wait.
 - `follow` polls the `seq` file once a second, so a "needs you" arrives within about a second plus the transport's
   latency. It sends a heartbeat every 15 s.
 - Agent exit: `emit` records the agent's pid (first ancestor that isn't a shell) once per session in
@@ -290,6 +296,8 @@ threat model for what that pin does and does not prove.
 - `install` edits agent configs with `python3`, the one place the shim needs more than coreutils (a refinement of
   ER-32): rewriting a user's JSON from `awk` isn't safe enough. It keeps a backup, leaves the user's own entries alone,
   and without `python3` writes a fresh file or prints the snippet and exits 3.
+- `uninstall` without `python3` still removes the spool, settings and shim, then exits 3 and says which hooks to remove
+  by hand. They do nothing once the shim is gone, and a spool must never outlive the request to clear it.
 
 ### The transport contract
 

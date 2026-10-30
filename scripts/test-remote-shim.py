@@ -73,10 +73,15 @@ done = next(e for e in events if e["kind"] == "turnCompleted")
 expect(0 < len(done["message"].encode()) <= 480, "a long message is cut to its cap")
 expect("�" not in done["message"], "a cut never lands inside a character")
 expect(any(e["kind"] == "toolFinished" and e["tool"] == "Read" for e in events), "a huge payload still parses")
-burst = [e["kind"] for e in events if e["session"] == "s-2"]
-expect(len(burst) == 200, f"every parallel emit arrived: { {k: burst.count(k) for k in sorted(set(burst))} }")
+# By kind: on Linux the test's own subshell counts as the agent, so `follow` adds an agentExited for this session.
+burst = sum(e["session"] == "s-2" and e["kind"] == "toolStarted" for e in events)
+expect(burst == 200, f"every parallel emit arrived: {burst} of 200")
+expect(read("held").strip() == "0", "a live holder's lock was taken over")
+expect(sum(e["session"] == "s-4" for e in events) == 1, "an emit waits out a live holder")
+expect(sum(e["session"] == "s-5" for e in events) == 1, "a dead holder's lock is taken over")
 expect(any(e["kind"] == "sessionEnded" for e in events), "session end")
 expect(any(e["kind"] == "agentExited" and e["session"] == "ghost-1" for e in events), "agent exit reported")
+expect(not any(e["session"] == "alive-1" for e in events), "a running agent was reported gone")
 
 stream = read("follow").splitlines()
 expect(strict(stream[0])["type"] == "hello", "follow starts with hello")

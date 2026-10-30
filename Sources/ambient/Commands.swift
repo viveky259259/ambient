@@ -498,6 +498,8 @@ struct Commands {
             let result = RemoteTransport(argv: machine.transport).run(RemoteTransport.shim("uninstall"), timeout: 60)
             if result.ok {
                 out.success("Removed the hooks, spool and shim from \(name)")
+            } else if result.status == 3 {
+                out.warn("Removed the spool and shim from \(name). It has no python3, so its hooks stay in the agent's config for you to remove by hand. They do nothing now.")
             } else {
                 failed = true
                 out.warn("Couldn't clear \(name), so unpairing it anyway: \(result.timedOut ? "timed out" : "exit status \(result.status)")")

@@ -10,7 +10,7 @@
 #
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
 
-AR_VERSION=1.0.0
+AR_VERSION=1.0.1
 AR_PROTO=1
 AR_CAPS=exit,title,heartbeat
 
@@ -26,7 +26,8 @@ AR_EVENTS=$AR_SPOOL/events.jsonl
 AR_OLD=$AR_SPOOL/events.1.jsonl
 AR_SEQ=$AR_SPOOL/seq
 AR_EPOCH=$AR_SPOOL/epoch
-AR_LOCK=$AR_SPOOL/lock
+AR_LOCK=$AR_SPOOL/lock.holder
+AR_LOCK_BREAK=$AR_SPOOL/lock.break
 AR_LIVE=$AR_SPOOL/live
 
 AR_HOOK_MARKER=.ambient/bin/ambient-remote
@@ -65,27 +66,38 @@ ensure_spool() {
 
 # --- The spool. Every write happens under this lock, so seq and file order always agree. ------------
 
+# The lock is a symlink to the holder's pid: creating one is atomic and names the holder in the same step, so a
+# waiter never sees a lock without an owner, and a live holder is never taken over, however slowly it runs.
 spool_lock() {
     lock_tries=0
-    while ! mkdir "$AR_LOCK" 2>/dev/null; do
+    while ! ln -s "$$" "$AR_LOCK" 2>/dev/null; do
         lock_tries=$((lock_tries + 1))
-        if [ "$lock_tries" -eq 20 ]; then
-            # The lock is held for about a millisecond. After this long, a holder that's gone left it behind.
-            lock_holder=
-            read -r lock_holder 2>/dev/null < "$AR_LOCK/pid"
-            if [ -z "$lock_holder" ] || ! kill -0 "$lock_holder" 2>/dev/null; then
-                rm -rf "$AR_LOCK"
-                continue
-            fi
-        fi
-        [ "$lock_tries" -lt 50 ] || return 1
+        [ "$lock_tries" -lt 250 ] || return 1
+        [ $((lock_tries % 20)) -ne 0 ] || spool_lock_break
         sleep 0.01 2>/dev/null || sleep 1
     done
-    echo "$$" > "$AR_LOCK/pid"
 }
 
 spool_unlock() {
-    rm -rf "$AR_LOCK"
+    rm -f "$AR_LOCK"
+}
+
+lock_owner() {
+    lock_line=$(ls -l "$AR_LOCK" 2>/dev/null)
+    echo "${lock_line##*-> }"
+}
+
+# Clears a lock whose holder is gone. One waiter at a time: two could see the same dead holder, and the second
+# would then remove the new lock the first made room for. The second read matters as much: a holder that let go
+# normally and then exited also looks dead, but only one that died holding the lock is still named after that.
+spool_lock_break() {
+    mkdir "$AR_LOCK_BREAK" 2>/dev/null || return 0
+    lock_holder=$(lock_owner)
+    case $lock_holder in
+        ''|*[!0-9]*) ;;
+        *) kill -0 "$lock_holder" 2>/dev/null || [ "$(lock_owner)" != "$lock_holder" ] || rm -f "$AR_LOCK" ;;
+    esac
+    rmdir "$AR_LOCK_BREAK" 2>/dev/null
 }
 
 # The seq file is "<last seq> <bytes in events.jsonl>". If it's lost, the spool itself says where it was.
@@ -701,6 +713,10 @@ edit_hooks() {
         esac
         return 0
     fi
+    case $2:$(hook_state "$1") in
+        install:installed) echo "ok $1: already up to date in $AR_FILE"; return 0 ;;
+        uninstall:missing) echo "ok $1: no hooks in $AR_FILE"; return 0 ;;
+    esac
     if [ "$2" = install ] && [ ! -s "$AR_FILE" ]; then
         hook_snippet "$1" "$AR_EVENTS_FOR" > "$AR_FILE" && echo "ok $1: hooks installed in $AR_FILE" && return 0
         return 1
@@ -779,13 +795,14 @@ cmd_uninstall() {
         [ -d "$(agent_dir "$uninstall_agent")" ] || continue
         edit_hooks "$uninstall_agent" uninstall
         uninstall_status=$?
-        [ "$uninstall_status" -eq 0 ] || uninstall_result=$uninstall_status
+        [ "$uninstall_status" -eq 0 ] || [ "$uninstall_result" -eq 1 ] || uninstall_result=$uninstall_status
     done
-    [ "$uninstall_result" -eq 0 ] || exit "$uninstall_result"
+    # Hooks left for the user to remove do nothing once the shim is gone, so they don't keep the spool here.
+    [ "$uninstall_result" -ne 1 ] || exit 1
     rm -rf "$AR_SPOOL"
     rm -f "$AR_CONF" "$AR_ID" "$AR_BIN"
     echo "ok removed the spool, settings and shim"
-    exit 0
+    exit "$uninstall_result"
 }
 
 hook_state() {
