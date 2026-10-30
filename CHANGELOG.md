@@ -12,6 +12,12 @@
   otherwise Ambient reuses local-agent's MLX Python or finds one.
 - **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
   change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
+- **Fix**: the task board kept re-rendering every card on every agent event, even after you closed it, which could
+  take a whole CPU core with a long-lived board. Closing it now frees it, and only the cards on screen are drawn:
+  with 1,626 tasks, 97% of a core and 590 MB became 1.6% and 90 MB.
+- **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.1% CPU with the island
+  alone when nothing happens, 0.5% while agents work, 1.2% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
+  reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.
 - **Remote agents**: follow Claude Code and Codex on your other machines from this Mac, over your own `ssh` or any
   other transport, with no accounts, no relay and no open ports. `ambient remote add NAME` copies a small POSIX `sh`
   shim from the app, checks its SHA-256, installs hooks and pins the machine's identity; `remove`, `purge`, `list` and

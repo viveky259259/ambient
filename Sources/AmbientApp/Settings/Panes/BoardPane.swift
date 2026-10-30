@@ -283,7 +283,8 @@ private struct BoardColumn: View {
             }
             .padding(.horizontal, Theme.Space.xxs)
 
-            VStack(spacing: Theme.Space.xs) {
+            // Lazy: a long-lived board holds thousands of tasks, and only the ones on screen should cost anything.
+            LazyVStack(spacing: Theme.Space.xs) {
                 ForEach(tasks) { task in
                     BoardCard(task: task, session: linkedSession(task), open: { open(task.id) })
                 }
