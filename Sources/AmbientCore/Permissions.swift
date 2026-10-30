@@ -66,6 +66,9 @@ public struct PermissionAsk: Codable, Equatable, Sendable, Identifiable {
     }
 
     public var tool: String { ToolNames.display(toolName) }
+
+    /// The hint doesn't show everything the tool would do, so the card says so before anyone allows it.
+    public var hintIsCut: Bool { hint?.hasSuffix("…") ?? false }
 }
 
 /// The user's answer. `ask` means "no answer": the agent shows its own prompt as if Ambient weren't there.

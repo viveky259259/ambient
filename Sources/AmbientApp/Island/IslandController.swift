@@ -88,7 +88,11 @@ final class IslandController {
         viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "island") }
         viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "island") }
         viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
-        viewModel.onAnswer = { [weak permissions] id, answer in permissions?.settle(id, with: answer) }
+        viewModel.onAnswer = { [weak self] id, answer in
+            // Answered, so nothing needs the user any more, though the agent's next hook may be a long tool away.
+            guard let self, let ask = self.permissions.settle(id, with: answer) else { return }
+            self.model.acknowledge("\(ask.event.agent.rawValue):\(ask.event.sessionId)")
+        }
         viewModel.onAnswerInAgent = { [weak self] ask in
             guard let self else { return }
             self.permissions.settle(ask.id, with: .ask)

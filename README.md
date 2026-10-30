@@ -128,13 +128,15 @@ buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds 
 - **The agent waits too.** In a terminal, Claude Code and Codex show their own prompt only after the island hands
   it back, so a prompt you ignore arrives up to that many seconds later. In Claude's desktop app and editors,
   the island and the app's own dialog race, and whichever you answer first wins.
+- **Nothing hidden.** A command too long for the card is cut at 80 characters, and the card says so and offers to
+  take you to the agent to read all of it.
 - **One at a time, none lost.** Several prompts queue in order, each with its own time limit, and the card says
   how many are waiting.
 - **No stray clicks.** The buttons ignore clicks for the first moment the card is on screen, so a card that
   appears under your pointer can't be approved by a click meant for something else.
 - Only this hook ever makes an agent wait: with the setting on, Ambient installs the permission hook in the
   foreground. Codex asks you to approve the changed hook once with `/hooks`. Every other hook stays in the
-  background. Agents without a permission hook that takes an answer (Gemini CLI, Antigravity) aren't affected.
+  background. Other agents aren't affected: their permission prompts stay in their own windows.
 
 ### Click to return
 

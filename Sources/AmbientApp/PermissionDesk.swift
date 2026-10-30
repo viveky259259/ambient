@@ -29,11 +29,13 @@ final class PermissionDesk: ObservableObject {
         return waiter.wait(seconds: (PermissionSettings.waits.last ?? 60) + 2)
     }
 
-    /// The user's click.
-    func settle(_ id: String, with answer: PermissionAnswer) {
-        guard queue.remove(id) != nil else { return }
+    /// The user's click. Returns the prompt it settled, if it was still waiting.
+    @discardableResult
+    func settle(_ id: String, with answer: PermissionAnswer) -> PermissionAsk? {
+        guard let ask = queue.remove(id) else { return nil }
         waiters.removeValue(forKey: id)?.resolve(answer)
         publish()
+        return ask
     }
 
     private func enqueue(_ ask: PermissionAsk, waiter: Waiter) {

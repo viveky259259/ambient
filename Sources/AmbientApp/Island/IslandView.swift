@@ -57,6 +57,8 @@ struct IslandView: View {
                     PermissionCard(entry: entry, count: model.permissionCount,
                                    onAnswer: { model.onAnswer(entry.ask.id, $0) },
                                    onAnswerInAgent: { model.onAnswerInAgent(entry.ask) })
+                        // A new view per prompt, so each one starts disarmed.
+                        .id(entry.ask.id)
                 }
             }
             .transition(.opacity)
@@ -220,9 +222,10 @@ private struct PermissionCard: View {
             }
             HStack(spacing: 8) {
                 Button(action: onAnswerInAgent) {
-                    Text("Answer in \(HostActivator.appName(for: ask.event.host) ?? ask.event.agent.displayName)")
+                    let app = HostActivator.appName(for: ask.event.host) ?? ask.event.agent.displayName
+                    Text(ask.hintIsCut ? "Cut short: see it all in \(app)" : "Answer in \(app)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(ask.hintIsCut ? Palette.waiting.color : .white.opacity(0.6))
                 }
                 .buttonStyle(.plain)
                 Spacer()
