@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Hooks that keep working**: Ambient re-checks each connected agent's hooks at launch, every ten minutes, and as
+  soon as the agent updates or its settings change, and rewrites out-of-date hooks with the usual backup. What it
+  can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it
+  can't read (*Show File*), and a terminal session that's been busy for two minutes without a single hook reaching
+  Ambient (for Codex, usually hooks awaiting `/hooks` approval). `ambient doctor` reports removed hooks too.
 - **Task board: model path.** Point the board's local LLM at a model folder or `.gguf` file instead of a gateway
   model id (Settings › Board › *Model & gateway options* › **Choose…**, or `ambient task model PATH`). Ambient
   reads the files to pick the runtime: a path local-agent already serves runs through the gateway by its id; other

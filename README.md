@@ -143,6 +143,23 @@ The app folds events into a state per session and picks the most urgent across a
 look at it — switch to its terminal or editor, or click it — and then settles. Sessions whose agent
 process exits disappear on their own.
 
+### Keeping hooks working
+
+Agents change: an update can rewrite their settings or the shape of their hooks. Ambient re-checks every
+connected agent's hooks when it starts, every ten minutes, and as soon as an agent's executable or settings
+file changes. Out-of-date hooks are rewritten on the spot (with the usual backup). What it can't fix shows in
+the menu bar, which gets a **!** and an item with a one-click fix:
+
+- **Hooks were removed** — you connected the agent, but its hooks are gone. *Reconnect* puts them back.
+- **Can't read the settings** — the file isn't valid JSON; *Show File* opens it in Finder. Ambient never
+  overwrites a file it can't read.
+- **Hooks stopped firing** — a session has been busy in a terminal for two minutes, started after its hooks
+  were in place, yet not one hook reached Ambient. For Codex that usually means its hooks await approval
+  (`/hooks`); otherwise restart the session, since agents read their hooks when they start.
+
+`ambient doctor` runs the same checks from a terminal, except for hooks that stopped firing: only the running app
+sees those.
+
 ### Click to return
 
 Each hook also records a return address — the agent's terminal, Claude desktop's session id, the tmux
@@ -170,7 +187,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, and `agents.json`: which agents you connected |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
@@ -223,6 +240,13 @@ Only these fields ever leave the hook process, and only to the local socket: the
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
+
+To notice hooks that stopped firing, Ambient looks once a minute at the processes on your Mac that are agent
+sessions in a terminal (Claude Code, Codex, `agy`): their process id, executable path, start time, CPU time used
+and whether a terminal is attached. Nothing else about them, never their arguments, environment or output, and
+only to compare with the hooks it has heard from. To notice updates it checks each agent's executable path, size and
+modification date, and keeps those in memory only. `~/.ambient/agents.json` keeps which agents you connected. None
+of it leaves your Mac.
 
 The living wallpaper keeps today's counts and a timeline of what happened, where and when, in
 `~/.ambient/day.json` — never prompts, summaries or commands — and starts fresh at midnight. On the lock

@@ -440,6 +440,7 @@ struct Commands {
 
         let installer = HookInstaller(paths: paths)
         let states = AgentKind.hooked.map { ($0, installer.status($0)) }
+        let connected = AgentRecord.load(paths)?.connected ?? []
         if !states.contains(where: { $0.1 == .installed || $0.1 == .partial }) {
             problems += 1
             out.error("No agent is connected — run `ambient install`")
@@ -453,6 +454,10 @@ struct Commands {
             case .partial:
                 problems += 1
                 out.warn("\(name): hooks are incomplete or outdated — run `ambient install \(agent.rawValue)`")
+            case .notInstalled where connected.contains(agent):
+                // Connected through Ambient, then removed: usually an agent update rewrote its settings.
+                problems += 1
+                out.error("\(name): its hooks were removed since you connected it — run `ambient install \(agent.rawValue)`")
             case .notInstalled:
                 out.warn("\(name): hooks not installed — run `ambient install \(agent.rawValue)`")
             case .agentMissing:

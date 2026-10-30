@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       tasksURL: paths.tasksFile,
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
+    private lazy var hookDoctor = HookDoctor(paths: paths, model: model)
     private var remote: RemoteCoordinator?
     private var island: IslandController?
     private var pet: PetController?
@@ -46,7 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             log.error("Couldn't prepare \(self.paths.home.path): \(error.localizedDescription)")
         }
-        healHooks()
+        // Repairs out-of-date hooks before the first events arrive, then keeps watching.
+        hookDoctor.start()
 
         model.start()
         let server = EventServer(paths: paths, model: model)
@@ -67,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         pet?.start()
 
-        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts,
+        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts, hookDoctor: hookDoctor,
                                     onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
                                     onDemo: { [weak self] in self?.playDemo() },
@@ -298,19 +300,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try? fm.removeItem(at: link)
         do { try fm.createSymbolicLink(at: link, withDestinationURL: cli) } catch {
             log.error("Couldn't link the command-line tool: \(error.localizedDescription)")
-        }
-    }
-
-    /// Repairs hooks the user installed before, e.g. after an update changed the events.
-    private func healHooks() {
-        let installer = HookInstaller(paths: paths)
-        for agent in AgentKind.hooked where installer.status(agent) == .partial {
-            do {
-                try installer.install(agent)
-                log.notice("Updated \(agent.rawValue) hooks")
-            } catch {
-                log.error("Couldn't update \(agent.rawValue) hooks: \(String(describing: error))")
-            }
         }
     }
 }

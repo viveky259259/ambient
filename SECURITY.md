@@ -12,6 +12,17 @@ check, tty, tmux or AppleScript ever runs for a remote session. A remote machine
 states and text, and nothing more. The threat model is in
 [the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md#threat-model-stride-er-40).
 
+## What Ambient reads on your Mac
+
+Besides agent hook events and the config files it edits, Ambient reads two things to keep hooks working, and
+keeps them on your Mac:
+
+- **Agent processes**, once a minute: for agent sessions attached to a terminal (Claude Code, Codex, `agy`), the
+  process id, executable path, start time, CPU time and whether a terminal is attached, to spot a busy session
+  whose hooks never reached Ambient. Never arguments, environment or output.
+- **Agent executables**: the path, size and modification date of each agent's executable, held in memory only, to
+  notice when an agent updates. `~/.ambient/agents.json` stores only which agents you connected.
+
 ## Network
 
 Ambient makes network requests only for reading aloud, and only when you choose to:
