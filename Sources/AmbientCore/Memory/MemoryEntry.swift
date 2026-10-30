@@ -12,6 +12,14 @@ public enum MemoryScope: Codable, Equatable, Hashable, Sendable {
         case .global: "global"
         }
     }
+
+    /// Unique across projects, which `label` isn't: two projects can share a folder name.
+    var id: String {
+        switch self {
+        case let .project(root): root
+        case .global: "global"
+        }
+    }
 }
 
 /// A file shared through working memory: a copy in `~/.ambient/memory/`, addressed by its content.
@@ -35,21 +43,29 @@ public struct MemoryAuthor: Codable, Equatable, Sendable {
     public var agent: AgentKind
     /// What the island calls it, e.g. "Codex" or a custom agent's own name.
     public var label: String
+    /// The agent's process, which outlives the island's interest in a session that's gone quiet.
+    public var agentPid: Int32?
 
-    public init(sessionID: String, agent: AgentKind, label: String) {
+    public init(sessionID: String, agent: AgentKind, label: String, agentPid: Int32? = nil) {
         self.sessionID = sessionID
         self.agent = agent
         self.label = label
+        self.agentPid = agentPid
     }
 
+    public init?(callerPids: [Int32], sessions: [Session]) {
+        guard let s = Session.calling(callerPids: callerPids, in: sessions) else { return nil }
+        self.init(sessionID: s.id, agent: s.agent, label: s.agentLabel, agentPid: s.host?.agentPid)
+    }
+}
+
+extension Session {
     /// The session whose agent process is the nearest of `callerPids`, the caller's parent chain. When one process
     /// has had several sessions (Claude's /clear), the most recent one.
-    public static func resolve(callerPids: [Int32], sessions: [Session]) -> MemoryAuthor? {
+    public static func calling(callerPids: [Int32], in sessions: [Session]) -> Session? {
         for pid in callerPids {
             let matches = sessions.filter { $0.host?.agentPid == pid }
-            if let s = matches.max(by: { $0.lastEventAt < $1.lastEventAt }) {
-                return MemoryAuthor(sessionID: s.id, agent: s.agent, label: s.agentLabel)
-            }
+            if let s = matches.max(by: { $0.lastEventAt < $1.lastEventAt }) { return s }
         }
         return nil
     }
@@ -57,7 +73,7 @@ public struct MemoryAuthor: Codable, Equatable, Sendable {
 
 /// One piece of shared working memory: text (often JSON) or a file, under a key other agents read it by.
 public struct MemoryEntry: Codable, Equatable, Identifiable, Sendable {
-    public var id: String { "\(scope.label)/\(key)" }
+    public var id: String { "\(scope.id)/\(key)" }
     public var key: String
     public var scope: MemoryScope
     /// Text or JSON. Nil for files, and in listings.
@@ -72,7 +88,7 @@ public struct MemoryEntry: Codable, Equatable, Identifiable, Sendable {
     public var updatedAt: Date
     /// Gone after this, unless written again.
     public var expiresAt: Date?
-    /// Gone when the author's session ends.
+    /// Gone when the author's session ends or its agent exits.
     public var untilSessionEnds: Bool
 
     public init(key: String, scope: MemoryScope, value: String? = nil, file: MemoryBlob? = nil,

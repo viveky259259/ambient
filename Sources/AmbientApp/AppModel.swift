@@ -30,6 +30,7 @@ final class AppModel: ObservableObject {
     private var saveWork: DispatchWorkItem?
     private var taskSaveWork: DispatchWorkItem?
     private var memorySaveWork: DispatchWorkItem?
+    private var nextMemoryCollect = Date.distantPast
     private var sweepTimer: Timer?
     private var llmProbeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -69,11 +70,13 @@ final class AppModel: ObservableObject {
             publishTasks(save: false)
         }
         if let memoryURL {
-            memoryStore.load(MemoryFile.load(from: memoryURL))
-            // Sessions that ended while Ambient was closed take what they kept only for themselves.
-            memoryStore.retainSessions(Set(store.sessions.map(\.id)))
-            memoryStore.sweep()
-            scheduleMemorySave()
+            if let saved = MemoryFile.load(from: memoryURL) {
+                memoryStore.load(saved)
+            } else {
+                // A file this version can't read: its shared files aren't abandoned, and it isn't saved over below.
+                nextMemoryCollect = .distantFuture
+            }
+            if !memoryStore.sweep().isEmpty { scheduleMemorySave() }
         }
         refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
@@ -155,7 +158,8 @@ final class AppModel: ObservableObject {
         return reply
     }
 
-    /// Drops what an ended session kept only for itself.
+    /// Drops what a session kept only for itself when it says it ended. One the island drops for going quiet isn't
+    /// over, so this isn't called for those: `MemoryStore.sweep` watches for its agent exiting.
     private func endSessionMemory(_ change: SessionChange) {
         guard change.removed, !memoryStore.sessionEnded(change.session.id).isEmpty else { return }
         scheduleMemorySave()
@@ -259,6 +263,7 @@ final class AppModel: ObservableObject {
         refreshTitles()
         rollOverDay()
         if !memoryStore.sweep().isEmpty { scheduleMemorySave() }
+        collectMemoryBlobs()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
@@ -266,7 +271,6 @@ final class AppModel: ObservableObject {
         for change in changes {
             transitions.send(change)
             observeTask(change)
-            endSessionMemory(change)
         }
     }
 
@@ -356,17 +360,26 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
     }
 
-    /// Saves shared memory shortly after it settles, then deletes shared files nothing refers to any more.
+    /// Saves shared memory shortly after it settles.
     private func scheduleMemorySave() {
         guard let memoryURL else { return }
         memorySaveWork?.cancel()
-        let entries = memoryStore.entries, blobs = memoryBlobs
-        let work = DispatchWorkItem {
-            try? MemoryFile.save(entries, to: memoryURL)
-            blobs?.collect(keeping: entries.compactMap(\.file), changedBefore: Date().addingTimeInterval(-300))
-        }
+        let entries = memoryStore.entries
+        let work = DispatchWorkItem { try? MemoryFile.save(entries, to: memoryURL) }
         memorySaveWork = work
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
+    /// Every few minutes, deletes shared files nothing refers to any more. On a timer, not after saves: a copy
+    /// forgotten while it's still within the grace period would otherwise wait for the next change.
+    private func collectMemoryBlobs() {
+        let now = Date(), grace: TimeInterval = 300
+        guard let memoryBlobs, now >= nextMemoryCollect else { return }
+        nextMemoryCollect = now.addingTimeInterval(grace)
+        let keep = memoryStore.blobs
+        DispatchQueue.global(qos: .utility).async {
+            memoryBlobs.collect(keeping: keep, changedBefore: now.addingTimeInterval(-grace))
+        }
     }
 
     /// Saves immediately, e.g. when quitting.

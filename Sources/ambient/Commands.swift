@@ -433,6 +433,7 @@ struct Commands {
         let client = MemoryClient(paths: paths, request: { request($0, timeout: Self.taskModelTimeout) })
         let sub = positional.first ?? "list"
         let key = positional.dropFirst().first
+        guard sub == "set" || positional.count <= 2 else { out.error(usage); return 64 }
         let reply: MemoryReply
         switch (sub, key) {
         case ("list", _), ("ls", _):
@@ -442,6 +443,10 @@ struct Commands {
         case let ("rm", key?), let ("forget", key?):
             reply = client.forget(key: key, scope: scope, folder: folder)
         case let ("set", key?):
+            guard positional.count <= (file == nil ? 3 : 2) else {
+                out.error("Give the value as one argument, in quotes, or a file, not both.")
+                return 64
+            }
             var value = positional.dropFirst(2).first
             if file == nil, value == nil || value == "-" {
                 value = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)

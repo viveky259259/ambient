@@ -66,9 +66,16 @@ import Testing
         #expect(store.sessionEnded("codex:c1").map(\.key) == ["scratch"])
         #expect(store.entries.map(\.key) == ["keep"])
 
-        try store.write(MemoryWrite(key: "scratch", scope: .project(app), value: "x", untilSessionEnds: true), author: codex)
-        #expect(store.retainSessions(["codex:c1"]).isEmpty)
-        #expect(store.retainSessions([]).map(\.key) == ["scratch"])
+    }
+
+    @Test func sessionBoundEntriesLastWhileTheirAgentRuns() throws {
+        let store = MemoryStore()
+        let agent = MemoryAuthor(sessionID: "codex:c1", agent: .codex, label: "Codex", agentPid: 7)
+        try store.write(MemoryWrite(key: "scratch", scope: .project(app), value: "x", untilSessionEnds: true), author: agent)
+        try store.write(MemoryWrite(key: "keep", scope: .project(app), value: "x"), author: agent)
+        #expect(store.sweep(isAlive: { _ in true }).isEmpty)
+        #expect(store.sweep(isAlive: { _ in false }).map(\.key) == ["scratch"])
+        #expect(store.entries.map(\.key) == ["keep"])
     }
 
     @Test func sessionBoundNeedsAnAuthor() {
@@ -95,6 +102,31 @@ import Testing
         }
         try store.write(MemoryWrite(key: "api/schema.v2", scope: .global, value: "ok"), author: nil)
         #expect(store.entries.count == 1)
+    }
+
+    @Test func secretsAreRefusedWhereverTheyAre() throws {
+        let store = MemoryStore()
+        let token = "ghp_" + String(repeating: "a", count: 36)
+        #expect(throws: MemoryError.self) {
+            try store.write(MemoryWrite(key: "k", scope: .global, value: "x", description: "use \(token)"), author: nil)
+        }
+        #expect(throws: MemoryError.self) { try store.write(MemoryWrite(key: token, scope: .global, value: "x"), author: nil) }
+        #expect(store.entries.isEmpty)
+    }
+
+    @Test func tooMuchTextIsCaughtBeforeSending() {
+        #expect(MemoryStore.problem(withValue: "fine") == nil)
+        #expect(MemoryStore.problem(withValue: String(repeating: "x", count: 300 * 1024))?.contains("as a file") == true)
+        #expect(MemoryStore.problem(withValue: "") != nil)
+    }
+
+    @Test func idsDontCollideAcrossProjectsNamedAlike() throws {
+        let store = MemoryStore()
+        for root in ["/work/app", "/personal/app", "/src/global"] {
+            try store.write(MemoryWrite(key: "plan", scope: .project(root), value: "x"), author: nil)
+        }
+        try store.write(MemoryWrite(key: "plan", scope: .global, value: "x"), author: nil)
+        #expect(Set(store.entries.map(\.id)).count == 4)
     }
 
     @Test func scopesHoldALimitedNumber() throws {
@@ -125,9 +157,10 @@ import Testing
         var other = Session(agent: .codex, sessionId: "c", at: Date())
         other.host = HostInfo(agentPid: 7)
         let sessions = [older, newer, other]
-        #expect(MemoryAuthor.resolve(callerPids: [42, 7], sessions: sessions)?.sessionID == "claude:new")
-        #expect(MemoryAuthor.resolve(callerPids: [99, 7], sessions: sessions)?.label == "Codex")
-        #expect(MemoryAuthor.resolve(callerPids: [99], sessions: sessions) == nil)
+        #expect(MemoryAuthor(callerPids: [42, 7], sessions: sessions)?.sessionID == "claude:new")
+        #expect(MemoryAuthor(callerPids: [42, 7], sessions: sessions)?.agentPid == 42)
+        #expect(MemoryAuthor(callerPids: [99, 7], sessions: sessions)?.label == "Codex")
+        #expect(MemoryAuthor(callerPids: [99], sessions: sessions) == nil)
     }
 
     @Test func persistRoundTrip() throws {
@@ -153,11 +186,14 @@ import Testing
                                  sessions: [claude], blobs: nil)
         guard case let .entry(entry) = wrote else { Issue.record("\(wrote)"); return }
         #expect(entry.author?.sessionID == "claude:s1")
+        #expect(entry.value == nil && entry.size == 1)
         #expect(store.revision > start)
 
         let reads = store.revision
-        #expect(store.answer(.read(key: "k", project: app, scope: nil), sessions: [], blobs: nil) == .entry(entry))
-        #expect(store.answer(.list(project: app, scope: nil), sessions: [], blobs: nil) == .entries([entry.summary]))
+        guard case let .entry(read) = store.answer(.read(key: "k", project: app, scope: nil), sessions: [], blobs: nil)
+        else { Issue.record("no entry"); return }
+        #expect(read.value == "v")
+        #expect(store.answer(.list(project: app, scope: nil), sessions: [], blobs: nil) == .entries([entry]))
         #expect(store.answer(.read(key: "nope", project: app, scope: nil), sessions: [], blobs: nil)
             == .failed("Nothing is shared as nope in app or globally."))
         #expect(store.revision == reads)
@@ -202,6 +238,25 @@ import Testing
         try FileManager.default.createDirectory(at: loose, withIntermediateDirectories: true)
         #expect(MemoryProject.root(for: loose.path) == loose.resolvingSymlinksInPath().path)
         #expect(MemoryProject.root(for: "/") == "/")
+
+        // Relative to the worktree, not to wherever Ambient runs.
+        let relative = dir.appendingPathComponent("rel")
+        try FileManager.default.createDirectory(at: relative, withIntermediateDirectories: true)
+        try "gitdir: ../repo/.git/worktrees/rel\n".write(to: relative.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        #expect(MemoryProject.root(for: relative.path) == root)
+
+        // A bare repository has no .git folder: it is the root.
+        let linked = dir.appendingPathComponent("linked")
+        try FileManager.default.createDirectory(at: linked, withIntermediateDirectories: true)
+        let bare = dir.appendingPathComponent("app.git")
+        try "gitdir: \(bare.path)/worktrees/linked\n".write(to: linked.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        #expect(MemoryProject.root(for: linked.path) == bare.resolvingSymlinksInPath().path)
+
+        // A submodule's .git also points elsewhere, but it's a project of its own.
+        let submodule = repo.appendingPathComponent("vendor")
+        try FileManager.default.createDirectory(at: submodule, withIntermediateDirectories: true)
+        try "gitdir: ../.git/modules/vendor\n".write(to: submodule.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        #expect(MemoryProject.root(for: submodule.path) == submodule.resolvingSymlinksInPath().path)
     }
 
     // MARK: - Files
@@ -221,6 +276,13 @@ import Testing
         let mode = try FileManager.default.attributesOfItem(atPath: blobs.url(for: blob).path)[.posixPermissions] as? NSNumber
         #expect(mode?.intValue == 0o400)
         #expect(try blobs.add(fileAt: source.path) == blob)
+
+        // Sharing it again counts as new, so collection leaves it for the app to hear about.
+        let copy = blobs.url(for: blob).path
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -3600)], ofItemAtPath: copy)
+        _ = try blobs.add(fileAt: source.path)
+        blobs.collect(keeping: [], changedBefore: Date().addingTimeInterval(-60))
+        #expect(blobs.contains(blob))
 
         // Kept while referenced or new; deleted once neither.
         blobs.collect(keeping: [], changedBefore: Date().addingTimeInterval(-60))
@@ -248,6 +310,68 @@ import Testing
         try "API_KEY=".write(to: template, atomically: true, encoding: .utf8)
         _ = try blobs.add(fileAt: template.path)
         #expect(throws: MemoryError.self) { try blobs.add(fileAt: dir.path) }
+
+        let dotSSH = dir.appendingPathComponent(".SSH")
+        try FileManager.default.createDirectory(at: dotSSH, withIntermediateDirectories: true)
+        for file in [dir.appendingPathComponent("prod.env"), dotSSH.appendingPathComponent("config")] {
+            try "x".write(to: file, atomically: true, encoding: .utf8)
+            #expect(throws: MemoryError.self) { try blobs.add(fileAt: file.path) }
+        }
+    }
+
+    @Test func filesAreScannedEvenWhenNotCleanText() throws {
+        let dir = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let blobs = MemoryBlobStore(root: dir.appendingPathComponent("memory"))
+        let secret = Data("key: AKIAABCDEFGHIJKLMNOP\n".utf8)
+
+        let stray = dir.appendingPathComponent("stray.log")
+        try (Data([0xFF, 0x0A]) + secret).write(to: stray)
+        #expect(throws: MemoryError.self) { try blobs.add(fileAt: stray.path) }
+
+        let long = dir.appendingPathComponent("long.log")
+        try (secret + Data(repeating: 0x2E, count: 2 * 1024 * 1024)).write(to: long)
+        #expect(throws: MemoryError.self) { try blobs.add(fileAt: long.path) }
+    }
+
+    @Test func limitsApplyToWhatALinkPointsTo() throws {
+        let dir = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let blobs = MemoryBlobStore(root: dir.appendingPathComponent("memory"))
+
+        let big = dir.appendingPathComponent("big.bin")
+        FileManager.default.createFile(atPath: big.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: big)
+        try handle.truncate(atOffset: UInt64(MemoryBlobStore.maxFileBytes + 1))
+        try handle.close()
+        let link = dir.appendingPathComponent("link.bin")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: big)
+        #expect(throws: MemoryError.self) { try blobs.add(fileAt: link.path) }
+
+        let fifo = dir.appendingPathComponent("pipe")
+        #expect(mkfifo(fifo.path, 0o600) == 0)
+        #expect(throws: MemoryError.self) { try blobs.add(fileAt: fifo.path) }
+    }
+
+    @Test func aNewEmptyFolderIsLeftForTheFileOnItsWay() throws {
+        let dir = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let blobs = MemoryBlobStore(root: dir)
+        let folder = dir.appendingPathComponent(String(repeating: "a", count: 64))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        blobs.collect(keeping: [], changedBefore: Date().addingTimeInterval(-60))
+        #expect(FileManager.default.fileExists(atPath: folder.path))
+        blobs.collect(keeping: [], changedBefore: Date().addingTimeInterval(60))
+        #expect(!FileManager.default.fileExists(atPath: folder.path))
+    }
+
+    @Test func aFileThatCantBeReadIsToldApartFromNone() throws {
+        let dir = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("memory.json")
+        #expect(MemoryFile.load(from: url) == [])
+        try Data("{\"version\":2,\"entries\":[]}".utf8).write(to: url)
+        #expect(MemoryFile.load(from: url) == nil)
     }
 
     private func temporaryDirectory() throws -> URL {

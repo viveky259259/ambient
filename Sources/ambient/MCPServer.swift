@@ -245,7 +245,7 @@ struct MCPServer {
         switch reply {
         case let .entry(entry): object = memory.fields(entry)
         case let .entries(entries): object = ["entries": entries.map { memory.fields($0) }]
-        case let .forgotten(entry): object = ["forgotten": memory.fields(entry.summary)]
+        case let .forgotten(entry): object = ["forgotten": memory.fields(entry)]
         case let .failed(message): return (message, true)
         }
         let data = (try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])) ?? Data()

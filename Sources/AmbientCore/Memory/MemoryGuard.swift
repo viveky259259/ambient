@@ -16,13 +16,14 @@ public enum MemoryGuard {
     ]
 
     private static let secretNames: Set<String> = [
-        ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials", "credentials.json",
+        ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials", "credentials.json",
         "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
     ]
     private static let secretExtensions: Set<String> = ["pem", "key", "p12", "pfx", "keychain", "keychain-db"]
     /// `.env.example` and the like are templates, meant to be shared.
     private static let envTemplates: Set<String> = ["example", "sample", "template", "dist"]
-    private static let secretFolders = ["/.ssh/", "/.aws/", "/.gnupg/", "/Library/Keychains/"]
+    /// Lowercase: APFS doesn't care how a folder is spelled.
+    private static let secretFolders = ["/.ssh/", "/.aws/", "/.gnupg/", "/library/keychains/"]
 
     /// Why this text shouldn't be shared, or nil.
     public static func problem(withText text: String) -> String? {
@@ -37,12 +38,12 @@ public enum MemoryGuard {
     public static func problem(withFilePath path: String) -> String? {
         let name = (path as NSString).lastPathComponent.lowercased()
         let ext = (name as NSString).pathExtension
-        let isEnv = name == ".env" || (name.hasPrefix(".env.") && !envTemplates.contains(ext))
+        let isEnv = name == ".env" || ext == "env" || (name.hasPrefix(".env.") && !envTemplates.contains(ext))
         let what: String
         if isEnv || secretNames.contains(name) || secretExtensions.contains(ext) {
             what = name
-        } else if let folder = secretFolders.first(where: { path.contains($0) }) {
-            what = "Anything in ~\(folder.dropLast())"
+        } else if let folder = secretFolders.first(where: { path.lowercased().contains($0) }) {
+            what = "Anything in \(folder == "/library/keychains/" ? "your keychains folder" : "~\(folder.dropLast())")"
         } else {
             return nil
         }
@@ -64,13 +65,15 @@ public enum MemoryProject {
             var isDirectory: ObjCBool = false
             if fileManager.fileExists(atPath: git, isDirectory: &isDirectory) {
                 if isDirectory.boolValue { return dir }
-                // A worktree's .git is a file: "gitdir: /repo/.git/worktrees/<name>".
+                // A worktree's .git is a file: "gitdir: /repo/.git/worktrees/<name>", or relative to the worktree.
                 if let text = try? String(contentsOfFile: git, encoding: .utf8),
                    let line = text.split(separator: "\n").first(where: { $0.hasPrefix("gitdir:") }) {
                     let gitdir = line.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces)
-                    if let range = gitdir.range(of: "/.git/worktrees/") {
-                        return URL(fileURLWithPath: String(gitdir[..<range.lowerBound])).standardizedFileURL
-                            .resolvingSymlinksInPath().path
+                    if let range = gitdir.range(of: "/worktrees/", options: .backwards) {
+                        let common = URL(fileURLWithPath: String(gitdir[..<range.lowerBound]), relativeTo: URL(fileURLWithPath: dir))
+                            .standardizedFileURL.resolvingSymlinksInPath()
+                        // A bare repository is its own root: /repo/.git's root is /repo, /repo.git's is itself.
+                        return (common.lastPathComponent == ".git" ? common.deletingLastPathComponent() : common).path
                     }
                 }
                 return dir

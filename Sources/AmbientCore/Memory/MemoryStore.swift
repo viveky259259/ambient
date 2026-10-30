@@ -51,17 +51,13 @@ public final class MemoryStore {
     @discardableResult
     public func write(_ w: MemoryWrite, author: MemoryAuthor?, now: Date = Date()) throws -> MemoryEntry {
         let key = w.key.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let problem = Self.problem(withKey: key) { throw MemoryError(problem) }
+        if let problem = Self.problem(withKey: key) ?? MemoryGuard.problem(withText: key)
+            ?? w.description.flatMap(MemoryGuard.problem(withText:)) { throw MemoryError(problem) }
         switch (w.value, w.file) {
         case (nil, nil), (_?, _?):
             throw MemoryError("Share either text or a file.")
         case let (value?, nil):
-            guard !value.isEmpty else { throw MemoryError("The value is empty. Use memory_forget to remove an entry.") }
-            guard value.utf8.count <= Self.maxValueBytes else {
-                throw MemoryError("The value is \(value.utf8.count / 1024) KB; text is limited to \(Self.maxValueBytes / 1024) KB. "
-                    + "Share it as a file instead.")
-            }
-            if let problem = MemoryGuard.problem(withText: value) { throw MemoryError(problem) }
+            if let problem = Self.problem(withValue: value) { throw MemoryError(problem) }
         case (nil, _?):
             break
         }
@@ -121,8 +117,9 @@ public final class MemoryStore {
                 return .failed("Ambient has no copy of \(file.name). Share the file again.")
             }
             do {
-                return .entry(try self.write(write, author: MemoryAuthor.resolve(callerPids: callerPids, sessions: sessions),
-                                             now: now))
+                // Without the value: the writer just sent it.
+                return .entry(try self.write(write, author: MemoryAuthor(callerPids: callerPids, sessions: sessions),
+                                             now: now).summary)
             } catch {
                 return .failed(error.localizedDescription)
             }
@@ -132,7 +129,7 @@ public final class MemoryStore {
         case let .list(project, scope):
             return .entries(list(project: project, scope: scope, now: now))
         case let .forget(key, project, scope):
-            return forget(key: key, project: project, scope: scope, now: now).map(MemoryReply.forgotten)
+            return forget(key: key, project: project, scope: scope, now: now).map { .forgotten($0.summary) }
                 ?? .failed(Self.nothingShared(key, project: project, scope: scope))
         }
     }
@@ -149,16 +146,15 @@ public final class MemoryStore {
         remove { $0.untilSessionEnds && $0.author?.sessionID == sessionID }
     }
 
-    /// Removes session-bound entries whose session isn't among `live`, e.g. after Ambient was closed while it ended.
+    /// Removes expired entries, and session-bound ones whose agent has exited. By the process, not the session
+    /// list: the island drops a session that's idle for two hours, while its agent may still be running.
     @discardableResult
-    public func retainSessions(_ live: Set<String>) -> [MemoryEntry] {
-        remove { $0.untilSessionEnds && !live.contains($0.author?.sessionID ?? "") }
-    }
-
-    /// Removes expired entries.
-    @discardableResult
-    public func sweep(now: Date = Date()) -> [MemoryEntry] {
-        remove { $0.isExpired(at: now) }
+    public func sweep(now: Date = Date(), isAlive: (Int32) -> Bool = SessionStore.processExists) -> [MemoryEntry] {
+        remove { entry in
+            if entry.isExpired(at: now) { return true }
+            guard entry.untilSessionEnds, let pid = entry.author?.agentPid else { return false }
+            return !isAlive(pid)
+        }
     }
 
     /// The files entries still refer to.
@@ -178,6 +174,17 @@ public final class MemoryStore {
 
     private static func lookup(project: String, scope: MemoryScope?) -> [MemoryScope] {
         scope.map { [$0] } ?? [.project(project), .global]
+    }
+
+    /// Why this text can't be shared, or nil. Also checked before sending: the socket silently drops a message
+    /// too big for it, and the agent would hear that Ambient isn't running.
+    public static func problem(withValue value: String) -> String? {
+        guard !value.isEmpty else { return "The value is empty. Use memory_forget to remove an entry." }
+        guard value.utf8.count <= maxValueBytes else {
+            return "The value is \(value.utf8.count / 1024) KB; text is limited to \(maxValueBytes / 1024) KB. "
+                + "Share it as a file instead."
+        }
+        return MemoryGuard.problem(withText: value)
     }
 
     /// Keys are short and plain so agents and shells can pass them around: "api-schema", "tests/failing".

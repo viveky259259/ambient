@@ -10,7 +10,17 @@ struct MemoryClient {
     /// The project whose memory is the default: the one around `folder`, or around the folder the agent runs in.
     func project(_ folder: String?) -> String {
         let folder = folder.flatMap { $0.isEmpty ? nil : MCPServer.absolute($0) }
-        return MemoryProject.root(for: folder ?? FileManager.default.currentDirectoryPath)
+        return MemoryProject.root(for: folder ?? workingFolder())
+    }
+
+    /// Where this process runs, unless that says nothing about the project: some apps start MCP servers in / or the
+    /// home folder. Then the folder of the session that started it, which Ambient knows from its hooks.
+    private func workingFolder() -> String {
+        let cwd = FileManager.default.currentDirectoryPath
+        guard cwd == "/" || cwd == paths.userHome.path, case let .status(sessions, _)? = request(.statusRequest),
+              let session = Session.calling(callerPids: ProcessTree.ancestors(of: getpid()).map(\.pid), in: sessions),
+              let folder = session.cwd else { return cwd }
+        return folder
     }
 
     /// "project", "global", or nothing for the default.
@@ -35,12 +45,15 @@ struct MemoryClient {
                ttlMinutes: Int?, untilSessionEnds: Bool, folder: String?) -> MemoryReply {
         let project = project(folder)
         do {
-            if let problem = MemoryStore.problem(withKey: key.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            if let problem = MemoryStore.problem(withKey: key.trimmingCharacters(in: .whitespacesAndNewlines))
+                ?? value.flatMap(MemoryStore.problem(withValue:)) {
                 throw MemoryError(problem)
             }
             let scope = try Self.scope(scope, project: project) ?? .project(project)
             let file = try filePath.map { try MemoryBlobStore(root: paths.memoryBlobs).add(fileAt: MCPServer.absolute($0)) }
-            let write = MemoryWrite(key: key, scope: scope, value: value, file: file, description: description,
+            // Clipped here as well as in the store, so the message always fits through the socket.
+            let write = MemoryWrite(key: key, scope: scope, value: value, file: file,
+                                    description: Trim.clean(description, max: MemoryStore.maxDescriptionLength),
                                     ttlMinutes: ttlMinutes, untilSessionEnds: untilSessionEnds)
             return send(.write(write, callerPids: ProcessTree.ancestors(of: getpid()).map(\.pid)))
         } catch {
@@ -66,13 +79,14 @@ struct MemoryClient {
         catch { return .failed(error.localizedDescription) }
     }
 
-    /// A few lines on what's shared for the project the agent runs in, for `ambient mcp`'s instructions.
+    /// A few lines on what's shared for the project the agent runs in, for `ambient mcp`'s instructions. Keys and
+    /// plain facts only: agents trust instructions, so nothing another agent worded goes in. Keys can't hold a
+    /// sentence, and descriptions wait for memory_list, whose results are treated as data.
     func digest(limit: Int = 8, now: Date = Date()) -> String? {
         guard case let .entries(entries) = list(scope: nil, folder: nil), !entries.isEmpty else { return nil }
         var lines = entries.prefix(limit).map { e in
-            let what = e.description.map { ": \($0)" } ?? ""
-            return "- \(e.key) (\(e.scope == .global ? "global" : "project"), \(e.file == nil ? "text" : "file"))\(what) — "
-                + "\(e.author?.label ?? "unknown agent"), \(Self.age(e.updatedAt, now: now))"
+            "- \(e.key) (\(e.scope == .global ? "global" : "project"), \(e.file == nil ? "text" : "file"), "
+                + "\(Self.age(e.updatedAt, now: now)))"
         }
         if entries.count > limit { lines.append("- …and \(entries.count - limit) more; memory_list shows them all.") }
         return lines.joined(separator: "\n")
