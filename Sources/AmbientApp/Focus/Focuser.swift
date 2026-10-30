@@ -20,6 +20,8 @@ final class Focuser {
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "focus")
 
     func focus(_ session: Session) {
+        // Remote sessions never run focus routes: no AppleScript, tmux, tty or deep link.
+        guard session.origin == nil else { return }
         var session = session
         // Some agents (Codex's app) don't pass __CFBundleIdentifier down; find the app from the process chain.
         if session.host != nil, session.host?.bundleId == nil,

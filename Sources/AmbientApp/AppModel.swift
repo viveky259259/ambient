@@ -94,7 +94,8 @@ final class AppModel: ObservableObject {
 
     /// Takes the user to the session — its chat, tab or window — and marks its result as seen.
     func open(_ session: Session) {
-        focuser.focus(session)
+        // There's nothing local to bring forward for a remote session; opening it marks it seen.
+        if session.origin == nil { focuser.focus(session) }
         acknowledge(session.id)
     }
 
@@ -199,7 +200,7 @@ final class AppModel: ObservableObject {
 
     private func userActivated(_ app: NSRunningApplication) {
         let ids = store.sessions.filter { s in
-            guard let host = s.host else { return false }
+            guard s.origin == nil, let host = s.host else { return false }
             return host.bundleId == app.bundleIdentifier || host.pids.contains(app.processIdentifier)
         }.map(\.id)
         for id in ids { acknowledge(id) }

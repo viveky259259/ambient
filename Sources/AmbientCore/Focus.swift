@@ -30,6 +30,8 @@ public enum FocusPlanner {
 
     /// Routes to try in order. Everything that reaches a script, command or URL is validated here.
     public static func routes(for s: Session, userHome: String = NSHomeDirectory()) -> [FocusRoute] {
+        // A remote session lives on another machine: no local app, tab, pane or URL is its.
+        guard s.origin == nil else { return [] }
         var routes: [FocusRoute] = []
         let host = s.host
 

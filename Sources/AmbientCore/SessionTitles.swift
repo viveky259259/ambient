@@ -13,6 +13,8 @@ public struct SessionTitles: Sendable {
     }
 
     public func title(for s: Session) -> String? {
+        // A remote session's id names a transcript on its own machine, never one here.
+        guard s.origin == nil else { return nil }
         let raw: String?
         switch s.agent {
         case .claude: raw = desktopTitle(s.host?.hostSessionId) ?? transcriptTitle(s.sessionId)
@@ -27,6 +29,7 @@ public struct SessionTitles: Sendable {
     /// Optional short excerpt from a local transcript store for LLM summarization.
     /// Only called when the user opts into transcript reading. Truncated; never uploads.
     public func excerpt(for s: Session, maxChars: Int = 1800) -> String? {
+        guard s.origin == nil else { return nil }
         switch s.agent {
         case .claude:
             return claudeExcerpt(s.sessionId, maxChars: maxChars)
