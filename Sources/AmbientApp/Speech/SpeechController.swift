@@ -7,6 +7,8 @@ enum SpeechState: Equatable {
     case idle
     case preparing
     case speaking
+    /// Held partway by the pause button; continue carries on from the same spot.
+    case paused
     case failed(String, offerMacVoice: Bool)
     /// A tip, such as which shortcut reads a selection.
     case hint(String)
@@ -41,7 +43,22 @@ final class SpeechController: ObservableObject, @unchecked Sendable {
         player.onLevel = { [weak self] in self?.level = $0 }
     }
 
-    var isActive: Bool { state == .preparing || state == .speaking }
+    /// Reading, about to, or paused partway: the shortcut on the same text stops it, new text replaces it.
+    var isActive: Bool { state == .preparing || state == .speaking || state == .paused }
+
+    func pause(from source: String) {
+        log.notice("speech: pause from \(source, privacy: .public)")
+        guard state == .speaking else { return }
+        player.pause()
+        state = .paused
+    }
+
+    func resume(from source: String) {
+        log.notice("speech: continue from \(source, privacy: .public)")
+        guard state == .paused else { return }
+        player.resume()
+        state = .speaking
+    }
 
     /// The shortcut or the Services item. Reads `text`; stops instead when it's empty or already being read.
     func toggle(_ text: String?) {

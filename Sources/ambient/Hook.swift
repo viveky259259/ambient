@@ -6,8 +6,9 @@ import Foundation
 enum Hook {
     static func run(arguments: [String], paths: AmbientPaths) {
         guard let name = arguments.first, let agent = AgentKind(rawValue: name) else { return }
-        // Gemini parses stdout as JSON; answer with an empty object, whatever happens.
-        let reply: @Sendable () -> Void = { if agent == .gemini { FileHandle.standardOutput.write(Data("{}\n".utf8)) } }
+        // Gemini and Antigravity parse stdout as JSON; always answer, whatever happens.
+        let answer = AdapterRegistry.reply(agent: agent, event: arguments.dropFirst().first)
+        let reply: @Sendable () -> Void = { if let answer { FileHandle.standardOutput.write(Data(answer.utf8)) } }
         defer { reply() }
         // Never outlive the agent's patience, even if stdin is never closed.
         DispatchQueue.global().asyncAfter(deadline: .now() + 3) {

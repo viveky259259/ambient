@@ -21,6 +21,29 @@ public enum ToolNames {
         "exec_command": "Shell",
         "local_shell": "Shell",
         "update_plan": "Plan",
+        // Copilot CLI
+        "bash": "Shell",
+        "view": "Read",
+        "create": "Write",
+        "edit": "Edit",
+        // OpenCode
+        "read": "Read",
+        "write": "Write",
+        "grep": "Grep",
+        "webfetch": "Fetch",
+        "todowrite": "Plan",
+        "task": "Task",
+        // Antigravity
+        "run_command": "Shell",
+        "view_file": "Read",
+        "write_to_file": "Write",
+        "replace_file_content": "Edit",
+        "multi_replace_file_content": "Edit",
+        "grep_search": "Grep",
+        "find_by_name": "Glob",
+        "list_dir": "List",
+        "read_url_content": "Fetch",
+        "search_web": "Search",
     ]
 
     /// "mcp__github__create_pr" → "github · create_pr"; "run_shell_command" → "Shell".
@@ -38,16 +61,16 @@ public enum ToolNames {
         if name == "apply_patch", let patch = input.firstString(["input", "patch"]) {
             return patchedFile(patch).map(basename)
         }
-        if let command = input.firstString(["command", "cmd"]) {
+        if let command = input.firstString(["command", "cmd", "CommandLine"]) {
             return Trim.clean(command, max: 80)
         }
-        if let path = input.firstString(["file_path", "absolute_path", "notebook_path", "path"]) {
+        if let path = input.firstString(["file_path", "absolute_path", "notebook_path", "path", "AbsolutePath", "TargetFile"]) {
             return Trim.clean(basename(path), max: 80)
         }
-        if let url = input.string("url") {
+        if let url = input.firstString(["url", "Url"]) {
             return Trim.clean(URL(string: url)?.host ?? url, max: 80)
         }
-        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt"]), max: 80)
+        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt", "Query", "Pattern", "toolAction"]), max: 80)
     }
 
     private static func basename(_ path: String) -> String {

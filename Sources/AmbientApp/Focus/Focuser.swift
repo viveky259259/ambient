@@ -26,6 +26,12 @@ final class Focuser {
            let id = HostActivator.app(for: session.host)?.bundleIdentifier {
             session.host?.bundleId = id
         }
+        // Cursor agent sessions that lost host metadata still jump back to the editor.
+        if session.agent == .cursor, session.host?.bundleId == nil,
+           let id = HostActivator.cursorApp()?.bundleIdentifier {
+            if session.host == nil { session.host = HostInfo(bundleId: id) }
+            else { session.host?.bundleId = id }
+        }
         let routes = FocusPlanner.routes(for: session)
         let host = session.host
         queue.async { [self] in

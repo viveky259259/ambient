@@ -10,6 +10,12 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case open(query: String?)
     /// Reply to `open`: the session that was opened, or nil if nothing matched.
     case opened(sessionID: String?)
+    case listTasks
+    case tasks([AgentTask])
+    case upsertTask(AgentTask)
+    case upsertTaskResult(AgentTask)
+    /// Open the most urgent linked session for a task id.
+    case openTask(String)
     case ping
     case pong(version: String)
 }

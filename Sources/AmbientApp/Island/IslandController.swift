@@ -30,8 +30,10 @@ final class IslandController {
     private var hoverWork: DispatchWorkItem?
     /// After a click, stay collapsed until the pointer leaves, rather than springing open again.
     private var hoverSuppressed = false
-    /// Called when the menu opens or closes, with the open menu's size and where the island is.
+    /// Called when the menu opens, closes or changes size, with the open menu's size and where the island is.
     var onMenuChange: ((Bool, CGSize, IslandGeometry) -> Void)?
+    /// The open menu's size and place as last reported; nil while it's closed.
+    private var reportedMenu: (size: CGSize, geometry: IslandGeometry)?
 
     init?(model: AppModel, prefs: Preferences, speech: SpeechController, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
@@ -73,7 +75,15 @@ final class IslandController {
             self?.endHover()
             onSettings()
         }
+        viewModel.onToggleShowAll = { [weak self] in
+            guard let self else { return }
+            self.viewModel.showingAll.toggle()
+            self.reportMenu()
+            self.trackPointer()
+        }
         viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
+        viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "island") }
+        viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "island") }
         viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
     }
 
@@ -157,11 +167,25 @@ final class IslandController {
             next = .hidden
         }
         if next != viewModel.presentation {
-            let wasOpen = viewModel.presentation == .expanded
+            // Each time it opens, the island starts with the short list.
+            if next != .expanded { viewModel.showingAll = false }
             viewModel.presentation = next
-            if (next == .expanded) != wasOpen { onMenuChange?(next == .expanded, viewModel.size(for: .expanded), viewModel.geometry) }
         }
+        reportMenu()
         trackPointer()
+    }
+
+    /// Tells `onMenuChange` when the menu opens or closes, and when sessions or the display resize it while open.
+    private func reportMenu() {
+        let size = viewModel.size(for: .expanded), geometry = viewModel.geometry
+        if viewModel.presentation == .expanded {
+            if let last = reportedMenu, last.size == size, last.geometry == geometry { return }
+            reportedMenu = (size, geometry)
+            onMenuChange?(true, size, geometry)
+        } else if reportedMenu != nil {
+            reportedMenu = nil
+            onMenuChange?(false, size, geometry)
+        }
     }
 
     private func relocate() {

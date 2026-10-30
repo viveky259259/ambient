@@ -71,7 +71,7 @@ private let foreignSettings = """
         let report = try box.installer.install(.claude)
         #expect(report.changed)
         let root = try JSONValue.parse(box.read(".claude/settings.json"))
-        #expect(root["hooks"]?.objectKeys == HookInstaller.spec(for: .claude).events)
+        #expect(root["hooks"]?.objectKeys == HookInstaller.spec(for: .claude)?.events)
         let entry = root["hooks"]?["PreToolUse"]?[0]?["hooks"]?[0]
         #expect(entry?["async"] == .bool(true))
         #expect(entry?["type"] == .string("command"))
@@ -179,6 +179,149 @@ private let foreignSettings = """
         #expect(entry?["name"] == .string("ambient"))
         #expect(entry?["timeout"] == .number("1500"))
         #expect(entry?["async"] == nil)
+    }
+
+    @Test func antigravityGetsAHookSetNamedAmbientWithTheEventInEachCommand() throws {
+        let box = try Sandbox()
+        try box.write(".gemini/config/hooks.json", "{\n  \"lint\": {\n    \"Stop\": []\n  }\n}\n")
+        try box.mkdir(".gemini/antigravity")
+        try box.installer.install(.antigravity)
+        let root = try JSONValue.parse(box.read(".gemini/config/hooks.json"))
+        #expect(root.objectKeys == ["lint", "ambient"])
+        let set = root["ambient"]
+        #expect(set?.objectKeys == HookInstaller.spec(for: .antigravity)?.events)
+        let start = set?["SessionStart"]?[0]
+        #expect(start?["command"]?.stringValue?.hasSuffix(#"hook antigravity SessionStart || true"#) == true)
+        #expect(start?["timeout"] == .number("5"))
+        let tool = set?["PreToolUse"]?[0]
+        #expect(tool?["matcher"] == .string("*"))
+        #expect(tool?["hooks"]?[0]?["command"]?.stringValue?.contains("hook antigravity PreToolUse") == true)
+        #expect(box.installer.status(.antigravity) == .installed)
+    }
+
+    @Test func antigravityIsFoundByAnyOfItsDataDirectories() throws {
+        let box = try Sandbox()
+        #expect(box.installer.status(.antigravity) == .agentMissing)
+        try box.mkdir(".gemini/antigravity-ide")
+        #expect(box.installer.status(.antigravity) == .notInstalled)
+        try box.installer.install(.antigravity)
+        #expect(box.installer.status(.antigravity) == .installed)
+    }
+
+    @Test func antigravityStaleHookSetNeedsUpdateAndUninstallRestoresTheFile() throws {
+        let box = try Sandbox()
+        let original = "{\n  \"lint\": {}\n}\n"
+        try box.write(".gemini/config/hooks.json", original)
+        try box.mkdir(".gemini/antigravity")
+        try box.installer.install(.antigravity)
+        let moved = HookInstaller(paths: AmbientPaths(userHome: box.root, home: box.root.appendingPathComponent("elsewhere")))
+        #expect(moved.status(.antigravity) == .partial)
+        try box.installer.uninstall(.antigravity)
+        #expect(try box.read(".gemini/config/hooks.json") == original)
+        #expect(box.installer.status(.antigravity) == .notInstalled)
+    }
+
+    @Test func cursorHooksAreFlatVersionedAndNeverPermissionHooks() throws {
+        let box = try Sandbox()
+        try box.mkdir(".cursor")
+        try box.installer.install(.cursor)
+        let root = try JSONValue.parse(box.read(".cursor/hooks.json"))
+        #expect(root.objectKeys == ["version", "hooks"])
+        #expect(root["version"] == .number("1"))
+        let entry = root["hooks"]?["stop"]?[0]
+        #expect(entry?["command"]?.stringValue?.hasSuffix("hook cursor || true") == true)
+        #expect(entry?["hooks"] == nil)
+        let events = try #require(HookInstaller.spec(for: .cursor)?.events)
+        for blocking in ["preToolUse", "beforeShellExecution", "beforeMCPExecution", "beforeReadFile", "subagentStart"] {
+            #expect(!events.contains(blocking))
+        }
+        #expect(box.installer.status(.cursor) == .installed)
+        try box.installer.uninstall(.cursor)
+        #expect(!FileManager.default.fileExists(atPath: box.root.appendingPathComponent(".cursor/hooks.json").path))
+    }
+
+    @Test func cursorKeepsTheUsersOwnHooks() throws {
+        let box = try Sandbox()
+        let original = """
+        {
+          "version": 1,
+          "hooks": {
+            "stop": [
+              { "command": "./hooks/audit.sh" }
+            ]
+          }
+        }
+
+        """
+        try box.write(".cursor/hooks.json", original)
+        try box.installer.install(.cursor)
+        let root = try JSONValue.parse(box.read(".cursor/hooks.json"))
+        #expect(root["hooks"]?["stop"]?.arrayCount == 2)
+        #expect(root["hooks"]?["stop"]?[0]?["command"] == .string("./hooks/audit.sh"))
+        try box.installer.install(.cursor)
+        #expect(try JSONValue.parse(box.read(".cursor/hooks.json"))["hooks"]?["stop"]?.arrayCount == 2)
+        try box.installer.uninstall(.cursor)
+        let after = try JSONValue.parse(box.read(".cursor/hooks.json"))
+        #expect(after == (try JSONValue.parse(original)))
+        #expect(box.installer.status(.cursor) == .notInstalled)
+    }
+
+    @Test func copilotGetsAHookFileOfItsOwn() throws {
+        let box = try Sandbox()
+        try box.mkdir(".copilot")
+        let report = try box.installer.install(.copilot)
+        #expect(report.config.path.hasSuffix(".copilot/hooks/ambient.json"))
+        let root = try JSONValue.parse(box.read(".copilot/hooks/ambient.json"))
+        #expect(root["version"] == .number("1"))
+        let entry = root["hooks"]?["preToolUse"]?[0]
+        #expect(entry?["bash"]?.stringValue?.hasSuffix("hook copilot preToolUse || true") == true)
+        #expect(entry?["timeoutSec"] == .number("5"))
+        #expect(box.installer.status(.copilot) == .installed)
+        #expect(try box.installer.install(.copilot).changed == false)
+    }
+
+    @Test func anOwnedFileThatChangedNeedsUpdateAndUninstallRemovesIt() throws {
+        let box = try Sandbox()
+        try box.mkdir(".copilot")
+        try box.installer.install(.copilot)
+        try box.write(".copilot/hooks/ambient.json", "{}")
+        #expect(box.installer.status(.copilot) == .partial)
+        let report = try box.installer.uninstall(.copilot)
+        #expect(report.changed)
+        let backup = try #require(report.backup)
+        #expect(try String(contentsOf: backup, encoding: .utf8) == "{}")
+        #expect(!FileManager.default.fileExists(atPath: box.root.appendingPathComponent(".copilot/hooks/ambient.json").path))
+        #expect(box.installer.status(.copilot) == .notInstalled)
+        #expect(try box.installer.uninstall(.copilot).changed == false)
+        try FileManager.default.removeItem(at: box.root.appendingPathComponent(".copilot"))
+        #expect(throws: InstallerError.agentNotFound(.copilot)) { try box.installer.uninstall(.copilot) }
+    }
+
+    @Test func openCodeGetsAPluginThatExportsOneFunction() throws {
+        let box = try Sandbox()
+        try box.mkdir(".config/opencode")
+        try box.installer.install(.opencode)
+        let plugin = try box.read(".config/opencode/plugins/ambient.js")
+        #expect(plugin.contains(#"join(homedir(), ".ambient/bin/ambient")"#))
+        #expect(plugin.components(separatedBy: "\nexport ").count == 2)
+        #expect(plugin.contains(#"["hook", "opencode"]"#))
+        #expect(box.installer.status(.opencode) == .installed)
+    }
+
+    @Test func openCodeOutsideHomeUsesTheAbsolutePath() throws {
+        let box = try Sandbox()
+        try box.mkdir(".local/share/opencode")
+        let custom = HookInstaller(paths: AmbientPaths(userHome: box.root, home: URL(fileURLWithPath: "/opt/amb \"x\"")))
+        try custom.install(.opencode)
+        #expect(try box.read(".config/opencode/plugins/ambient.js").contains(#"const cli = "/opt/amb \"x\"/bin/ambient""#))
+    }
+
+    @Test func customAgentsHaveNothingToInstall() throws {
+        let box = try Sandbox()
+        #expect(HookInstaller.spec(for: .custom) == nil)
+        #expect(box.installer.status(.custom) == .agentMissing)
+        #expect(throws: InstallerError.agentNotFound(.custom)) { try box.installer.install(.custom) }
+        #expect(!AgentKind.hooked.contains(.custom))
     }
 
     @Test func unparsableConfigIsNeverOverwritten() throws {

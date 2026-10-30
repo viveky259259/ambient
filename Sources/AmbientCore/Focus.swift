@@ -58,7 +58,10 @@ public enum FocusPlanner {
         }
 
         let hints = titleHints(cwd: s.cwd, userHome: userHome)
-        if !hints.isEmpty, host?.bundleId != claudeDesktop, !(host?.bundleId == codexApp && s.agent == .codex) {
+        // Cursor: prefer raising the project window in the editor before a bare activate.
+        if s.agent == .cursor, !hints.isEmpty {
+            routes.append(.window(titleHints: hints))
+        } else if !hints.isEmpty, host?.bundleId != claudeDesktop, !(host?.bundleId == codexApp && s.agent == .codex) {
             routes.append(.window(titleHints: hints))
         }
         routes.append(.activate)

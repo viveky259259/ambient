@@ -49,6 +49,9 @@ public final class SessionStore {
         let previous = existing?.activity
         if let cwd = e.cwd, !cwd.isEmpty { s.cwd = cwd }
         if let host = e.host { s.host = host }
+        // Only custom agents may carry a display override; hooked kinds keep AgentKind.displayName
+        // (so Cursor never inherits a Codex/Claude payload name).
+        if e.agent == .custom, let name = e.agentName { s.agentName = name }
         s.lastEventAt = e.timestamp
 
         if e.kind == .sessionEnded {

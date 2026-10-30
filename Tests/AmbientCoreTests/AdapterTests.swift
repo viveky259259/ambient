@@ -14,6 +14,11 @@ private func gemini(_ json: String) -> EventKind? {
     AdapterRegistry.event(agent: .gemini, payload: payload(json), eventHint: nil)?.kind
 }
 
+/// Antigravity's payloads don't name the event; the hook command passes it.
+private func antigravity(_ event: String, _ json: String) -> EventKind? {
+    AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: event)?.kind
+}
+
 @Suite struct ClaudeAdapterTests {
     @Test func sessionStart() {
         #expect(claude(#"{"session_id":"a","hook_event_name":"SessionStart","source":"startup"}"#) == .sessionStarted)
@@ -223,11 +228,196 @@ private func gemini(_ json: String) -> EventKind? {
     }
 }
 
+@Suite struct AntigravityAdapterTests {
+    @Test func sessionIsTheConversationAndProjectTheFirstWorkspace() {
+        let json = #"{"conversationId":"0b1c-22","workspacePaths":["/src/app","/src/lib"],"modelName":"gemini-3-pro"}"#
+        let event = AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: "SessionStart")
+        #expect(event?.sessionId == "0b1c-22")
+        #expect(event?.cwd == "/src/app")
+        #expect(event?.kind == .sessionStarted)
+    }
+
+    @Test func withoutAConversationThereIsNoEvent() {
+        #expect(antigravity("SessionStart", #"{"session_id":"a"}"#) == nil)
+    }
+
+    @Test func onlyTheFirstModelCallOfATurnIsAPrompt() {
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":0,"initialNumSteps":4}"#) == .promptSubmitted)
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":3,"initialNumSteps":4}"#) == nil)
+        #expect(antigravity("PostInvocation", #"{"conversationId":"a","invocationNum":0}"#) == nil)
+    }
+
+    @Test func tools() {
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{"CommandLine":"npm test","Cwd":"/src/app"}},"stepIdx":2}"#)
+                == .toolStarted(name: "run_command", detail: "npm test"))
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"view_file","args":{"AbsolutePath":"/src/app/main.swift"}}}"#)
+                == .toolStarted(name: "view_file", detail: "main.swift"))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":""}"#)
+                == .toolFinished(name: "run_command", failed: false))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":"exit status 1"}"#)
+                == .toolFinished(name: "run_command", failed: true))
+    }
+
+    @Test func stop() {
+        #expect(antigravity("Stop", #"{"conversationId":"a","executionNum":1,"terminationReason":"model_stop","fullyIdle":true}"#)
+                == .turnCompleted(summary: nil))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"error","error":"Quota exceeded"}"#)
+                == .turnFailed(message: "Quota exceeded"))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"max_steps_exceeded"}"#)
+                == .turnFailed(message: "Reached its step limit"))
+    }
+
+    /// Payloads as agy 1.4.1 sent them, trimmed of paths.
+    @Test func realAgyPayloads() {
+        let tool = #"{"artifactDirectoryPath":"/b","conversationId":"63d70cb9","modelName":"gemini-3.8-flash-medium","stepIdx":2,"toolCall":{"args":{"AbsolutePath":"/w/notes.txt","toolAction":"Reading notes.txt","toolSummary":"Read notes file"},"name":"view_file"},"transcriptPath":"/t","workspacePaths":["/w"]}"#
+        #expect(antigravity("PreToolUse", tool) == .toolStarted(name: "view_file", detail: "notes.txt"))
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"args":{"toolAction":"Searching the web"},"name":"search_web"}}"#)
+                == .toolStarted(name: "search_web", detail: "Searching the web"))
+        let stop = #"{"conversationId":"d5ffbc7b","error":"","executionNum":0,"fullyIdle":true,"terminationReason":"NO_TOOL_CALL","workspacePaths":["/w"]}"#
+        #expect(antigravity("Stop", stop) == .turnCompleted(summary: nil))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"MAX_STEPS_EXCEEDED"}"#) == .turnFailed(message: "Reached its step limit"))
+    }
+
+    @Test func repliesWithADecisionWhereOneIsRequired() {
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PreToolUse") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "Stop") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PostToolUse") == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .gemini, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .claude, event: "Stop") == nil)
+    }
+}
+
+private func event(_ agent: AgentKind, _ json: String, hint: String? = nil) -> AgentEvent? {
+    AdapterRegistry.event(agent: agent, payload: payload(json), eventHint: hint)
+}
+
+@Suite struct CursorAdapterTests {
+    @Test func sessionIsTheConversationAndProjectTheFirstWorkspaceRoot() {
+        let e = event(.cursor, #"{"conversation_id":"c-1","generation_id":"g","hook_event_name":"beforeSubmitPrompt","workspace_roots":["/src/web"],"prompt":"secret"}"#)
+        #expect(e?.sessionId == "c-1")
+        #expect(e?.cwd == "/src/web")
+        #expect(e?.kind == .promptSubmitted)
+    }
+
+    @Test func toolsShowAsWorkingWhenTheyFinish() {
+        // After-the-fact hooks map to toolStarted so the island keeps showing the last tool until stop.
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUse","tool_name":"Shell","tool_input":{"command":"ls"}}"#)?.kind
+                == .toolStarted(name: "Shell", detail: "ls"))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterShellExecution","command":"npm test"}"#)?.kind
+                == .toolStarted(name: "npm test", detail: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterFileEdit","file_path":"/src/web/App.swift"}"#)?.kind
+                == .toolStarted(name: "Edit", detail: "App.swift"))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUseFailure","tool_name":"Shell","failure_type":"error"}"#)?.kind
+                == .toolFinished(name: "Shell", failed: true))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"subagentStart"}"#)?.kind == .subagentStarted)
+    }
+
+    @Test func stopAndSession() {
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"stop","status":"completed","loop_count":0}"#)?.kind == .turnCompleted(summary: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"stop","status":"error"}"#)?.kind == .turnFailed(message: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","session_id":"c","hook_event_name":"sessionStart"}"#)?.kind == .sessionStarted)
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"sessionEnd","reason":"window_close"}"#)?.kind == .sessionEnded)
+    }
+
+    @Test func neverRepliesSoItNeverDecidesAnything() {
+        #expect(AdapterRegistry.reply(agent: .cursor, event: "beforeSubmitPrompt") == nil)
+    }
+
+    @Test func payloadAgentFieldDoesNotRelabelCursorAsCodex() {
+        // Cursor must not share CustomAdapter / ClaudeAdapter naming: ignore payload "agent".
+        let e = event(.cursor, #"{"conversation_id":"c","hook_event_name":"beforeSubmitPrompt","agent":"Codex","model":"codex"}"#)
+        #expect(e?.agent == .cursor)
+        #expect(e?.agentName == nil)
+        var session = Session(agent: .cursor, sessionId: "c", at: Date())
+        session.agentName = e?.agentName
+        #expect(session.agentLabel == "Cursor")
+    }
+}
+
+@Suite struct CopilotAdapterTests {
+    @Test func toolArgsMayBeAJSONString() {
+        let kind = event(.copilot, #"{"sessionId":"s","timestamp":1704614600000,"cwd":"/src/app","toolName":"bash","toolArgs":"{\"command\":\"npm test\"}"}"#, hint: "preToolUse")?.kind
+        #expect(kind == .toolStarted(name: "bash", detail: "npm test"))
+        let object = event(.copilot, #"{"sessionId":"s","toolName":"view","toolArgs":{"path":"/src/app/main.ts"}}"#, hint: "preToolUse")?.kind
+        #expect(object == .toolStarted(name: "view", detail: "main.ts"))
+    }
+
+    @Test func lifecycle() {
+        let start = event(.copilot, #"{"sessionId":"s","cwd":"/src/app","source":"new"}"#, hint: "sessionStart")
+        #expect(start?.kind == .sessionStarted)
+        #expect(start?.cwd == "/src/app")
+        #expect(event(.copilot, #"{"sessionId":"s","prompt":"secret"}"#, hint: "userPromptSubmitted")?.kind == .promptSubmitted)
+        #expect(event(.copilot, #"{"sessionId":"s","stopReason":"end_turn"}"#, hint: "agentStop")?.kind == .turnCompleted(summary: nil))
+        #expect(event(.copilot, #"{"sessionId":"s","toolName":"bash","error":"exit 1"}"#, hint: "postToolUseFailure")?.kind
+                == .toolFinished(name: "bash", failed: true))
+        #expect(event(.copilot, #"{"sessionId":"s","reason":"user_exit"}"#, hint: "sessionEnd")?.kind == .sessionEnded)
+    }
+
+    @Test func permissionPromptsNeedYouAndIdleRemindersDont() {
+        // The payload names the event in PascalCase; the command passes camelCase.
+        #expect(event(.copilot, #"{"sessionId":"s","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Allow bash?"}"#, hint: "notification")?.kind
+                == .needsInput(reason: "permission", message: "Allow bash?"))
+        #expect(event(.copilot, #"{"sessionId":"s","hook_event_name":"Notification","notification_type":"agent_idle","message":"Idle"}"#, hint: "notification") == nil)
+    }
+
+    @Test func onlyUnrecoverableErrorsFailTheTurn() {
+        #expect(event(.copilot, #"{"sessionId":"s","error":{"message":"Rate limited","name":"E"},"recoverable":false}"#, hint: "errorOccurred")?.kind
+                == .turnFailed(message: "Rate limited"))
+        #expect(event(.copilot, #"{"sessionId":"s","error":{"message":"Retrying"},"recoverable":true}"#, hint: "errorOccurred")?.kind
+                == .notice(message: "Retrying"))
+    }
+}
+
+@Suite struct OpenCodeAdapterTests {
+    @Test func itsPluginSpeaksClaudesFormat() {
+        let e = event(.opencode, #"{"session_id":"ses_1","hook_event_name":"PreToolUse","cwd":"/src/app","tool_name":"bash","tool_input":{"command":"bun test"}}"#)
+        #expect(e?.agent == .opencode)
+        #expect(e?.kind == .toolStarted(name: "bash", detail: "bun test"))
+    }
+}
+
+@Suite struct CustomAdapterTests {
+    @Test func everyEvent() {
+        func kind(_ json: String) -> EventKind? { event(.custom, json)?.kind }
+        #expect(kind(#"{"session_id":"b","event":"start"}"#) == .sessionStarted)
+        #expect(kind(#"{"session_id":"b","event":"working"}"#) == .promptSubmitted)
+        #expect(kind(#"{"session_id":"b","event":"working","tool":"pytest","detail":"tests/  unit"}"#) == .toolStarted(name: "pytest", detail: "tests/ unit"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","message":"Apply the edit?"}"#) == .needsInput(reason: "question", message: "Apply the edit?"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"permission"}"#) == .needsInput(reason: "permission", message: nil))
+        #expect(kind(#"{"session_id":"b","event":"done","message":"Shipped"}"#) == .turnCompleted(summary: "Shipped"))
+        #expect(kind(#"{"session_id":"b","event":"error","message":"Build failed"}"#) == .turnFailed(message: "Build failed"))
+        #expect(kind(#"{"session_id":"b","event":"end"}"#) == .sessionEnded)
+        #expect(kind(#"{"session_id":"b","event":"idle"}"#) == .sessionEnded)
+        #expect(kind(#"{"session_id":"b","event":"dance"}"#) == nil)
+        #expect(kind(#"{"event":"done"}"#) == nil)
+    }
+
+    @Test func theAgentNamesItselfBriefly() {
+        let e = event(.custom, #"{"session_id":"b","event":"working","agent":"Aider","cwd":"/src/cli"}"#)
+        #expect(e?.agentName == "Aider")
+        #expect(e?.cwd == "/src/cli")
+        let long = event(.custom, #"{"session_id":"b","event":"working","agent":"\#(String(repeating: "x", count: 60))"}"#)
+        #expect((long?.agentName?.count ?? 0) <= 24)
+    }
+
+    @Test func theEventCanComeFromTheCommandInstead() {
+        #expect(event(.custom, #"{"session_id":"b"}"#, hint: "done")?.kind == .turnCompleted(summary: nil))
+    }
+
+    @Test func longSessionIdsAreCut() {
+        let e = event(.custom, #"{"session_id":"\#(String(repeating: "s", count: 500))","event":"start"}"#)
+        #expect((e?.sessionId.count ?? 0) <= 128)
+    }
+}
+
 @Suite struct ToolNameTests {
     @Test func displayNames() {
         #expect(ToolNames.display("Bash") == "Bash")
         #expect(ToolNames.display("mcp__github__create_pull_request") == "github · create_pull_request")
         #expect(ToolNames.display("run_shell_command") == "Shell")
+        #expect(ToolNames.display("replace_file_content") == "Edit")
+        #expect(ToolNames.display("bash") == "Shell")
         #expect(ToolNames.display("apply_patch") == "Patch")
         #expect(ToolNames.display("replace") == "Edit")
     }

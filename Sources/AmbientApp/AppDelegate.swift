@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let paths = AmbientPaths.current()
     private let prefs = Preferences.shared
     private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile, dayURL: paths.dayFile,
+                                      tasksURL: paths.tasksFile,
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
     private var island: IslandController?
@@ -23,9 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
     private lazy var shortcuts = ShortcutCenter(prefs: prefs)
+    private lazy var nowPlaying = NowPlaying(speech: speech)
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
+    private var boardWindow: NSWindow?
     private var demoTimers: [Timer] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -61,7 +64,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts,
                                     onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
-                                    onDemo: { [weak self] in self?.playDemo() })
+                                    onDemo: { [weak self] in self?.playDemo() },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
         menuBar?.start()
 
         dockGlow = DockGlow(model: model, prefs: prefs)
@@ -87,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.speakFrontmostSelection()
         }
         shortcuts.start()
+        nowPlaying.start()
         showShortcutHintOnce()
         voicePack.onRemove = { [weak self] in
             self?.speech.stop()
@@ -123,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func showSetup() {
         if setupWindow == nil, let notifier, let wallpaper {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
+            let view = SettingsView(setup: setup, prefs: prefs, model: model, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
@@ -131,7 +136,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                         self?.prefs.setupCompleted = true
                                         self?.setupWindow?.close()
                                         self?.askForNotificationsOnce()
-                                    })
+                                    },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
             let hosting = NSHostingController(rootView: view)
             hosting.sizingOptions = [.minSize, .maxSize]
             let window = NSWindow(contentViewController: hosting)
@@ -157,6 +163,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         setupModel?.refresh()
         setupWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+    }
+
+    // MARK: - Board window
+
+    /// Wider dedicated Board — menu Task Board… and Settings › Board › Open Board.
+    func showBoard() {
+        if boardWindow == nil {
+            let view = BoardWindowView(model: model, prefs: prefs)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "Task Board"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isReleasedWhenClosed = false
+            window.setContentSize(NSSize(width: 980, height: 620))
+            window.center()
+            boardWindow = window
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                if self?.setupWindow?.isVisible != true {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
+        }
+        NSApp.setActivationPolicy(.regular)
+        boardWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
 
@@ -262,7 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Repairs hooks the user installed before, e.g. after an update changed the events.
     private func healHooks() {
         let installer = HookInstaller(paths: paths)
-        for agent in AgentKind.allCases where installer.status(agent) == .partial {
+        for agent in AgentKind.hooked where installer.status(agent) == .partial {
             do {
                 try installer.install(agent)
                 log.notice("Updated \(agent.rawValue) hooks")

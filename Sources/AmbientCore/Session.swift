@@ -47,6 +47,8 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var acknowledged: Bool
     /// The name the session has in its agent's own UI (Claude chat title, Codex thread name), when known.
     public var title: String?
+    /// A custom agent's own name, e.g. "Aider".
+    public var agentName: String?
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
 
@@ -64,6 +66,15 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
 
     public var project: String? {
         AgentEvent(agent: agent, sessionId: sessionId, cwd: cwd, kind: .sessionStarted).project
+    }
+
+    /// What to call the agent on the island, menu bar, Dock-adjacent surfaces and wallpaper.
+    /// Hooked kinds always use `AgentKind.displayName` so a leaked payload field (or a shared
+    /// Claude/Codex adapter mistake) can never relabel Cursor as "Codex". Only `.custom` may
+    /// override the label via `agentName` (e.g. "Aider").
+    public var agentLabel: String {
+        if agent == .custom { return agentName ?? agent.displayName }
+        return agent.displayName
     }
 
     public var mood: Mood {

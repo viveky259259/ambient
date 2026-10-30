@@ -70,7 +70,7 @@ struct WelcomePane: View {
 
     /// Agents installed on this Mac.
     private var found: [AgentKind] {
-        AgentKind.allCases.filter { (setup.agentStates[$0] ?? .notInstalled) != .agentMissing }
+        AgentKind.hooked.filter { (setup.agentStates[$0] ?? .notInstalled) != .agentMissing }
     }
 
     private var connected: [AgentKind] { found.filter { setup.agentStates[$0] == .installed } }

@@ -13,9 +13,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private var cancellables: Set<AnyCancellable> = []
     private let onSettings: () -> Void
     private let onDemo: () -> Void
+    private let onOpenBoard: () -> Void
 
     init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter,
-         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void) {
+         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void,
+         onOpenBoard: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
         self.speech = speech
@@ -23,6 +25,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
+        self.onOpenBoard = onOpenBoard
         super.init()
     }
 
@@ -47,6 +50,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         switch speech.state {
         case .preparing, .speaking:
             button.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Ambient is reading aloud")
+            button.title = ""
+            return
+        case .paused:
+            button.image = NSImage(systemSymbolName: "pause.circle", accessibilityDescription: "Ambient's reading is paused")
             button.title = ""
             return
         case .failed:
@@ -100,7 +107,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         switch speech.state {
-        case .preparing, .speaking:
+        case .preparing, .speaking, .paused:
+            if speech.state == .paused {
+                menu.addItem(item("Continue Speaking", #selector(resumeSpeaking)))
+            } else if speech.state == .speaking {
+                menu.addItem(item("Pause Speaking", #selector(pauseSpeaking)))
+            }
             menu.addItem(item("Stop Speaking", #selector(stopSpeaking)))
             menu.addItem(.separator())
         case .failed(let message, let offerMacVoice):
@@ -120,7 +132,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let row = NSMenuItem(title: "", action: #selector(openSession(_:)), keyEquivalent: "")
             row.target = self
             row.representedObject = s.id
-            let meta = [s.agent.displayName, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
+            let meta = [s.agentLabel, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
             let text = NSMutableAttributedString(string: Trim.truncate(Describe.title(s), max: 48), attributes: [.font: NSFont.menuFont(ofSize: 13)])
             text.append(NSAttributedString(string: "  \(meta)\n",
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
@@ -156,6 +168,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
         menu.addItem(item("Play Demo", #selector(demo)))
+        let boardCount = model.tasks.filter { $0.status == .blocked || $0.status == .inProgress }.count
+        let boardTitle = boardCount == 0 ? "Task Board…" : "Task Board (\(boardCount))…"
+        menu.addItem(item(boardTitle, #selector(openBoard)))
         menu.addItem(.separator())
         menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
         menu.addItem(item("Settings…", #selector(settings), key: ","))
@@ -219,10 +234,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func quietFor(_ sender: NSMenuItem) { model.setQuiet(for: sender.representedObject as? TimeInterval) }
     @objc private func togglePet() { prefs.petEnabled.toggle() }
     @objc private func demo() { onDemo() }
+    @objc private func openBoard() { onOpenBoard() }
     @objc private func suggestFeature() { NSWorkspace.shared.open(FeatureRequests.url()) }
     @objc private func settings() { onSettings() }
     @objc private func quit() { NSApp.terminate(nil) }
     @objc private func stopSpeaking() { speech.stop() }
+    @objc private func pauseSpeaking() { speech.pause(from: "menu bar") }
+    @objc private func resumeSpeaking() { speech.resume(from: "menu bar") }
     @objc private func useMacVoice() { speech.useMacVoice() }
     @objc private func readSelection() { onReadSelection() }
 }

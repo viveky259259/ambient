@@ -26,6 +26,7 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.presentation)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.sessions.count)
+        .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.showingAll)
         .environment(\.colorScheme, .dark)
     }
 
@@ -45,7 +46,8 @@ struct IslandView: View {
             VStack(spacing: 0) {
                 Color.clear.frame(height: model.geometry.notchHeight)
                 SpeechRow(state: model.speech, level: model.speechLevel,
-                          onStop: model.onStopSpeech, onUseMacVoice: model.onUseMacVoice)
+                          onStop: model.onStopSpeech, onPause: model.onPauseSpeech,
+                          onResume: model.onResumeSpeech, onUseMacVoice: model.onUseMacVoice)
             }
             .transition(.opacity)
         case .expanded:
@@ -111,9 +113,10 @@ private struct WingLabel: View {
 
 struct AgentTag: View {
     let agent: AgentKind
+    let label: String
 
     var body: some View {
-        Text(agent.displayName.uppercased())
+        Text(label.uppercased())
             .font(.system(size: 8.5, weight: .bold, design: .rounded))
             .tracking(0.6)
             .foregroundStyle(Palette.agent(agent).color)
@@ -136,7 +139,7 @@ private struct BloomCard: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    AgentTag(agent: session.agent)
+                    AgentTag(agent: session.agent, label: session.agentLabel)
                 }
                 Text(Describe.activity(session.activity))
                     .font(.system(size: 11.5))
@@ -173,14 +176,21 @@ private struct ExpandedList: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(maxWidth: .infinity, minHeight: 52)
             }
-            ForEach(model.listed) { s in
-                SessionRow(session: s) { model.onOpen(s) }
+            if model.showingAll {
+                ScrollView(.vertical) { rows }
+                    .scrollIndicators(.never)
+            } else {
+                rows
             }
             Spacer(minLength: 0)
             HStack(spacing: 14) {
                 FooterButton(title: model.quiet ? "Resume alerts" : "Quiet 1h",
                              symbol: model.quiet ? "bell" : "bell.slash", action: model.onToggleQuiet)
                 FooterButton(title: "Mark all seen", symbol: "checkmark.circle", action: model.onAcknowledgeAll)
+                if model.hasMore {
+                    FooterButton(title: model.showingAll ? "Show fewer" : "View all \(model.sessions.count)",
+                                 symbol: model.showingAll ? "chevron.up" : "list.bullet", action: model.onToggleShowAll)
+                }
                 Spacer()
                 FooterButton(title: "Settings", symbol: "gearshape", action: model.onSettings)
             }
@@ -188,6 +198,14 @@ private struct ExpandedList: View {
             .frame(height: 40)
         }
         .padding(.top, 8)
+    }
+
+    private var rows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(model.listed) { s in
+                SessionRow(session: s) { model.onOpen(s) }
+            }
+        }
     }
 }
 
@@ -203,7 +221,7 @@ private struct SessionRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(Describe.title(session)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
-                        AgentTag(agent: session.agent)
+                        AgentTag(agent: session.agent, label: session.agentLabel)
                         if session.subagents > 0 {
                             Text("+\(session.subagents) agents").font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                         }

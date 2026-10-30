@@ -64,6 +64,10 @@ struct WallpaperPane: View {
                         }
                     }
                 }
+                SettingsSection(header: "Task board",
+                                footer: "Soft title and status cues on the desk scene — calm, glanceable, not Kanban columns. Off by default. Hidden when nothing is blocked or in progress.") {
+                    SettingsToggleRow(title: "Show task board on wallpaper", isOn: $prefs.wallpaperShowBoard)
+                }
             }
             .disabled(!prefs.wallpaperEnabled)
         }

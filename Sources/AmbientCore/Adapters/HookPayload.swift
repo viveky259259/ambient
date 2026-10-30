@@ -22,8 +22,18 @@ public struct HookPayload: @unchecked Sendable {
         }
     }
 
+    /// The strings in an array, skipping anything else.
+    public func strings(_ key: String) -> [String] {
+        (raw[key] as? [Any])?.compactMap { $0 as? String } ?? []
+    }
+
     public func object(_ key: String) -> HookPayload? {
         (raw[key] as? [String: Any]).map(HookPayload.init)
+    }
+
+    /// An object, or a string holding one as JSON.
+    public func objectOrJSON(_ key: String) -> HookPayload? {
+        object(key) ?? string(key).flatMap { HookPayload(json: Data($0.utf8)) }
     }
 
     /// True when the key holds a value other than null.

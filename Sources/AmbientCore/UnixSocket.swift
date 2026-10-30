@@ -160,6 +160,9 @@ public final class UnixSocketServer: @unchecked Sendable {
 
     private static func serve(_ fd: Int32, maxMessageSize: Int, handler: Handler) {
         defer { close(fd) }
+        // Accepted sockets inherit the listener's O_NONBLOCK on macOS; block, bounded by the timeouts,
+        // so a reply larger than the send buffer isn't cut off and a slow client isn't dropped.
+        _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK)
         noSigPipe(fd)
         setTimeout(fd, SO_RCVTIMEO, 1)
         setTimeout(fd, SO_SNDTIMEO, 1)

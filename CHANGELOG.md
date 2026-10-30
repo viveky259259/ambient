@@ -2,14 +2,52 @@
 
 ## Unreleased
 
+- **Fixed**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
+  sessions finished with JSON like `{"suggestion":"…"}`.
+
+## 0.7.0 — 2026-10-23
+
+- **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of
+  agent work — backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day
+  sessions; needs-you → blocked). Optional **local LLM** summaries via the local-agent MCP gateway
+  (`http://127.0.0.1:5051/mcp` only — non-loopback URLs refused; default model
+  `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit` on `/Volumes/Models`). LLM options collapse by default in Settings.
+  Transcript reading is opt-in; cloud-tagged models are blocked; heuristics remain the fallback when the gateway or
+  SSD is unavailable. Optional **wallpaper board cues** (Settings › Wallpaper / Board; off by default) draw soft
+  title + status chips on the living wallpaper when tasks are blocked or in progress. Persist to
+  `~/.ambient/tasks.json`. Optional one-shot `ambient task skill-bootstrap` writes a few-shot skill pack to
+  `~/.ambient/task-skill.json` (Anthropic from Keychain only; never the live path). CLI: `ambient tasks`,
+  `ambient task upsert`, `ambient task open`, `ambient task skill-bootstrap`, `ambient task skill-status`.
+- **Cursor (first-class)**: no longer beta. Installs after-the-fact tool hooks (`afterShellExecution`,
+  `afterFileEdit`, `afterMCPExecution`) so the island shows tools while Cursor works; still never uses
+  permission-style hooks. Click-to-return prefers the Cursor editor window for the project.
+- **More agents (beta)**: connect **GitHub Copilot CLI** and **OpenCode** in Settings › Agents or with
+  `ambient install`, and `ambient doctor` checks each one. They're marked beta until they've run against the
+  real agents; Settings › Agents and the README say what each one shows.
+- **Antigravity**: checked against a real `agy` 1.4 session: sessions, prompts, tools and finished turns all arrive.
+  Turns that end with reasons spelled in capitals (as agy sends them) are now read correctly. Copilot CLI gets a hook file of Ambient's own
+  (`~/.copilot/hooks/ambient.json`), OpenCode a small plugin (`~/.config/opencode/plugins/ambient.js`), and both
+  show *needs you* for permission prompts. Cursor's hooks go next to yours in `~/.cursor/hooks.json`; Ambient uses
+  only hooks that can't block or approve anything, so Cursor sessions show tools as they finish and never show
+  *needs you*.
+- **Any other agent**: `ambient emit <start|working|waiting|done|error|end> --session ID [--agent NAME]` and
+  `ambient hook custom` (one JSON object per event) let any agent or script drive the island, with its own name,
+  a return address to the terminal it runs in, and a session that ends with its process. The README documents
+  the fields, with an example for Aider.
 - **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌥⎋ (Option-Escape; change it in Settings › Voice), or choose Services › Speak
   with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
   blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
   offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
-  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with a stop button, and
-  say why if it can't. Change it any time in Settings › Voice.
-- **Fixed**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
-  sessions finished with JSON like `{"suggestion":"…"}`.
+  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with pause, continue
+  and stop (the keyboard's ⏯ key and AirPods or headphones work too), and say why if it can't. Change it any time
+  in Settings › Voice.
+- **Antigravity**: connect Google Antigravity in Settings › Agents (or `ambient install antigravity`). Ambient adds a
+  hook set named `ambient` to `~/.gemini/config/hooks.json` and follows each conversation through prompts, tool calls
+  and finished or failed turns. Antigravity has no permission hook, so its sessions never show *needs you*.
+- **View all**: with more than five sessions, the hovered island offers *View all*, which lists every session and
+  scrolls past ten.
+- **Fix**: `ambient status` and `ambient open` no longer say Ambient isn't running when it tracks many sessions. The
+  app cut off any reply longer than 8 KB.
 
 ## 0.6.0 — 2026-10-10
 
