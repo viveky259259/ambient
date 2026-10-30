@@ -14,6 +14,16 @@
   can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it
   can't read (*Show File*), and a terminal session that's been busy for two minutes without a single hook reaching
   Ambient (for Codex, usually hooks awaiting `/hooks` approval). `ambient doctor` reports removed hooks too.
+- **Task board: model path.** Point the board's local LLM at a model folder or `.gguf` file instead of a gateway
+  model id (Settings › Board › *Model & gateway options* › **Choose…**, or `ambient task model PATH`). Ambient
+  reads the files to pick the runtime: a path local-agent already serves runs through the gateway by its id; other
+  MLX / Hugging Face folders run directly with mlx-lm, vision checkpoints with mlx-vlm, Hugging Face cache folders
+  from their pinned snapshot, and GGUF with llama.cpp. Speech, image and video models are refused, and so are folders that declare their own Python code (`model_file`). Direct runs are
+  offline, one at a time, keep the prompt off the command line, stop if a model tries to load custom code, and turn off
+  reasoning models' thinking so the reply is the JSON. Replies that still carry `<think>` blocks are cleaned before parsing. Optional **Python for MLX**;
+  otherwise Ambient reuses local-agent's MLX Python or finds one.
+- **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
+  change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
 - **Fix**: the task board kept re-rendering every card on every agent event, even after you closed it, which could
   take a whole CPU core with a long-lived board. Closing it now frees it, and only the cards on screen are drawn:
   with 1,626 tasks, 97% of a core and 590 MB became 1.6% and 90 MB.

@@ -23,6 +23,16 @@ import Testing
         #expect(s.title == "Approve patch")
     }
 
+    @Test func dropsReasoningBeforeTheAnswer() {
+        let closed = "<think>Status should be blocked.</think>\n{\"title\":\"Approve tests\",\"status\":\"blocked\"}"
+        #expect(TaskSummarizer.parse(closed) == TaskSemantics(title: "Approve tests", status: .blocked))
+        // The template opened <think> in the prompt, so only the closing tag comes back.
+        let openedByTemplate = "Weighing it up…\n</think>\n\n{\"title\":\"Ship it\",\"status\":\"done\"}"
+        #expect(TaskSummarizer.parse(openedByTemplate) == TaskSemantics(title: "Ship it", status: .done))
+        // Cut off mid-thought: no answer, rather than the reasoning as a summary.
+        #expect(TaskSummarizer.parse("<think>1. Analyze the request") == TaskSemantics())
+    }
+
     @Test func fallsBackToPlainTextSummary() {
         let s = TaskSummarizer.parse("Just a paragraph with no JSON.")
         #expect(s.title == nil)
