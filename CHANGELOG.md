@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Hooks that keep working**: Ambient re-checks each connected agent's hooks at launch, every ten minutes, and as
+  soon as the agent updates or its settings change, and rewrites out-of-date hooks with the usual backup. What it
+  can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it
+  can't read (*Show File*), and a terminal session that's been busy for two minutes without a single hook reaching
+  Ambient (for Codex, usually hooks awaiting `/hooks` approval). `ambient doctor` reports removed hooks too.
+
 ## 0.7.0 — 2026-10-23
 
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of

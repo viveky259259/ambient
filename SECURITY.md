@@ -3,6 +3,17 @@
 Ambient runs locally. Its attack surface is the Unix socket at `~/.ambient/ambient.sock` (mode 0600 inside a 0700
 directory) and the agent config files it edits.
 
+## What Ambient reads on your Mac
+
+Besides agent hook events and the config files it edits, Ambient reads two things to keep hooks working, and
+keeps them on your Mac:
+
+- **Agent processes**, once a minute: for agent sessions attached to a terminal (Claude Code, Codex, `agy`), the
+  process id, executable path, start time, CPU time and whether a terminal is attached, to spot a busy session
+  whose hooks never reached Ambient. Never arguments, environment or output.
+- **Agent executables**: the path, size and modification date of each agent's executable, saved with the agents
+  you connected in `~/.ambient/agents.json`, to notice when an agent updates.
+
 ## Network
 
 Ambient makes network requests only for reading aloud, and only when you choose to:

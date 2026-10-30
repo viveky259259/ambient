@@ -31,6 +31,9 @@ public enum AgentKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// Dictionaries keyed by agent encode as JSON objects ("claude": …) rather than key-value arrays.
+extension AgentKind: CodingKeyRepresentable {}
+
 /// What happened in an agent session, normalized across agents.
 public enum EventKind: Codable, Equatable, Sendable {
     case sessionStarted
