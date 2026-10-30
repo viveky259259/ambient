@@ -13,13 +13,14 @@ struct Commands {
         case "install": return install(rest)
         case "uninstall": return uninstall(rest)
         case "status": return status(rest)
-        case "doctor": return doctor()
+        case "doctor": return doctor(rest)
         case "emit": return emit(rest)
         case "demo": return demo()
         case "ack": return ack()
         case "open": return open(rest)
         case "tasks": return tasks(rest)
         case "task": return task(rest)
+        case "remote": return remote(rest)
         case "link": return link() ? 0 : 1
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
@@ -47,7 +48,13 @@ struct Commands {
           ambient task open ID                                    Jump to a task's linked session
           ambient task skill-bootstrap                            Once: learn a local skill pack via Anthropic (Keychain), then local LLM uses it
           ambient task skill-status                               Show whether ~/.ambient/task-skill.json is present
-          ambient doctor                                          Check the app, the hooks and the connection
+          ambient remote add NAME [--host HOST] [--label TEXT] [--redaction metadata|standard|full]
+                 [--agents claude,codex] [--accept-new-identity] [-- TRANSPORT COMMAND...]
+                                                                  Follow agents on another machine over your own ssh
+          ambient remote remove NAME [--uninstall]                Stop following it; --uninstall also clears the machine
+          ambient remote purge NAME                               Delete everything from it on this Mac
+          ambient remote list                                     Show paired machines
+          ambient doctor [--remote NAME]                          Check the app, the hooks and the connection, or one machine
           ambient emit <working|waiting|done|error|idle>          Send a demo event
                  [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
           ambient emit <start|working|waiting|done|error|end> --session ID
@@ -182,7 +189,8 @@ struct Commands {
             let clock = Describe.clock(s, now: now) ?? ""
             let title = Trim.truncate(Describe.title(s), max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
             let agent = s.agent.rawValue.padding(toLength: 11, withPad: " ", startingAt: 0)
-            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(clock))")
+            let machine = Describe.machine(s).map { "\(out.dim("on " + $0))  " } ?? ""
+            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(machine)\(Describe.status(s))  \(out.dim(clock))")
         }
         return 0
     }
@@ -336,7 +344,14 @@ struct Commands {
 
     // MARK: - Doctor
 
-    private func doctor() -> Int32 {
+    private func doctor(_ args: [String]) -> Int32 {
+        if args.first == "--remote" {
+            guard args.count == 2 else {
+                out.error("Usage: ambient doctor --remote NAME")
+                return 64
+            }
+            return doctorRemote(args[1])
+        }
         var problems = 0
         print(out.bold("Ambient doctor"))
 
@@ -392,6 +407,180 @@ struct Commands {
         }
 
         print(problems == 0 ? out.dim("Everything looks good.") : out.dim("\(problems) problem\(problems == 1 ? "" : "s") found."))
+        return problems == 0 ? 0 : 1
+    }
+
+    // MARK: - Remote
+
+    private func remote(_ args: [String]) -> Int32 {
+        guard let sub = args.first else {
+            out.error("Usage: ambient remote add|remove|purge|list")
+            return 64
+        }
+        let rest = Array(args.dropFirst())
+        switch sub {
+        case "add": return remoteAdd(rest)
+        case "remove": return remoteRemove(rest)
+        case "purge": return remotePurge(rest)
+        case "list": return remoteList()
+        default:
+            out.error("Unknown remote command '\(sub)'. Use add, remove, purge or list.")
+            return 64
+        }
+    }
+
+    private func machines() -> [Machine] { MachineFile.load(from: paths.machinesFile) }
+
+    private func remoteAdd(_ args: [String]) -> Int32 {
+        let split = args.firstIndex(of: "--")
+        let own = split.map { Array(args[..<$0]) } ?? args
+        let command = split.map { Array(args[($0 + 1)...]) } ?? []
+        guard let name = own.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [--agents claude,codex] [-- TRANSPORT...]")
+            return 64
+        }
+        guard Machine.isValidID(name) else {
+            out.error(RemotePairing.Failure.invalidID(name).description)
+            return 64
+        }
+        var redaction: RemoteRedaction?
+        if let level = option("--redaction", in: own) {
+            guard let parsed = RemoteRedaction(rawValue: level) else {
+                out.error("Redaction is metadata, standard or full.")
+                return 64
+            }
+            redaction = parsed
+        }
+        guard let shimURL = RemoteShim.bundledURL(), let shim = try? RemoteShim(url: shimURL) else {
+            out.error("Can't find ambient-remote in the app. Run this from an installed Ambient.app.")
+            return 1
+        }
+        let transport = command.isEmpty ? Machine.defaultTransport(host: option("--host", in: own) ?? name) : command
+        let request = RemotePairing.Request(
+            id: name, label: option("--label", in: own), transport: transport, redaction: redaction,
+            agents: option("--agents", in: own)?.split(separator: ",").map(String.init) ?? [],
+            acceptNewIdentity: own.contains("--accept-new-identity"))
+
+        out.line("•", "Pairing \(name) over \(transport.joined(separator: " "))…")
+        var list = machines()
+        let outcome: RemotePairing.Outcome
+        do {
+            outcome = try RemotePairing.pair(request, shim: shim, existing: list.first { $0.id == name }, audit: paths.remoteAudit)
+        } catch {
+            out.error(error.description)
+            return 1
+        }
+        list.removeAll { $0.id == name }
+        list.append(outcome.machine)
+        do { try MachineFile.save(list, to: paths.machinesFile) } catch {
+            out.error("Couldn't save \(tilde(paths.machinesFile.path)): \(error.localizedDescription)")
+            return 1
+        }
+        out.success("Copied ambient-remote \(shim.version); checksum verified")
+        for line in outcome.installLines { out.note(line) }
+        out.success("Paired \(outcome.machine.label) · level \(outcome.status.hello.level.rawValue)")
+        out.note("Identity \(outcome.machine.fingerprint)")
+        if outcome.needsManualStep { out.warn("One agent's hooks need adding by hand; see above.") }
+        if outcome.status.codex == .installed {
+            out.note("Codex asks you to trust new hooks: run /hooks in Codex on that machine once.")
+        }
+        if !UnixSocketServer.isListening(paths.socket.path) { out.note("Open Ambient.app to start following it.") }
+        return 0
+    }
+
+    private func remoteRemove(_ args: [String]) -> Int32 {
+        guard let name = args.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote remove NAME [--uninstall]")
+            return 64
+        }
+        var list = machines()
+        guard let machine = list.first(where: { $0.id == name }) else {
+            out.error("No paired machine is called '\(name)'. Try `ambient remote list`.")
+            return 1
+        }
+        var failed = false
+        if args.contains("--uninstall") {
+            let result = RemoteTransport(argv: machine.transport).run(RemoteTransport.shim("uninstall"), timeout: 60)
+            if result.ok {
+                out.success("Removed the hooks, spool and shim from \(name)")
+            } else if result.status == 3 {
+                out.warn("Removed the spool and shim from \(name). It has no python3, so its hooks stay in the agent's config for you to remove by hand. They do nothing now.")
+            } else {
+                failed = true
+                out.warn("Couldn't clear \(name), so unpairing it anyway: \(result.timedOut ? "timed out" : "exit status \(result.status)")")
+            }
+        }
+        list.removeAll { $0.id == name }
+        do {
+            try MachineFile.save(list, to: paths.machinesFile)
+            try RemotePurge.removeSessions(machine: name, paths: paths)
+        } catch {
+            out.error("Couldn't update \(tilde(paths.remoteDir.path)): \(error.localizedDescription)")
+            return 1
+        }
+        paths.remoteAudit.append(.init(action: .unpaired, machine: name))
+        out.success("Removed \(name). Its sessions and cursor are gone from this Mac.")
+        return failed ? 1 : 0
+    }
+
+    private func remotePurge(_ args: [String]) -> Int32 {
+        guard let name = args.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote purge NAME")
+            return 64
+        }
+        guard Machine.isValidID(name) else {
+            out.error("'\(name)' isn't a valid machine name.")
+            return 64
+        }
+        var list = machines()
+        let wasPaired = list.contains { $0.id == name }
+        list.removeAll { $0.id == name }
+        do {
+            if wasPaired { try MachineFile.save(list, to: paths.machinesFile) }
+            try RemotePurge.scrub(machine: name, paths: paths)
+        } catch {
+            out.error("Couldn't purge \(name): \(error.localizedDescription)")
+            return 1
+        }
+        paths.remoteAudit.append(.init(action: .purged, machine: name))
+        out.success("Deleted everything from \(name) on this Mac: sessions, cursor, board tasks and today's moments.")
+        out.note("The audit log keeps that it happened, and holds no event content.")
+        return 0
+    }
+
+    private func remoteList() -> Int32 {
+        let list = machines()
+        guard !list.isEmpty else {
+            print("No paired machines. Add one with `ambient remote add NAME`.")
+            return 0
+        }
+        let cursors = StateFile.loadCursors(from: paths.stateFile)
+        for m in list {
+            let id = m.id.padding(toLength: 16, withPad: " ", startingAt: 0)
+            let seq = cursors[m.id].map { "seq \($0.seq)" } ?? "no events yet"
+            print("  \(id) \(out.dim(m.label == m.id ? "" : m.label + "  "))\(m.transport.joined(separator: " "))  \(out.dim(seq))")
+            print("  \(String(repeating: " ", count: 16)) \(out.dim(m.fingerprint))")
+        }
+        return 0
+    }
+
+    private func doctorRemote(_ name: String) -> Int32 {
+        guard let machine = machines().first(where: { $0.id == name }) else {
+            out.error("No paired machine is called '\(name)'. Try `ambient remote list`.")
+            return 1
+        }
+        print(out.bold("Ambient doctor · \(name)"))
+        let shim = RemoteShim.bundledURL().flatMap { try? RemoteShim(url: $0) }
+        let checks = RemoteDoctor.check(machine, shim: shim, cursor: StateFile.loadCursors(from: paths.stateFile)[name])
+        for check in checks {
+            switch check.level {
+            case .ok: out.success(check.text)
+            case .warn: out.warn(check.text)
+            case .fail: out.error(check.text)
+            }
+        }
+        let problems = checks.filter { $0.level == .fail }.count
+        print(problems == 0 ? out.dim("Nothing is stopping this machine.") : out.dim("\(problems) problem\(problems == 1 ? "" : "s") found."))
         return problems == 0 ? 0 : 1
     }
 

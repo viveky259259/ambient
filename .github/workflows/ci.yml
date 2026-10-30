@@ -17,6 +17,17 @@ permissions:
   contents: read
 
 jobs:
+  # The shim runs on Linux, so it's tested there: dash and mawk are what Ubuntu and Debian ship.
+  remote-shim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the other shells and awks
+        run: sudo apt-get update -q && sudo apt-get install -yq busybox gawk mawk
+      - name: Test ambient-remote
+        run: REQUIRE_ALL=1 scripts/test-remote-shim.sh
+
   build:
     runs-on: macos-15
     timeout-minutes: 30
@@ -42,6 +53,7 @@ jobs:
           test "$(echo '{}' | $CLI hook gemini)" = "{}"
           lipo -archs $CLI | grep -q x86_64
           lipo -archs $CLI | grep -q arm64
+          sh -n build/Ambient.app/Contents/Resources/ambient-remote
       - name: Site states the app's version
         run: scripts/check-site.sh
       - name: Upload app

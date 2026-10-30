@@ -155,16 +155,27 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let row = NSMenuItem(title: "", action: #selector(openSession(_:)), keyEquivalent: "")
             row.target = self
             row.representedObject = s.id
-            let meta = [s.agentLabel, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
+            let meta = [s.agentLabel, Describe.machine(s), Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
             let text = NSMutableAttributedString(string: Trim.truncate(Describe.title(s), max: 48), attributes: [.font: NSFont.menuFont(ofSize: 13)])
             text.append(NSAttributedString(string: "  \(meta)\n",
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
-            text.append(NSAttributedString(string: Trim.truncate(Describe.activity(s.activity), max: 60),
+            text.append(NSAttributedString(string: Trim.truncate(Describe.status(s), max: 60),
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
             row.attributedTitle = text
             row.image = Self.dot(s.tint.nsColor, dim: s.mood == .idle)
             if let app = HostActivator.appName(for: s.host) { row.toolTip = "Open \(app)" }
             menu.addItem(row)
+        }
+
+        if !model.remoteLinks.isEmpty {
+            menu.addItem(.separator())
+            for link in model.remoteLinks {
+                let row = NSMenuItem(title: "\(link.machine.label) · \(link.summary)", action: #selector(settings), keyEquivalent: "")
+                row.target = self
+                row.image = Self.dot(link.health == .connected ? Palette.done.nsColor : Palette.idle.nsColor, dim: false)
+                row.toolTip = link.health.detail
+                menu.addItem(row)
+            }
         }
 
         menu.addItem(.separator())

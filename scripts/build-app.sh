@@ -46,6 +46,9 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$APP/Contents/Info.plist"
 cp LICENSE "$APP/Contents/Resources/LICENSE" 2>/dev/null || true
+# Copied to remote machines over the user's own transport; sealed by the app's signature, never downloaded.
+cp Resources/ambient-remote "$APP/Contents/Resources/ambient-remote"
+chmod 755 "$APP/Contents/Resources/ambient-remote"
 
 # The icon is drawn by code; re-render only when the script changes.
 ICNS=build/AppIcon.icns

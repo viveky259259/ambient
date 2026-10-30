@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
     private lazy var hookDoctor = HookDoctor(paths: paths, model: model)
+    private var remote: RemoteCoordinator?
     private var island: IslandController?
     private var pet: PetController?
     private var notifier: Notifier?
@@ -30,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var boardWindow: NSWindow?
+    private var boardClosing: NSObjectProtocol?
     private var demoTimers: [Timer] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -52,6 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let server = EventServer(paths: paths, model: model)
         do { try server.start() } catch { log.error("Socket server failed: \(String(describing: error))") }
         self.server = server
+
+        let remote = RemoteCoordinator(paths: paths, model: model)
+        remote.start()
+        self.remote = remote
 
         let notifier = Notifier(model: model, prefs: prefs)
         notifier.start()
@@ -115,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         model.saveNow()
+        remote?.stop()
         server?.stop()
         kokoro?.shutDown()
     }
@@ -128,9 +135,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup window
 
     func showSetup() {
-        if setupWindow == nil, let notifier, let wallpaper {
+        if setupWindow == nil, let notifier, let wallpaper, let remote {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs, model: model, wallpaper: wallpaper,
+            let view = SettingsView(setup: setup, prefs: prefs, model: model, remote: remote, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
@@ -182,7 +189,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.setContentSize(NSSize(width: 980, height: 620))
             window.center()
             boardWindow = window
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            boardClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                // Let its views go: kept, they re-render every card on every agent event with nobody looking.
+                self?.boardWindow = nil
+                if let closing = self?.boardClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.boardClosing = nil
                 if self?.setupWindow?.isVisible != true {
                     NSApp.setActivationPolicy(.accessory)
                 }
