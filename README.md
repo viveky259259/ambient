@@ -107,13 +107,34 @@ finished, permission requested, turn finished or failed, compaction, subagents, 
 for OpenCode, which has no command hooks, a small plugin that does the same.
 The hook runs the bundled `ambient` command, which reads the event, reduces it to a few short fields,
 sends one line over a private Unix socket, and exits — in about 15 ms, always with success, and in the
-background for Claude Code and Codex, so it never slows your agent down. If Ambient isn't running,
+background for Claude Code and Codex, so it never slows your agent down (the one exception is the opt-in
+[permission hook](#answer-permission-prompts-from-the-island)). If Ambient isn't running,
 the event is simply dropped.
 
 The app folds events into a state per session and picks the most urgent across all of them:
 **needs you** › **error** › **done** › **working** › **idle**. A finished session stays green until you
 look at it — switch to its terminal or editor, or click it — and then settles. Sessions whose agent
 process exits disappear on their own.
+
+### Answer permission prompts from the island
+
+Off unless you turn it on in **Settings › Island**. For Claude Code and Codex, a tool request then opens a
+card at the notch with the agent, the project and what it wants to run (the command, file or host), and two
+buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds a rule.
+
+- **Ambient never answers for you.** If you don't answer within the wait you choose (20 seconds by default), the
+  prompt goes back to the agent, which asks you as usual. The same happens when the agent's app is already in
+  front, when the island is off, and when the agent moves on (you answered in its own window, say).
+- **The agent waits too.** In a terminal, Claude Code and Codex show their own prompt only after the island hands
+  it back, so a prompt you ignore arrives up to that many seconds later. In Claude's desktop app and editors,
+  the island and the app's own dialog race, and whichever you answer first wins.
+- **One at a time, none lost.** Several prompts queue in order, each with its own time limit, and the card says
+  how many are waiting.
+- **No stray clicks.** The buttons ignore clicks for the first moment the card is on screen, so a card that
+  appears under your pointer can't be approved by a click meant for something else.
+- Only this hook ever makes an agent wait: with the setting on, Ambient installs the permission hook in the
+  foreground. Codex asks you to approve the changed hook once with `/hooks`. Every other hook stays in the
+  background. Agents without a permission hook that takes an answer (Gemini CLI, Antigravity) aren't affected.
 
 ### Click to return
 
@@ -142,7 +163,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, and `permissions.json` with the island's permission setting |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file

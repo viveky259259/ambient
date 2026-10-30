@@ -7,7 +7,7 @@ struct IslandView: View {
     private var size: CGSize { model.currentSize }
     private var expandedLike: Bool {
         switch model.presentation {
-        case .bloom, .expanded, .speech: true
+        case .bloom, .expanded, .speech, .permission: true
         default: false
         }
     }
@@ -48,6 +48,16 @@ struct IslandView: View {
                 SpeechRow(state: model.speech, level: model.speechLevel,
                           onStop: model.onStopSpeech, onPause: model.onPauseSpeech,
                           onResume: model.onResumeSpeech, onUseMacVoice: model.onUseMacVoice)
+            }
+            .transition(.opacity)
+        case .permission:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                if let entry = model.permission {
+                    PermissionCard(entry: entry, count: model.permissionCount,
+                                   onAnswer: { model.onAnswer(entry.ask.id, $0) },
+                                   onAnswerInAgent: { model.onAnswerInAgent(entry.ask) })
+                }
             }
             .transition(.opacity)
         case .expanded:
@@ -162,6 +172,97 @@ private struct BloomCard: View {
         .padding(.top, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+    }
+}
+
+/// A permission prompt the island can answer. Its buttons arm after a moment, so a card that appears under the
+/// pointer can't be approved by a click meant for something else. Nobody answering sends it back to the agent.
+private struct PermissionCard: View {
+    let entry: PermissionQueue.Entry
+    let count: Int
+    let onAnswer: (PermissionAnswer) -> Void
+    let onAnswerInAgent: () -> Void
+    @State private var armed = false
+
+    private var ask: PermissionAsk { entry.ask }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Palette.waiting.color)
+                Text(ask.event.project ?? ask.event.agent.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                AgentTag(agent: ask.event.agent, label: ask.event.agentName ?? ask.event.agent.displayName)
+                Spacer(minLength: 8)
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    let left = max(0, Int(entry.deadline.timeIntervalSince(ctx.date).rounded(.up)))
+                    Text(count > 1 ? "1 of \(count) · \(left)s" : "\(left)s")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            HStack(spacing: 6) {
+                Text("wants to use \(ask.tool)")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .fixedSize()
+                if let hint = ask.hint {
+                    Text(hint)
+                        .font(.system(size: 11.5, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            HStack(spacing: 8) {
+                Button(action: onAnswerInAgent) {
+                    Text("Answer in \(HostActivator.appName(for: ask.event.host) ?? ask.event.agent.displayName)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                CardButton(title: "Deny", prominent: false) { onAnswer(.deny) }
+                CardButton(title: "Allow once", prominent: true) { onAnswer(.allow) }
+            }
+            .disabled(!armed)
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .task(id: ask.id) {
+            armed = false
+            try? await Task.sleep(for: .milliseconds(600))
+            armed = true
+        }
+    }
+}
+
+private struct CardButton: View {
+    let title: String
+    let prominent: Bool
+    let action: () -> Void
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(prominent ? .black : .white)
+                .padding(.horizontal, 14)
+                .frame(height: 26)
+                .background(Capsule().fill(prominent ? Color.white.opacity(hovered ? 1 : 0.88)
+                                                     : Color.white.opacity(hovered ? 0.22 : 0.14)))
+        }
+        .buttonStyle(.plain)
+        .opacity(enabled ? 1 : 0.45)
+        .onHover { hovered = $0 }
     }
 }
 

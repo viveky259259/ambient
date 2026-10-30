@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Answer permission prompts from the island** (off by default; Settings › Island): Claude Code and Codex tool
+  requests open a card at the notch with the agent, the project and the command, file or host, and *Allow once*
+  or *Deny*. Ambient never answers for you: a prompt you don't answer within the wait you choose (20 seconds by
+  default), or one you'd rather answer in the agent's own app, goes back to the agent, which asks as usual.
+  Several prompts queue in order, and the buttons ignore clicks for the first moment so a card that appears under
+  the pointer can't be approved by accident. Only the permission hook waits, and only with the setting on;
+  Codex asks you to approve the changed hook once with `/hooks`.
+
 ## 0.7.0 — 2026-10-23
 
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of
