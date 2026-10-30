@@ -310,6 +310,34 @@ private final class Scratch {
         }
     }
 
+    /// mlx-vlm forces `trust_remote_code` on for some tokenizers, so the folder check alone can't stop their code.
+    @Test func modelFolderCodeNeverLoads() async throws {
+        let s = try Scratch()
+        try s.file("site/transformers/__init__.py")
+        try s.file("site/transformers/dynamic_module_utils.py", """
+        def get_class_in_module(*args, **kwargs): pass
+        def get_class_from_dynamic_module(*args, **kwargs): pass
+        """)
+        // Asks for the folder's code and swallows errors, as mlx-vlm's patched AutoProcessor does.
+        try s.file("site/mlx_vlm/__init__.py", """
+        import transformers.dynamic_module_utils as dynamic
+        def generate(*args, **kwargs): pass
+        def load(path):
+            try:
+                dynamic.get_class_from_dynamic_module()
+            except Exception:
+                pass
+            raise RuntimeError("The folder's code loaded.")
+        """)
+        try s.file("site/mlx_vlm/prompt_utils.py", "apply_chat_template = None")
+        try s.file("site/mlx_vlm/utils.py", "load_config = None")
+        let python = try s.tool("python", "PYTHONPATH='\(s.url.path)/site' exec python3 \"$@\"")
+        await #expect(throws: LocalModelRunner.RunError.failed("This model runs its own Python code, which Ambient won't load.")) {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: true, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 30)
+        }
+    }
+
     /// The board's status line shows `localizedDescription`.
     @Test func errorsKeepTheirMessage() {
         #expect(LocalModelRunner.RunError.failed("Model type x not supported").localizedDescription == "Model type x not supported")

@@ -160,9 +160,14 @@ public enum LocalModelRunner {
 
     /// Loads with mlx-lm (or mlx-vlm) and prints one marked JSON line. Base models without a chat template get the
     /// prompt as plain text. `enable_thinking=False` keeps reasoning models (Qwen3 and later) from spending the whole
-    /// token budget thinking before the JSON; templates without that switch ignore it.
+    /// token budget thinking before the JSON; templates without that switch ignore it. Some mlx-vlm processors force
+    /// `trust_remote_code` on and catch `Exception`, so loading a folder's code ends the run before any of it can start.
     static let mlxScript = """
     import json, sys
+    import transformers.dynamic_module_utils as dynamic
+    def refuse(*args, **kwargs):
+        sys.exit("This model runs its own Python code, which Ambient won't load.")
+    dynamic.get_class_in_module = dynamic.get_class_from_dynamic_module = refuse
     req = json.load(sys.stdin)
     if req["vision"]:
         from mlx_vlm import generate, load
