@@ -118,6 +118,34 @@ for MLX** can't be set this way, since Ambient runs that program: use Settings o
 Ambient also refuses model folders that declare their own Python code (`model_file` in `config.json`), and direct
 runs stop with an error if a model tries to load custom code (`auto_map`).
 
+**Working memory** — the same MCP server lets your agents share data with each other: Claude Code leaves the API
+contract it worked out, Codex picks it up in the next tab; one agent shares a build log or a fixture file, another reads
+it. Add `~/.ambient/bin/ambient mcp` as a stdio MCP server to each agent that should take part, as above for Claude
+Code.
+
+| Tool | Does |
+| --- | --- |
+| `memory_write` | Shares text or JSON (up to 32 KB) under a key, e.g. `api-schema` or `tests/failing`. Writing a key again replaces it |
+| `memory_write_file` | Shares a file (up to 50 MB): Ambient keeps a read-only copy, so the agent that reads it can't change it for the others |
+| `memory_read` | Returns the text, or the path of the file's copy, with who shared it and when |
+| `memory_list` | What's shared, newest first, without the values |
+| `memory_forget` | Removes an entry |
+
+An entry is shared with the agents working in the same project, git worktrees included, or with every agent when
+written with `scope: "global"`; `project` reads or writes another project's. It lasts 7 days unless written again,
+for `ttl_minutes` (up to 30 days), or, with `until_session_ends`, until the agent session that wrote it ends — Ambient
+knows which session is asking from the agent process that started `ambient mcp`. When an agent starts the server, its
+instructions list what's already shared for the project, so the agent knows to look. Agents without MCP, and you, use
+`ambient memory`:
+
+```bash
+ambient memory set failing-tests "TaskStoreTests.persistRoundTrip" --description "Still red after the fix"
+ambient memory set build-log --file build.log
+ambient memory                    # what's shared here and globally
+ambient memory get failing-tests  # the text, or the shared file's path
+ambient memory rm failing-tests
+```
+
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).
 
@@ -210,7 +238,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected) and `permissions.json` (the island's permission setting) |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected), `permissions.json` (the island's permission setting), and what agents share through working memory (`memory.json`, and copies of shared files in `memory/`) |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
@@ -263,6 +291,12 @@ Only these fields ever leave the hook process, and only to the local socket: the
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
+
+Working memory holds only what an agent chooses to share through `ambient mcp`, or you share with `ambient memory`, in
+`~/.ambient/memory.json` and `~/.ambient/memory/`, readable only by your user. Every agent you've given `ambient mcp`
+can read it, so Ambient refuses text that looks like an API token or a private key, `.env` files, key and credential
+files, and anything in `~/.ssh`, `~/.aws` or `~/.gnupg`. Entries expire, a week by default, and their file copies go
+with them. Agents are told that entries are data other agents wrote, not instructions. It never leaves your Mac.
 
 To notice hooks that stopped firing, Ambient looks once a minute at the processes on your Mac that are agent
 sessions in a terminal (Claude Code, Codex, `agy`): their process id, executable path, start time, CPU time used
@@ -391,7 +425,9 @@ ambient task upsert --title TEXT […]                   Create or update a boar
 ambient task open ID                                   Jump to a task's linked session
 ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]
                                                        Show or set the board's local model (a folder or .gguf file)
-ambient mcp                                            MCP server (stdio) with get_task_model / set_task_model_path
+ambient memory [list|get KEY|set KEY [VALUE|--file PATH]|rm KEY] [--global] [--in FOLDER]
+                                                       What agents share through working memory, or share something
+ambient mcp                                            MCP server (stdio): working memory, get_task_model / set_task_model_path
 ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [-- COMMAND…]   Follow agents on another machine
 ambient remote remove NAME [--uninstall]               Stop following it; --uninstall also clears the machine
 ambient remote purge NAME                              Delete everything from it on this Mac

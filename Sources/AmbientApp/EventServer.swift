@@ -10,7 +10,8 @@ final class EventServer {
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "server")
 
     init(paths: AmbientPaths, model: AppModel, permissions: PermissionDesk) {
-        self.server = UnixSocketServer(path: paths.socket.path)
+        // Room for a shared-memory write: 32 KB of text, however much escaping JSON adds.
+        self.server = UnixSocketServer(path: paths.socket.path, maxMessageSize: 256 * 1024)
         self.model = model
         self.permissions = permissions
     }
@@ -80,13 +81,24 @@ final class EventServer {
                     return try? Wire.encode(.taskModelTimedOut)
                 }
                 return try? Wire.encode(.taskModel(config))
+            case let .memory(request):
+                let box = ReplyBox<MemoryReply>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    box.value = model.value.memory(request)
+                    done.signal()
+                }
+                guard done.wait(timeout: .now() + 2) == .success, let reply = box.value else {
+                    return try? Wire.encode(.memoryReply(.failed("Ambient didn't answer in time. Try again in a moment.")))
+                }
+                return try? Wire.encode(.memoryReply(reply))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
             case let .permissionRequest(ask):
                 DispatchQueue.main.async { model.value.apply(ask.event) }
                 // Holds this connection's thread until the user answers or the prompt goes back to the agent.
                 return try? Wire.encode(.permissionAnswer(permissions.value.answer(for: ask)))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut, .permissionAnswer:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut, .memoryReply, .permissionAnswer:
                 return nil
             }
         }
