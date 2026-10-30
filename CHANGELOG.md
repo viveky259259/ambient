@@ -5,6 +5,33 @@
 - **Homebrew cask**: `scripts/update-cask.sh` writes the cask for a published release into the tap, with the checksum
   from the GitHub release, and the cask downloads from yaml.cafe with `?ref=brew` so Homebrew installs are counted on
   their own.
+- **Answer permission prompts from the island** (off by default; Settings › Island): Claude Code and Codex tool
+  requests open a card at the notch with the agent, the project and the command, file or host, and *Allow once*
+  or *Deny*. Ambient never answers for you: a prompt you don't answer within the wait you choose (20 seconds by
+  default), or one you'd rather answer in the agent's own app, goes back to the agent, which asks as usual.
+  Several prompts queue in order, and the buttons ignore clicks for the first moment so a card that appears under
+  the pointer can't be approved by accident. Only the permission hook waits, and only with the setting on;
+  Codex asks you to approve the changed hook once with `/hooks`.
+- **Hooks that keep working**: Ambient re-checks each connected agent's hooks at launch, every ten minutes, and as
+  soon as the agent updates or its settings change, and rewrites out-of-date hooks with the usual backup. What it
+  can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it
+  can't read (*Show File*), and a terminal session that's been busy for two minutes without a single hook reaching
+  Ambient (for Codex, usually hooks awaiting `/hooks` approval). `ambient doctor` reports removed hooks too.
+- **Fix**: the task board kept re-rendering every card on every agent event, even after you closed it, which could
+  take a whole CPU core with a long-lived board. Closing it now frees it, and only the cards on screen are drawn:
+  with 1,626 tasks, 97% of a core and 590 MB became 1.6% and 90 MB.
+- **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.1% CPU with the island
+  alone when nothing happens, 0.5% while agents work, 1.2% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
+  reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.
+- **Remote agents**: follow Claude Code and Codex on your other machines from this Mac, over your own `ssh` or any
+  other transport, with no accounts, no relay and no open ports. `ambient remote add NAME` copies a small POSIX `sh`
+  shim from the app, checks its SHA-256, installs hooks and pins the machine's identity; `remove`, `purge`, `list` and
+  `ambient doctor --remote NAME` look after it, and Settings › Remote shows each link. Sessions carry their machine's
+  label in the island, menu bar, pet, notifications and board. Redaction (`metadata`, `standard` by default, or `full`)
+  happens on the machine; remote text never reaches online voices or any non-loopback address. Remote events go
+  through their own strict decoder and can't touch the app's socket, focus routes or pid checks. Events wait in a
+  bounded spool while your Mac sleeps; old prompts show as *missed* with no chime, and sessions on an unreachable
+  machine show as *unknown*. A local audit log records what happened, with no event content.
 
 ## 0.7.0 — 2026-10-23
 

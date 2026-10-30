@@ -63,6 +63,12 @@ final class Preferences: ObservableObject {
     @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
     /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
     @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
+    /// Answer Claude Code and Codex permission prompts from the island. Kept in ~/.ambient/permissions.json,
+    /// which the hooks read, rather than in UserDefaults.
+    @Published var answerPermissions: Bool { didSet { savePermissions() } }
+    /// Seconds the island waits for an answer before the agent asks in its own way.
+    @Published var permissionWait: Int { didSet { savePermissions() } }
+    private let paths: AmbientPaths
 
     // MARK: - Task board local LLM (local-agent MCP)
 
@@ -74,8 +80,17 @@ final class Preferences: ObservableObject {
     @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
     @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
 
-    init(defaults: UserDefaults = .standard) {
+    // MARK: - Remote machines
+
+    /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
+    @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
+
+    init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
+        self.paths = paths
+        let permissions = PermissionSettings.load(paths)
+        answerPermissions = permissions.enabled
+        permissionWait = permissions.wait
         defaults.register(defaults: [
             "islandEnabled": true,
             "islandShowsWorking": true,
@@ -110,6 +125,7 @@ final class Preferences: ObservableObject {
             "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
             "taskLLMReadTranscripts": false,
             "taskLLMModelsVolume": "/Volumes/Models",
+            "remoteSummaries": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -153,12 +169,21 @@ final class Preferences: ObservableObject {
         taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
             ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
         taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
+        remoteSummaries = defaults.bool(forKey: "remoteSummaries")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 
     var taskLLMConfig: TaskLLMConfig {
         TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
                       readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
+    }
+
+    var permissionSettings: PermissionSettings {
+        PermissionSettings(enabled: answerPermissions, wait: permissionWait)
+    }
+
+    private func savePermissions() {
+        try? permissionSettings.save(paths)
     }
 
     var isQuiet: Bool {

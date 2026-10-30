@@ -204,7 +204,8 @@ private struct BoardColumn: View {
             }
             .padding(.horizontal, Theme.Space.xxs)
 
-            VStack(spacing: Theme.Space.xs) {
+            // Lazy: a long-lived board holds thousands of tasks, and only the ones on screen should cost anything.
+            LazyVStack(spacing: Theme.Space.xs) {
                 ForEach(tasks) { task in
                     BoardCard(task: task, session: linkedSession(task), open: { open(task.id) })
                 }
@@ -262,6 +263,13 @@ private struct BoardCard: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
+                    if let machine = task.machine {
+                        Label { Text(verbatim: machine.label) } icon: { Image(systemName: "network") }
+                            .labelStyle(.titleAndIcon)
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                     Spacer(minLength: 0)
                     if let session, let clock = Describe.clock(session, now: Date()) {
                         Text(clock)
@@ -278,7 +286,7 @@ private struct BoardCard: View {
                         Circle()
                             .fill(session.moodTint.color)
                             .frame(width: 6, height: 6)
-                            .help(Describe.mood(session.mood))
+                            .help(Describe.remoteState(session) ?? Describe.mood(session.mood))
                     }
                 }
             }

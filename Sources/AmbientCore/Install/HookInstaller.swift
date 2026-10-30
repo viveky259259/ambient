@@ -86,9 +86,12 @@ public struct InstallReport: Sendable {
 /// Adds and removes Ambient's entries in agent hook configs, leaving everything else alone.
 public struct HookInstaller: Sendable {
     public let paths: AmbientPaths
+    /// Answering permission prompts from the island, which makes one hook something the agent waits for.
+    public let permissions: PermissionSettings
 
-    public init(paths: AmbientPaths) {
+    public init(paths: AmbientPaths, permissions: PermissionSettings? = nil) {
         self.paths = paths
+        self.permissions = permissions ?? PermissionSettings.load(paths)
     }
 
     /// Nil for custom agents, which have no hooks to install.
@@ -212,6 +215,30 @@ public struct HookInstaller: Sendable {
         }
     }
 
+    /// The entry Ambient installs for an event. With answering from the island on, the permission hook of an
+    /// agent that takes decisions runs in the foreground, so the agent waits for the user's answer (the hook itself
+    /// gives up after the island's wait); every other hook is unchanged.
+    func entry(_ spec: AgentHookSpec, event: String) -> JSONValue {
+        guard permissions.enabled, PermissionReply.agents.contains(spec.agent), event == "PermissionRequest",
+              case var .object(members) = spec.entry(command(for: spec.agent), event) else {
+            return spec.entry(command(for: spec.agent), event)
+        }
+        members = members.compactMap { member in
+            switch member.key {
+            case "async": nil
+            case "command": JSONValue.Member("command", .string(answeringCommand(for: spec.agent)))
+            case "timeout": JSONValue.Member("timeout", .number(String(PermissionSettings.hookTimeout)))
+            default: member
+            }
+        }
+        return .object(members)
+    }
+
+    /// The permission hook's command when the island answers: the agent waits for this one.
+    func answeringCommand(for agent: AgentKind) -> String {
+        command(for: agent).replacingOccurrences(of: " hook \(agent.rawValue) ", with: " hook \(agent.rawValue) --answer ")
+    }
+
     public static func isAmbientCommand(_ command: String) -> Bool {
         command.contains("bin/ambient\" hook ") || command.contains("bin/ambient hook ")
     }
@@ -244,10 +271,9 @@ public struct HookInstaller: Sendable {
             guard let set = root[spec.layout.key] else { return .notInstalled }
             return set == hookSet(spec) ? .installed : .partial
         }
-        let current = command(for: agent)
         var exact = 0, any = false
         for event in spec.events {
-            let wanted = spec.entry(current, event)
+            let wanted = entry(spec, event: event)
             if Self.entries(in: root["hooks"]?[event]).contains(wanted) { exact += 1 }
             if Self.commands(in: root["hooks"]?[event]).contains(where: Self.isAmbientCommand) { any = true }
         }
@@ -280,6 +306,17 @@ public struct HookInstaller: Sendable {
 
     @discardableResult
     public func install(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
+        let report = try write(agent, dryRun: dryRun)
+        if !dryRun { AgentRecord.update(paths, agent, connected: true, seed: connectedNow) }
+        return report
+    }
+
+    /// Agents whose settings hold Ambient's hooks, current or out of date.
+    func connectedNow() -> Set<AgentKind> {
+        HookHealth.seed(statuses: Dictionary(uniqueKeysWithValues: AgentKind.hooked.map { ($0, status($0)) }))
+    }
+
+    private func write(_ agent: AgentKind, dryRun: Bool) throws -> InstallReport {
         guard let spec = Self.spec(for: agent) else { throw InstallerError.agentNotFound(agent) }
         if case .ownedFile = spec.layout { return try writeOwned(spec, contents: ownedContents(spec), dryRun: dryRun) }
         let path = paths.userHome.appendingPathComponent(spec.configFile).path
@@ -288,11 +325,10 @@ public struct HookInstaller: Sendable {
                 hooks = hookSet(spec)
                 return
             }
-            let command = command(for: agent)
             hooks = Self.removingAmbientEntries(from: hooks)
             for event in spec.events {
-                let entry = spec.entry(command, event)
-                let item = if case .flat = spec.layout { entry } else { JSONValue.object([.init("hooks", .array([entry]))]) }
+                let hook = entry(spec, event: event)
+                let item = if case .flat = spec.layout { hook } else { JSONValue.object([.init("hooks", .array([hook]))]) }
                 switch hooks[event] {
                 case nil: hooks[event] = .array([item])
                 case var .array(items)?:
@@ -308,11 +344,17 @@ public struct HookInstaller: Sendable {
     @discardableResult
     public func uninstall(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
         guard let spec = Self.spec(for: agent) else { throw InstallerError.agentNotFound(agent) }
-        if case .ownedFile = spec.layout { return try writeOwned(spec, contents: nil, dryRun: dryRun) }
-        let owned = if case .hookSet = spec.layout { true } else { false }
-        return try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
-            hooks = owned ? .object([]) : Self.removingAmbientEntries(from: hooks)
+        let report: InstallReport
+        if case .ownedFile = spec.layout {
+            report = try writeOwned(spec, contents: nil, dryRun: dryRun)
+        } else {
+            let owned = if case .hookSet = spec.layout { true } else { false }
+            report = try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
+                hooks = owned ? .object([]) : Self.removingAmbientEntries(from: hooks)
+            }
         }
+        if !dryRun { AgentRecord.update(paths, agent, connected: false, seed: connectedNow) }
+        return report
     }
 
     private static func parseConfig(_ text: String) throws -> JSONValue {

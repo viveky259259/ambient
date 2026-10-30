@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
     @ObservedObject var model: AppModel
+    let remote: RemoteCoordinator
     let wallpaper: LivingWallpaper
     let speech: SpeechController
     let voicePack: VoicePackInstaller
@@ -87,6 +88,8 @@ struct SettingsView: View {
             WelcomePane(setup: setup, firstRun: firstRun, onDemo: onDemo, onGetStarted: onDone)
         case .agents:
             AgentsPane(setup: setup)
+        case .remote:
+            RemotePane(model: model, prefs: prefs, remote: remote)
         case .board:
             BoardPane(model: model, prefs: prefs, onOpenBoard: onOpenBoard)
         case .island:

@@ -8,6 +8,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let prefs: Preferences
     private let speech: SpeechController
     private let shortcuts: ShortcutCenter
+    private let hookDoctor: HookDoctor
+    /// The problems listed in the open menu, so a click knows which one it fixes.
+    private var listedProblems: [HookProblem] = []
     private let onReadSelection: () -> Void
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var cancellables: Set<AnyCancellable> = []
@@ -15,13 +18,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let onDemo: () -> Void
     private let onOpenBoard: () -> Void
 
-    init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter,
+    init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter, hookDoctor: HookDoctor,
          onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void,
          onOpenBoard: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
         self.speech = speech
         self.shortcuts = shortcuts
+        self.hookDoctor = hookDoctor
         self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
@@ -40,6 +44,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             .store(in: &cancellables)
         // @Published delivers before the value is stored; read it a turn later.
         speech.$state
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
+            .store(in: &cancellables)
+        hookDoctor.$problems
             .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
             .store(in: &cancellables)
         updateIcon()
@@ -67,9 +74,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let primary = IslandPolicy.primary(model.sessions)
         button.image = Self.icon(mood: mood, color: primary?.moodTint.nsColor, quiet: prefs.isQuiet)
         let waiting = model.sessions.filter { $0.mood == .waiting }.count
-        button.title = waiting > 1 ? " \(waiting)" : ""
+        let problem = hookDoctor.problems.first
+        // A broken connection is worth a mark until it's fixed: it means missing every event from that agent.
+        button.title = (waiting > 1 ? " \(waiting)" : "") + (problem == nil ? "" : " !")
         button.imagePosition = .imageLeading
-        button.setAccessibilityLabel("Ambient: \(Describe.mood(mood))")
+        button.toolTip = problem.map { "Ambient: \($0.summary)" } ?? "Ambient"
+        button.setAccessibilityLabel("Ambient: \(problem?.summary ?? Describe.mood(mood))")
     }
 
     /// A ring when idle (template, so it follows the menu bar), a colored orb otherwise.
@@ -122,6 +132,19 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         case .idle, .hint:
             break
         }
+        listedProblems = hookDoctor.problems
+        for (index, problem) in listedProblems.enumerated() {
+            let fix: String = switch problem {
+            case .removed: "Reconnect"
+            case .unreadable: "Show File"
+            case .silent: "Fix…"
+            }
+            let row = item("\(problem.summary) — \(fix)", #selector(fixProblem(_:)))
+            row.representedObject = index
+            row.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Problem")
+            menu.addItem(row)
+        }
+        if !listedProblems.isEmpty { menu.addItem(.separator()) }
         let sessions = model.sessions
         let header = sessions.isEmpty ? "No agent sessions" : "\(sessions.count) session\(sessions.count == 1 ? "" : "s") · \(Describe.mood(model.mood))"
         menu.addItem(NSMenuItem(title: header, action: nil, keyEquivalent: ""))
@@ -132,16 +155,27 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let row = NSMenuItem(title: "", action: #selector(openSession(_:)), keyEquivalent: "")
             row.target = self
             row.representedObject = s.id
-            let meta = [s.agentLabel, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
+            let meta = [s.agentLabel, Describe.machine(s), Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
             let text = NSMutableAttributedString(string: Trim.truncate(Describe.title(s), max: 48), attributes: [.font: NSFont.menuFont(ofSize: 13)])
             text.append(NSAttributedString(string: "  \(meta)\n",
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
-            text.append(NSAttributedString(string: Trim.truncate(Describe.activity(s.activity), max: 60),
+            text.append(NSAttributedString(string: Trim.truncate(Describe.status(s), max: 60),
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
             row.attributedTitle = text
             row.image = Self.dot(s.tint.nsColor, dim: s.mood == .idle)
             if let app = HostActivator.appName(for: s.host) { row.toolTip = "Open \(app)" }
             menu.addItem(row)
+        }
+
+        if !model.remoteLinks.isEmpty {
+            menu.addItem(.separator())
+            for link in model.remoteLinks {
+                let row = NSMenuItem(title: "\(link.machine.label) · \(link.summary)", action: #selector(settings), keyEquivalent: "")
+                row.target = self
+                row.image = Self.dot(link.health == .connected ? Palette.done.nsColor : Palette.idle.nsColor, dim: false)
+                row.toolTip = link.health.detail
+                menu.addItem(row)
+            }
         }
 
         menu.addItem(.separator())
@@ -227,6 +261,17 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func openSession(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String, let s = model.sessions.first(where: { $0.id == id }) else { return }
         model.open(s)
+    }
+
+    @objc private func fixProblem(_ sender: NSMenuItem) {
+        guard let index = sender.representedObject as? Int, listedProblems.indices.contains(index) else { return }
+        let problem = listedProblems[index]
+        guard let advice = hookDoctor.fix(problem) else { return }
+        let alert = NSAlert()
+        alert.messageText = problem.summary
+        alert.informativeText = advice + " `ambient doctor` checks the whole chain."
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     @objc private func acknowledgeAll() { model.acknowledgeAll() }
