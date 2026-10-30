@@ -66,6 +66,6 @@ jobs:
         run: |
           V=${{ steps.release.outputs.version }}
           sleep 10
-          test "$(curl -fsSL "https://yaml.cafe/downloads/Ambient-$V.dmg" | sha256sum | cut -c1-64)" = "$(sha256sum "dist/Ambient-$V.dmg" | cut -c1-64)"
+          test "$(curl -fsSL "https://yaml.cafe/downloads/Ambient-$V.dmg?ref=ci" | sha256sum | cut -c1-64)" = "$(sha256sum "dist/Ambient-$V.dmg" | cut -c1-64)"
           curl -fsS https://yaml.cafe/ | grep -q "Ambient-$V.dmg"
           echo "yaml.cafe serves Ambient $V"
