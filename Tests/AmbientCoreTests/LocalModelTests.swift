@@ -299,6 +299,17 @@ private final class Scratch {
         }
     }
 
+    /// The shared queue runs one model at a time, so a run that never returns would stall every later one.
+    @Test func childHoldingThePipesAfterExitDoesNotHangTheRun() async throws {
+        let s = try Scratch()
+        // The background sleep inherits both pipes and outlives the runtime.
+        let python = try s.tool("python", "sleep 12 &\nexit 0")
+        await #expect(throws: LocalModelRunner.RunError.timedOut) {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 30)
+        }
+    }
+
     /// The board's status line shows `localizedDescription`.
     @Test func errorsKeepTheirMessage() {
         #expect(LocalModelRunner.RunError.failed("Model type x not supported").localizedDescription == "Model type x not supported")

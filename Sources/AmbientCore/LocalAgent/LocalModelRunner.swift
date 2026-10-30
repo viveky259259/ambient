@@ -148,7 +148,8 @@ public enum LocalModelRunner {
             _ = group.wait(timeout: .now() + 1)
             throw RunError.timedOut
         }
-        group.wait()
+        // Same after a normal exit. The readers may still be writing, so their data can't be used.
+        if group.wait(timeout: .now() + 5) == .timedOut { throw RunError.timedOut }
         guard process.terminationStatus == 0 else {
             let log = String(decoding: err.data, as: UTF8.self)
                 .split(whereSeparator: \.isNewline).suffix(6).joined(separator: "\n")
