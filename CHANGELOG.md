@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-- **Homebrew**: `brew install --cask viveky259259/tap/ambient`. `scripts/update-cask.sh` writes the cask for each
-  release into the tap, with the checksum from the GitHub release, and the cask downloads from yaml.cafe with
-  `?ref=brew` so Homebrew installs are counted on their own.
+- **Homebrew cask**: `scripts/update-cask.sh` writes the cask for a published release into the tap, with the checksum
+  from the GitHub release, and the cask downloads from yaml.cafe with `?ref=brew` so Homebrew installs are counted on
+  their own.
 
 ## 0.7.0 — 2026-10-23
 

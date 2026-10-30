@@ -26,6 +26,7 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+trap 'exit 130' INT TERM
 
 cp -R "$APP" "$COPY"
 plutil -replace CFBundleIdentifier -string $ID "$COPY/Contents/Info.plist"

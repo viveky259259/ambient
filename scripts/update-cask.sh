@@ -3,6 +3,8 @@
 #
 #   scripts/update-cask.sh 0.6.0 ../homebrew-tap      then commit and push the tap
 #
+# With the first cask in the tap, add `brew install --cask viveky259259/tap/ambient` to the README's Install section.
+#
 # The checksum is the GitHub release's own digest of Ambient-<version>.dmg, the same file yaml.cafe serves (the Deploy
 # site workflow checks that), so nothing is downloaded and no download is counted. The cask downloads from yaml.cafe
 # with ?ref=brew, so Homebrew installs show up under their own launch tag in scripts/downloads.sh.

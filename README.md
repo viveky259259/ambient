@@ -51,12 +51,6 @@ offline voice download, and the text you select when you choose an online voice.
    (or connect them one at a time under **Agents**).
 3. Click **Play Demo** to see every state, then **Get Started**.
 
-With Homebrew:
-
-```bash
-brew install --cask viveky259259/tap/ambient
-```
-
 Or from a terminal, once the app has run once:
 
 ```bash
