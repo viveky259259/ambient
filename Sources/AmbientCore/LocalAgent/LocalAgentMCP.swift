@@ -13,7 +13,7 @@ public final class LocalAgentMCP: @unchecked Sendable {
         }
     }
 
-    public enum MCPError: Error, Equatable, CustomStringConvertible, Sendable {
+    public enum MCPError: LocalizedError, Equatable, CustomStringConvertible, Sendable {
         case badURL
         case nonLoopback
         case http(Int)
@@ -31,6 +31,8 @@ public final class LocalAgentMCP: @unchecked Sendable {
             case let .decode(message): "Couldn't read the MCP reply: \(message)"
             }
         }
+
+        public var errorDescription: String? { description }
     }
 
     private let config: Config

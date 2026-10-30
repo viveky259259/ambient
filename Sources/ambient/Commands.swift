@@ -22,6 +22,7 @@ struct Commands {
         case "task": return task(rest)
         case "remote": return remote(rest)
         case "link": return link() ? 0 : 1
+        case "mcp": return MCPServer(request: { request($0) }).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
         case "voice-files":
@@ -48,6 +49,11 @@ struct Commands {
           ambient task open ID                                    Jump to a task's linked session
           ambient task skill-bootstrap                            Once: learn a local skill pack via Anthropic (Keychain), then local LLM uses it
           ambient task skill-status                               Show whether ~/.ambient/task-skill.json is present
+          ambient task model [PATH|--clear] [--python PATH] [--enable|--disable]
+                                                                  Show or set the board's local model: an MLX or Hugging Face
+                                                                  folder, or a .gguf file (default: the gateway model id)
+          ambient mcp                                             Run as an MCP server (stdio) so agents can read and set the
+                                                                  board's model: claude mcp add ambient -- ~/.ambient/bin/ambient mcp
           ambient remote add NAME [--host HOST] [--label TEXT] [--redaction metadata|standard|full]
                  [--agents claude,codex] [--accept-new-identity] [-- TRANSPORT COMMAND...]
                                                                   Follow agents on another machine over your own ssh
@@ -163,9 +169,10 @@ struct Commands {
 
     // MARK: - Status
 
+    /// Waits longer than the 2 seconds the app gives its main thread, so a busy app isn't taken for a closed one.
     private func request(_ message: WireMessage) -> WireMessage? {
         guard let data = try? Wire.encode(message),
-              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 1, expectReply: true),
+              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 3, expectReply: true),
               !reply.isEmpty else { return nil }
         return try? Wire.decode(reply)
     }
@@ -246,7 +253,7 @@ struct Commands {
 
     private func task(_ args: [String]) -> Int32 {
         guard let sub = args.first else {
-            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task skill-bootstrap")
+            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task model [PATH] | ambient task skill-bootstrap")
             return 64
         }
         let rest = Array(args.dropFirst())
@@ -268,8 +275,9 @@ struct Commands {
             return 0
         case "skill-bootstrap": return taskSkillBootstrap(rest)
         case "skill-status": return taskSkillStatus()
+        case "model": return taskModel(rest)
         default:
-            out.error("Unknown task command '\(sub)'. Use upsert, open, skill-bootstrap or skill-status.")
+            out.error("Unknown task command '\(sub)'. Use upsert, open, model, skill-bootstrap or skill-status.")
             return 64
         }
     }
@@ -311,6 +319,60 @@ struct Commands {
             return 0
         }
         out.warn("No \(tilde(paths.taskSkill.path)) yet — using bundled seed. Run ambient task skill-bootstrap once.")
+        return 0
+    }
+
+    /// `path` with `~` expanded and made absolute against the current directory, since the app runs from elsewhere.
+    /// Symlinks stay as they are: a venv's python finds its packages through its own path. Empty stays empty.
+    private static func absolute(_ path: String) -> String {
+        let trimmed = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        guard !trimmed.isEmpty else { return "" }
+        return URL(fileURLWithPath: trimmed).standardizedFileURL.path
+    }
+
+    /// Shows the board's model, or points it at a model folder or `.gguf` file first.
+    private func taskModel(_ args: [String]) -> Int32 {
+        let usage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
+        var change = TaskModelChange()
+        var rest = args[...]
+        while let arg = rest.popFirst() {
+            switch arg {
+            case "--clear": change.modelPath = ""
+            case "--enable": change.enabled = true
+            case "--disable": change.enabled = false
+            case "--json": continue
+            case "--python":
+                guard let python = rest.popFirst() else { out.error(usage); return 64 }
+                change.pythonPath = Self.absolute(python)
+            case "--help", "-h": print(usage); return 0
+            default:
+                guard !arg.hasPrefix("--"), change.modelPath == nil else { out.error(usage); return 64 }
+                change.modelPath = arg
+            }
+        }
+        if let path = change.modelPath, let problem = LocalModelPath.problem(with: path) {
+            out.error(problem)
+            return 1
+        }
+        if let python = change.pythonPath, !python.isEmpty, !FileManager.default.isExecutableFile(atPath: python) {
+            out.error("No executable Python at \(python). Nothing changed.")
+            return 1
+        }
+        let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
+        let reply = request(message)
+        guard case let .taskModel(config)? = reply else {
+            out.error(MCPServer.noConfig(reply, changing: message != .taskModelRequest))
+            return 1
+        }
+        let report = blocking { await TaskModelReport.make(config) }
+        if args.contains("--json") {
+            print(MCPServer.render(report))
+            return 0
+        }
+        print(out.bold("Board model"))
+        for field in report.fields {
+            print("  \(field.key.padding(toLength: 14, withPad: " ", startingAt: 0)) \(field.key == "status" && report.resolution.route == nil ? out.dim(field.value) : field.value)")
+        }
         return 0
     }
 

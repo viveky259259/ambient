@@ -70,6 +70,10 @@ final class Preferences: ObservableObject {
     /// Streamable HTTP MCP URL for local-agent (default LaunchAgent on this Mac).
     @Published var taskLLMMCPURL: String { didSet { defaults.set(taskLLMMCPURL, forKey: "taskLLMMCPURL") } }
     @Published var taskLLMModelID: String { didSet { defaults.set(taskLLMModelID, forKey: "taskLLMModelID") } }
+    /// A model folder or .gguf file on this Mac; when set it wins over the model id.
+    @Published var taskLLMModelPath: String { didSet { defaults.set(taskLLMModelPath, forKey: "taskLLMModelPath") } }
+    /// Python with mlx-lm / mlx-vlm for running a model path directly; empty to find one.
+    @Published var taskLLMPython: String { didSet { defaults.set(taskLLMPython, forKey: "taskLLMPython") } }
     /// Opt-in: read local Claude/Codex transcript stores for richer summaries.
     @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
     @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
@@ -113,6 +117,8 @@ final class Preferences: ObservableObject {
             "taskLLMEnabled": false,
             "taskLLMMCPURL": "http://127.0.0.1:5051/mcp",
             "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+            "taskLLMModelPath": "",
+            "taskLLMPython": "",
             "taskLLMReadTranscripts": false,
             "taskLLMModelsVolume": "/Volumes/Models",
             "remoteSummaries": false,
@@ -158,6 +164,8 @@ final class Preferences: ObservableObject {
         taskLLMMCPURL = defaults.string(forKey: "taskLLMMCPURL") ?? "http://127.0.0.1:5051/mcp"
         taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
             ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        taskLLMModelPath = defaults.string(forKey: "taskLLMModelPath") ?? ""
+        taskLLMPython = defaults.string(forKey: "taskLLMPython") ?? ""
         taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
         remoteSummaries = defaults.bool(forKey: "remoteSummaries")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
@@ -165,6 +173,7 @@ final class Preferences: ObservableObject {
 
     var taskLLMConfig: TaskLLMConfig {
         TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
+                      modelPath: taskLLMModelPath, pythonPath: taskLLMPython,
                       readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
     }
 
