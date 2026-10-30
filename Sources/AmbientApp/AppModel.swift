@@ -8,6 +8,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var mood: Mood = .idle
     @Published private(set) var tasks: [AgentTask] = []
     @Published private(set) var taskLLMStatus: TaskLLMStatus = .disabled
+    /// How the board's model runs, once the last probe found it usable.
+    @Published private(set) var taskModelRoute: TaskModelRoute?
     /// Today's story, for the living wallpaper.
     @Published private(set) var day = DayLog(now: Date())
     /// Paired machines and how their links are doing, sorted by name.
@@ -35,6 +37,7 @@ final class AppModel: ObservableObject {
     private var titleCheckedAt: [String: Date] = [:]
     private var lastSummarizedAt: [String: Date] = [:]
     private var summarizingTaskIDs = Set<String>()
+    private var llmProbeGeneration = 0
     /// How far each machine has been applied. Saved with the sessions, in the same file.
     private var remoteCursors: [String: RemoteCursor] = [:]
     private var unreachableWork: [String: DispatchWorkItem] = [:]
@@ -268,18 +271,33 @@ final class AppModel: ObservableObject {
         scheduleSummary(for: task, session: change.session)
     }
 
-    /// Re-probe local-agent MCP / Models volume. Safe to call from Settings.
+    /// Re-probe local-agent MCP / Models volume / the model path's runtime. Safe to call from Settings.
     func refreshTaskLLMStatus() {
         let config = prefs.taskLLMConfig
+        llmProbeGeneration += 1
         guard config.enabled else {
             taskLLMStatus = .disabled
+            taskModelRoute = nil
             return
         }
+        let generation = llmProbeGeneration
         let summarizer = TaskSummarizer(config: config)
-        Task { [weak self] in
-            let status = await summarizer.probe()
-            await MainActor.run { self?.taskLLMStatus = status }
+        Task { @MainActor [weak self] in
+            let resolution = await summarizer.resolve()
+            // A slower probe of settings that have since changed doesn't get the last word.
+            guard let self, self.llmProbeGeneration == generation else { return }
+            self.taskLLMStatus = resolution.status
+            self.taskModelRoute = resolution.route
         }
+    }
+
+    /// Applies a change from `ambient task model` / `ambient mcp` and returns the settings that result.
+    func setTaskModel(_ change: TaskModelChange) -> TaskLLMConfig {
+        if let path = change.modelPath { prefs.taskLLMModelPath = path.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let python = change.pythonPath { prefs.taskLLMPython = python.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let enabled = change.enabled { prefs.taskLLMEnabled = enabled }
+        refreshTaskLLMStatus()
+        return prefs.taskLLMConfig
     }
 
     private func scheduleSummary(for task: AgentTask, session: Session) {
@@ -305,23 +323,29 @@ final class AppModel: ObservableObject {
             let context = SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt)
             let summarizer = TaskSummarizer(config: config)
             Task { @MainActor in
-                defer { model.summarizingTaskIDs.remove(taskID) }
+                defer {
+                    model.summarizingTaskIDs.remove(taskID)
+                    // Failures count too: a model that can't run mustn't reload on every session event.
+                    model.lastSummarizedAt[taskID] = Date()
+                }
+                // Settings changed while this ran (another model, or summaries off): its answer and status no longer count.
+                func stale() -> Bool { model.prefs.taskLLMConfig != config }
                 do {
-                    let status = await summarizer.probe()
-                    guard status == .ready else {
-                        model.taskLLMStatus = status
+                    let resolution = await summarizer.resolve()
+                    guard case let .ready(route) = resolution else {
+                        if !stale() { model.taskLLMStatus = resolution.status }
                         return
                     }
-                    let semantics = try await summarizer.summarize(context: context)
+                    let semantics = try await summarizer.summarize(context: context, via: route)
+                    if stale() { return }
                     // Re-read the live linked session so a stale captured `.waiting` cannot re-block
                     // after the user has already unblocked.
                     let live = model.sessions.first { $0.id == session.id }
                     _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: live)
-                    model.lastSummarizedAt[taskID] = Date()
                     model.publishTasks()
                     model.taskLLMStatus = .ready
                 } catch {
-                    model.taskLLMStatus = .failed(error.localizedDescription)
+                    if !stale() { model.taskLLMStatus = .failed(error.localizedDescription) }
                 }
             }
         }
