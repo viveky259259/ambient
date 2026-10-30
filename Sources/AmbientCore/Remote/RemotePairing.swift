@@ -31,7 +31,8 @@ public struct RemoteShim: Sendable {
 }
 
 /// Pairs a machine: copies the shim over the transport, checks its SHA-256 on the far side, runs its `install`, and
-/// pins the identity it reports. Nothing is added to the allowlist until all of that has worked.
+/// pins the identity it reports. Nothing is added to the allowlist until all of that has worked. A machine that's
+/// already pinned and has a shim says who it is first, so a different one is left as it was.
 public enum RemotePairing {
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case invalidID(String)
@@ -94,6 +95,14 @@ public enum RemotePairing {
         guard Machine.isValidID(request.id) else { throw .invalidID(request.id) }
         let transport = RemoteTransport(argv: request.transport)
 
+        // With no shim there, or one this app can't read, it has to wait for the same check after the install.
+        if existing != nil, !request.acceptNewIdentity {
+            let reported = transport.run(RemoteTransport.shim("status"))
+            if reported.ok, let status = try? RemoteLineDecoder.status(reported.lastLine) {
+                try requireIdentity(status.hello.identity, request: request, existing: existing, audit: audit)
+            }
+        }
+
         let copied = transport.run(RemoteTransport.copyShim, input: shim.bytes, timeout: 60)
         guard copied.ok else {
             if copied.status == 255 || copied.status == 127 || copied.timedOut { throw .unreachable(explain(copied)) }
@@ -124,10 +133,7 @@ public enum RemotePairing {
         }
 
         let identity = status.hello.identity
-        if let existing, existing.fingerprint != identity, !request.acceptNewIdentity {
-            audit?.append(.init(action: .fingerprintChanged, machine: request.id, detail: identity))
-            throw .identityChanged(expected: existing.fingerprint, got: identity)
-        }
+        try requireIdentity(identity, request: request, existing: existing, audit: audit)
         if let existing, existing.fingerprint != identity {
             audit?.append(.init(action: .fingerprintChanged, machine: request.id, detail: "approved \(identity)"))
         }
@@ -136,6 +142,13 @@ public enum RemotePairing {
         let machine = Machine(id: request.id, label: request.label ?? existing?.label, transport: request.transport,
                               fingerprint: identity)
         return Outcome(machine: machine, status: status, installLines: lines, needsManualStep: installed.status == 3)
+    }
+
+    /// Stops at a machine other than the pinned one, unless the user has said that's expected.
+    private static func requireIdentity(_ identity: String, request: Request, existing: Machine?, audit: RemoteAudit?) throws(Failure) {
+        guard let existing, existing.fingerprint != identity, !request.acceptNewIdentity else { return }
+        audit?.append(.init(action: .fingerprintChanged, machine: request.id, detail: identity))
+        throw .identityChanged(expected: existing.fingerprint, got: identity)
     }
 
     static func explain(_ result: RemoteTransport.Result) -> String {

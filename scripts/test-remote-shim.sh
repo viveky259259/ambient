@@ -29,6 +29,34 @@ busybox_path() {
     echo "$bin"
 }
 
+# What `follow` runs as awk, with a rotation landing while it streams and an `emit` right behind it, as on a busy
+# machine. ROTATE=before lands it before awk opens anything; ROTATE=between lands it once awk is done with its first
+# file. `$HOME/rotate` is used up, so it happens once. Every other use of awk goes straight through.
+race_awk() {
+    bin=$ROOT/bin-race
+    mkdir -p "$bin"
+    cat > "$bin/awk" <<'EOF'
+#!/bin/sh
+rotate() {
+    rm "$HOME/rotate"
+    mv -f "$HOME/.ambient/spool/events.jsonl" "$HOME/.ambient/spool/events.1.jsonl"
+    printf '%s' '{"session_id":"s-6","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}' |
+        "$HOME/.ambient/bin/ambient-remote" emit claude
+}
+case ${2:-} in from=*) [ -e "$HOME/rotate" ] || exec "$REAL_AWK" "$@" ;; *) exec "$REAL_AWK" "$@" ;; esac
+from=$2 to=$4 cutoff=$6 program=$7
+shift 7
+if [ "$ROTATE" = between ]; then
+    "$REAL_AWK" -v "$from" -v "$to" -v "$cutoff" "$program" "$1"
+    shift
+fi
+rotate
+exec "$REAL_AWK" -v "$from" -v "$to" -v "$cutoff" "$program" "$@"
+EOF
+    chmod 755 "$bin/awk"
+    echo "$bin"
+}
+
 check() {
     name=$1 shell=$2 path=$3
     home=$ROOT/home-$name
@@ -92,6 +120,35 @@ check() {
         i=$((i + 1))
     done
     wc -c "$home/.ambient/spool"/events* | tail -n 1 > "$home/spool-bytes"
+
+    # Events 1 and 2 are in the rotated file and already sent, and 3 to 5 are in the live one when `follow` starts.
+    # `quiet` is a rotation with nothing written since, which leaves no live file at all.
+    race() {
+        rm -rf "$home/.ambient/spool"
+        for i in 1 2 3 4 5; do
+            [ "$i" -ne 3 ] || mv "$home/.ambient/spool/events.jsonl" "$home/.ambient/spool/events.1.jsonl"
+            emit '{"session_id":"s-6","cwd":"/x","hook_event_name":"PreToolUse","tool_name":"Bash"}'
+        done
+        if [ "$1" = quiet ]; then
+            mv "$home/.ambient/spool/events.jsonl" "$home/.ambient/spool/events.1.jsonl"
+        else
+            : > "$home/rotate"
+        fi
+        HOME=$home PATH=$(race_awk):$path ROTATE=$1 REAL_AWK=$(PATH=$path; command -v awk) \
+            $shell "$home/.ambient/bin/ambient-remote" follow --since 2 --heartbeat 1 > "$home/raced-$1" 2> /dev/null &
+        follower=$!
+        i=0
+        while [ "$i" -lt 50 ] && ! grep -qs "\"seq\":$2," "$home/raced-$1"; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+        kill "$follower" 2> /dev/null || :
+        wait "$follower" 2> /dev/null || :
+    }
+    rm "$home/.ambient/remote.conf"
+    race before 6
+    race between 6
+    race quiet 5
 
     if python3 scripts/test-remote-shim.py "$home" "$name"; then
         echo "ok   $name"
