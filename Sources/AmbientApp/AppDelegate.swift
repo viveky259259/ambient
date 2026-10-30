@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
     private var boardWindow: NSWindow?
+    private var boardClosing: NSObjectProtocol?
     private var demoTimers: [Timer] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -186,7 +187,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.setContentSize(NSSize(width: 980, height: 620))
             window.center()
             boardWindow = window
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            boardClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                // Let its views go: kept, they re-render every card on every agent event with nobody looking.
+                self?.boardWindow = nil
+                if let closing = self?.boardClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.boardClosing = nil
                 if self?.setupWindow?.isVisible != true {
                     NSApp.setActivationPolicy(.accessory)
                 }

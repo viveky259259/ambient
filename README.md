@@ -209,6 +209,32 @@ you chose, with your key, which is kept in your login Keychain. The offline mode
 small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file
 is checked against a hash built into Ambient before it's used.
 
+### Performance
+
+Ambient costs next to nothing when nothing happens. Measured on an Apple M5 Max (macOS 27.0.1, the code after Ambient
+0.7.0) with `scripts/measure-perf.sh`, which runs a separate copy of the app for 45 seconds per case; CPU is percent
+of one core, energy impact is macOS's own figure (as in Activity Monitor). Other work kept every core busy during this
+run, so a quiet Mac may read a little differently:
+
+| Case | CPU, average | CPU, peak | Energy impact | Memory |
+| --- | --- | --- | --- | --- |
+| Island only, nothing happening | 0.1% | 0.3% | 0.1 | 21 MB |
+| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 23 MB |
+| Island and Dock glow, agents working | 0.4% | 0.6% | 0.3 | 23 MB |
+| Island and living wallpaper, nothing happening | 0.2% | 0.3% | 0.1 | 41 MB |
+| Island and desktop pet, nothing happening | 0.3% | 0.6% | 0.3 | 23 MB |
+| Everything on, agents working | 1.2% | 1.4% | 1.2 | 50 MB |
+
+The task board adds to that as it grows. With 1,626 tasks and an event every two seconds, Ambient used 1.6% of a core
+and 90 MB with the board closed, and 4.2% and 96 MB with it open.
+
+What these numbers leave out: the living wallpaper pauses where windows cover it, so the figure above is for a
+mostly covered desktop, as while you work; a bare desktop costs more. Memory with everything on moves with what the
+wallpaper has drawn: an earlier run of the same case read 241 MB. The Dock glow was measured without Accessibility
+access (its edge-line mode). The black hole or sun when the island opens wasn't measured; it runs only while the
+island is open and stops in Low Power Mode. Run `scripts/measure-perf.sh` to measure your Mac; it changes nothing in
+the Ambient you use, and nothing it measures leaves your Mac.
+
 ## Remote agents
 
 Coding agents run on devboxes, cloud VMs and the Mac mini in the closet too. Pair a machine, and its sessions show up
