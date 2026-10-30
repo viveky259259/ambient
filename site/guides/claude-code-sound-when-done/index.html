@@ -129,6 +129,8 @@
 
     <p class="answer">Add a <code>Stop</code> hook to <code>~/.claude/settings.json</code> that runs <code>afplay /System/Library/Sounds/Glass.aiff</code>. Claude Code runs it the moment Claude finishes responding. For a different sound when Claude asks for permission, add a <code>PermissionRequest</code> hook too. For a plain bell, set <code>preferredNotifChannel</code> to <code>"terminal_bell"</code>; for distinct chimes across every agent, use Ambient.</p>
 
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-sound-when-done-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
+
     <h2>The quickest way: a Stop hook</h2>
     <p><code>Stop</code> runs when Claude finishes responding. Add this to <code>~/.claude/settings.json</code>:</p>
     <pre><code>{
