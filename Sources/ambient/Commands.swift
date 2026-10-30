@@ -24,7 +24,7 @@ struct Commands {
         case "link": return link() ? 0 : 1
         case "memory": return memory(rest)
         case "mcp":
-            let send: (WireMessage) -> WireMessage? = { request($0, timeout: Self.taskModelTimeout) }
+            let send: (WireMessage) -> WireMessage? = { request($0) }
             return MCPServer(request: send, memory: MemoryClient(paths: paths, request: send)).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
         // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
@@ -180,12 +180,10 @@ struct Commands {
 
     // MARK: - Status
 
-    /// Task-model requests wait for the app's main thread for up to 2 seconds; give them longer than that.
-    static let taskModelTimeout: TimeInterval = 3
-
-    private func request(_ message: WireMessage, timeout: TimeInterval = 1) -> WireMessage? {
+    /// Waits longer than the 2 seconds the app gives its main thread, so a busy app isn't taken for a closed one.
+    private func request(_ message: WireMessage) -> WireMessage? {
         guard let data = try? Wire.encode(message),
-              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: timeout, expectReply: true),
+              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 3, expectReply: true),
               !reply.isEmpty else { return nil }
         return try? Wire.decode(reply)
     }
@@ -335,6 +333,14 @@ struct Commands {
         return 0
     }
 
+    /// `path` with `~` expanded and made absolute against the current directory, since the app runs from elsewhere.
+    /// Symlinks stay as they are: a venv's python finds its packages through its own path. Empty stays empty.
+    static func absolute(_ path: String) -> String {
+        let trimmed = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        guard !trimmed.isEmpty else { return "" }
+        return URL(fileURLWithPath: trimmed).standardizedFileURL.path
+    }
+
     /// Shows the board's model, or points it at a model folder or `.gguf` file first.
     private func taskModel(_ args: [String]) -> Int32 {
         let usage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
@@ -348,7 +354,7 @@ struct Commands {
             case "--json": continue
             case "--python":
                 guard let python = rest.popFirst() else { out.error(usage); return 64 }
-                change.pythonPath = MCPServer.absolute(python)
+                change.pythonPath = Self.absolute(python)
             case "--help", "-h": print(usage); return 0
             default:
                 guard !arg.hasPrefix("--"), change.modelPath == nil else { out.error(usage); return 64 }
@@ -359,12 +365,12 @@ struct Commands {
             out.error(problem)
             return 1
         }
-        if let python = change.pythonPath, let problem = MCPServer.validate(python: python) {
-            out.error(problem)
+        if let python = change.pythonPath, !python.isEmpty, !FileManager.default.isExecutableFile(atPath: python) {
+            out.error("No executable Python at \(python). Nothing changed.")
             return 1
         }
         let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
-        let reply = request(message, timeout: Self.taskModelTimeout)
+        let reply = request(message)
         guard case let .taskModel(config)? = reply else {
             out.error(MCPServer.noConfig(reply, changing: message != .taskModelRequest))
             return 1
@@ -438,7 +444,7 @@ struct Commands {
                 positional.append(arg)
             }
         }
-        let client = MemoryClient(paths: paths, request: { request($0, timeout: Self.taskModelTimeout) })
+        let client = MemoryClient(paths: paths, request: { request($0) })
         let sub = positional.first ?? "list"
         let key = positional.dropFirst().first
         guard sub == "set" || positional.count <= 2 else { out.error(usage); return 64 }

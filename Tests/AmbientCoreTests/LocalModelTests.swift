@@ -44,6 +44,44 @@ private final class Scratch {
         #expect(LocalModelPath.problem(with: "models/qwen") == "Use an absolute path.")
         #expect(LocalModelPath.problem(with: "/nonexistent/ambient/model") == "Nothing at /nonexistent/ambient/model.")
         #expect(LocalModelPath.problem(with: s.url.appendingPathComponent("whisper-large").path)?.hasSuffix("Nothing changed.") == true)
+        try s.file("empty/readme.md")
+        #expect(LocalModelPath.problem(with: s.url.appendingPathComponent("empty").path)
+            == "empty: No config.json or .gguf file in this folder. Nothing changed.")
+    }
+
+    @Test func foldersThatBringTheirOwnCodeAreRefused() throws {
+        let s = try Scratch()
+        try s.file("custom/config.json", #"{"model_type":"qwen2_vl","vision_config":{},"model_file":"custom.py"}"#)
+        try s.file("custom/model.safetensors")
+        let model = try #require(LocalModelPath.inspect(s.url.appendingPathComponent("custom").path))
+        #expect(model.format == .unknown)
+        #expect(model.note?.contains("model_file") == true)
+        #expect(LocalModelPath.problem(with: s.url.appendingPathComponent("custom").path)?.contains("model_file") == true)
+    }
+
+    @Test func nullVisionConfigIsATextModel() throws {
+        let s = try Scratch()
+        try s.file("text/config.json", #"{"model_type":"qwen2","vision_config":null}"#)
+        try s.file("text/model.safetensors")
+        #expect(LocalModelPath.inspect(s.url.appendingPathComponent("text").path)?.format == .mlxText)
+    }
+
+    @Test func ggufRepoWithAConfigFileStaysGGUF() throws {
+        let s = try Scratch()
+        try s.file("repo/config.json", #"{"model_type":"llama"}"#)
+        try s.file("repo/model-Q4.gguf")
+        let model = try #require(LocalModelPath.inspect(s.url.appendingPathComponent("repo").path))
+        #expect(model.format == .gguf)
+        #expect(model.resolved.hasSuffix("repo/model-Q4.gguf"))
+    }
+
+    @Test func chosenGGUFFilesGetTheSameChecksAsFolders() throws {
+        let s = try Scratch()
+        #expect(LocalModelPath.inspect(try s.file("flux1-dev-Q4.gguf").path)?.format == .media)
+        #expect(LocalModelPath.inspect(try s.file("whisper-large.gguf").path)?.format == .media)
+        let projector = try #require(LocalModelPath.inspect(try s.file("mmproj-f16.gguf").path))
+        #expect(projector.format == .unknown)
+        #expect(projector.note?.contains("main .gguf") == true)
     }
 
     @Test func mlxTextAndVisionFolders() throws {
@@ -259,6 +297,52 @@ private final class Scratch {
             try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
                                                 prompt: "x", maxTokens: 1, temperature: 0, timeout: 0.5)
         }
+    }
+
+    /// The shared queue runs one model at a time, so a run that never returns would stall every later one.
+    @Test func childHoldingThePipesAfterExitDoesNotHangTheRun() async throws {
+        let s = try Scratch()
+        // The background sleep inherits both pipes and outlives the runtime.
+        let python = try s.tool("python", "sleep 12 &\nexit 0")
+        await #expect(throws: LocalModelRunner.RunError.timedOut) {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 30)
+        }
+    }
+
+    /// mlx-vlm forces `trust_remote_code` on for some tokenizers, so the folder check alone can't stop their code.
+    @Test func modelFolderCodeNeverLoads() async throws {
+        let s = try Scratch()
+        try s.file("site/transformers/__init__.py")
+        try s.file("site/transformers/dynamic_module_utils.py", """
+        def get_class_in_module(*args, **kwargs): pass
+        def get_class_from_dynamic_module(*args, **kwargs): pass
+        """)
+        // Asks for the folder's code and swallows errors, as mlx-vlm's patched AutoProcessor does.
+        try s.file("site/mlx_vlm/__init__.py", """
+        import transformers.dynamic_module_utils as dynamic
+        def generate(*args, **kwargs): pass
+        def load(path):
+            try:
+                dynamic.get_class_from_dynamic_module()
+            except Exception:
+                pass
+            raise RuntimeError("The folder's code loaded.")
+        """)
+        try s.file("site/mlx_vlm/prompt_utils.py", "apply_chat_template = None")
+        try s.file("site/mlx_vlm/utils.py", "load_config = None")
+        let python = try s.tool("python", "PYTHONPATH='\(s.url.path)/site' exec python3 \"$@\"")
+        await #expect(throws: LocalModelRunner.RunError.failed("This model runs its own Python code, which Ambient won't load.")) {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: true, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 30)
+        }
+    }
+
+    /// The board's status line shows `localizedDescription`.
+    @Test func errorsKeepTheirMessage() {
+        #expect(LocalModelRunner.RunError.failed("Model type x not supported").localizedDescription == "Model type x not supported")
+        #expect(LocalModelRunner.RunError.timedOut.localizedDescription == "Local model timed out.")
+        #expect(LocalAgentMCP.MCPError.transport("Local LLM timed out.").localizedDescription == "Local LLM timed out.")
     }
 
     @Test func llamaCppGetsThePromptFileAndPlainCompletion() async throws {

@@ -9,7 +9,7 @@ struct MemoryClient {
 
     /// The project whose memory is the default: the one around `folder`, or around the folder the agent runs in.
     func project(_ folder: String?) -> String {
-        let folder = folder.flatMap { $0.isEmpty ? nil : MCPServer.absolute($0) }
+        let folder = folder.flatMap { $0.isEmpty ? nil : Commands.absolute($0) }
         return MemoryProject.root(for: folder ?? workingFolder())
     }
 
@@ -50,7 +50,7 @@ struct MemoryClient {
                 throw MemoryError(problem)
             }
             let scope = try Self.scope(scope, project: project) ?? .project(project)
-            let file = try filePath.map { try MemoryBlobStore(root: paths.memoryBlobs).add(fileAt: MCPServer.absolute($0)) }
+            let file = try filePath.map { try MemoryBlobStore(root: paths.memoryBlobs).add(fileAt: Commands.absolute($0)) }
             // Clipped here as well as in the store, so the message always fits through the socket.
             let write = MemoryWrite(key: key, scope: scope, value: value, file: file,
                                     description: Trim.clean(description, max: MemoryStore.maxDescriptionLength),

@@ -113,8 +113,10 @@ read and set the board's model, add Ambient as an MCP server:
 claude mcp add ambient -- ~/.ambient/bin/ambient mcp
 ```
 
-It offers `get_task_model` and `set_task_model_path` (path, optional `python`, optional `enable`), and needs
-Ambient running.
+It offers `get_task_model` and `set_task_model_path` (path, optional `enable`), and needs Ambient running. **Python
+for MLX** can't be set this way, since Ambient runs that program: use Settings or `ambient task model --python`.
+Ambient also refuses model folders that declare their own Python code (`model_file` in `config.json`), and direct
+runs stop with an error if a model tries to load custom code (`auto_map`).
 
 **Working memory** — the same MCP server lets your agents share data with each other: Claude Code leaves the API
 contract it worked out, Codex picks it up in the next tab; one agent shares a build log or a fixture file, another reads

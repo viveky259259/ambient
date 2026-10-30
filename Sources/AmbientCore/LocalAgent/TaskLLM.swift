@@ -208,13 +208,8 @@ public struct TaskSummarizer: Sendable {
         }
     }
 
-    /// Probe gateway + storage + model without running inference.
-    public func probe() async -> TaskLLMStatus {
-        await resolve().status
-    }
-
-    /// Picks how to run the configured model: by gateway id, or for a model path, through the gateway when it
-    /// knows that path and otherwise directly with the runtime the model's format needs.
+    /// Picks how to run the configured model without running inference: by gateway id, or for a model path, through
+    /// the gateway when it knows that path and otherwise directly with the runtime the model's format needs.
     public func resolve() async -> TaskModelResolution {
         guard config.enabled else { return .unavailable(.disabled) }
         if config.usesModelPath { return await resolvePath() }
@@ -312,19 +307,14 @@ public struct TaskSummarizer: Sendable {
         }
     }
 
-    /// Resolves the model, then summarizes with it.
-    public func summarize(context: String) async throws -> TaskSemantics {
-        switch await resolve() {
-        case let .ready(route): try await summarize(context: context, via: route)
-        case let .unavailable(status): throw LocalAgentMCP.MCPError.rpc(status.label)
-        }
-    }
+    /// How long a model gets to answer, in seconds.
+    static let replyTimeout = 120
 
     public func summarize(context: String, via route: TaskModelRoute) async throws -> TaskSemantics {
         let prompt = Self.prompt(for: context, skill: skillPack)
         guard case let .gateway(modelID, _) = route else {
             let text = try await LocalModelRunner.generate(route, prompt: prompt, maxTokens: 220, temperature: 0.2,
-                                                           timeout: 120)
+                                                           timeout: TimeInterval(Self.replyTimeout))
             return Self.parse(text)
         }
         if TaskLLMConfig.isCloudModel(modelID) {
@@ -339,7 +329,7 @@ public struct TaskSummarizer: Sendable {
             "options": [
                 "max_tokens": 220,
                 "temperature": 0.2,
-                "timeout_seconds": 120,
+                "timeout_seconds": Self.replyTimeout,
             ],
         ]) as? [String: Any]
         guard let jobID = submitted?["id"] as? String else {
@@ -349,8 +339,9 @@ public struct TaskSummarizer: Sendable {
         return Self.parse(text)
     }
 
-    private func waitForText(jobID: String, attempts: Int = 90) async throws -> String {
-        for _ in 0..<attempts {
+    private func waitForText(jobID: String) async throws -> String {
+        // Twice a second for the whole of the job's time: big models can take most of it just to load.
+        for _ in 0..<(Self.replyTimeout * 2) {
             try await Task.sleep(nanoseconds: 500_000_000)
             let status = try await mcp.callTool(name: "get_job", arguments: ["job_id": jobID]) as? [String: Any]
             let state = status?["status"] as? String ?? ""

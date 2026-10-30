@@ -21,7 +21,7 @@ public enum TaskModelRoute: Equatable, Sendable {
 /// Runs a model on disk directly, without the local-agent gateway. One model at a time, like the gateway's queue,
 /// so two summaries never load two copies of the weights.
 public enum LocalModelRunner {
-    public enum RunError: Error, Equatable, CustomStringConvertible, Sendable {
+    public enum RunError: LocalizedError, Equatable, CustomStringConvertible, Sendable {
         case launch(String)
         case timedOut
         case failed(String)
@@ -35,6 +35,8 @@ public enum LocalModelRunner {
             case .noOutput: "The local model returned no text."
             }
         }
+
+        public var errorDescription: String? { description }
     }
 
     private static let queue = DispatchQueue(label: "com.viveky259259.Ambient.localmodel", qos: .utility)
@@ -146,7 +148,8 @@ public enum LocalModelRunner {
             _ = group.wait(timeout: .now() + 1)
             throw RunError.timedOut
         }
-        group.wait()
+        // Same after a normal exit. The readers may still be writing, so their data can't be used.
+        if group.wait(timeout: .now() + 5) == .timedOut { throw RunError.timedOut }
         guard process.terminationStatus == 0 else {
             let log = String(decoding: err.data, as: UTF8.self)
                 .split(whereSeparator: \.isNewline).suffix(6).joined(separator: "\n")
@@ -157,9 +160,14 @@ public enum LocalModelRunner {
 
     /// Loads with mlx-lm (or mlx-vlm) and prints one marked JSON line. Base models without a chat template get the
     /// prompt as plain text. `enable_thinking=False` keeps reasoning models (Qwen3 and later) from spending the whole
-    /// token budget thinking before the JSON; templates without that switch ignore it.
+    /// token budget thinking before the JSON; templates without that switch ignore it. Some mlx-vlm processors force
+    /// `trust_remote_code` on and catch `Exception`, so loading a folder's code ends the run before any of it can start.
     static let mlxScript = """
     import json, sys
+    import transformers.dynamic_module_utils as dynamic
+    def refuse(*args, **kwargs):
+        sys.exit("This model runs its own Python code, which Ambient won't load.")
+    dynamic.get_class_in_module = dynamic.get_class_from_dynamic_module = refuse
     req = json.load(sys.stdin)
     if req["vision"]:
         from mlx_vlm import generate, load
