@@ -132,8 +132,9 @@ public enum RemotePairing {
             audit?.append(.init(action: .fingerprintChanged, machine: request.id, detail: "approved \(identity)"))
         }
         audit?.append(.init(action: .paired, machine: request.id, detail: identity))
+        // Always a new date: a changed machine is what restarts its link, so the new shim and level take effect.
         let machine = Machine(id: request.id, label: request.label ?? existing?.label, transport: request.transport,
-                              fingerprint: identity, pairedAt: existing?.pairedAt ?? Date())
+                              fingerprint: identity)
         return Outcome(machine: machine, status: status, installLines: lines, needsManualStep: installed.status == 3)
     }
 

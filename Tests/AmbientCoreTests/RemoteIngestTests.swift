@@ -355,6 +355,8 @@ private func auditFile() -> RemoteAudit {
         #expect(MachineFile.load(from: machines) == [good])
         let mode = try FileManager.default.attributesOfItem(atPath: machines.path)[.posixPermissions] as? Int
         #expect(mode == 0o600)
+        try MachineFile.save([good, good], to: machines)
+        #expect(MachineFile.load(from: machines) == [good])
 
         let state = dir.appendingPathComponent("state.json")
         try StateFile.save([], cursors: ["devbox": RemoteCursor(seq: 9, epoch: "e")], to: state)

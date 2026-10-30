@@ -10,7 +10,7 @@
 #
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
 
-AR_VERSION=1.0.1
+AR_VERSION=1.0.2
 AR_PROTO=1
 AR_CAPS=exit,title,heartbeat
 
@@ -586,7 +586,8 @@ cmd_follow() {
             exit 0
         fi
         [ $((follow_tick % 5)) -ne 0 ] || check_live
-        [ $((follow_tick % 30)) -ne 0 ] || check_titles
+        # Reread so a tightened level stops titles here too, without waiting for this connection to end.
+        [ $((follow_tick % 30)) -ne 0 ] || { read_conf; check_titles; }
         if [ $((follow_tick % follow_heartbeat)) -eq 0 ]; then
             printf '{"v":%s,"type":"heartbeat","seq":%s}\n' "$AR_PROTO" "$follow_last" || exit 0
         fi
@@ -608,6 +609,7 @@ PY_MERGE='
 import json, os, sys, time
 
 path, mode, command, backups = sys.argv[1:5]
+path = os.path.realpath(path)
 events = sys.argv[5:]
 marker = ".ambient/bin/ambient-remote"
 

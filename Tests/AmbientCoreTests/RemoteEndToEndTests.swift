@@ -122,7 +122,7 @@ private final class Hub: @unchecked Sendable {
             cursor.seq = batch.last?.event.seq ?? self.cursor.seq
             crashed = true
         }
-        let (changes, saveFirst) = store.apply(batch, from: machine.ref)
+        let (changes, saveFirst) = store.apply(batch, from: machine.ref, saved: self.cursor, cursor: cursor)
         self.cursor = cursor
         applied += batch.map(\.event.seq)
         if saveFirst { try! StateFile.save(store.sessions, cursors: [machine.id: cursor], to: stateURL) }
@@ -457,6 +457,51 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         #expect(hub.healthLog.contains { if case .reconnecting = $0 { true } else { false } })
         #expect(hub.healthLog.filter { $0 == .connected }.count >= 2)
         #expect(stub.paths.remoteAudit.records().contains { $0.action == .spoolReset })
+
+        // A session from before the rebuild goes on, with a seq far below the one it remembers.
+        try stub.hook("UserPromptSubmit", session: "a")
+        #expect(waitUntil { hub.sessions().first { $0.sessionId == "a" }?.activity == .thinking })
+    }
+
+    @Test func aFloodIsHeldBackOnlyAsLongAsTheLimitSays() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains(.connected) })
+
+        // 300 past the burst of 500, so about 6 s at 50 a second. Adding up each event's wait would take minutes.
+        let count = 800, now = Int(Date().timeIntervalSince1970)
+        try Data().write(to: stub.spool.appendingPathComponent("events.jsonl"))
+        try stub.appendToSpool((1...count).map {
+            #"{"v":1,"seq":\#($0),"id":"\#(String(format: "%032x", $0))","ts":\#(now),"agent":"claude","session":"s1","kind":"toolStarted"}"# + "\n"
+        }.joined())
+        try "\(count) 0\n".write(to: stub.spool.appendingPathComponent("seq"), atomically: true, encoding: .utf8)
+        #expect(waitUntil(20) { hub.cursor.seq == Int64(count) })
+    }
+
+    @Test func pairingAgainStartsANewLink() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let again = try RemotePairing.pair(.init(id: machine.id, label: machine.label, transport: machine.transport),
+                                           shim: RemoteShim(url: shimURL), existing: machine, audit: nil)
+        // The coordinator restarts a link when its machine changes, which is what puts the new shim and level to work.
+        #expect(again.machine != machine)
+        #expect(again.machine.fingerprint == machine.fingerprint)
+    }
+
+    @Test func pairingKeepsASymlinkedConfigALink() throws {
+        let stub = try StubMachine()
+        let dotfile = stub.home.appendingPathComponent("dotfiles-settings.json")
+        try Data("{}".utf8).write(to: dotfile)
+        let config = stub.home.appendingPathComponent(".claude/settings.json")
+        try FileManager.default.createSymbolicLink(at: config, withDestinationURL: dotfile)
+
+        _ = try stub.pair()
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: config.path) == dotfile.path)
+        #expect(try String(contentsOf: dotfile, encoding: .utf8).contains("ambient-remote"))
     }
 
     @Test func anUnreachableMachineRetriesWithoutAFuss() throws {

@@ -25,13 +25,16 @@ public enum MachineFile {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
-    /// Whatever was saved. A machine with an invalid id or fingerprint isn't followed: the file is the allowlist.
+    /// Whatever was saved. A machine with an invalid id or fingerprint isn't followed, and an id is only read once:
+    /// the file is the allowlist, and people edit it.
     public static func load(from url: URL) -> [Machine] {
         guard let data = try? Data(contentsOf: url),
               let envelope = try? JSONDecoder().decode(Envelope.self, from: data),
               envelope.version == 1 else { return [] }
+        var seen = Set<String>()
         return envelope.machines.filter {
             Machine.isValidID($0.id) && Machine.isValidFingerprint($0.fingerprint) && !$0.transport.isEmpty
+                && seen.insert($0.id).inserted
         }
     }
 }

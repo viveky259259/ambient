@@ -159,9 +159,15 @@ public final class RemoteLink: @unchecked Sendable {
         child.standardOutput = out
         child.standardError = err
         let errors = TailBuffer()
+        let drained = DispatchSemaphore(value: 0)
         err.fileHandleForReading.readabilityHandler = { handle in
             let chunk = handle.availableData
-            if chunk.isEmpty { handle.readabilityHandler = nil } else { errors.append(chunk) }
+            if chunk.isEmpty {
+                handle.readabilityHandler = nil
+                drained.signal()
+            } else {
+                errors.append(chunk)
+            }
         }
         do {
             try child.run()
@@ -175,9 +181,12 @@ public final class RemoteLink: @unchecked Sendable {
         if cancelled { child.terminate() }
 
         let result = read(child, from: out.fileHandleForReading.fileDescriptor)
-        err.fileHandleForReading.readabilityHandler = nil
         child.terminate()
         child.waitUntilExit()
+        // What it printed on the way out is why it left. An ssh ControlPersist master can hold this pipe open, so a
+        // short wait, not an end of file.
+        _ = drained.wait(timeout: .now() + 0.5)
+        err.fileHandleForReading.readabilityHandler = nil
         lock.lock()
         process = nil
         lock.unlock()
@@ -230,7 +239,8 @@ public final class RemoteLink: @unchecked Sendable {
                     return finish(.refused(reason))
                 case let .deliver(delivery):
                     batch.append(delivery)
-                    hold += ingest.delay(after: delivery.event, now: now)
+                    // Each delay is the whole wait from now, not a step on top of the last one.
+                    hold = max(hold, ingest.delay(after: delivery.event, now: now))
                 case .heartbeat, .dropped:
                     break
                 }

@@ -108,7 +108,7 @@ final class AppModel: ObservableObject {
     func applyRemote(_ batch: [RemoteDelivery], cursor: RemoteCursor, from machine: MachineRef) {
         // Already queued when the machine was unpaired: the allowlist wins.
         guard remoteLinks.contains(where: { $0.machine.id == machine.id }) else { return }
-        let (changes, saveFirst) = store.apply(batch, from: machine)
+        let (changes, saveFirst) = store.apply(batch, from: machine, saved: remoteCursor(machine.id), cursor: cursor)
         remoteCursors[machine.id] = cursor
         if let i = remoteLinks.firstIndex(where: { $0.machine.id == machine.id }) {
             remoteLinks[i].lastEventAt = Date()

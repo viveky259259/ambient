@@ -6,7 +6,7 @@ public enum RemoteRedaction: String, Codable, CaseIterable, Sendable {
     case metadata
     /// Adds tool names and short titles. The default.
     case standard
-    /// Adds prompt and message text.
+    /// Adds up to 160 characters of the agent's final message, a permission request or an error. Never what you typed.
     case full
 }
 

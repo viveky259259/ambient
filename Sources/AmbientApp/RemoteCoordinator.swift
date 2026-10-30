@@ -85,7 +85,7 @@ final class RemoteCoordinator {
             links[id] = nil
             stopping.async { link.stop() }
         }
-        for machine in next where previous[machine.id] != machine || links[machine.id] == nil || hasGivenUp(machine.id) {
+        for machine in next where previous[machine.id] != machine || links[machine.id] == nil {
             if let link = links[machine.id] {
                 links[machine.id] = nil
                 // A new link can't start until the old one has stopped, or two would follow the same spool.
@@ -96,15 +96,6 @@ final class RemoteCoordinator {
             } else {
                 follow(machine)
             }
-        }
-    }
-
-    /// A link that stopped for a reason pairing fixes. Pairing again leaves the machine the same when only the shim
-    /// changed, so it's the file's new date that brings the link back.
-    private func hasGivenUp(_ id: String) -> Bool {
-        switch model.remoteLinks.first(where: { $0.machine.id == id })?.health {
-        case .revoked, .upgradeNeeded: true
-        default: false
         }
     }
 

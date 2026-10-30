@@ -85,8 +85,16 @@ public final class SessionStore {
 
     /// A batch from one machine, and whether the state must reach disk before anyone hears about it. Alerts go out
     /// only after the sessions and the cursor are saved together, so a hub killed at any point replays the events
-    /// it hasn't saved: none lost, none announced twice.
-    public func apply(_ batch: [RemoteDelivery], from machine: MachineRef) -> (changes: [SessionChange], saveFirst: Bool) {
+    /// it hasn't saved: none lost, none announced twice. A batch that doesn't follow `saved` comes from a rebuilt spool,
+    /// whose `seq` started over, so what the machine's sessions remember no longer compares.
+    public func apply(_ batch: [RemoteDelivery], from machine: MachineRef, saved: RemoteCursor = RemoteCursor(),
+                      cursor: RemoteCursor = RemoteCursor()) -> (changes: [SessionChange], saveFirst: Bool) {
+        if let first = batch.first?.event.seq, saved.epoch != cursor.epoch || first <= saved.seq {
+            for var s in byId.values where s.origin?.machine.id == machine.id {
+                s.origin?.lastSeq = 0
+                byId[s.id] = s
+            }
+        }
         var changes: [SessionChange] = []
         var saveFirst = false
         for delivery in batch {
