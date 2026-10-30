@@ -69,7 +69,8 @@ scenario() {
   kill $PID 2>/dev/null; wait $PID 2>/dev/null || true; PID=""
   print -r -- "$samples" | awk -v name="$name" -v avg=$(( (c1 - c0) / (t1 - t0) * 100 )) '
     { if ($1 > peak) peak = $1; power += $2; n++; mem = $3 }
-    END { printf "| %s | %.1f%% | %.1f%% | %.1f | %s |\n", name, avg, peak, (n ? power / n : 0), mem }'
+    END { if (avg + 0 > peak) peak = avg + 0  # the average comes from ps, the samples from top
+      printf "| %s | %.1f%% | %.1f%% | %.1f | %s |\n", name, avg, peak, (n ? power / n : 0), mem }'
 }
 
 echo "| Scenario | CPU, average | CPU, peak | Energy impact | Memory |"
