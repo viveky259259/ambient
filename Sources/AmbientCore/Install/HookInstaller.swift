@@ -306,6 +306,17 @@ public struct HookInstaller: Sendable {
 
     @discardableResult
     public func install(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
+        let report = try write(agent, dryRun: dryRun)
+        if !dryRun { AgentRecord.update(paths, agent, connected: true, seed: connectedNow) }
+        return report
+    }
+
+    /// Agents whose settings hold Ambient's hooks, current or out of date.
+    func connectedNow() -> Set<AgentKind> {
+        HookHealth.seed(statuses: Dictionary(uniqueKeysWithValues: AgentKind.hooked.map { ($0, status($0)) }))
+    }
+
+    private func write(_ agent: AgentKind, dryRun: Bool) throws -> InstallReport {
         guard let spec = Self.spec(for: agent) else { throw InstallerError.agentNotFound(agent) }
         if case .ownedFile = spec.layout { return try writeOwned(spec, contents: ownedContents(spec), dryRun: dryRun) }
         let path = paths.userHome.appendingPathComponent(spec.configFile).path
@@ -333,11 +344,17 @@ public struct HookInstaller: Sendable {
     @discardableResult
     public func uninstall(_ agent: AgentKind, dryRun: Bool = false) throws -> InstallReport {
         guard let spec = Self.spec(for: agent) else { throw InstallerError.agentNotFound(agent) }
-        if case .ownedFile = spec.layout { return try writeOwned(spec, contents: nil, dryRun: dryRun) }
-        let owned = if case .hookSet = spec.layout { true } else { false }
-        return try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
-            hooks = owned ? .object([]) : Self.removingAmbientEntries(from: hooks)
+        let report: InstallReport
+        if case .ownedFile = spec.layout {
+            report = try writeOwned(spec, contents: nil, dryRun: dryRun)
+        } else {
+            let owned = if case .hookSet = spec.layout { true } else { false }
+            report = try edit(agent, dryRun: dryRun, createIfMissing: false) { hooks in
+                hooks = owned ? .object([]) : Self.removingAmbientEntries(from: hooks)
+            }
         }
+        if !dryRun { AgentRecord.update(paths, agent, connected: false, seed: connectedNow) }
+        return report
     }
 
     private static func parseConfig(_ text: String) throws -> JSONValue {

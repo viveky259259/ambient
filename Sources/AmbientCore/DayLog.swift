@@ -21,15 +21,19 @@ public struct DayMoment: Codable, Equatable, Sendable {
 
     public let kind: Kind
     public let agent: AgentKind
-    /// The session's title, else its project, else the agent's name.
+    /// The session's title, else its project, else the agent's name. For a remote session, only the agent and
+    /// the machine's label: its titles and projects aren't kept here.
     public let place: String
     public let at: Date
+    /// The machine's id, for a remote session.
+    public var machine: String?
 
-    public init(kind: Kind, agent: AgentKind, place: String, at: Date) {
+    public init(kind: Kind, agent: AgentKind, place: String, at: Date, machine: String? = nil) {
         self.kind = kind
         self.agent = agent
         self.place = place
         self.at = at
+        self.machine = machine
     }
 }
 
@@ -70,7 +74,7 @@ public struct DayLog: Codable, Equatable, Sendable {
         rollOver(now: now, calendar: calendar)
         let s = change.session
         guard let event = change.event, !s.sessionId.hasPrefix("demo-") else { return }
-        if let project = s.project, !projects.contains(project) {
+        if !s.isRemote, let project = s.project, !projects.contains(project) {
             projects.append(project)
             projects.sort()
         }
@@ -112,8 +116,14 @@ public struct DayLog: Codable, Equatable, Sendable {
     }
 
     private mutating func remember(_ kind: DayMoment.Kind, _ s: Session) {
-        moments.insert(DayMoment(kind: kind, agent: s.agent, place: Describe.title(s), at: s.lastEventAt), at: 0)
+        let place = s.origin.map { "\(s.agentLabel) on \($0.machine.label)" } ?? Describe.title(s)
+        moments.insert(DayMoment(kind: kind, agent: s.agent, place: place, at: s.lastEventAt, machine: s.origin?.machine.id), at: 0)
         if moments.count > Self.maxMoments { moments.removeLast(moments.count - Self.maxMoments) }
+    }
+
+    /// Forgets the moments from a machine. Totals stay: they hold no text, and they're gone at midnight.
+    public mutating func removeMoments(machine: String) {
+        moments.removeAll { $0.machine == machine }
     }
 }
 

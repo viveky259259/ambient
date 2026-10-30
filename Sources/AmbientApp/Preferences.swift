@@ -80,6 +80,11 @@ final class Preferences: ObservableObject {
     @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
     @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
 
+    // MARK: - Remote machines
+
+    /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
+    @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
+
     init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
         self.paths = paths
@@ -120,6 +125,7 @@ final class Preferences: ObservableObject {
             "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
             "taskLLMReadTranscripts": false,
             "taskLLMModelsVolume": "/Volumes/Models",
+            "remoteSummaries": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -163,6 +169,7 @@ final class Preferences: ObservableObject {
         taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
             ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
         taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
+        remoteSummaries = defaults.bool(forKey: "remoteSummaries")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 
