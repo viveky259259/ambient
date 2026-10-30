@@ -67,8 +67,18 @@ public struct PermissionAsk: Codable, Equatable, Sendable, Identifiable {
 
     public var tool: String { ToolNames.display(toolName) }
 
-    /// The hint doesn't show everything the tool would do, so the card says so before anyone allows it.
-    public var hintIsCut: Bool { hint?.hasSuffix("…") ?? false }
+    /// Whether the card shows all it knows of what the tool would do. A cut hint doesn't, and neither does none at
+    /// all (MCP tools have no hint), so the card says so before anyone allows it.
+    public var showsAll: Bool { hint.map { !$0.hasSuffix("…") } ?? false }
+
+    public static let maxHintLines = 3
+
+    /// Lines the hint takes on the card, which wraps it rather than hide any of it. About 57 characters fit on a
+    /// line, and these counts leave room for wide characters and for a long word that can't share one.
+    public var hintLines: Int {
+        let count = hint?.count ?? 0
+        return count <= 36 ? 1 : count <= 52 ? 2 : Self.maxHintLines
+    }
 }
 
 /// The user's answer. `ask` means "no answer": the agent shows its own prompt as if Ambient weren't there.

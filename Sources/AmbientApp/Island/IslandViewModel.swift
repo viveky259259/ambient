@@ -72,7 +72,9 @@ final class IslandViewModel: ObservableObject {
         case .collapsed: return CGSize(width: collapsed, height: h)
         case .bloom: return CGSize(width: max(collapsed, 400), height: h + 74)
         case .speech: return CGSize(width: max(collapsed, 360), height: h + 48)
-        case .permission: return CGSize(width: max(collapsed, 440), height: h + 112)
+        case .permission:
+            let hintLines = permission?.ask.hintLines ?? 1
+            return CGSize(width: max(collapsed, 440), height: h + 100 + CGFloat(hintLines) * 15)
         case .expanded:
             let rows = CGFloat(min(max(1, listed.count), Self.maxAllRows))
             return CGSize(width: max(collapsed, 440), height: h + 12 + rows * 52 + 44)

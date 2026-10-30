@@ -207,25 +207,31 @@ private struct PermissionCard: View {
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }
-            HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("wants to use \(ask.tool)")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.72))
-                    .fixedSize()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                // Wrapped, never trimmed by the view: this is the text the user decides on.
                 if let hint = ask.hint {
                     Text(hint)
                         .font(.system(size: 11.5, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.92))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        .lineLimit(PermissionAsk.maxHintLines)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Its details aren't shown here.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Palette.waiting.color)
                 }
             }
             HStack(spacing: 8) {
                 Button(action: onAnswerInAgent) {
                     let app = HostActivator.appName(for: ask.event.host) ?? ask.event.agent.displayName
-                    Text(ask.hintIsCut ? "Cut short: see it all in \(app)" : "Answer in \(app)")
+                    Text(ask.showsAll ? "Answer in \(app)" : "See it all in \(app)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(ask.hintIsCut ? Palette.waiting.color : .white.opacity(0.6))
+                        .foregroundStyle(ask.showsAll ? .white.opacity(0.6) : Palette.waiting.color)
                 }
                 .buttonStyle(.plain)
                 Spacer()

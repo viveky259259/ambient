@@ -128,8 +128,8 @@ buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds 
 - **The agent waits too.** In a terminal, Claude Code and Codex show their own prompt only after the island hands
   it back, so a prompt you ignore arrives up to that many seconds later. In Claude's desktop app and editors,
   the island and the app's own dialog race, and whichever you answer first wins.
-- **Nothing hidden.** A command too long for the card is cut at 80 characters, and the card says so and offers to
-  take you to the agent to read all of it.
+- **Nothing hidden.** The card wraps what it shows rather than trim it. A command over 80 characters is cut, and MCP
+  tools show no details at all, and in both cases the card says so and offers to take you to the agent to read it.
 - **One at a time, none lost.** Several prompts queue in order, each with its own time limit, and the card says
   how many are waiting.
 - **No stray clicks.** The buttons ignore clicks for the first moment the card is on screen, so a card that
