@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Fixed**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
+  sessions finished with JSON like `{"suggestion":"…"}`.
+
 ## 0.7.0 — 2026-10-23
 
 - **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of

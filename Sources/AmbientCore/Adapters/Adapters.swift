@@ -32,7 +32,8 @@ public enum AdapterRegistry {
                              now: Date = Date(), host: HostInfo? = nil) -> AgentEvent? {
         let adapter: any AgentAdapter.Type = switch agent {
         // OpenCode's events reach Ambient through its plugin, which speaks Claude's format.
-        case .claude, .codex, .opencode: ClaudeAdapter.self
+        case .claude, .opencode: ClaudeAdapter.self
+        case .codex: CodexAdapter.self
         case .gemini: GeminiAdapter.self
         case .antigravity: AntigravityAdapter.self
         case .cursor: CursorAdapter.self
@@ -71,7 +72,7 @@ public enum AdapterRegistry {
     }
 }
 
-/// Claude Code. Codex's hooks use the same event names and fields, so it shares this adapter.
+/// Claude Code. Codex's hooks use the same event names and fields, so CodexAdapter builds on this one.
 /// OpenCode's plugin also speaks this format. Cursor has its own adapter — do not add it here.
 enum ClaudeAdapter: AgentAdapter {
     static func normalize(event: String, payload p: HookPayload) -> EventKind? {
@@ -124,6 +125,17 @@ enum ClaudeAdapter: AgentAdapter {
         default:
             return message.map { .notice(message: $0) }
         }
+    }
+}
+
+/// Codex. Codex Desktop also runs one-turn threads of its own through these hooks, e.g. to suggest
+/// the next prompt when a turn ends ({"suggestion":"…"}). It doesn't save them, so their payloads
+/// carry a null transcript_path; threads people work in, forks included, always have one, and so do
+/// `codex exec` runs unless `--ephemeral`. Their SessionEnd still passes, clearing rows from before.
+enum CodexAdapter: AgentAdapter {
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        if p.isNull("transcript_path"), event != "SessionEnd" { return nil }
+        return ClaudeAdapter.normalize(event: event, payload: p)
     }
 }
 
