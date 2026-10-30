@@ -172,9 +172,19 @@ private func antigravity(_ event: String, _ json: String) -> EventKind? {
         #expect(codex(empty) == nil)
     }
 
+    private static let suggestionEnd = #"{"session_id":"01a14be7-7fce-77a1-aea0-1b954fa0a392","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionEnd","reason":"other"}"#
+
     @Test func suggestionThreadEndStillClearsItsRow() {
-        let end = #"{"session_id":"01a14be7-7fce-77a1-aea0-1b954fa0a392","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionEnd","reason":"other"}"#
-        #expect(codex(end)?.kind == .sessionEnded)
+        #expect(codex(Self.suggestionEnd)?.kind == .sessionEnded)
+    }
+
+    // Codex ends each hidden thread minutes later, when Ambient has never seen it.
+    @Test func endOfAnUnseenSuggestionThreadLeavesNoRowOrTask() throws {
+        let store = SessionStore(), tasks = TaskStore()
+        let change = try #require(codex(Self.suggestionEnd).flatMap { store.apply($0) })
+        #expect(store.sessions.isEmpty)
+        #expect(tasks.observe(change) == nil)
+        #expect(tasks.tasks.isEmpty)
     }
 
     @Test func forksPeopleMakeAreKept() {
