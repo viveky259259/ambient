@@ -64,13 +64,29 @@ final class EventServer {
                 }
                 _ = done.wait(timeout: .now() + 2)
                 return try? Wire.encode(.opened(sessionID: box.value ?? nil))
+            case .taskModelRequest, .setTaskModel:
+                let box = ReplyBox<TaskLLMConfig>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    if case let .setTaskModel(change) = message {
+                        box.value = model.value.setTaskModel(change)
+                    } else {
+                        box.value = model.value.prefs.taskLLMConfig
+                    }
+                    done.signal()
+                }
+                // The CLI waits longer than this, so it hears either the settings or that they may still change.
+                guard done.wait(timeout: .now() + 2) == .success, let config = box.value else {
+                    return try? Wire.encode(.taskModelTimedOut)
+                }
+                return try? Wire.encode(.taskModel(config))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
             case let .permissionRequest(ask):
                 DispatchQueue.main.async { model.value.apply(ask.event) }
                 // Holds this connection's thread until the user answers or the prompt goes back to the agent.
                 return try? Wire.encode(.permissionAnswer(permissions.value.answer(for: ask)))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult, .permissionAnswer:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut, .permissionAnswer:
                 return nil
             }
         }

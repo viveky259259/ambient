@@ -90,6 +90,34 @@ pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, 
 local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
 `ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board.
 
+**Model path** — instead of a gateway model id, point the board at a model on disk: Settings › Board › *Model &
+gateway options* › **Choose…**, `ambient task model PATH`, or an agent through `ambient mcp`. Ambient looks at
+the files to decide how to run it:
+
+| You choose | Ambient runs it |
+| --- | --- |
+| A path local-agent already serves (its `list_models` shows that path) | Through the gateway, by that model's id, so its queue and adapters apply |
+| An MLX or Hugging Face folder (`config.json` + safetensors) | Directly with **mlx-lm** |
+| The same with a `vision_config` (Qwen-VL, Qwen3.5 and similar) | Directly with **mlx-vlm**, text only |
+| A Hugging Face cache folder (`models--org--name`) | Its pinned snapshot, as above |
+| A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion`, or `llama-cli -no-cnv`) |
+| Speech, transcription, image or video weights | Refused: they can't write a summary |
+
+Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, and ask reasoning models (Qwen3 and later) not to
+think first. MLX runs get the prompt on standard input. llama.cpp reads it from a temporary file that only you can
+read (`0600`), deleted when the run ends. Ambient uses **Python for MLX** if you set one, otherwise the
+Python local-agent uses for MLX, otherwise a `python3` that can import the package. To let Claude Code or Codex
+read and set the board's model, add Ambient as an MCP server:
+
+```bash
+claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+```
+
+It offers `get_task_model` and `set_task_model_path` (path, optional `enable`), and needs Ambient running. **Python
+for MLX** can't be set this way, since Ambient runs that program: use Settings or `ambient task model --python`.
+Ambient also refuses model folders that declare their own Python code (`model_file` in `config.json`), and direct
+runs stop with an error if a model tries to load custom code (`auto_map`).
+
 Aider, Amp and other agents without command hooks can drive Ambient themselves; see
 [Any other agent](#any-other-agent).
 
@@ -361,6 +389,9 @@ ambient status [--json]                                The sessions Ambient is t
 ambient tasks [--json]                                 The agent task board
 ambient task upsert --title TEXT […]                   Create or update a board task
 ambient task open ID                                   Jump to a task's linked session
+ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]
+                                                       Show or set the board's local model (a folder or .gguf file)
+ambient mcp                                            MCP server (stdio) with get_task_model / set_task_model_path
 ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [-- COMMAND…]   Follow agents on another machine
 ambient remote remove NAME [--uninstall]               Stop following it; --uninstall also clears the machine
 ambient remote purge NAME                              Delete everything from it on this Mac
