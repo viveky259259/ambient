@@ -8,6 +8,15 @@
 - **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.1% CPU with the island
   alone when nothing happens, 0.5% while agents work, 1.2% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
   reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.
+- **Remote agents**: follow Claude Code and Codex on your other machines from this Mac, over your own `ssh` or any
+  other transport, with no accounts, no relay and no open ports. `ambient remote add NAME` copies a small POSIX `sh`
+  shim from the app, checks its SHA-256, installs hooks and pins the machine's identity; `remove`, `purge`, `list` and
+  `ambient doctor --remote NAME` look after it, and Settings › Remote shows each link. Sessions carry their machine's
+  label in the island, menu bar, pet, notifications and board. Redaction (`metadata`, `standard` by default, or `full`)
+  happens on the machine; remote text never reaches online voices or any non-loopback address. Remote events go
+  through their own strict decoder and can't touch the app's socket, focus routes or pid checks. Events wait in a
+  bounded spool while your Mac sleeps; old prompts show as *missed* with no chime, and sessions on an unreachable
+  machine show as *unknown*. A local audit log records what happened, with no event content.
 
 ## 0.7.0 — 2026-10-23
 

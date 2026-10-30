@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       tasksURL: paths.tasksFile,
                                       titles: SessionTitles(userHome: paths.userHome))
     private var server: EventServer?
+    private var remote: RemoteCoordinator?
     private var island: IslandController?
     private var pet: PetController?
     private var notifier: Notifier?
@@ -51,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let server = EventServer(paths: paths, model: model)
         do { try server.start() } catch { log.error("Socket server failed: \(String(describing: error))") }
         self.server = server
+
+        let remote = RemoteCoordinator(paths: paths, model: model)
+        remote.start()
+        self.remote = remote
 
         let notifier = Notifier(model: model, prefs: prefs)
         notifier.start()
@@ -114,6 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         model.saveNow()
+        remote?.stop()
         server?.stop()
         kokoro?.shutDown()
     }
@@ -127,9 +133,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup window
 
     func showSetup() {
-        if setupWindow == nil, let notifier, let wallpaper {
+        if setupWindow == nil, let notifier, let wallpaper, let remote {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs, model: model, wallpaper: wallpaper,
+            let view = SettingsView(setup: setup, prefs: prefs, model: model, remote: remote, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
