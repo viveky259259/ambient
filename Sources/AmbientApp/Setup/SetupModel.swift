@@ -12,13 +12,14 @@ final class SetupModel: ObservableObject {
     @Published var launchAtLogin = false
     @Published var loginItemNeedsApproval = false
 
-    let installer: HookInstaller
     let paths: AmbientPaths
     private let notifier: Notifier
 
+    /// Made fresh each time, so it follows the island's permission setting.
+    var installer: HookInstaller { HookInstaller(paths: paths) }
+
     init(paths: AmbientPaths, notifier: Notifier) {
         self.paths = paths
-        self.installer = HookInstaller(paths: paths)
         self.notifier = notifier
     }
 

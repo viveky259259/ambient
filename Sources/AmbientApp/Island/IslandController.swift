@@ -20,6 +20,7 @@ final class IslandController {
     private let model: AppModel
     private let prefs: Preferences
     private let speech: SpeechController
+    private let permissions: PermissionDesk
     private let viewModel: IslandViewModel
     private let panel: IslandPanel
     private var cancellables: Set<AnyCancellable> = []
@@ -35,11 +36,13 @@ final class IslandController {
     /// The open menu's size and place as last reported; nil while it's closed.
     private var reportedMenu: (size: CGSize, geometry: IslandGeometry)?
 
-    init?(model: AppModel, prefs: Preferences, speech: SpeechController, onSettings: @escaping () -> Void) {
+    init?(model: AppModel, prefs: Preferences, speech: SpeechController, permissions: PermissionDesk,
+          onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
         self.model = model
         self.prefs = prefs
         self.speech = speech
+        self.permissions = permissions
         viewModel = IslandViewModel(geometry: geometry)
 
         panel = IslandPanel(contentRect: geometry.panelFrame, styleMask: [.borderless, .nonactivatingPanel],
@@ -85,6 +88,18 @@ final class IslandController {
         viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "island") }
         viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "island") }
         viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
+        viewModel.onAnswer = { [weak self] id, answer in
+            // Answered, so nothing needs the user any more, though the agent's next hook may be a long tool away.
+            guard let self, let ask = self.permissions.settle(id, with: answer) else { return }
+            self.model.acknowledge("\(ask.event.agent.rawValue):\(ask.event.sessionId)")
+        }
+        viewModel.onAnswerInAgent = { [weak self] ask in
+            guard let self else { return }
+            self.permissions.settle(ask.id, with: .ask)
+            if let session = self.viewModel.sessions.first(where: { $0.agent == ask.event.agent && $0.sessionId == ask.event.sessionId }) {
+                self.model.open(session)
+            }
+        }
     }
 
     func start() {
@@ -107,6 +122,14 @@ final class IslandController {
             .store(in: &cancellables)
         speech.$level
             .sink { [weak self] in self?.viewModel.speechLevel = $0 }
+            .store(in: &cancellables)
+        permissions.$current
+            .combineLatest(permissions.$count)
+            .sink { [weak self] current, count in
+                self?.viewModel.permission = current
+                self?.viewModel.permissionCount = count
+                self?.refresh()
+            }
             .store(in: &cancellables)
         prefs.objectWillChange
             .receive(on: DispatchQueue.main)
@@ -154,6 +177,9 @@ final class IslandController {
         let next: IslandViewModel.Presentation
         if !prefs.islandEnabled {
             next = .hidden
+        } else if let entry = viewModel.permission {
+            // Ahead of hovering too: reaching for Allow or Deny mustn't swap the prompt for the session list.
+            next = .permission(entry.ask.id)
         } else if viewModel.speech != .idle {
             // Ahead of hovering, so reaching for the stop button doesn't swap it for the session list.
             next = .speech

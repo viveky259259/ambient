@@ -30,12 +30,15 @@ public enum Mood: Int, Codable, Comparable, CaseIterable, Sendable {
 }
 
 public struct Session: Identifiable, Codable, Equatable, Sendable {
-    /// "agent:sessionId", unique across agents.
+    /// "agent:sessionId", unique across agents; "remote/machine/agent:sessionId" for another machine's session.
     public let id: String
     public let agent: AgentKind
     public let sessionId: String
     public var cwd: String?
+    /// The local return address. Always nil for remote sessions: see `origin`.
     public var host: HostInfo?
+    /// The machine a remote session runs on; nil for local sessions.
+    public var origin: RemoteOrigin?
     public var activity: Activity
     public var activitySince: Date
     public var lastEventAt: Date
@@ -52,10 +55,12 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
 
-    public init(agent: AgentKind, sessionId: String, at date: Date) {
-        self.id = "\(agent.rawValue):\(sessionId)"
+    public init(agent: AgentKind, sessionId: String, at date: Date, origin: RemoteOrigin? = nil) {
+        self.id = origin.map { Self.remoteID(machine: $0.machine.id, agent: agent, sessionId: sessionId) }
+            ?? "\(agent.rawValue):\(sessionId)"
         self.agent = agent
         self.sessionId = sessionId
+        self.origin = origin
         self.activity = .idle
         self.activitySince = date
         self.lastEventAt = date
@@ -65,7 +70,15 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var project: String? {
-        AgentEvent(agent: agent, sessionId: sessionId, cwd: cwd, kind: .sessionStarted).project
+        if let origin { return origin.project }
+        return AgentEvent(agent: agent, sessionId: sessionId, cwd: cwd, kind: .sessionStarted).project
+    }
+
+    public var isRemote: Bool { origin != nil }
+
+    /// Local ids always start with an agent's name, so they can never take this form.
+    public static func remoteID(machine: String, agent: AgentKind, sessionId: String) -> String {
+        "remote/\(machine)/\(agent.rawValue):\(sessionId)"
     }
 
     /// What to call the agent on the island, menu bar, Dock-adjacent surfaces and wallpaper.
@@ -78,9 +91,12 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var mood: Mood {
-        switch activity {
+        // Whatever this session last said may no longer be true: never "working" forever, and no alerts.
+        if origin?.unreachable == true { return .idle }
+        return switch activity {
         // A prompt the user has looked at: they've probably answered it and the agent is running again.
-        case .waiting: acknowledged ? .working : .waiting
+        // A missed one is from the past, so seeing it is the end of it.
+        case .waiting: acknowledged ? (origin?.missed == true ? .idle : .working) : .waiting
         case .error: acknowledged ? .idle : .error
         case .done: acknowledged ? .idle : .done
         case .thinking, .tool, .compacting: .working

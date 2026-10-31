@@ -63,6 +63,12 @@ final class Preferences: ObservableObject {
     @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
     /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
     @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
+    /// Answer Claude Code and Codex permission prompts from the island. Kept in ~/.ambient/permissions.json,
+    /// which the hooks read, rather than in UserDefaults.
+    @Published var answerPermissions: Bool { didSet { savePermissions() } }
+    /// Seconds the island waits for an answer before the agent asks in its own way.
+    @Published var permissionWait: Int { didSet { savePermissions() } }
+    private let paths: AmbientPaths
 
     // MARK: - Task board local LLM (local-agent MCP)
 
@@ -70,12 +76,25 @@ final class Preferences: ObservableObject {
     /// Streamable HTTP MCP URL for local-agent (default LaunchAgent on this Mac).
     @Published var taskLLMMCPURL: String { didSet { defaults.set(taskLLMMCPURL, forKey: "taskLLMMCPURL") } }
     @Published var taskLLMModelID: String { didSet { defaults.set(taskLLMModelID, forKey: "taskLLMModelID") } }
+    /// A model folder or .gguf file on this Mac; when set it wins over the model id.
+    @Published var taskLLMModelPath: String { didSet { defaults.set(taskLLMModelPath, forKey: "taskLLMModelPath") } }
+    /// Python with mlx-lm / mlx-vlm for running a model path directly; empty to find one.
+    @Published var taskLLMPython: String { didSet { defaults.set(taskLLMPython, forKey: "taskLLMPython") } }
     /// Opt-in: read local Claude/Codex transcript stores for richer summaries.
     @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
     @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
 
-    init(defaults: UserDefaults = .standard) {
+    // MARK: - Remote machines
+
+    /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
+    @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
+
+    init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
+        self.paths = paths
+        let permissions = PermissionSettings.load(paths)
+        answerPermissions = permissions.enabled
+        permissionWait = permissions.wait
         defaults.register(defaults: [
             "islandEnabled": true,
             "islandShowsWorking": true,
@@ -108,8 +127,11 @@ final class Preferences: ObservableObject {
             "taskLLMEnabled": false,
             "taskLLMMCPURL": "http://127.0.0.1:5051/mcp",
             "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+            "taskLLMModelPath": "",
+            "taskLLMPython": "",
             "taskLLMReadTranscripts": false,
             "taskLLMModelsVolume": "/Volumes/Models",
+            "remoteSummaries": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -152,13 +174,25 @@ final class Preferences: ObservableObject {
         taskLLMMCPURL = defaults.string(forKey: "taskLLMMCPURL") ?? "http://127.0.0.1:5051/mcp"
         taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
             ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        taskLLMModelPath = defaults.string(forKey: "taskLLMModelPath") ?? ""
+        taskLLMPython = defaults.string(forKey: "taskLLMPython") ?? ""
         taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
+        remoteSummaries = defaults.bool(forKey: "remoteSummaries")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 
     var taskLLMConfig: TaskLLMConfig {
         TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
+                      modelPath: taskLLMModelPath, pythonPath: taskLLMPython,
                       readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
+    }
+
+    var permissionSettings: PermissionSettings {
+        PermissionSettings(enabled: answerPermissions, wait: permissionWait)
+    }
+
+    private func savePermissions() {
+        try? permissionSettings.save(paths)
     }
 
     var isQuiet: Bool {

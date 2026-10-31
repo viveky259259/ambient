@@ -6,16 +6,19 @@ import os
 final class EventServer {
     private let server: UnixSocketServer
     private let model: AppModel
+    private let permissions: PermissionDesk
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "server")
 
-    init(paths: AmbientPaths, model: AppModel) {
+    init(paths: AmbientPaths, model: AppModel, permissions: PermissionDesk) {
         self.server = UnixSocketServer(path: paths.socket.path)
         self.model = model
+        self.permissions = permissions
     }
 
     func start() throws {
         let snapshot = model.snapshot
         let model = MainThreadBox(model)
+        let permissions = MainThreadBox(permissions)
         let log = self.log
         try server.start { data in
             let message: WireMessage
@@ -61,9 +64,29 @@ final class EventServer {
                 }
                 _ = done.wait(timeout: .now() + 2)
                 return try? Wire.encode(.opened(sessionID: box.value ?? nil))
+            case .taskModelRequest, .setTaskModel:
+                let box = ReplyBox<TaskLLMConfig>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    if case let .setTaskModel(change) = message {
+                        box.value = model.value.setTaskModel(change)
+                    } else {
+                        box.value = model.value.prefs.taskLLMConfig
+                    }
+                    done.signal()
+                }
+                // The CLI waits longer than this, so it hears either the settings or that they may still change.
+                guard done.wait(timeout: .now() + 2) == .success, let config = box.value else {
+                    return try? Wire.encode(.taskModelTimedOut)
+                }
+                return try? Wire.encode(.taskModel(config))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult:
+            case let .permissionRequest(ask):
+                DispatchQueue.main.async { model.value.apply(ask.event) }
+                // Holds this connection's thread until the user answers or the prompt goes back to the agent.
+                return try? Wire.encode(.permissionAnswer(permissions.value.answer(for: ask)))
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut, .permissionAnswer:
                 return nil
             }
         }
