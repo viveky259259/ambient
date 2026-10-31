@@ -9,13 +9,14 @@ struct MemoryClient {
 
     /// The project whose memory is the default: the one around `folder`, or around the folder the agent runs in.
     func project(_ folder: String?) -> String {
-        let folder = folder.flatMap { $0.isEmpty ? nil : Commands.absolute($0) }
-        return MemoryProject.root(for: folder ?? workingFolder())
+        MemoryProject.root(for: workingFolder(folder))
     }
 
-    /// Where this process runs, unless that says nothing about the project: some apps start MCP servers in / or the
-    /// home folder. Then the folder of the session that started it, which Ambient knows from its hooks.
-    private func workingFolder() -> String {
+    /// `named` if there is one. Otherwise where this process runs, unless that says nothing about the project: some
+    /// apps start MCP servers in / or the home folder. Then the folder of the session that started it, which Ambient
+    /// knows from its hooks.
+    private func workingFolder(_ named: String?) -> String {
+        if let named, !named.isEmpty { return Commands.absolute(named) }
         let cwd = FileManager.default.currentDirectoryPath
         guard cwd == "/" || cwd == paths.userHome.path, case let .status(sessions, _)? = request(.statusRequest),
               let session = Session.calling(callerPids: ProcessTree.ancestors(of: getpid()).map(\.pid), in: sessions),
@@ -43,14 +44,17 @@ struct MemoryClient {
     /// Shares text, or a file copied into the blob store first.
     func write(key: String, value: String?, filePath: String?, description: String?, scope: String?,
                ttlMinutes: Int?, untilSessionEnds: Bool, folder: String?) -> MemoryReply {
-        let project = project(folder)
+        let folder = workingFolder(folder)
+        let project = MemoryProject.root(for: folder)
         do {
             if let problem = MemoryStore.problem(withKey: key.trimmingCharacters(in: .whitespacesAndNewlines))
                 ?? value.flatMap(MemoryStore.problem(withValue:)) {
                 throw MemoryError(problem)
             }
             let scope = try Self.scope(scope, project: project) ?? .project(project)
-            let file = try filePath.map { try MemoryBlobStore(root: paths.memoryBlobs).add(fileAt: Commands.absolute($0)) }
+            let file = try filePath.map {
+                try MemoryBlobStore(root: paths.memoryBlobs).add(fileAt: MemoryProject.path($0, in: folder))
+            }
             // Clipped here as well as in the store, so the message always fits through the socket.
             let write = MemoryWrite(key: key, scope: scope, value: value, file: file,
                                     description: Trim.clean(description, max: MemoryStore.maxDescriptionLength),

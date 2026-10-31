@@ -465,8 +465,10 @@ struct Commands {
             if file == nil, value == nil || value == "-" {
                 value = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
             }
-            reply = client.write(key: key, value: file == nil ? value : nil, filePath: file, description: description,
-                                 scope: scope, ttlMinutes: ttl, untilSessionEnds: false, folder: folder)
+            // A path typed in a shell means the shell's folder, whatever --in says.
+            reply = client.write(key: key, value: file == nil ? value : nil, filePath: file.map(Self.absolute),
+                                 description: description, scope: scope, ttlMinutes: ttl, untilSessionEnds: false,
+                                 folder: folder)
         default:
             out.error(usage)
             return 64

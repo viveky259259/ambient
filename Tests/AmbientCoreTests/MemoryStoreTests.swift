@@ -374,6 +374,33 @@ import Testing
         #expect(MemoryFile.load(from: url) == nil)
     }
 
+    @Test func aFileThatCantBeReadIsntSavedOver() throws {
+        let dir = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("memory.json")
+        let entry = MemoryEntry(key: "notes", scope: .global, value: "text")
+
+        for unreadable in ["{\"version\":2,\"entries\":[]}", "not json", ""] {
+            try Data(unreadable.utf8).write(to: url)
+            #expect(throws: MemoryError.self) { try MemoryFile.save([entry], to: url) }
+            #expect(try Data(contentsOf: url) == Data(unreadable.utf8))
+        }
+
+        // Nothing there, or a file that reads fine, is saved as usual.
+        try FileManager.default.removeItem(at: url)
+        try MemoryFile.save([entry], to: url)
+        try MemoryFile.save([entry, MemoryEntry(key: "more", scope: .global, value: "text")], to: url)
+        #expect(MemoryFile.load(from: url)?.count == 2)
+    }
+
+    @Test func relativePathsStartWhereTheAgentWorks() {
+        let tree = "/work/repo-tree/src"
+        #expect(MemoryProject.path("notes.txt", in: tree) == "/work/repo-tree/src/notes.txt")
+        #expect(MemoryProject.path(" ../notes.txt\n", in: tree) == "/work/repo-tree/notes.txt")
+        #expect(MemoryProject.path("/var/log/build.log", in: tree) == "/var/log/build.log")
+        #expect(MemoryProject.path("~/build.log", in: tree) == ("~/build.log" as NSString).expandingTildeInPath)
+    }
+
     private func temporaryDirectory() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

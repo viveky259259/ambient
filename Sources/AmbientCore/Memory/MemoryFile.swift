@@ -8,7 +8,10 @@ public enum MemoryFile {
         var entries: [MemoryEntry]
     }
 
+    /// Won't replace a file `load` can't read: it may be a newer version's, and once replaced, the shared files it
+    /// refers to would look abandoned.
     public static func save(_ entries: [MemoryEntry], to url: URL) throws {
+        guard load(from: url) != nil else { throw MemoryError("\(url.path) can't be read, so it's left as it is.") }
         let data = try JSONEncoder().encode(Envelope(entries: entries))
         try data.write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)

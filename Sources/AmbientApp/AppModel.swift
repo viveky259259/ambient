@@ -79,7 +79,8 @@ final class AppModel: ObservableObject {
             if let saved = MemoryFile.load(from: memoryURL) {
                 memoryStore.load(saved)
             } else {
-                // A file this version can't read: its shared files aren't abandoned, and it isn't saved over below.
+                // A file this version can't read: its shared files aren't abandoned, and MemoryFile.save leaves it
+                // alone, so what's shared until then lasts until Ambient quits.
                 nextMemoryCollect = .distantFuture
             }
             if !memoryStore.sweep().isEmpty { scheduleMemorySave() }

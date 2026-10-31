@@ -54,6 +54,14 @@ public enum MemoryGuard {
 
 /// The folder a project's shared memory belongs to.
 public enum MemoryProject {
+    /// A path as an agent gave it, with `~` expanded and made absolute against `folder`, where it works. Not against
+    /// the project's root: from a worktree, that's another checkout, with other files.
+    public static func path(_ path: String, in folder: String) -> String {
+        let expanded = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: expanded, relativeTo: URL(fileURLWithPath: folder, isDirectory: true))
+            .standardizedFileURL.path
+    }
+
     /// The repository's root for a folder inside it, with git worktrees mapped to the main checkout so they share
     /// memory. Outside a repository, the folder itself.
     public static func root(for folder: String, fileManager: FileManager = .default) -> String {

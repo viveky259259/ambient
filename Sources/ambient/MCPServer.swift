@@ -108,7 +108,7 @@ struct MCPServer {
                 "type": "object",
                 "properties": lifetimeProperties.merging([
                     "key": ["type": "string", "description": "Short name, e.g. build-log or design/mockup.png."],
-                    "path": ["type": "string", "description": "The file to share (absolute, ~ or relative to the project)."],
+                    "path": ["type": "string", "description": "The file to share: absolute, ~, or relative to the folder you work in (to `project`, if you give one)."],
                 ]) { a, _ in a },
                 "required": ["key", "path"],
                 "additionalProperties": false,
