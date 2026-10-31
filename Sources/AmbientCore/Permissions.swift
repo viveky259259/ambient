@@ -141,6 +141,21 @@ public struct PermissionQueue: Sendable {
         return gone.map(\.ask)
     }
 
+    /// Prompts a session change shows the agent no longer waits on. Prompts are all local, so a remote session is
+    /// someone else's even with the same id, and nothing it does can touch one.
+    public mutating func withdraw(after change: SessionChange) -> [PermissionAsk] {
+        let s = change.session
+        guard !s.isRemote else { return [] }
+        guard change.removed else {
+            return change.event.map {
+                withdraw(after: AgentEvent(agent: s.agent, sessionId: s.sessionId, cwd: nil, kind: $0, timestamp: s.lastEventAt))
+            } ?? []
+        }
+        let gone = entries.map(\.ask).filter { $0.event.agent == s.agent && $0.event.sessionId == s.sessionId }
+        entries.removeAll { entry in gone.contains { $0.id == entry.ask.id } }
+        return gone
+    }
+
     /// Prompts a later event shows the agent no longer waits on: its turn moved on or ended, or the tool ran
     /// (answered in the agent's own app, say).
     public mutating func withdraw(after event: AgentEvent) -> [PermissionAsk] {

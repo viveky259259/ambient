@@ -4,6 +4,9 @@ import Foundation
 /// optional local-LLM semantics overwrite title/summary/status when applied.
 /// Not thread-safe: own it from one queue.
 public final class TaskStore {
+    /// The most tasks the board keeps from one machine. Tasks don't expire by themselves, so this is what holds one
+    /// back. The largest board measured so far had 1,626 tasks, from every source; past this, its oldest go first.
+    public var machineTaskLimit = 5_000
     private var byId: [String: AgentTask] = [:]
     /// Session id → task id for quick lookup.
     private var sessionIndex: [String: String] = [:]
@@ -55,10 +58,14 @@ public final class TaskStore {
     public func applySemantics(_ semantics: TaskSemantics, toTaskID id: String,
                                session: Session? = nil, at date: Date = Date()) -> AgentTask? {
         guard var t = byId[id] else { return nil }
-        if let title = semantics.title, !title.isEmpty, !t.manual || titleLooksGeneric(t.title) {
+        // What a model says about a remote session can be remote text, and `ambient tasks` prints it.
+        let plain = { [machine = t.machine] (text: String?) in
+            machine == nil ? text : text.flatMap { RemoteEventDecoder.plainText($0, max: $0.count) }
+        }
+        if let title = plain(semantics.title), !title.isEmpty, !t.manual || titleLooksGeneric(t.title) {
             t.title = title
         }
-        if let summary = semantics.summary, !summary.isEmpty {
+        if let summary = plain(semantics.summary), !summary.isEmpty {
             t.summary = summary
         }
         if let status = semantics.status, !t.manual {
@@ -110,6 +117,7 @@ public final class TaskStore {
             return t
         }
 
+        if let machine = s.origin?.machine.id, !makeRoom(on: machine) { return nil }
         var t = AgentTask(
             title: heuristicTitle(s),
             status: status(from: s.mood),
@@ -127,6 +135,20 @@ public final class TaskStore {
         byId[t.id] = t
         sessionIndex[s.id] = t.id
         return t
+    }
+
+    /// Makes room for one more of a machine's tasks by dropping its oldest. A session that's still running has updated
+    /// its task, so these are finished work. Tasks the user wrote stay, and when they're all that's left there's no room.
+    private func makeRoom(on machine: String) -> Bool {
+        let own = byId.values.lazy.filter { $0.machine?.id == machine }
+        var excess = own.count + 1 - machineTaskLimit
+        while excess > 0 {
+            guard let oldest = own.filter({ !$0.manual }).min(by: { $0.updatedAt < $1.updatedAt }) else { return false }
+            byId[oldest.id] = nil
+            for sid in oldest.sessionIds where sessionIndex[sid] == oldest.id { sessionIndex[sid] = nil }
+            excess -= 1
+        }
+        return true
     }
 
     private func unlink(sessionID: String, at date: Date) -> AgentTask? {
@@ -177,15 +199,16 @@ public final class TaskStore {
         return byId.values.first { t in
             // The same folder name on two machines is two pieces of work.
             guard t.machine?.id == s.origin?.machine.id else { return false }
-            guard calendar.startOfDay(for: t.updatedAt) == day || calendar.startOfDay(for: t.createdAt) == day else {
-                return false
-            }
             let sameProject: Bool = {
                 if let a = t.cwd, let b = s.cwd, !a.isEmpty, a == b { return true }
                 if let a = t.project, let b = s.project, a.caseInsensitiveCompare(b) == .orderedSame { return true }
                 return false
             }()
             guard sameProject else { return false }
+            // After the project, because this is what's slow on a full board.
+            guard calendar.startOfDay(for: t.updatedAt) == day || calendar.startOfDay(for: t.createdAt) == day else {
+                return false
+            }
             let other = normalize(t.title)
             return other == title || other.hasPrefix(title) || title.hasPrefix(other)
                 || (titleLooksGeneric(t.title) && titleLooksGeneric(heuristicTitle(s)))

@@ -235,9 +235,12 @@ nested value or a wrong type rejects the whole line.
 `follow`, not by hooks.
 
 Limits: a line is capped at 64 KB, and nesting deeper than a flat object is refused by a byte scan, both before
-parsing (a deeply nested line would otherwise exhaust the parser's stack). Text is cut to its cap, control and bidirectional
-formatting characters are removed, and the result is plain text on every surface. Lines that fail any check
-are dropped and counted, and the audit log records the reason without the content.
+parsing (a deeply nested line would otherwise exhaust the parser's stack). The shim cuts text to its cap, in characters, so
+what the hub would throw away never leaves the machine, and the hub cuts it again. Control and bidirectional formatting
+characters are removed, no character keeps more than 16 Unicode scalars, since caps count characters and combining marks
+pile onto one without limit, and the result is plain text on every surface. The hub also drops `tool`, `title` and
+`message` when they're above the level `hello` reports, which covers lines spooled before a level was tightened. Lines
+that fail any check are dropped and counted, and the audit log records the reason without the content.
 
 ### Session keys and the quarantine
 
@@ -263,6 +266,10 @@ are dropped and counted, and the audit log records the reason without the conten
 The fingerprint is the SHA-256 fingerprint of the remote's SSH host key as `follow` reports it in its
 handshake, or, where the shim can't read a host key (containers), the random install id it generated. See the
 threat model for what that pin does and does not prove.
+
+Before `ambient remote add` or `remove --uninstall` changes anything on a pinned machine, the hub sends this app's shim on
+stdin with `sh -s identity`. That needs nothing installed and writes nothing there, not even an install id, so a machine
+that turns out not to be the pinned one is left exactly as it was. One that can't be asked isn't changed either.
 
 ## How P1 is built
 
@@ -293,6 +300,7 @@ threat model for what that pin does and does not prove.
 - Retention runs whenever the shim runs: on every 64th event, when `follow` starts and every 10 minutes while it
   runs. There's no daemon (ER-10), so an idle machine with no hub keeps its spool until the next event or connection.
   `follow` never sends a line past the age limit.
+- `identity` prints who the machine is and writes nothing. The hub runs it from stdin, before anything is installed.
 - `install` edits agent configs with `python3`, the one place the shim needs more than coreutils (a refinement of
   ER-32): rewriting a user's JSON from `awk` isn't safe enough. It keeps a backup, leaves the user's own entries alone,
   and without `python3` writes a fresh file or prints the snippet and exits 3.
@@ -303,7 +311,11 @@ threat model for what that pin does and does not prove.
 
 The transport is an argv. Ambient appends one argument, a shell string for the machine's login shell, the way `ssh`
 takes it. Stdin is `/dev/null` while following, so the hub can't send anything. `ambient remote add NAME` builds
-`ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 NAME`.
+`ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ForwardAgent=no
+-o ForwardX11=no -o ClearAllForwardings=yes NAME`. It stays up with nobody watching and only ever reads, so it forwards
+nothing, whatever the user's config says for that host. A machine keeps the transport it was paired with: one paired
+before the forwarding options were added has none of them until it's paired again, and a command given after `--` is the
+user's own. `--host` can't start with `-`, which ssh would take as an option.
 
 ### Delivery
 
@@ -320,18 +332,29 @@ takes it. Stdin is `/dev/null` while following, so the hub can't send anything. 
   later, it restarts past it. Everything else saves on the usual debounce, and replays harmlessly. The one window left
   is between the save and the notification itself, microseconds wide, where an alert can be lost but not repeated.
 - **Rate limit:** a token bucket per machine (50 events/s, burst 500) holds events back rather than dropping them, so a
-  flood delays only its own machine. Replays run free, since the spool's cap already bounds them.
+  flood delays only its own machine. Replays have their own bucket, at the same rate with a burst of 40,000, more than a
+  full 5 MB spool of the shortest real lines (about 165 bytes). `hello.seq` is whatever the machine says, so replays can't
+  run free: the bucket lives on `RemoteIngest`, across reconnects, and a machine that calls everything a replay spends it
+  and is paced like any other.
+- **Backpressure:** the link hands the app one batch at a time and reads no more until it's applied, so a fast machine
+  fills its own pipe rather than the main queue. `stop()` releases that wait, so nothing depends on the main thread
+  answering, which matters when the main thread is what's waiting for the link to stop.
+- **Limits:** 1,000 sessions per machine at once and 5,000 tasks per machine. ER-37 plans for 300 sessions across a whole
+  hub, and sessions leave when they end or sit quiet for two hours, so only a flood gets near the first. Events for new
+  sessions past it are dropped and counted in the audit log as `sessionLimit`. Tasks never expire by themselves, so past the
+  second a machine's oldest go, which also holds a session start/end loop to it. The largest real board measured had
+  1,626 tasks from every source. Tasks the user wrote are never dropped, and local tasks have no limit.
 - Clocks further apart than 2 minutes at the handshake are corrected for (ER-21).
 - A link that hears nothing for 45 s is dead. Backoff doubles from 1 s to 60 s with 20% jitter, and resets after 30 s
-  up. A refused sign-in retries once a minute.
+  up. A refused sign-in retries once a minute. A replaced spool restarts at once; a second restart in a row backs off too.
 - Sessions show as *unknown* after 30 s of failed reconnects, or at once for sign-in, identity and upgrade failures.
 
 ### What the hub keeps
 
 - `~/.ambient/remote/machines.json`: the allowlist (ER-4). The CLI writes it and the app polls it every 5 s, so pairing
   needs no new `WireMessage`.
-- `~/.ambient/remote/audit.jsonl`: rejections are written at most once a minute per reason, with a count, so garbage
-  can't fill it. It rotates at 5 MB.
+- `~/.ambient/remote/audit.jsonl`: rejections, spool gaps and resets, held-back events and refused sessions are written
+  at most once a minute per reason, with a count, so a machine can't fill it or push older records out. It rotates at 5 MB.
 - Remote sessions in `state.json` and tasks in `tasks.json`. Tasks never merge across machines.
 - The day log counts remote turns, but keeps only "Claude on Devbox" as the place: no titles or projects.
 - `ambient remote remove` drops the sessions and cursor. `purge` also deletes the board tasks and today's moments,
@@ -362,18 +385,38 @@ on the hub, `RemoteLink` and the rest of the app.
 
 | Threat | Example | Mitigation | Residual risk |
 |---|---|---|---|
-| **S**poofing a machine | An ssh alias is re-pointed, or a reinstalled machine takes over a name. | The transport authenticates the host (ssh `known_hosts`, certificates, SSM, IAP). Ambient pins the reported fingerprint at pairing; a change stops the link until the user approves it again (ER-3). | The fingerprint is reported by the remote, so a malicious remote that already passed the transport's own check can claim the old one. It can then only send quarantined display data. |
-| **S**poofing a session | A remote event names a local session id, or a local hook names a remote one. | Remote ids are namespaced `remote/<machine>/…`; local ids can't take that form. | None known. |
+| **S**poofing a machine | An ssh alias is re-pointed, or a reinstalled machine takes over a name. | The transport authenticates the host (ssh `known_hosts`, certificates, SSM, IAP). Ambient pins the reported fingerprint at pairing; a change stops the link until the user approves it again (ER-3). Pairing again and `remove --uninstall` ask who the machine is first, in a way that writes nothing there. | The fingerprint is reported by the remote, and a host key's fingerprint is public, so a malicious remote that already passed the transport's own check can claim the old one. The pin stops honest mistakes, not a liar. It can then only send quarantined display data. |
+| **S**poofing a session | A remote event names a local session id, or a local hook names a remote one. | Remote ids are namespaced `remote/<machine>/…`; local ids can't take that form. Permission prompts are local, and a remote session with the same id can't withdraw one. | None known. |
 | **T**ampering with events | Another user on a shared host writes to the spool. | The spool directory is `0700` and its files `0600`, in the user's own home (ER-9). | Root on the remote can write anything; root is trusted on its own machine. |
-| **T**ampering with the shim | The copied `ambient-remote` is altered on the remote. | It comes from the signed app bundle, and its SHA-256 is checked after copying and on every `doctor` (ER-31). | Between checks, a local attacker with the user's rights on the remote can alter it; they can already alter that user's agents. |
-| **R**epudiation | "I never paired that machine." | Append-only local audit log of pairing, unpairing, fingerprint changes, link changes and rejections (ER-27). | The log is local and the user can edit it; P2 adds `os_log` for MDM collection. |
+| **T**ampering with the shim | The copied `ambient-remote` is altered on the remote. | It comes from the signed app bundle, and its SHA-256 is checked after copying and on every `doctor` (ER-31). | The machine reports that hash itself, so the check catches accidents, not a liar. A local attacker with the user's rights on the remote can alter the shim, and so can an agent there that's been talked into it. They can already alter that user's agents, and against the hub they get what a malicious machine gets: the rows below, not more. |
+| **R**epudiation | "I never paired that machine." | Append-only local audit log of pairing, unpairing, fingerprint changes, link changes and rejections (ER-27). Whatever a machine can repeat at will is written at most once a minute per reason, so it can't rotate older records out. | The log is local and the user can edit it, and it keeps two files of 5 MB; P2 adds `os_log` for MDM collection. |
 | **I**nformation disclosure in transit | Session text crosses the network. | Only over the user's own transport; no relay or third party (ER-16). | Whatever the transport allows. |
-| **I**nformation disclosure at rest | Prompts sit in the spool or on the hub. | Redaction on the remote before spooling, default `standard` (no prompt or message text); spool capped at 5 MB and 24 h; hub data follows the day log; purge per machine (ER-12, ER-14). | `full` keeps text on disk on both sides until it ages out. |
+| **I**nformation disclosure at rest | Prompts sit in the spool or on the hub. | Redaction on the remote before spooling, default `standard` (no prompt or message text), and again on the hub against the level the machine reports; spool capped at 5 MB and 24 h; sessions leave the hub after two quiet hours and moments at midnight; purge per machine (ER-12, ER-14). | `full` keeps text on disk on both sides until it ages out. A tightened level doesn't clear the spool: those lines still cross the transport, and only the hub drops them. Titles and project names on the board don't age out: a machine's tasks stay until it's purged or its oldest make way past 5,000. |
 | **I**nformation disclosure to third parties | Remote text reaches an online voice or a cloud model. | Remote text never goes to online voices, `skill-bootstrap` or any non-loopback URL; the local LLM needs a separate opt-in (ER-13). | None known. |
-| **D**enial of service | A remote floods events or writes huge lines. | 64 KB line cap, field caps, per-machine rate limit, strict decoder that never allocates beyond the line (ER-7, ER-37). | A flood can still delay that machine's own events. |
+| **D**enial of service | A remote floods events, writes huge lines, or calls everything a replay. | 64 KB line cap; field caps, with 16 scalars per character; 50 events/s per machine, plus a replay bucket that reconnecting doesn't refill; 1,000 sessions and 5,000 tasks per machine; the link reads no more until the app has applied what it has; restarts back off (ER-7, ER-37). | A flood delays that machine's own events and costs the app main-thread time: with `AppModel` under test but no UI, the worst stall was about a second as the limits filled, then about 0.3 s on a full board, at about 70 MB. The same machine can raise notifications and chimes at up to that rate until it's unpaired. Not yet load-tested with the UI on screen (P3). |
 | **D**enial of service to the agent | A slow hook blocks the agent. | `emit` only appends locally, takes about 10 ms and always exits 0 (ER-17). | A full disk drops events silently. |
-| **E**levation of privilege on the hub | A remote sends `setTaskModel`, `open` or any `WireMessage`, or a payload aimed at AppleScript, tmux or a pid. | The socket is never forwarded and the Mac opens no port (decision 1). Remote lines go through their own decoder, which has no `WireMessage` cases, and the quarantine drops `HostInfo` so no focus route, pid check, tty or AppleScript ever runs for a remote session (ER-6, ER-8). Tests prove each of these. | Bugs in the decoder; P3 adds an external review. |
+| **E**levation of privilege on the hub | A remote sends `setTaskModel`, `open` or any `WireMessage`, or a payload aimed at AppleScript, tmux or a pid. | The socket is never forwarded and the Mac opens no port (decision 1). Remote lines go through their own decoder, which has no `WireMessage` cases, and the quarantine drops `HostInfo` so no focus route, pid check, tty or AppleScript ever runs for a remote session (ER-6, ER-8). Whatever the CLI prints from a machine is plain text, so it can't carry terminal escapes. Tests in `AmbientCore` prove these; the guards in `AppModel` and `Focuser` are in the app target, which has no tests. | Bugs in the decoder; P3 adds an external review. |
+| **E**levation through the transport | The link stays up unattended, carrying the user's ssh agent or forwarded ports. | The `ssh` command Ambient builds turns off agent, X11 and port forwarding, over whatever the config says (decision 1). | Only that command: one given after `--`, or one stored before these options, stays as it was, and a shared ControlMaster connection keeps its own forwards. |
 | **E**levation of privilege on the remote | Ambient needs root or opens a port. | The shim runs as the user with no daemon, no port and no sshd change (ER-10). | None known. |
+
+### Review, 2026-11-01
+
+An independent agent, with no part in writing this model or the code, checked each row above against the code on
+2026-11-01, including a run of the shim against hostile payloads. It found no code execution, exfiltration or quarantine
+escape, and one blocker: a machine that claimed a huge `hello.seq` escaped the rate limit, nothing capped its sessions or
+tasks, and the link queued to the main thread without limit. On the code as it stood, a machine doing that left the main
+queue falling behind by a second every second, and 1.5 GB resident after 30 s. Its findings were fixed in one branch,
+which changed this document too:
+
+- the replay bucket, the session and task limits, and backpressure;
+- restarts that back off, and audit records a machine can repeat throttled to one a minute per reason;
+- plain text in what the CLI prints from a machine, and a cap on scalars per character;
+- text cut to its cap on the machine, and redaction applied again on the hub against the machine's level;
+- an identity check that writes nothing, before pairing again or `remove --uninstall` changes a machine;
+- no forwarding on the `ssh` command Ambient builds, `--host` refused when it starts with `-`, `umask 077` in `uninstall`, and
+  no way for a remote session to withdraw a local permission prompt.
+
+This records what was reviewed and changed. It doesn't settle ER-40: see the open questions.
 
 ## Phases
 
@@ -435,6 +478,9 @@ The load test against the ER-37 targets, the SBOM, the whitepaper and the extern
 
 ## Open questions
 
+- Does the agent review below meet ER-40? ER-40 asks for a review before P1 ships. An agent reviewed this threat model
+  and the fixes it asked for are in, but whether an agent's review counts is the project owner's decision, and it hasn't
+  been made. Until it is, treat ER-40 as open.
 - Is native Windows needed on the remote side, beyond WSL2?
 - Should the pin bind to the key the transport verified? Today the machine reports its own host key. Parsing it from
   `ssh -v` would hold against a malicious machine, but only for ssh, and only by reading debug output.

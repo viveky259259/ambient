@@ -16,8 +16,13 @@ public final class SessionStore {
     }
 
     public var timeouts: Timeouts
+    /// The most sessions one machine can have here at once. ER-37 plans for 300 across a whole hub, and sessions leave
+    /// when they end or sit quiet for two hours, so only a machine that's flooding this gets near it.
+    public var machineSessionLimit = 1_000
     private let isAlive: (Int32) -> Bool
     private var byId: [String: Session] = [:]
+    /// Events turned away at `machineSessionLimit` during the current batch.
+    private var refused = 0
 
     public init(timeouts: Timeouts = Timeouts(), isAlive: @escaping (Int32) -> Bool = SessionStore.processExists) {
         self.timeouts = timeouts
@@ -64,6 +69,10 @@ public final class SessionStore {
         let id = Session.remoteID(machine: machine.id, agent: e.agent, sessionId: e.session)
         let existing = byId[id]
         if let last = existing?.origin?.lastSeq, e.seq <= last { return nil }
+        if existing == nil, isFull(machine.id) {
+            refused += 1
+            return nil
+        }
 
         var s = existing ?? Session(agent: e.agent, sessionId: e.session, at: date, origin: RemoteOrigin(machine: machine))
         s.host = nil
@@ -83,12 +92,18 @@ public final class SessionStore {
         return commit(s, previous: existing?.activity, kind: kind, at: at)
     }
 
+    private func isFull(_ machine: String) -> Bool {
+        byId.count >= machineSessionLimit
+            && byId.values.lazy.filter { $0.origin?.machine.id == machine }.count >= machineSessionLimit
+    }
+
     /// A batch from one machine, and whether the state must reach disk before anyone hears about it. Alerts go out
     /// only after the sessions and the cursor are saved together, so a hub killed at any point replays the events
     /// it hasn't saved: none lost, none announced twice. A batch that doesn't follow `saved` comes from a rebuilt spool,
-    /// whose `seq` started over, so what the machine's sessions remember no longer compares.
+    /// whose `seq` started over, so what the machine's sessions remember no longer compares. `refused` counts events
+    /// for new sessions turned away at `machineSessionLimit`.
     public func apply(_ batch: [RemoteDelivery], from machine: MachineRef, saved: RemoteCursor = RemoteCursor(),
-                      cursor: RemoteCursor = RemoteCursor()) -> (changes: [SessionChange], saveFirst: Bool) {
+                      cursor: RemoteCursor = RemoteCursor()) -> (changes: [SessionChange], saveFirst: Bool, refused: Int) {
         if let first = batch.first?.event.seq, saved.epoch != cursor.epoch || first <= saved.seq {
             for var s in byId.values where s.origin?.machine.id == machine.id {
                 s.origin?.lastSeq = 0
@@ -97,6 +112,7 @@ public final class SessionStore {
         }
         var changes: [SessionChange] = []
         var saveFirst = false
+        refused = 0
         for delivery in batch {
             guard let change = apply(delivery.event, from: machine, at: delivery.at, missed: delivery.missed) else { continue }
             changes.append(change)
@@ -105,7 +121,7 @@ public final class SessionStore {
                 saveFirst = true
             }
         }
-        return (changes, saveFirst)
+        return (changes, saveFirst, refused)
     }
 
     /// Marks a machine's sessions as out of reach, or back. Returns the changes for surfaces to show.

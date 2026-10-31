@@ -126,11 +126,13 @@ final class AppModel: ObservableObject {
         remoteCursors[machine] ?? RemoteCursor()
     }
 
-    /// Events from a machine's link. Remote input arrives only here, already through `RemoteIngest`.
-    func applyRemote(_ batch: [RemoteDelivery], cursor: RemoteCursor, from machine: MachineRef) {
+    /// Events from a machine's link. Remote input arrives only here, already through `RemoteIngest`. Returns how many
+    /// were turned away because the machine has as many sessions as it can have.
+    @discardableResult
+    func applyRemote(_ batch: [RemoteDelivery], cursor: RemoteCursor, from machine: MachineRef) -> Int {
         // Already queued when the machine was unpaired: the allowlist wins.
-        guard remoteLinks.contains(where: { $0.machine.id == machine.id }) else { return }
-        let (changes, saveFirst) = store.apply(batch, from: machine, saved: remoteCursor(machine.id), cursor: cursor)
+        guard remoteLinks.contains(where: { $0.machine.id == machine.id }) else { return 0 }
+        let (changes, saveFirst, refused) = store.apply(batch, from: machine, saved: remoteCursor(machine.id), cursor: cursor)
         remoteCursors[machine.id] = cursor
         if let i = remoteLinks.firstIndex(where: { $0.machine.id == machine.id }) {
             remoteLinks[i].lastEventAt = Date()
@@ -144,8 +146,11 @@ final class AppModel: ObservableObject {
         for t in changes {
             transitions.send(t)
             record(t)
-            observeTask(t)
+            observeTask(t, publish: false)
         }
+        // Once per batch: a board's worth of sorting per event is what a burst would otherwise cost the main thread.
+        if !changes.isEmpty { publishTasks() }
+        return refused
     }
 
     func setRemoteHealth(_ health: RemoteHealth, machine: Machine, hello: RemoteHello?, updateAvailable: Bool) {
@@ -296,13 +301,10 @@ final class AppModel: ObservableObject {
         objectWillChange.send()
     }
 
-    private func observeTask(_ change: SessionChange) {
-        guard let task = taskStore.observe(change) else {
-            publishTasks()
-            return
-        }
-        publishTasks()
-        scheduleSummary(for: task, session: change.session)
+    private func observeTask(_ change: SessionChange, publish: Bool = true) {
+        let task = taskStore.observe(change)
+        if publish { publishTasks() }
+        if let task { scheduleSummary(for: task, session: change.session) }
     }
 
     /// Re-probe local-agent MCP / Models volume / the model path's runtime. Safe to call from Settings.

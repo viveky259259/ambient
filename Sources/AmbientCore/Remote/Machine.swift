@@ -23,11 +23,18 @@ public struct Machine: Codable, Equatable, Hashable, Sendable {
 
     public var ref: MachineRef { MachineRef(id: id, label: label) }
 
-    /// The user's own ssh, with their `~/.ssh/config`: ProxyJump, certificates, agents and ControlMaster all apply.
-    /// `BatchMode` makes a sign-in failure an error rather than a prompt nobody can see.
+    /// The user's own ssh, with their `~/.ssh/config`: ProxyJump, certificates and ControlMaster all apply.
+    /// `BatchMode` makes a sign-in failure an error rather than a prompt nobody can see. This connection stays up with
+    /// nobody watching and only ever reads, so it forwards nothing, whatever the config says for that host. A machine
+    /// paired before these were here keeps the command it was paired with.
     public static func defaultTransport(host: String) -> [String] {
         ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=15",
-         "-o", "ServerAliveCountMax=3", host]
+         "-o", "ServerAliveCountMax=3", "-o", "ForwardAgent=no", "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", host]
+    }
+
+    /// ssh takes anything starting with `-` as an option, even where a host belongs.
+    public static func isValidHost(_ host: String) -> Bool {
+        !host.isEmpty && !host.hasPrefix("-")
     }
 
     /// Lowercase letters, digits, `.`, `_` and `-`; starts with a letter or digit; at most 32 characters.

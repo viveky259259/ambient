@@ -105,7 +105,10 @@ private final class Hub: @unchecked Sendable {
 
     func link(options: RemoteLink.Options = .init(), policy: RemoteIngest.Policy = .init(), audit: RemoteAudit?) -> RemoteLink {
         RemoteLink(machine: machine, cursor: cursor, policy: policy, options: options, audit: audit,
-                   deliver: { [self] batch, cursor in receive(batch, cursor: cursor) },
+                   deliver: { [self] batch, cursor, applied in
+                       receive(batch, cursor: cursor)
+                       applied()
+                   },
                    report: { [self] health, _ in
                        lock.lock(); defer { lock.unlock() }
                        self.health.append(health)
@@ -122,7 +125,7 @@ private final class Hub: @unchecked Sendable {
             cursor.seq = batch.last?.event.seq ?? self.cursor.seq
             crashed = true
         }
-        let (changes, saveFirst) = store.apply(batch, from: machine.ref, saved: self.cursor, cursor: cursor)
+        let (changes, saveFirst, _) = store.apply(batch, from: machine.ref, saved: self.cursor, cursor: cursor)
         self.cursor = cursor
         applied += batch.map(\.event.seq)
         if saveFirst { try! StateFile.save(store.sessions, cursors: [machine.id: cursor], to: stateURL) }
@@ -282,6 +285,38 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
             #expect(spool.contains("All finished") == wantMessage, "\(level)")
             #expect(spool.contains(#""project":"api""#), "\(level)")
         }
+    }
+
+    @Test func textStopsAtItsCapOnTheMachine() throws {
+        let stub = try StubMachine()
+        _ = try stub.pair(redaction: .full)
+        func sent(_ text: String) throws -> String {
+            try stub.hook("Stop", ["last_assistant_message": text])
+            let line = try #require(try stub.spoolLines().last)
+            let object = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any]
+            return try #require(object?["message"] as? String)
+        }
+        #expect(try sent(String(repeating: "A", count: 1_000)) == String(repeating: "A", count: 159) + "…")
+        #expect(try sent(String(repeating: "é", count: 1_000)) == String(repeating: "é", count: 159) + "…")
+        #expect(try sent(String(repeating: "\"", count: 1_000)) == String(repeating: "\"", count: 159) + "…")
+        #expect(try sent(String(repeating: "A", count: 160)) == String(repeating: "A", count: 160))
+    }
+
+    @Test func aTightenedLevelCoversWhatWasAlreadySpooled() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair(redaction: .full)
+        try stub.hook("PreToolUse", ["tool_name": "Bash"])
+        try stub.hook("Stop", ["last_assistant_message": "the secret result"])
+        #expect(try stub.spoolLines().joined().contains("the secret result"))
+
+        let tightened = try RemotePairing.pair(.init(id: machine.id, transport: machine.transport, redaction: .metadata),
+                                               shim: RemoteShim(url: shimURL), existing: machine, audit: nil).machine
+        let hub = Hub(machine: tightened, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.cursor.seq == 2 })
+        #expect(hub.sessions().first?.activity == .done(summary: nil))
     }
 
     @Test func killingTheHubLosesAndDuplicatesNoAlerts() throws {
@@ -461,11 +496,13 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         #expect(stub.paths.remoteAudit.records().filter { $0.action == .fingerprintChanged }.count == 1)
     }
 
-    @Test func aDifferentMachineWithNoShimIsStillRefused() throws {
+    @Test func aDifferentMachineWithNoShimIsLeftAsItWasToo() throws {
         let stub = try StubMachine()
         let machine = try stub.pair()
         try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
         try FileManager.default.removeItem(at: stub.shim)
+        let settings = stub.home.appendingPathComponent(".claude/settings.json")
+        try Data("{}".utf8).write(to: settings)
 
         #expect {
             _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
@@ -474,6 +511,144 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
             if case RemotePairing.Failure.identityChanged = error { return true }
             return false
         }
+        #expect(!FileManager.default.fileExists(atPath: stub.shim.path))
+        #expect(try Data(contentsOf: settings) == Data("{}".utf8))
+    }
+
+    @Test func aMachineThatsNeverSeenAmbientIsLeftAsItWas() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let other = try StubMachine()
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: other.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        #expect(!FileManager.default.fileExists(atPath: other.home.appendingPathComponent(".ambient").path))
+        #expect(!FileManager.default.fileExists(atPath: other.home.appendingPathComponent(".claude/settings.json").path))
+    }
+
+    @Test func uninstallingChecksItsMachineFirst() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let other = try StubMachine()
+        let theirs = try other.pair()
+        let shim = try RemoteShim(url: shimURL)
+
+        // The alias now reaches a machine with its own pairing, and that stays exactly as it was.
+        var repointed = machine
+        repointed.transport = theirs.transport
+        #expect(RemotePairing.uninstall(repointed, shim: shim) == .differentMachine(theirs.fingerprint))
+        #expect(FileManager.default.fileExists(atPath: other.shim.path))
+        #expect(FileManager.default.fileExists(atPath: other.spool.path))
+        #expect(try String(contentsOf: other.home.appendingPathComponent(".claude/settings.json"), encoding: .utf8).contains("ambient-remote"))
+
+        #expect(RemotePairing.uninstall(machine, shim: shim) == .removed)
+        #expect(!FileManager.default.fileExists(atPath: stub.shim.path))
+        #expect(!FileManager.default.fileExists(atPath: stub.spool.path))
+
+        var dead = machine
+        dead.transport = ["/bin/sh", "-c", "exit 255", "stub"]
+        guard case .failed = RemotePairing.uninstall(dead, shim: shim) else {
+            Issue.record("a machine out of reach isn't removed")
+            return
+        }
+    }
+
+    @Test func whatAMachineReportsIsPrintedOnlyAsPlainText() throws {
+        let shim = try RemoteShim(url: shimURL)
+        // Everything works until `status`, whose line has a key that clears the screen and retitles the terminal.
+        let script = #"case "$0" in *sha256sum*) echo \#(shim.sha256) ;; *status*) printf '{"\\u001b[2J\\u001b]0;pwned\\u0007":1}\n' ;; *install*) ;; *) cat > /dev/null ;; esac"#
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: ["/bin/sh", "-c", script]), shim: shim, existing: nil, audit: nil)
+        } throws: { error in
+            let text = String(describing: error)
+            return text.contains("pwned") && !text.unicodeScalars.contains { $0.properties.generalCategory == .control }
+        }
+    }
+
+    /// A machine with plenty to say: hello, then an event every few milliseconds for as long as anyone reads them.
+    private func steadyMachine() -> Machine {
+        let pin = "id:" + String(repeating: "a", count: 32)
+        let script = #"""
+            printf '{"v":1,"type":"hello","shim":"1.0.0","proto":1,"caps":"exit","level":"standard","seq":0,"epoch":"0123456789abcdef","identity":"\#(pin)","ts":%s}\n' "$(date +%s)"
+            i=0
+            while :; do
+                i=$((i + 1))
+                printf '{"v":1,"seq":%s,"id":"%032x","ts":1,"agent":"claude","session":"s","kind":"toolStarted"}\n' "$i" "$i" || exit 0
+                sleep 0.01
+            done
+            """#
+        return Machine(id: "steady", transport: ["/bin/sh", "-c", script], fingerprint: pin)
+    }
+
+    private final class Gate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var answers: [@Sendable () -> Void] = []
+        private var count = 0
+
+        func arrived(_ applied: @escaping @Sendable () -> Void) {
+            lock.lock(); defer { lock.unlock() }
+            count += 1
+            answers.append(applied)
+        }
+
+        var batches: Int {
+            lock.lock(); defer { lock.unlock() }
+            return count
+        }
+
+        func answer() {
+            lock.lock()
+            let waiting = answers
+            answers = []
+            lock.unlock()
+            waiting.forEach { $0() }
+        }
+    }
+
+    @Test func aLinkWaitsForEachBatchToBeApplied() {
+        let gate = Gate()
+        let link = RemoteLink(machine: steadyMachine(), cursor: .init(), deliver: { _, _, applied in gate.arrived(applied) },
+                              report: { _, _ in })
+        link.start()
+        #expect(waitUntil { gate.batches == 1 })
+        // The machine goes on writing, and nothing more comes this way until the first batch is done.
+        Thread.sleep(forTimeInterval: 0.3)
+        #expect(gate.batches == 1)
+        gate.answer()
+        #expect(waitUntil { gate.batches == 2 })
+
+        // Nobody will answer this one, as when the thread that would is the one quitting.
+        let start = Date()
+        link.stop()
+        #expect(Date().timeIntervalSince(start) < 5)
+    }
+
+    @Test func aMachineThatWontSettleWaitsLikeAnyOtherRetry() throws {
+        let stub = try StubMachine()
+        let log = stub.hub.appendingPathComponent("connections")
+        let pin = "id:" + String(repeating: "a", count: 32)
+        // A new epoch on every connection, so every connection says the spool was replaced.
+        let script = #"""
+            echo x >> '\#(log.path)'
+            printf '{"v":1,"type":"hello","shim":"1.0.0","proto":1,"caps":"exit","level":"standard","seq":0,"epoch":"%016x","identity":"\#(pin)","ts":%s}\n' "$$" "$(date +%s)"
+            sleep 5
+            """#
+        let machine = Machine(id: "restless", transport: ["/bin/sh", "-c", script], fingerprint: pin)
+        var options = RemoteLink.Options()
+        options.backoff.base = 0.2
+        let link = RemoteLink(machine: machine, cursor: RemoteCursor(seq: 0, epoch: String(repeating: "0", count: 16)), options: options,
+                              deliver: { _, _, applied in applied() }, report: { _, _ in })
+        link.start()
+        Thread.sleep(forTimeInterval: 1)
+        link.stop()
+        let connections = try String(contentsOf: log, encoding: .utf8).split(separator: "\n").count
+        #expect(connections >= 2, "the first restart is immediate")
+        #expect(connections <= 5, "\(connections) connections in a second")
     }
 
     @Test func theLinkReconnectsAndARebuiltSpoolStartsOver() throws {

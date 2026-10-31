@@ -66,6 +66,13 @@ check() {
     remote() { HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" "$@"; }
     emit() { printf '%s' "$1" | remote emit claude; }
 
+    # The hub asks a machine who it is before changing anything there, by sending this script on stdin.
+    fresh=$ROOT/fresh-$name
+    mkdir -p "$fresh"
+    HOME=$fresh AMBIENT_REMOTE_HOSTKEYS=/nonexistent PATH=$path $shell -s identity < "$SHIM" > "$home/identity"
+    [ "$(cat "$home/identity")" = "id:" ] && [ -z "$(ls -A "$fresh")" ] ||
+        { echo "FAIL $name: asking who a machine is changed it"; failures=$((failures + 1)); }
+
     remote version > "$home/version"
     remote install --redaction full > "$home/install"
     remote install > "$home/reinstall"
@@ -159,9 +166,21 @@ check() {
     # Without python3 the hooks are the user's to remove, which is status 3. Everything else still goes.
     want=0
     (PATH=$path; command -v python3) > /dev/null 2>&1 || want=3
+    # What uninstall rewrites can hold secrets, so the copy it writes first must be private from the start.
+    mkdir -p "$home/wrapped"
+    if [ "$want" -eq 0 ]; then
+        printf '#!/bin/sh\numask > "$HOME/uninstall-umask"\nexec "%s" "$@"\n' "$(PATH=$path; command -v python3)" > "$home/wrapped/python3"
+        chmod 700 "$home/wrapped/python3"
+    fi
     got=0
-    remote uninstall > /dev/null || got=$?
+    (umask 022; HOME=$home PATH=$home/wrapped:$path $shell "$home/.ambient/bin/ambient-remote" uninstall > /dev/null) || got=$?
     [ "$got" -eq "$want" ] || { echo "FAIL $name: uninstall exited $got, not $want"; failures=$((failures + 1)); }
+    if [ "$want" -eq 0 ]; then
+        case $(cat "$home/uninstall-umask") in
+            *77) ;;
+            *) echo "FAIL $name: uninstall edits configs under a umask of $(cat "$home/uninstall-umask")"; failures=$((failures + 1)) ;;
+        esac
+    fi
     [ ! -e "$home/.ambient/spool" ] && [ ! -e "$home/.ambient/bin/ambient-remote" ] ||
         { echo "FAIL $name: spool or shim left behind"; failures=$((failures + 1)); }
 }

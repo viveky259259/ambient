@@ -6,7 +6,7 @@ public struct RemoteAudit: Sendable {
     public enum Action: String, Codable, Sendable {
         case paired, unpaired, purged, fingerprintChanged, policyChanged
         case linkUp, linkDown, signInNeeded, upgradeNeeded
-        case rejected, rateLimited, spoolGap, spoolReset
+        case rejected, rateLimited, spoolGap, spoolReset, sessionLimit
     }
 
     public struct Record: Codable, Equatable, Sendable {
@@ -62,5 +62,41 @@ public struct RemoteAudit: Sendable {
         decoder.dateDecodingStrategy = .iso8601
         guard let data = try? Data(contentsOf: url) else { return [] }
         return data.split(separator: UInt8(ascii: "\n")).compactMap { try? decoder.decode(Record.self, from: Data($0)) }
+    }
+}
+
+/// Writes each kind of record at most once a minute, with a count, so a machine can neither fill the log nor rotate what
+/// matters out of it. Not thread-safe: it has one owner.
+public struct RemoteAuditThrottle {
+    private struct Kind: Hashable {
+        let action: RemoteAudit.Action
+        let machine: String
+        let detail: String?
+    }
+
+    private let audit: RemoteAudit?
+    private var kinds: [Kind: (count: Int, lastWritten: Date?)] = [:]
+
+    public init(audit: RemoteAudit?) {
+        self.audit = audit
+    }
+
+    public mutating func record(_ action: RemoteAudit.Action, machine: String, detail: String? = nil, count: Int = 1, now: Date) {
+        let kind = Kind(action: action, machine: machine, detail: detail)
+        var entry = kinds[kind] ?? (0, nil)
+        entry.count += count
+        if entry.lastWritten.map({ now.timeIntervalSince($0) >= 60 }) ?? true {
+            audit?.append(.init(ts: now, action: action, machine: machine, detail: detail, count: entry.count))
+            entry = (0, now)
+        }
+        kinds[kind] = entry
+    }
+
+    /// Writes out counts still waiting for their minute.
+    public mutating func flush(now: Date) {
+        for (kind, entry) in kinds where entry.count > 0 {
+            audit?.append(.init(ts: now, action: kind.action, machine: kind.machine, detail: kind.detail, count: entry.count))
+            kinds[kind] = (0, now)
+        }
     }
 }
