@@ -437,6 +437,45 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         #expect(approved.machine.fingerprint == "id:" + String(repeating: "f", count: 32))
     }
 
+    @Test func aDifferentMachineIsLeftAsItWas() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+
+        // The transport now reaches another machine, which has its own shim and its own settings.
+        try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
+        let settings = stub.home.appendingPathComponent(".claude/settings.json")
+        try Data("{}".utf8).write(to: settings)
+        var theirShim = try Data(contentsOf: stub.shim)
+        theirShim.append(Data("# this machine's own copy\n".utf8))
+        try theirShim.write(to: stub.shim)
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: stub.paths.remoteAudit)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        #expect(try Data(contentsOf: settings) == Data("{}".utf8))
+        #expect(try Data(contentsOf: stub.shim) == theirShim)
+        #expect(stub.paths.remoteAudit.records().filter { $0.action == .fingerprintChanged }.count == 1)
+    }
+
+    @Test func aDifferentMachineWithNoShimIsStillRefused() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
+        try FileManager.default.removeItem(at: stub.shim)
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+    }
+
     @Test func theLinkReconnectsAndARebuiltSpoolStartsOver() throws {
         let stub = try StubMachine()
         let machine = try stub.pair()
@@ -532,6 +571,11 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         link.start()
         defer { link.stop() }
         #expect(waitUntil { hub.healthLog.contains { if case .upgradeNeeded = $0 { true } else { false } } })
+
+        // Pairing again is what fixes it, even though this shim's `status` can't be read either.
+        let shim = try RemoteShim(url: shimURL)
+        let again = try RemotePairing.pair(.init(id: machine.id, transport: machine.transport), shim: shim, existing: machine, audit: nil)
+        #expect(again.status.hello.shim == shim.version)
     }
 
     @Test func aRefusedSignInAsksForIt() throws {

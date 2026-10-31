@@ -95,6 +95,13 @@ expect(read("follow.err") == "", f"follow wrote to stderr: {read('follow.err')[:
 
 expect(int(read("spool-bytes").split()[0]) <= 2048 + 200, f"spool over its cap: {read('spool-bytes')}")
 
+# By kind again: `follow` can add an agentExited, as above. Landing before awk starts, a rotation shows the same file
+# twice, because `follow` already holds it: that repeat is the proof it does, and the hub drops it by seq.
+for moment, want in [("before", [3, 4, 5, 3, 4, 5, 6]), ("between", [3, 4, 5, 6]), ("quiet", [3, 4, 5])]:
+    raced = [strict(line) for line in read(f"raced-{moment}").splitlines()]
+    heard = [e["seq"] for e in raced if e.get("kind") == "toolStarted"]
+    expect(heard == want, f"a rotation {moment} the two files: follow sent {heard}, not {want}")
+
 for problem in problems:
     print(f"  {name}: {problem}")
 sys.exit(1 if problems else 0)

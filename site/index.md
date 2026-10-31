@@ -112,6 +112,7 @@ Step-by-step guides for each agent's own options:
 - [Multiple Claude Code sessions on Mac](https://yaml.cafe/guides/multiple-claude-code-sessions-mac/)
 - [Claude Code notifications in tmux](https://yaml.cafe/guides/claude-code-tmux-notifications/)
 - [Claude Code notification apps compared](https://yaml.cafe/guides/claude-code-notification-apps-mac/)
+- [Vibe Island alternatives for Mac](https://yaml.cafe/guides/vibe-island-alternatives-mac/)
 
 ## Questions
 
