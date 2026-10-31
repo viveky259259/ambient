@@ -42,6 +42,7 @@ Not a fit: Linux or Windows; agents that run only on a remote machine over SSH (
 - [Multiple Claude Code sessions on Mac](https://yaml.cafe/guides/multiple-claude-code-sessions-mac/): Worktrees, agent view and background sessions, and seeing which one needs you.
 - [Claude Code notifications in tmux](https://yaml.cafe/guides/claude-code-tmux-notifications/): allow-passthrough, the bell flag, a hook that messages tmux, and Shift+Enter.
 - [Claude Code notification apps compared](https://yaml.cafe/guides/claude-code-notification-apps-mac/): Ambient, Vibe Island, Vibe Notch, Claude Pulse and AI Done Now, side by side.
+- [Vibe Island alternatives for Mac](https://yaml.cafe/guides/vibe-island-alternatives-mac/): Twelve notch apps for AI coding agents by price, agents, approvals, tmux and Intel support, including free options for Claude Code and Codex
 - [Claude Code in tmux](https://yaml.cafe/guides/claude-code-in-tmux/): The four tmux.conf lines it needs, one window per session, and finding the pane that needs you.
 - [tmux focus events](https://yaml.cafe/guides/tmux-focus-events-claude-code/): What set -g focus-events on does, how to check it, and the pane-activity side effect.
 - [Notifications not working](https://yaml.cafe/guides/claude-code-notifications-not-working/): Timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.
