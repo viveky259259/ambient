@@ -416,7 +416,9 @@ which changed this document too:
 - no forwarding on the `ssh` command Ambient builds, `--host` refused when it starts with `-`, `umask 077` in `uninstall`, and
   no way for a remote session to withdraw a local permission prompt.
 
-This records what was reviewed and changed. It doesn't settle ER-40: see the open questions.
+The same agent then made those fixes, and the session coordinating the release read them, so the fixes haven't had an
+independent review of their own. This records what was reviewed and changed. It doesn't settle ER-40: see the open
+questions.
 
 ## Phases
 
