@@ -10,7 +10,7 @@
 #
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
 
-AR_VERSION=1.0.2
+AR_VERSION=1.0.3
 AR_PROTO=1
 AR_CAPS=exit,title,heartbeat
 
@@ -572,14 +572,19 @@ cmd_follow() {
     while :; do
         read_seq
         if [ "$AR_N" -gt "$follow_last" ]; then
-            # awk stops at a file that isn't there, and reads stdin when it's given none.
-            set --
-            [ ! -f "$AR_OLD" ] || set -- "$AR_OLD"
-            [ ! -f "$AR_EVENTS" ] || set -- "$@" "$AR_EVENTS"
-            if [ $# -gt 0 ]; then
-                awk -v from="$follow_last" -v to="$AR_N" -v cutoff=$(($(date +%s) - AR_MAX_AGE)) "$AWK_STREAM" \
-                    "$@" 2>/dev/null || exit 0
-            fi
+            # Nothing is locked here, so a stalled hub can't hold up `emit`, and a rotation can land at any moment. So
+            # events.jsonl is opened before events.1.jsonl is even looked at, though it's read after it. If it rotates
+            # in between it comes through twice, and the hub drops the repeats by seq. The other way round it wouldn't
+            # come through at all. A rotation leaves no events.jsonl until the next `emit`. If one lands between the
+            # test and the open, this hangs up, which loses nothing: the hub reconnects from its cursor.
+            follow_new=/dev/null
+            [ ! -f "$AR_EVENTS" ] || follow_new=$AR_EVENTS
+            {
+                # awk stops at a file that isn't there.
+                set --
+                [ ! -f "$AR_OLD" ] || set -- "$AR_OLD"
+                awk -v from="$follow_last" -v to="$AR_N" -v cutoff=$(($(date +%s) - AR_MAX_AGE)) "$AWK_STREAM" "$@" -
+            } 2>/dev/null < "$follow_new" || exit 0
             follow_last=$AR_N
         elif [ "$AR_N" -lt "$follow_last" ]; then
             # The spool was reset under us. Hang up: the handshake on the next connection tells the hub.
