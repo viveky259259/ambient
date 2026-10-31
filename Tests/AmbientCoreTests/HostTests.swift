@@ -30,6 +30,34 @@ import Testing
         #expect(chain.count >= 1)
         #expect(chain.allSatisfy { !$0.name.isEmpty })
     }
+
+    @Test func appServerIsToldFromExecByItsSubcommand() {
+        #expect(HostCapture.isAppServer(["codex", "app-server", "--analytics-default-enabled"]))
+        #expect(HostCapture.isAppServer(["codex", "-c", "features.x=true", "app-server"]))
+        #expect(!HostCapture.isAppServer(["codex", "exec", "--ephemeral", "app-server"]))
+        #expect(!HostCapture.isAppServer(["codex", "resume"]))
+        #expect(!HostCapture.isAppServer([]))
+    }
+
+    @Test func hostKeepsOnlyWhetherItsTheAppServer() {
+        let chain: [ProcessTree.Entry] = [.init(pid: 9, name: "sh"), .init(pid: 8, name: "codex")]
+        #expect(HostCapture.host(environment: [:], chain: chain, arguments: ["codex", "app-server"]).appServer == true)
+        #expect(HostCapture.host(environment: [:], chain: chain, arguments: ["codex", "exec", "fix it"]).appServer == nil)
+        #expect(HostCapture.host(environment: [:], chain: chain).appServer == nil)
+    }
+
+    @Test func readsARealProcessArguments() throws {
+        let sleep = Process()
+        sleep.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        sleep.arguments = ["30"]
+        try sleep.run()
+        defer { sleep.terminate() }
+        #expect(ProcessTree.arguments(of: sleep.processIdentifier) == ["/bin/sleep", "30"])
+    }
+
+    @Test func noArgumentsForAProcessThatIsGone() {
+        #expect(ProcessTree.arguments(of: 99_999_999) == nil)
+    }
 }
 
 @Suite struct HostCaptureDetailTests {

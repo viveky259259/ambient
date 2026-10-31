@@ -16,6 +16,8 @@ protocol AgentAdapter {
     static func agentName(_ payload: HookPayload) -> String?
     /// The event's name, from the payload or else from the hook command.
     static func eventName(_ payload: HookPayload, hint: String?) -> String?
+    /// Whether to leave this event out whatever it says, e.g. an agent's own background work.
+    static func ignores(event: String, payload: HookPayload, host: HostInfo?) -> Bool
 }
 
 extension AgentAdapter {
@@ -23,6 +25,7 @@ extension AgentAdapter {
     static func cwd(_ payload: HookPayload) -> String? { payload.string("cwd") }
     static func agentName(_ payload: HookPayload) -> String? { nil }
     static func eventName(_ payload: HookPayload, hint: String?) -> String? { payload.string("hook_event_name") ?? hint }
+    static func ignores(event: String, payload: HookPayload, host: HostInfo?) -> Bool { false }
 }
 
 public enum AdapterRegistry {
@@ -42,6 +45,7 @@ public enum AdapterRegistry {
         }
         guard let sessionId = adapter.sessionId(payload), !sessionId.isEmpty,
               let name = adapter.eventName(payload, hint: eventHint),
+              !adapter.ignores(event: name, payload: payload, host: host),
               let kind = adapter.normalize(event: name, payload: payload) else { return nil }
         return AgentEvent(agent: agent, sessionId: Trim.truncate(sessionId, max: Limits.sessionId),
                           cwd: adapter.cwd(payload), kind: kind, timestamp: now, host: host,
@@ -130,12 +134,16 @@ enum ClaudeAdapter: AgentAdapter {
 
 /// Codex. Codex Desktop also runs one-turn threads of its own through these hooks, e.g. to suggest
 /// the next prompt when a turn ends ({"suggestion":"…"}). It doesn't save them, so their payloads
-/// carry a null transcript_path; threads people work in, forks included, always have one, and so do
-/// `codex exec` runs unless `--ephemeral`. Their SessionEnd still passes, clearing rows from before.
+/// carry a null transcript_path, and they run under `codex app-server`. Threads people work in there
+/// have a transcript, forks included. `codex exec --ephemeral` has none either, but it's real work and
+/// doesn't run under the app server. SessionEnd still passes, clearing rows from before.
 enum CodexAdapter: AgentAdapter {
     static func normalize(event: String, payload p: HookPayload) -> EventKind? {
-        if p.isNull("transcript_path"), event != "SessionEnd" { return nil }
-        return ClaudeAdapter.normalize(event: event, payload: p)
+        ClaudeAdapter.normalize(event: event, payload: p)
+    }
+
+    static func ignores(event: String, payload p: HookPayload, host: HostInfo?) -> Bool {
+        p.isNull("transcript_path") && host?.appServer == true && event != "SessionEnd"
     }
 }
 

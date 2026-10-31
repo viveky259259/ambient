@@ -157,8 +157,8 @@ private func antigravity(_ event: String, _ json: String) -> EventKind? {
         #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","turn_id":"01a14c04-a2c6-7633-a390-6b536c980c8b","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"{\"suggestion\":\"Has the download finished? Show me the clip when it's ready.\"}"}"#,
     ]
 
-    private func codex(_ json: String) -> AgentEvent? {
-        AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil)
+    private func codex(_ json: String, host: HostInfo? = HostInfo(appServer: true)) -> AgentEvent? {
+        AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil, host: host)
     }
 
     @Test func realTurnKeepsItsSummary() {
@@ -190,6 +190,21 @@ private func antigravity(_ event: String, _ json: String) -> EventKind? {
     @Test func forksPeopleMakeAreKept() {
         let start = #"{"session_id":"01a14c10-0000-7000-8000-000000000001","transcript_path":"/Users/me/.codex/sessions/2026/10/18/rollout-x.jsonl","cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"default","source":"fork"}"#
         #expect(codex(start)?.kind == .sessionStarted)
+    }
+
+    // A run started with `codex exec --ephemeral` saves nothing either, but it isn't under the app server.
+    @Test func ephemeralExecRunsAreKept() {
+        let exec = HostInfo(agentPid: 8)
+        let session = "01a14c20-0000-7000-8000-000000000002"
+        let start = #"{"session_id":"\#(session)","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","source":"startup"}"#
+        let stop = #"{"session_id":"\#(session)","turn_id":"t","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"The benchmark passed."}"#
+        #expect(codex(start, host: exec)?.kind == .sessionStarted)
+        #expect(codex(stop, host: exec)?.kind == .turnCompleted(summary: "The benchmark passed."))
+    }
+
+    // Unreadable arguments leave the host unknown, and an event is only dropped when it's known to be hidden.
+    @Test func anUnknownHostKeepsItsEvents() {
+        #expect(codex(Self.suggestionThread[0], host: nil)?.kind == .sessionStarted)
     }
 
     @Test func suggestionTurnsAddNoRows() {
