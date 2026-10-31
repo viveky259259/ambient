@@ -16,6 +16,8 @@ protocol AgentAdapter {
     static func agentName(_ payload: HookPayload) -> String?
     /// The event's name, from the payload or else from the hook command.
     static func eventName(_ payload: HookPayload, hint: String?) -> String?
+    /// Whether to leave this event out whatever it says, e.g. an agent's own background work.
+    static func ignores(event: String, payload: HookPayload, host: HostInfo?) -> Bool
 }
 
 extension AgentAdapter {
@@ -23,6 +25,7 @@ extension AgentAdapter {
     static func cwd(_ payload: HookPayload) -> String? { payload.string("cwd") }
     static func agentName(_ payload: HookPayload) -> String? { nil }
     static func eventName(_ payload: HookPayload, hint: String?) -> String? { payload.string("hook_event_name") ?? hint }
+    static func ignores(event: String, payload: HookPayload, host: HostInfo?) -> Bool { false }
 }
 
 public enum AdapterRegistry {
@@ -32,7 +35,8 @@ public enum AdapterRegistry {
                              now: Date = Date(), host: HostInfo? = nil) -> AgentEvent? {
         let adapter: any AgentAdapter.Type = switch agent {
         // OpenCode's events reach Ambient through its plugin, which speaks Claude's format.
-        case .claude, .codex, .opencode: ClaudeAdapter.self
+        case .claude, .opencode: ClaudeAdapter.self
+        case .codex: CodexAdapter.self
         case .gemini: GeminiAdapter.self
         case .antigravity: AntigravityAdapter.self
         case .cursor: CursorAdapter.self
@@ -41,6 +45,7 @@ public enum AdapterRegistry {
         }
         guard let sessionId = adapter.sessionId(payload), !sessionId.isEmpty,
               let name = adapter.eventName(payload, hint: eventHint),
+              !adapter.ignores(event: name, payload: payload, host: host),
               let kind = adapter.normalize(event: name, payload: payload) else { return nil }
         return AgentEvent(agent: agent, sessionId: Trim.truncate(sessionId, max: Limits.sessionId),
                           cwd: adapter.cwd(payload), kind: kind, timestamp: now, host: host,
@@ -71,7 +76,7 @@ public enum AdapterRegistry {
     }
 }
 
-/// Claude Code. Codex's hooks use the same event names and fields, so it shares this adapter.
+/// Claude Code. Codex's hooks use the same event names and fields, so CodexAdapter builds on this one.
 /// OpenCode's plugin also speaks this format. Cursor has its own adapter — do not add it here.
 enum ClaudeAdapter: AgentAdapter {
     static func normalize(event: String, payload p: HookPayload) -> EventKind? {
@@ -124,6 +129,21 @@ enum ClaudeAdapter: AgentAdapter {
         default:
             return message.map { .notice(message: $0) }
         }
+    }
+}
+
+/// Codex. Codex Desktop also runs one-turn threads of its own through these hooks, e.g. to suggest
+/// the next prompt when a turn ends ({"suggestion":"…"}). It doesn't save them, so their payloads
+/// carry a null transcript_path, and they run under `codex app-server`. Threads people work in there
+/// have a transcript, forks included. `codex exec --ephemeral` has none either, but it's real work and
+/// doesn't run under the app server. SessionEnd still passes, clearing rows from before.
+enum CodexAdapter: AgentAdapter {
+    static func normalize(event: String, payload p: HookPayload) -> EventKind? {
+        ClaudeAdapter.normalize(event: event, payload: p)
+    }
+
+    static func ignores(event: String, payload p: HookPayload, host: HostInfo?) -> Bool {
+        p.isNull("transcript_path") && host?.appServer == true && event != "SessionEnd"
     }
 }
 

@@ -30,6 +30,8 @@
 - **Fix**: the task board kept re-rendering every card on every agent event, even after you closed it, which could
   take a whole CPU core with a long-lived board. Closing it now frees it, and only the cards on screen are drawn:
   with 1,626 tasks, 97% of a core and 590 MB became 1.6% and 90 MB.
+- **Fix**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
+  sessions finished with JSON like `{"suggestion":"…"}`.
 - **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.1% CPU with the island
   alone when nothing happens, 0.5% while agents work, 1.9% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
   reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.

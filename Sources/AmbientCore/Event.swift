@@ -60,6 +60,8 @@ public struct HostInfo: Codable, Equatable, Sendable {
     public var pids: [Int32]
     /// The agent process itself. When it's gone, so is the session.
     public var agentPid: Int32?
+    /// True when the agent runs as `codex app-server`, behind Codex's app or an editor, and not `codex exec`.
+    public var appServer: Bool?
 
     // Return addresses: enough to bring the user back to the exact chat, tab or pane.
 
@@ -74,12 +76,13 @@ public struct HostInfo: Codable, Equatable, Sendable {
     public var cmuxSocket: String?
 
     public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = [], agentPid: Int32? = nil,
-                tty: String? = nil, hostSessionId: String? = nil, tmuxSocket: String? = nil, tmuxPane: String? = nil,
-                cmuxWorkspace: String? = nil, cmuxSurface: String? = nil, cmuxSocket: String? = nil) {
+                appServer: Bool? = nil, tty: String? = nil, hostSessionId: String? = nil, tmuxSocket: String? = nil,
+                tmuxPane: String? = nil, cmuxWorkspace: String? = nil, cmuxSurface: String? = nil, cmuxSocket: String? = nil) {
         self.bundleId = bundleId
         self.termProgram = termProgram
         self.pids = pids
         self.agentPid = agentPid
+        self.appServer = appServer
         self.tty = tty
         self.hostSessionId = hostSessionId
         self.tmuxSocket = tmuxSocket
