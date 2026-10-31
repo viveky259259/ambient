@@ -70,7 +70,8 @@ expect(prompt["kind"] == "needsInput" and prompt["reason"] == "permission", f"pr
 expect(prompt["project"] == "my proj", f"project {prompt}")
 expect('Allow "curl"? café' in prompt["message"], f"message {prompt['message']}")
 done = next(e for e in events if e["kind"] == "turnCompleted")
-expect(0 < len(done["message"].encode()) <= 480, "a long message is cut to its cap")
+expect(0 < len(done["message"]) <= 160, "a long message is cut to its cap on the machine")
+expect(done["message"].endswith("…"), "a cut says so")
 expect("�" not in done["message"], "a cut never lands inside a character")
 expect(any(e["kind"] == "toolFinished" and e["tool"] == "Read" for e in events), "a huge payload still parses")
 # By kind: on Linux the test's own subshell counts as the agent, so `follow` adds an agentExited for this session.

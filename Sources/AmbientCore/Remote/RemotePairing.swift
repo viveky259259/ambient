@@ -32,7 +32,7 @@ public struct RemoteShim: Sendable {
 
 /// Pairs a machine: copies the shim over the transport, checks its SHA-256 on the far side, runs its `install`, and
 /// pins the identity it reports. Nothing is added to the allowlist until all of that has worked. A machine that's
-/// already pinned and has a shim says who it is first, so a different one is left as it was.
+/// already pinned says who it is first, so a different one is left as it was.
 public enum RemotePairing {
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case invalidID(String)
@@ -95,12 +95,8 @@ public enum RemotePairing {
         guard Machine.isValidID(request.id) else { throw .invalidID(request.id) }
         let transport = RemoteTransport(argv: request.transport)
 
-        // With no shim there, or one this app can't read, it has to wait for the same check after the install.
         if existing != nil, !request.acceptNewIdentity {
-            let reported = transport.run(RemoteTransport.shim("status"))
-            if reported.ok, let status = try? RemoteLineDecoder.status(reported.lastLine) {
-                try requireIdentity(status.hello.identity, request: request, existing: existing, audit: audit)
-            }
+            try requireIdentity(try identity(over: transport, shim: shim), request: request, existing: existing, audit: audit)
         }
 
         let copied = transport.run(RemoteTransport.copyShim, input: shim.bytes, timeout: 60)
@@ -142,6 +138,40 @@ public enum RemotePairing {
         let machine = Machine(id: request.id, label: request.label ?? existing?.label, transport: request.transport,
                               fingerprint: identity)
         return Outcome(machine: machine, status: status, installLines: lines, needsManualStep: installed.status == 3)
+    }
+
+    /// What became of `ambient remote remove --uninstall`.
+    public enum Uninstall: Equatable, Sendable {
+        case removed
+        /// Python isn't on the machine, so its hooks stay for the user to remove. They do nothing now.
+        case needsManualStep
+        /// The transport reaches another machine, which was left as it was. Holds what that one reports.
+        case differentMachine(String)
+        case failed(String)
+    }
+
+    /// Clears the hooks, spool and shim from a paired machine, once it has said it's that machine.
+    public static func uninstall(_ machine: Machine, shim: RemoteShim) -> Uninstall {
+        let transport = RemoteTransport(argv: machine.transport)
+        let reported: String
+        do {
+            reported = try identity(over: transport, shim: shim)
+        } catch {
+            return .failed(error.description)
+        }
+        guard reported == machine.fingerprint else { return .differentMachine(reported) }
+        let result = transport.run(RemoteTransport.shim("uninstall"), timeout: 60)
+        if result.ok { return .removed }
+        if result.status == 3 { return .needsManualStep }
+        return .failed(result.timedOut ? "timed out" : "exit status \(result.status)")
+    }
+
+    /// Who a machine says it is, asked before anything there changes. This app's shim runs from stdin, so it doesn't
+    /// matter what's installed there, if anything, and it leaves nothing behind.
+    static func identity(over transport: RemoteTransport, shim: RemoteShim) throws(Failure) -> String {
+        let reported = transport.run(RemoteTransport.identify, input: shim.bytes)
+        guard reported.ok else { throw .unreachable(explain(reported)) }
+        return Machine.isValidFingerprint(reported.lastLineWord) ? reported.lastLineWord : "no identity"
     }
 
     /// Stops at a machine other than the pinned one, unless the user has said that's expected.

@@ -7,8 +7,8 @@ private let pin = "id:" + String(repeating: "a", count: 32)
 private let machine = Machine(id: "devbox", label: "Devbox", transport: ["ssh", "devbox"], fingerprint: pin)
 
 private func hello(seq: Int64 = 10, epoch: String = "0123456789abcdef", identity: String = pin, proto: Int = 1,
-                   ts: Date = now) -> Data {
-    Data(#"{"v":1,"type":"hello","shim":"1.0.0","proto":\#(proto),"caps":"exit,title,heartbeat","level":"standard","seq":\#(seq),"epoch":"\#(epoch)","identity":"\#(identity)","ts":\#(Int(ts.timeIntervalSince1970))}"#.utf8)
+                   ts: Date = now, level: String = "standard") -> Data {
+    Data(#"{"v":1,"type":"hello","shim":"1.0.0","proto":\#(proto),"caps":"exit,title,heartbeat","level":"\#(level)","seq":\#(seq),"epoch":"\#(epoch)","identity":"\#(identity)","ts":\#(Int(ts.timeIntervalSince1970))}"#.utf8)
 }
 
 private func event(_ seq: Int64, kind: String = "toolStarted", id: String? = nil, ts: Date = now, extra: String = "") -> Data {
@@ -150,6 +150,64 @@ private func auditFile() -> RemoteAudit {
         #expect(live(103) == 1.0 / 50)
         #expect(abs(live(104) - 2.0 / 50) < 1e-9)
         #expect(audit.records().map(\.action) == [.rateLimited])
+    }
+
+    /// `hello.seq` is whatever the machine says: this one says every event it will ever send is a replay.
+    @Test func aForgedHandshakeDoesntBuyFreePacing() {
+        let ingest = RemoteIngest(machine: machine, cursor: .init(), replayLimiter: RemoteRateLimiter(rate: 50, burst: 3))
+        _ = ingest.receive(hello(seq: 1 << 53), now: now)
+        func replay(_ seq: Int64, at: Date = now) -> TimeInterval {
+            ingest.delay(after: RemoteEvent(seq: seq, id: "", ts: now, agent: .claude, session: "s", kind: .needsInput), now: at)
+        }
+        for seq in Int64(1)...3 { #expect(replay(seq) == 0) }
+        #expect(replay(4) == 1.0 / 50)
+        // Reconnecting doesn't refill it, only time does.
+        ingest.beginConnection()
+        _ = ingest.receive(hello(seq: 1 << 53), now: now)
+        #expect(replay(5) > 0)
+        #expect(replay(6, at: now.addingTimeInterval(1)) == 0)
+    }
+
+    @Test func aFullSpoolReplaysWithoutWaiting() {
+        let ingest = RemoteIngest(machine: machine, cursor: .init())
+        _ = ingest.receive(hello(seq: 1 << 53), now: now)
+        func replay(_ seq: Int64) -> TimeInterval {
+            ingest.delay(after: RemoteEvent(seq: seq, id: "", ts: now, agent: .claude, session: "s", kind: .toolStarted), now: now)
+        }
+        // 5 MB of the shortest lines real sessions write: a UUID for the session, and no project or tool.
+        let spool = Int64(5 * 1024 * 1024 / 165)
+        for seq in 1...spool { #expect(replay(seq) == 0) }
+        var held = false
+        for seq in (spool + 1)...(spool + 10_000) { held = held || replay(seq) > 0 }
+        #expect(held)
+    }
+
+    @Test func gapsAndResetsCantFillTheLog() {
+        let audit = auditFile()
+        let ingest = RemoteIngest(machine: machine, cursor: .init(), audit: audit)
+        _ = ingest.receive(hello(), now: now)
+        for i in Int64(0)..<1_000 { _ = ingest.receive(event(i * 2 + 1), now: now) }
+        for i in 1...1_000 {
+            ingest.beginConnection()
+            #expect(ingest.receive(hello(seq: 0, epoch: String(format: "%016x", i)), now: now) == .restart)
+        }
+        ingest.flush(now: now)
+        let records = audit.records()
+        #expect(records.count <= 4)
+        #expect(records.filter { $0.action == .spoolGap }.compactMap(\.count).reduce(0, +) == 999)
+        #expect(records.filter { $0.action == .spoolReset }.compactMap(\.count).reduce(0, +) == 1_000)
+    }
+
+    @Test func nothingAboveTheMachinesLevelGetsThrough() throws {
+        let extra = #","tool":"Bash","title":"Fix the secret thing","message":"secret text""#
+        for (level, names, text) in [("metadata", false, false), ("standard", true, false), ("full", true, true)] {
+            let ingest = RemoteIngest(machine: machine, cursor: .init())
+            _ = ingest.receive(hello(level: level), now: now)
+            let e = try #require(delivery(ingest.receive(event(1, kind: "needsInput", extra: extra), now: now))).event
+            #expect((e.tool != nil) == names, "\(level)")
+            #expect((e.title != nil) == names, "\(level)")
+            #expect((e.message != nil) == text, "\(level)")
+        }
     }
 
     @Test func tokensRefillAtTheRate() {
@@ -328,6 +386,81 @@ private func auditFile() -> RemoteAudit {
         #expect(log.moments.map(\.place) == ["Claude on Devbox"])
         log.removeMoments(machine: "devbox")
         #expect(log.moments.isEmpty)
+    }
+
+    @Test func aMachineCanOnlyHoldSoManySessions() throws {
+        func batch(_ events: RemoteEvent...) -> [RemoteDelivery] { events.map { RemoteDelivery(event: $0, at: now, missed: false) } }
+        #expect(SessionStore().machineSessionLimit >= 900)
+        let store = SessionStore()
+        store.machineSessionLimit = 3
+        let other = MachineRef(id: "other", label: "Other")
+        store.apply(AgentEvent(agent: .claude, sessionId: "local", cwd: "/x", kind: .promptSubmitted, timestamp: now))
+        for i in Int64(1)...3 { #expect(store.apply(remote(.promptSubmitted, seq: i, session: "s\(i)"), from: devbox, at: now) != nil) }
+
+        #expect(store.apply(remote(.promptSubmitted, seq: 4, session: "s4"), from: devbox, at: now) == nil)
+        #expect(store.apply(batch(remote(.needsInput, seq: 5, session: "s5"), remote(.needsInput, seq: 6, session: "s6")), from: devbox).refused == 2)
+        // Its own sessions go on, and nobody else's are affected.
+        #expect(store.apply(remote(.toolStarted, seq: 7, session: "s1"), from: devbox, at: now) != nil)
+        #expect(store.apply(remote(.promptSubmitted, seq: 1, session: "x"), from: other, at: now) != nil)
+        #expect(store.apply(AgentEvent(agent: .claude, sessionId: "local2", cwd: "/x", kind: .promptSubmitted, timestamp: now)) != nil)
+        #expect(store.sessions.count == 6)
+        // One ending makes room.
+        store.apply(remote(.sessionEnded, seq: 8, session: "s1"), from: devbox, at: now)
+        #expect(store.apply(remote(.promptSubmitted, seq: 9, session: "s9"), from: devbox, at: now) != nil)
+    }
+
+    @Test func aSessionLoopCantGrowTheBoard() throws {
+        #expect(TaskStore().machineTaskLimit >= 3_000)
+        let store = SessionStore()
+        let tasks = TaskStore()
+        tasks.machineTaskLimit = 20
+        let local = try #require(store.apply(AgentEvent(agent: .claude, sessionId: "l", cwd: "/x/api", kind: .promptSubmitted, timestamp: now)))
+        tasks.observe(local, now: now)
+        var mine = try #require(tasks.tasks.first)
+        mine.machine = devbox
+        tasks.upsert(mine, at: now)
+
+        // No session outlives its loop, so the session limit doesn't help here.
+        for i in Int64(1)...200 {
+            let at = now.addingTimeInterval(Double(i))
+            for (offset, kind) in [(Int64(0), RemoteEvent.Kind.sessionStarted), (1, .sessionEnded)] {
+                let e = RemoteEvent(seq: i * 2 + offset, id: String(format: "%032x", i * 2 + offset), ts: at, agent: .claude,
+                                    session: "s\(i)", kind: kind, project: "project-\(i)")
+                let change = try #require(store.apply(e, from: devbox, at: at))
+                tasks.observe(change, now: at)
+            }
+        }
+        let own = tasks.tasks.filter { $0.machine == devbox }
+        #expect(own.count == 20)
+        #expect(own.contains { $0.project == "project-200" })
+        #expect(!own.contains { $0.project == "project-1" })
+        // What the user wrote isn't anyone's to drop.
+        #expect(own.contains { $0.id == mine.id })
+    }
+
+    @Test func aFullBoardOfTheUsersOwnTasksTakesNoMore() throws {
+        let store = SessionStore()
+        let tasks = TaskStore()
+        tasks.machineTaskLimit = 1
+        let first = try #require(store.apply(remote(.promptSubmitted, seq: 1, session: "s1"), from: devbox, at: now))
+        var task = try #require(tasks.observe(first, now: now))
+        task.machine = devbox
+        tasks.upsert(task, at: now)
+        let second = RemoteEvent(seq: 2, id: String(format: "%032x", 2), ts: now, agent: .claude, session: "s2", kind: .promptSubmitted, project: "other")
+        let change = try #require(store.apply(second, from: devbox, at: now))
+        #expect(tasks.observe(change, now: now) == nil)
+        #expect(tasks.tasks.count == 1)
+    }
+
+    @Test func whatAModelSaysAboutARemoteSessionIsPlainTextToo() throws {
+        let store = SessionStore()
+        let tasks = TaskStore()
+        let change = try #require(store.apply(remote(.promptSubmitted, seq: 1), from: devbox, at: now))
+        let task = try #require(tasks.observe(change, now: now))
+        let semantics = TaskSemantics(title: "Clean\u{1B}[2J up", summary: "Done\u{1B}]0;x\u{7} now")
+        let plain = try #require(tasks.applySemantics(semantics, toTaskID: task.id))
+        #expect(plain.title == "Clean[2J up")
+        #expect(plain.summary == "Done]0;x now")
     }
 
     @Test func tasksNeverMixMachines() throws {

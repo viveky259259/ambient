@@ -52,15 +52,8 @@ final class PermissionDesk: ObservableObject {
 
     private func agentMoved(_ t: SessionChange) {
         guard !queue.entries.isEmpty else { return }
-        let s = t.session
-        let gone = t.removed
-            ? queue.entries.map(\.ask).filter { $0.event.agent == s.agent && $0.event.sessionId == s.sessionId }
-            : t.event.map { queue.withdraw(after: AgentEvent(agent: s.agent, sessionId: s.sessionId, cwd: nil, kind: $0,
-                                                             timestamp: s.lastEventAt)) } ?? []
-        for ask in gone {
-            queue.remove(ask.id)
-            waiters.removeValue(forKey: ask.id)?.resolve(.ask)
-        }
+        let gone = queue.withdraw(after: t)
+        for ask in gone { waiters.removeValue(forKey: ask.id)?.resolve(.ask) }
         if !gone.isEmpty { publish() }
     }
 
