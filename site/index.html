@@ -62,7 +62,7 @@
         "operatingSystem": "macOS 14 or later",
         "processorRequirements": "Apple silicon or Intel",
         "softwareVersion": "0.7.0",
-        "fileSize": "4.2 MB",
+        "fileSize": "9.0 MB",
         "dateModified": "2026-09-30T00:00:00+00:00",
         "isAccessibleForFree": true,
         "license": "https://opensource.org/licenses/MIT",
@@ -79,7 +79,7 @@
           "Wallpaper follows the time of day, matches macOS light or dark mode, or stays light or dark",
           "Wallpaper on every display and on the lock screen",
           "Works with Claude Code, Codex and Gemini CLI",
-          "No accounts, no network requests, no telemetry"
+          "No accounts, no telemetry, online only when you ask"
         ],
         "publisher": { "@id": "https://yaml.cafe/#org" }
       },
@@ -89,7 +89,7 @@
         "mainEntity": [
           { "@type": "Question", "name": "Is Ambient free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Download it, connect your agents and use every feature." } },
           { "@type": "Question", "name": "Is Ambient open source?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The source code is on GitHub under the MIT license: https://github.com/viveky259259/ambient" } },
-          { "@type": "Question", "name": "Does it send my code or prompts anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them over a Unix socket to the app on your Mac. The app makes no network requests." } },
+          { "@type": "Question", "name": "Does it send my code or prompts anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them over a Unix socket to the app on your Mac. Ambient goes online only when you ask it to, and machines you pair reach your Mac over your own ssh." } },
           { "@type": "Question", "name": "Will it slow my agent down?", "acceptedAnswer": { "@type": "Answer", "text": "No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped." } },
           { "@type": "Question", "name": "How is Ambient different from Claude Code's built-in notifications?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent." } },
           { "@type": "Question", "name": "Does it work with tmux, iTerm2, VS Code and Cursor?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors." } },
@@ -141,7 +141,7 @@
       <button class="btn" id="mobile-copy-hero">Copy link for your Mac</button>
       <a class="link-btn" href="#return">See how it works ›</a>
     </div>
-    <p class="fineprint desktop-only">Free · Version 0.7.0 · macOS 14 or later · Apple silicon and Intel · 3.6&nbsp;MB</p>
+    <p class="fineprint desktop-only">Free · Version 0.7.0 · macOS 14 or later · Apple silicon and Intel · 9.0&nbsp;MB</p>
     <p class="fineprint mobile-only hidden">Ambient is a Mac app. Save this link and open it on your Mac.</p>
 
     <div class="macbook" aria-hidden="true">
@@ -317,7 +317,7 @@
   <div class="wrap">
     <p class="stat grad">0 bytes</p>
     <h2>leave your Mac.</h2>
-    <p class="section-lede">Private by design: no accounts, no network, no telemetry. Events travel over a private socket on your Mac and stay there.</p>
+    <p class="section-lede">Private by design: no accounts, no telemetry, online only when you ask. Events travel over a private socket on your Mac and stay there.</p>
   </div>
 </section>
 
@@ -327,7 +327,7 @@
     <div class="faq">
       <details><summary>Is Ambient free?</summary><p>Yes. Download it, connect your agents and use every feature.</p></details>
       <details><summary>Is Ambient open source?</summary><p>Yes. The <a href="https://github.com/viveky259259/ambient">source code is on GitHub</a> under the MIT license.</p></details>
-      <details><summary>Does it send my code or prompts anywhere?</summary><p>No. Each hook reduces an event to a few short fields — agent, state, project name, a trimmed message — and sends them over a Unix socket to the app on your Mac. The app makes no network requests.</p></details>
+      <details><summary>Does it send my code or prompts anywhere?</summary><p>No. Each hook reduces an event to a few short fields — agent, state, project name, a trimmed message — and sends them over a Unix socket to the app on your Mac. Ambient goes online only when you ask it to, and machines you pair reach your Mac over your own ssh.</p></details>
       <details><summary>Will it slow my agent down?</summary><p>No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped.</p></details>
       <details><summary>How is Ambient different from Claude Code's built-in notifications?</summary><p>Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent. <a href="/guides/claude-code-notifications-mac/">Compare every option</a>.</p></details>
       <details><summary>Does it work with tmux, iTerm2, VS Code and Cursor?</summary><p>Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors.</p></details>

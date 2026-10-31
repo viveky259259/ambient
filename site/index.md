@@ -12,7 +12,7 @@ Coding agents work for minutes at a time, then stop to ask a question, wait for 
 - **Back in one click.** A notification, an island row or a menu row opens the exact place the agent runs, not just the app.
 - **Alerts only when they matter.** Banners and soft chimes for a question, a finished turn or a failure, and silence while you're already looking at the agent.
 - **Every agent in one place.** Claude Code, Codex and Gemini CLI, in any terminal or editor and in the Claude and Codex desktop apps, sorted most urgent first.
-- **Private by design.** No accounts, no network requests, no telemetry. Events never leave your Mac.
+- **Private by design.** No accounts and no telemetry, and Ambient goes online only when you ask it to. Events stay on your Mac and on the machines you connect yourself, over your own ssh.
 - **Made for the Mac.** A notch island in macOS glass, a Dock glow, a menu bar list and a living wallpaper. Designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.
 
 ## What you see
@@ -76,7 +76,7 @@ agent hook ──▶ ambient hook <agent> ──▶ ~/.ambient/ambient.sock ─�
 
 ## Privacy
 
-Ambient collects nothing. It has no accounts, makes no network requests and sends no telemetry. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them to the app on your Mac. Your prompts and tool output are never stored.
+Ambient collects nothing. It has no accounts and sends no telemetry, and it goes online only when you ask it to. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them to the app on your Mac. Your prompts and tool output are never stored.
 
 ## Install
 
@@ -124,7 +124,7 @@ Step-by-step guides for each agent's own options:
 
 **Which Macs does it run on?** macOS 14 or later, on Apple silicon and Intel.
 
-**Does it work over SSH?** Ambient needs the agent to run on the same Mac; hooks on a remote machine can't reach it.
+**Does it work over SSH?** Yes. Pair a machine with `ambient remote add`, and its agents show up on your Mac beside the local ones, over your own ssh. A remote machine can only send display data, so clicking one of its sessions marks it as seen, and Ambient can't answer or approve anything there.
 
 **How do I remove it?** Run `ambient uninstall` (your other settings stay exactly as they were), quit Ambient, and delete the app and `~/.ambient`.
 
