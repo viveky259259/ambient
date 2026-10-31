@@ -12,7 +12,7 @@
   <meta property="og:title" content="How to get Claude Code notifications inside tmux">
   <meta property="og:description" content="allow-passthrough, the tmux bell flag, a hook that messages tmux, and jumping back to the pane.">
   <meta property="og:image" content="https://yaml.cafe/assets/og.png">
-  <meta property="article:modified_time" content="2026-10-09">
+  <meta property="article:modified_time" content="2026-10-31">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="/assets/favicon-64.png">
@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-tmux-notifications/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-09T00:00:00+00:00",
-      "dateModified": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-10-31T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -125,16 +125,19 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get Claude Code notifications inside tmux</h1>
-    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 4 min read</p>
+    <p class="meta">Updated <time datetime="2026-10-31">October 31, 2026</time> · 4 min read</p>
 
     <p class="answer">Inside tmux, Claude Code's desktop notifications never reach your terminal until you add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code> and reload it. Hooks don't go through the terminal, so a <code>Stop</code> or <code>PermissionRequest</code> hook works in tmux as it is, and Ambient takes you back to the exact pane.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-tmux-notifications-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
 
     <h2>Let notifications through</h2>
     <p>Add these lines to <code>~/.tmux.conf</code>, then run <code>tmux source-file ~/.tmux.conf</code>:</p>
     <pre><code>set -g allow-passthrough on
+set -g focus-events on
 set -s extended-keys on
 set -as terminal-features 'xterm*:extkeys'</code></pre>
-    <p><code>allow-passthrough</code> lets Claude Code's notifications and progress bar reach the terminal outside tmux. The <code>extended-keys</code> lines make Shift+Enter insert a newline instead of sending your prompt. Your outer terminal still has to show notifications: Ghostty and Kitty do out of the box, iTerm2 after you enable escape-sequence alerts.</p>
+    <p><code>allow-passthrough</code> lets Claude Code's notifications and progress bar reach the terminal outside tmux. <code>focus-events</code> passes focus changes through to Claude Code (<a href="/guides/tmux-focus-events-claude-code/">what it does</a>). The <code>extended-keys</code> lines make Shift+Enter insert a newline instead of sending your prompt. Your outer terminal still has to show notifications: Ghostty and Kitty do out of the box, iTerm2 after you enable escape-sequence alerts.</p>
 
     <h2>Let the bell flag the window</h2>
     <p>With <code>"preferredNotifChannel": "terminal_bell"</code> in <code>~/.claude/settings.json</code>, Claude Code rings the bell when it finishes or waits for permission. tmux flags a window whose pane rang the bell in the status line, so you can see which window wants you even when it's in the background.</p>
@@ -174,7 +177,7 @@ set -as terminal-features 'xterm*:extkeys'</code></pre>
       <li><a href="https://code.claude.com/docs/en/hooks-guide">Automate actions with hooks</a>, Claude Code docs</li>
       <li><a href="https://man.openbsd.org/tmux.1">tmux manual</a>, OpenBSD</li>
     </ul>
-    <p>More guides: <a href="/guides/multiple-claude-code-sessions-mac/">Multiple Claude Code sessions on Mac</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+    <p>More guides: <a href="/guides/claude-code-in-tmux/">Claude Code in tmux</a> · <a href="/guides/claude-code-notifications-not-working/">Notifications not working</a> · <a href="/guides/multiple-claude-code-sessions-mac/">Multiple Claude Code sessions on Mac</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
   </article>
 </main>
 

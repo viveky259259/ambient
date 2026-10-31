@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code notifications not working? Fix them on Mac</title>
+  <meta name="description" content="Why Claude Code notifications don&#x27;t appear on Mac and how to fix each cause: timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-notifications-not-working/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-notifications-not-working/">
+  <meta property="og:title" content="Claude Code notifications not working on Mac: how to fix them">
+  <meta property="og:description" content="Timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-10-31">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/claude-code-notifications-not-working/#article",
+      "headline": "Claude Code notifications not working on Mac: how to fix them",
+      "description": "Why Claude Code notifications don't appear on Mac and how to fix each cause: timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.",
+      "url": "https://yaml.cafe/guides/claude-code-notifications-not-working/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-not-working/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-10-31T00:00:00+00:00",
+      "dateModified": "2026-10-31T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Notifications not working",
+          "item": "https://yaml.cafe/guides/claude-code-notifications-not-working/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why do Claude Code notifications not show up on my Mac?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Usually because you were still typing, your terminal doesn't show desktop notifications, or macOS is blocking the app. Only Ghostty, Kitty and iTerm2 get desktop notifications by default."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why don't I get notifications in the VS Code terminal?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Claude Code doesn't send a desktop notification there. Use a Notification hook, or set preferredNotifChannel to terminal_bell."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does my osascript notification hook do nothing?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "osascript posts through Script Editor, and it fails silently without permission. Run it once, then allow Script Editor in System Settings → Notifications."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-not-working-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>Claude Code notifications not working on Mac: how to fix them</h1>
+    <p class="meta">Updated <time datetime="2026-10-31">October 31, 2026</time> · 4 min read</p>
+
+    <p class="answer">Most missing Claude Code notifications come from one of three causes: you were still typing, your terminal doesn't show them (only Ghostty, Kitty and iTerm2 get desktop notifications), or macOS is blocking the app that posts them. Start with the table below.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-not-working-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
+
+    <h2>Find your symptom</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Nothing in VS Code, Cursor, Warp or other terminals</td><td>No built-in desktop notification there</td><td>Use a hook or the terminal bell</td></tr>
+          <tr><td>Nothing in Apple Terminal</td><td>No desktop notification, and at most a silent bell</td><td>Use a hook, or the bell with Audible bell on</td></tr>
+          <tr><td>Nothing in iTerm2</td><td>Alerts are off by default</td><td>Turn them on in iTerm2</td></tr>
+          <tr><td>Nothing in Ghostty or Kitty</td><td>macOS is blocking the app</td><td>Allow notifications for it</td></tr>
+          <tr><td>Nothing inside tmux</td><td>tmux swallows the alert</td><td>Add <code>allow-passthrough</code></td></tr>
+          <tr><td>An <code>osascript</code> hook does nothing</td><td>Script Editor has no permission</td><td>Allow notifications for Script Editor</td></tr>
+          <tr><td>Alerts arrive late, or not while you type</td><td>The alert waits until you look away</td><td>Use <code>Stop</code> and <code>PermissionRequest</code> hooks</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Check the timing first</h2>
+    <p>Claude Code only alerts you when you appear to be away, and that's based on typing. A permission alert waits until you haven't typed for about six seconds, and each keystroke pushes it back. An idle alert comes about 60 seconds after Claude finishes, if you haven't typed since. For an alert the moment something happens, use a <code>PermissionRequest</code> or <code>Stop</code> hook. The <a href="/guides/claude-code-permission-notification/">permission guide</a> shows how.</p>
+
+    <h2>Use a terminal that shows them</h2>
+    <p>Ghostty, Kitty and iTerm2 get a desktop notification. Other terminals get nothing by default, or in Apple Terminal, at most a silent bell. To send the bell in any terminal, add this to <code>~/.claude/settings.json</code>:</p>
+    <pre><code>{
+  "preferredNotifChannel": "terminal_bell"
+}</code></pre>
+    <p>In Apple Terminal, also turn on Audible bell under Settings → Profiles → Advanced. If this setting is <code>notifications_disabled</code>, change it back: that turns off the alert, though hooks still run.</p>
+
+    <h2>Turn on alerts in iTerm2</h2>
+    <p>Go to Settings → Profiles → Terminal and check Notification Center Alerts. Then click Filter Alerts and enable Send escape sequence-generated alerts.</p>
+
+    <h2>Allow notifications in macOS</h2>
+    <p>Open System Settings → Notifications, find your terminal app and turn on Allow Notifications. Also check that Focus or Do Not Disturb isn't hiding them.</p>
+
+    <h2>Let them through tmux</h2>
+    <p>Add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code> and run <code>tmux source-file ~/.tmux.conf</code>. The <a href="/guides/claude-code-in-tmux/">tmux setup guide</a> has the full config.</p>
+
+    <h2>Fix a silent osascript hook</h2>
+    <p><code>osascript</code> posts notifications through Script Editor. Without permission it fails silently, and macOS doesn't ask. Run this once so Script Editor appears in your settings:</p>
+    <pre><code>osascript -e 'display notification "test"'</code></pre>
+    <p>Nothing shows yet. Open System Settings → Notifications, find Script Editor and turn on Allow Notifications, then run the command again.</p>
+
+    <h2>Check that the hook loaded</h2>
+    <p>Type <code>/hooks</code> at the Claude Code prompt and look for your hook under its event. If it's missing, check that <code>~/.claude/settings.json</code> is valid JSON, and that the new event sits beside your existing events inside the single <code>hooks</code> object.</p>
+
+    <h2>Or skip the setup</h2>
+    <p>Ambient installs its own hooks and shows every session at the notch, in any terminal or editor, with no notification settings to line up. Click the island to go back to the exact tab or pane.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-not-working-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Why do Claude Code notifications not show up on my Mac?</h3>
+    <p>Usually because you were still typing, your terminal doesn&#x27;t show desktop notifications, or macOS is blocking the app. Only Ghostty, Kitty and iTerm2 get desktop notifications by default.</p>
+    <h3>Why don&#x27;t I get notifications in the VS Code terminal?</h3>
+    <p>Claude Code doesn&#x27;t send a desktop notification there. Use a Notification hook, or set preferredNotifChannel to terminal_bell.</p>
+    <h3>Why does my osascript notification hook do nothing?</h3>
+    <p>osascript posts through Script Editor, and it fails silently without permission. Run it once, then allow Script Editor in System Settings → Notifications.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/terminal-config#get-a-terminal-bell-or-notification">Get a terminal bell or notification</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks#notification">Notification hook</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/hooks-guide">Automate actions with hooks</a>, Claude Code docs</li>
+      <li><a href="https://code.claude.com/docs/en/debug-your-config">Debug your configuration</a>, Claude Code docs</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a> · <a href="/guides/claude-code-permission-notification/">Claude Code permission notifications</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>
