@@ -1,6 +1,8 @@
 # Ambient
 
-**Your Mac, aware of your coding agents.**
+**Your Mac, aware of your coding agents.** Website and download: [yaml.cafe](https://yaml.cafe/)
+
+Ambient is a free, open source (MIT) macOS notch app for AI coding agents. It shows when an agent is working, needs you, has finished or hit an error, and one click takes you back to the exact terminal tab, tmux pane or chat.
 
 Ambient turns what Claude Code, Codex, Gemini CLI, Antigravity, Cursor, Copilot CLI and OpenCode (or any agent or
 script you point at it) are doing into calm, glanceable signals on your
@@ -46,7 +48,7 @@ offline voice download, and the text you select when you choose an online voice.
 
 ## Install
 
-1. Download `Ambient-<version>.dmg` from [Releases](../../releases), open it and drag **Ambient** to Applications.
+1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag **Ambient** to Applications.
 2. Open Ambient. Settings opens on **Welcome**: click **Connect All** to hook up every agent it found
    (or connect them one at a time under **Agents**).
 3. Click **Play Demo** to see every state, then **Get Started**.
