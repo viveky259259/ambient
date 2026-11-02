@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.0 — 2026-11-03
+
+0.7.0 was tagged but never had a download, so this release also brings everything listed under 0.7.0 below.
+
 - **Homebrew cask**: `scripts/update-cask.sh` writes the cask for a published release into the tap, with the checksum
   from the GitHub release, and the cask downloads from yaml.cafe with `?ref=brew` so Homebrew installs are counted on
   their own.
