@@ -15,10 +15,12 @@ final class RemoteCoordinator {
     private var machines: [Machine] = []
     private var machinesChangedAt: Date?
     private var pollTimer: Timer?
+    private var limits: RemoteAuditThrottle
 
     init(paths: AmbientPaths, model: AppModel) {
         self.paths = paths
         self.model = model
+        limits = RemoteAuditThrottle(audit: paths.remoteAudit)
     }
 
     func start() {
@@ -101,13 +103,17 @@ final class RemoteCoordinator {
 
     private func follow(_ machine: Machine) {
         guard machines.contains(machine), links[machine.id] == nil else { return }
+        let coordinator = MainThreadBox(self)
         let model = MainThreadBox(self.model)
         let ref = machine.ref
         let shimVersion = bundledShim?.version
         let link = RemoteLink(
             machine: machine, cursor: self.model.remoteCursor(machine.id), audit: paths.remoteAudit,
-            deliver: { batch, cursor in
-                DispatchQueue.main.async { model.value.applyRemote(batch, cursor: cursor, from: ref) }
+            deliver: { batch, cursor, applied in
+                DispatchQueue.main.async {
+                    coordinator.value.apply(batch, cursor: cursor, from: ref)
+                    applied()
+                }
             },
             report: { health, hello in
                 DispatchQueue.main.async {
@@ -117,6 +123,11 @@ final class RemoteCoordinator {
             })
         links[machine.id] = link
         link.start()
+    }
+
+    private func apply(_ batch: [RemoteDelivery], cursor: RemoteCursor, from machine: MachineRef) {
+        let refused = model.applyRemote(batch, cursor: cursor, from: machine)
+        if refused > 0 { limits.record(.sessionLimit, machine: machine.id, count: refused, now: Date()) }
     }
 }
 

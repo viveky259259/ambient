@@ -371,13 +371,21 @@ runs `ambient-remote follow`, which streams the spool back as JSON lines. Nothin
 opens no port. If it sleeps or loses the network, events wait in the spool and arrive on reconnect, and a prompt that
 waited longer than 10 minutes shows as *missed*, without a chime. While a machine can't be reached its sessions show
 as *unknown* rather than working forever. Links reconnect by themselves, and the menu bar and Settings › Remote show
-how each one is doing.
+how each one is doing. The `ssh` command Ambient builds forwards nothing, so nothing on the machine can use your ssh
+agent or ports through the link, whatever your config says for that host. A command you give after `--` runs as you
+wrote it.
 
 **What it can do.** A remote machine can only send display data. It can't reach the app's socket, run anything, or
 touch a window, tab, tmux pane or process on your Mac. Remote sessions don't jump to a terminal when you click them,
 since there's nothing local to open: clicking marks them as seen. Remote events go through their own strict decoder,
 and if a machine's identity changes the link stops until you pair it again. Ambient can't answer or approve anything
 on the remote machine.
+
+That display data can be false. A machine that's been taken over, or an agent on it that's been talked into it, can show
+you made-up states and text and alert you about them. Each machine is limited to 50 events a second, 1,000 sessions and
+5,000 board tasks, so it can only slow itself down. Its identity is something it reports, so the check catches a
+re-pointed alias or a rebuilt machine, not one that's lying. Pairing again and `remove --uninstall` check it first, and
+leave a different machine as it was.
 
 **What leaves the machine.** Redaction happens there, before anything is written to the spool:
 
@@ -390,13 +398,16 @@ on the remote machine.
 | The session's title in its agent | | ✓ | ✓ |
 | Up to 160 characters of the agent's final message, a permission prompt or an error | | | ✓ |
 
-Your prompts, tool input and output, commands, file paths and transcripts are never sent at any level. Neither are the
-agent's process id, terminal or tmux pane, which `follow` uses on the machine to tell when the agent has exited.
+Your prompts, tool input and output, commands, file paths and transcripts are never sent as such at any level, but at
+`full` an agent's final message can quote any of them. Neither are the agent's process id, terminal or tmux pane, which
+`follow` uses on the machine to tell when the agent has exited. Lines already in the spool when you tighten a level
+still cross your transport, and your Mac drops what the new level doesn't allow as they arrive.
 
 **Where it's kept.** On the machine, in `~/.ambient/spool` (folder `0700`, files `0600`), capped at 5 MB and 24 hours;
 set `spool_max_bytes` and `spool_max_age` in `~/.ambient/remote.conf` to change that. The limits are enforced whenever
 the shim runs, since it has no daemon. On your Mac, remote sessions live with local ones in `~/.ambient/state.json`, on
-the board in `~/.ambient/tasks.json`, and in the day log with no titles or projects. `~/.ambient/remote/audit.jsonl` records
+the board in `~/.ambient/tasks.json`, where a machine's tasks stay until you purge it or its oldest make way past 5,000,
+and in the day log with no titles or projects. `~/.ambient/remote/audit.jsonl` records
 pairing, unpairing, fingerprint changes, link changes and rejected lines, and never any event content.
 
 **Where it goes.** Text from a remote machine stays on your Mac. It's never sent to an online voice, to `ambient task
@@ -406,7 +417,7 @@ that on in Settings › Remote. Your transport is the only thing that touches th
 ```bash
 ambient remote list                       # Paired machines
 ambient doctor --remote devbox            # Transport, shim version and checksum, spool, hooks, cursor
-ambient remote remove devbox --uninstall  # Unpair, and clear the hooks, spool and shim from the machine
+ambient remote remove devbox --uninstall  # Unpair, and clear the hooks, spool and shim, if it's still that machine
 ambient remote purge devbox               # Delete everything from it on this Mac
 ```
 

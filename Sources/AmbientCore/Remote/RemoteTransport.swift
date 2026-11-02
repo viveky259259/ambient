@@ -32,6 +32,9 @@ public struct RemoteTransport: Sendable {
         #"sh -c '"$HOME/.ambient/bin/ambient-remote" \#(arguments)'"#
     }
 
+    /// Runs the shim sent on stdin and asks who the machine is. Nothing is read from there or left behind.
+    public static let identify = "sh -s identity"
+
     /// `follow` replaces that `sh`, so ending the transport ends it.
     public static func follow(since seq: Int64) -> String {
         #"sh -c 'exec "$HOME/.ambient/bin/ambient-remote" follow --since \#(seq)'"#
@@ -84,6 +87,8 @@ public struct RemoteTransport: Sendable {
             }
         }
         if let stdin, let input {
+            // A transport that exits first, as a failed sign-in does, mustn't take this process with it.
+            _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
             DispatchQueue.global().async {
                 try? stdin.fileHandleForWriting.write(contentsOf: input)
                 try? stdin.fileHandleForWriting.close()

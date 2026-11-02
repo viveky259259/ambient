@@ -70,6 +70,15 @@ public struct RemoteEvent: Equatable, Sendable {
         case .titleChanged: nil
         }
     }
+
+    /// This event without what `level` keeps on the machine. The hub's half of redaction: the shim applies a level to
+    /// what it spools from then on, and this covers what was already there.
+    func redacted(to level: RemoteRedaction) -> RemoteEvent {
+        let names = level != .metadata
+        return RemoteEvent(v: v, seq: seq, id: id, ts: ts, agent: agent, session: session, kind: kind, project: project,
+                           tool: names ? tool : nil, title: names ? title : nil, reason: reason,
+                           message: level == .full ? message : nil)
+    }
 }
 
 /// Why a remote line was dropped. `code` is what the audit log records: never any of the line's content.
@@ -108,7 +117,8 @@ public enum RemoteRejection: Error, Equatable, Sendable, CustomStringConvertible
         case .notAnObject: "not a JSON object"
         case .tooDeep: "nested too deeply"
         case let .duplicateField(f): "duplicate field \(f)"
-        case let .unknownField(f): "unknown field \(f)"
+        // The one key not from our own allowlist. Pairing prints this, so it can't go out as the machine wrote it.
+        case let .unknownField(f): "unknown field \(RemoteEventDecoder.plainText(f, max: 40) ?? "")"
         case let .missingField(f): "missing field \(f)"
         case let .wrongType(f): "wrong type for \(f)"
         case let .unsupportedVersion(v): "protocol version \(v)"
@@ -129,6 +139,9 @@ public enum RemoteEventDecoder {
         public static let tool = 64
         public static let title = 80
         public static let message = 160
+        /// Per character, since `Trim` counts characters and combining marks pile onto one without limit. Real text has
+        /// room: a flag takes 2, a Thai syllable 3 or 4, the longest Sanskrit conjuncts about 10.
+        public static let scalarsPerCharacter = 16
     }
 
     static let allowed: Set<String> = ["v", "seq", "id", "ts", "agent", "session", "kind", "project", "tool", "title",
@@ -193,7 +206,8 @@ public enum RemoteEventDecoder {
     }
 
     /// Plain text only: control, format (including bidirectional overrides and zero-width characters) and
-    /// line separator characters are removed, whitespace collapsed, and the result cut to `max`.
+    /// line separator characters are removed, whitespace collapsed, the result cut to `max`, and no character left
+    /// holding more than `Caps.scalarsPerCharacter`.
     public static func plainText(_ s: String, max: Int) -> String? {
         let kept = s.unicodeScalars.filter { scalar in
             switch scalar.properties.generalCategory {
@@ -204,7 +218,11 @@ public enum RemoteEventDecoder {
                 return true
             }
         }
-        return Trim.clean(String(String.UnicodeScalarView(kept)), max: max)
+        return Trim.clean(String(String.UnicodeScalarView(kept)), max: max).map { text in
+            var thin = String.UnicodeScalarView()
+            for character in text { thin.append(contentsOf: character.unicodeScalars.prefix(Caps.scalarsPerCharacter)) }
+            return String(thin)
+        }
     }
 
     /// The deepest bracket nesting outside strings. A valid line is one flat object: depth 1.

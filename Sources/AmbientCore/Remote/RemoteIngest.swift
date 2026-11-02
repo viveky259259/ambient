@@ -56,6 +56,10 @@ public struct RemoteRateLimiter: Sendable {
         self.tokens = burst
     }
 
+    /// For replays: more than a full 5 MB spool, whose shortest real lines run about 165 bytes, so a Mac back from sleep
+    /// catches up at once. After that, the live rate. A larger `spool_max_bytes` only takes longer to arrive.
+    public static var replay: RemoteRateLimiter { RemoteRateLimiter(rate: 50, burst: 40_000) }
+
     public mutating func delay(now: Date) -> TimeInterval {
         if let updatedAt { tokens = min(burst, tokens + max(0, now.timeIntervalSince(updatedAt)) * rate) }
         updatedAt = now
@@ -88,23 +92,26 @@ public final class RemoteIngest {
 
     private let audit: RemoteAudit?
     private var limiter: RemoteRateLimiter
+    /// Lives here rather than on a connection, so reconnecting doesn't refill it.
+    private var replayLimiter: RemoteRateLimiter
     private var hello: RemoteHello?
     private var skew: TimeInterval = 0
     private var seenIDs = Set<String>()
     private var seenOrder: [String] = []
     private var seenStart = 0
-    /// Rejections are recorded at most once a minute per reason, with a count, so garbage can't fill the log.
-    private var pendingRejections: [String: (count: Int, lastWritten: Date?)] = [:]
-    private var lastRateAudit: Date?
-    private var heldBack = 0
+    /// Everything a machine can repeat at will goes through this, so it can't fill the log.
+    private var throttle: RemoteAuditThrottle
 
     public init(machine: Machine, cursor: RemoteCursor, policy: Policy = Policy(),
-                limiter: RemoteRateLimiter = RemoteRateLimiter(), audit: RemoteAudit? = nil) {
+                limiter: RemoteRateLimiter = RemoteRateLimiter(), replayLimiter: RemoteRateLimiter = .replay,
+                audit: RemoteAudit? = nil) {
         self.machine = machine
         self.cursor = cursor
         self.policy = policy
         self.limiter = limiter
+        self.replayLimiter = replayLimiter
         self.audit = audit
+        self.throttle = RemoteAuditThrottle(audit: audit)
     }
 
     /// A new connection is starting: it must say hello before anything counts.
@@ -132,26 +139,20 @@ public final class RemoteIngest {
         }
     }
 
-    /// How long to hold back the event just delivered. A replay runs free: the spool's cap already bounds it.
+    /// How long to hold back the event just delivered. A replay has its own bucket, since an honest one is bounded by
+    /// the spool's cap. But `hello.seq` is whatever the machine says, so calling everything a replay only spends that
+    /// bucket: from then on it's paced like anything else.
     public func delay(after e: RemoteEvent, now: Date) -> TimeInterval {
-        guard e.seq > (hello?.seq ?? 0) else { return 0 }
-        let wait = limiter.delay(now: now)
+        let replay = e.seq <= (hello?.seq ?? 0)
+        let wait = replay ? replayLimiter.delay(now: now) : limiter.delay(now: now)
         guard wait > 0 else { return 0 }
-        heldBack += 1
-        if lastRateAudit.map({ now.timeIntervalSince($0) >= 60 }) ?? true {
-            audit?.append(.init(ts: now, action: .rateLimited, machine: machine.id, count: heldBack))
-            lastRateAudit = now
-            heldBack = 0
-        }
+        throttle.record(.rateLimited, machine: machine.id, now: now)
         return wait
     }
 
-    /// Writes out rejection counts still waiting for their minute. Call when a connection ends.
+    /// Writes out audit counts still waiting for their minute. Call when a connection ends.
     public func flush(now: Date) {
-        for (code, entry) in pendingRejections where entry.count > 0 {
-            audit?.append(.init(ts: now, action: .rejected, machine: machine.id, detail: code, count: entry.count))
-            pendingRejections[code] = (0, now)
-        }
+        throttle.flush(now: now)
     }
 
     private func handshake(_ h: RemoteHello, now: Date) -> RemoteIngestOutput {
@@ -164,7 +165,7 @@ public final class RemoteIngest {
             return .refused(.upgradeNeeded("This machine's ambient-remote speaks protocol \(h.proto). Run `ambient remote add \(machine.id)` to update it."))
         }
         if cursor.epoch != nil, cursor.epoch != h.epoch || h.seq < cursor.seq {
-            audit?.append(.init(ts: now, action: .spoolReset, machine: machine.id))
+            throttle.record(.spoolReset, machine: machine.id, now: now)
             cursor = RemoteCursor(seq: 0, epoch: h.epoch)
             return .restart
         }
@@ -175,14 +176,16 @@ public final class RemoteIngest {
         return .linked(h)
     }
 
-    private func accept(_ e: RemoteEvent, now: Date) -> RemoteIngestOutput {
+    private func accept(_ line: RemoteEvent, now: Date) -> RemoteIngestOutput {
         guard let hello else { return reject(.invalid("order"), now: now) }
+        // A line spooled before the level was tightened still streams. What counts is the level now.
+        let e = line.redacted(to: hello.level)
         guard e.seq > cursor.seq, !seenIDs.contains(e.id) else {
             duplicates += 1
             return .dropped
         }
         if cursor.seq > 0, e.seq > cursor.seq + 1 {
-            audit?.append(.init(ts: now, action: .spoolGap, machine: machine.id, count: Int(e.seq - cursor.seq - 1)))
+            throttle.record(.spoolGap, machine: machine.id, count: Int(e.seq - cursor.seq - 1), now: now)
         }
         cursor.seq = e.seq
         remember(e.id)
@@ -214,13 +217,7 @@ public final class RemoteIngest {
 
     private func reject(_ rejection: RemoteRejection, now: Date) -> RemoteIngestOutput {
         rejected += 1
-        var entry = pendingRejections[rejection.code] ?? (0, nil)
-        entry.count += 1
-        if entry.lastWritten.map({ now.timeIntervalSince($0) >= 60 }) ?? true {
-            audit?.append(.init(ts: now, action: .rejected, machine: machine.id, detail: rejection.code, count: entry.count))
-            entry = (0, now)
-        }
-        pendingRejections[rejection.code] = entry
+        throttle.record(.rejected, machine: machine.id, detail: rejection.code, now: now)
         if case let .unsupportedVersion(v) = rejection {
             return .refused(.upgradeNeeded("This machine's ambient-remote speaks protocol \(v). Run `ambient remote add \(machine.id)` to update it."))
         }

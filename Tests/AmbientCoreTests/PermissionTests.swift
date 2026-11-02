@@ -66,6 +66,26 @@ private func event(_ kind: EventKind, session: String = "s1", agent: AgentKind =
         }
     }
 
+    @Test func aRemoteSessionCantTouchALocalPrompt() {
+        var q = PermissionQueue()
+        _ = q.add(ask("a"), now: t0, wait: 20)
+        var local = Session(agent: .claude, sessionId: "s1", at: t0.addingTimeInterval(1))
+        local.lastEventAt = t0.addingTimeInterval(1)
+        var remote = Session(agent: .claude, sessionId: "s1", at: t0.addingTimeInterval(1),
+                             origin: RemoteOrigin(machine: MachineRef(id: "devbox", label: "Devbox")))
+        remote.lastEventAt = t0.addingTimeInterval(1)
+
+        // Same agent and session id, from another machine: that's another session.
+        #expect(q.withdraw(after: SessionChange(session: remote, previous: nil, event: .turnCompleted(summary: nil), removed: false)).isEmpty)
+        #expect(q.withdraw(after: SessionChange(session: remote, previous: nil, event: .sessionEnded, removed: true)).isEmpty)
+        #expect(q.current?.ask.id == "a")
+
+        #expect(q.withdraw(after: SessionChange(session: local, previous: nil, event: .turnCompleted(summary: nil), removed: false)).map(\.id) == ["a"])
+        _ = q.add(ask("b"), now: t0, wait: 20)
+        #expect(q.withdraw(after: SessionChange(session: local, previous: nil, event: .sessionEnded, removed: true)).map(\.id) == ["b"])
+        #expect(q.entries.isEmpty)
+    }
+
     @Test func otherEventsLeaveThePromptAlone() {
         var q = PermissionQueue()
         _ = q.add(ask("a"), now: t0, wait: 20)

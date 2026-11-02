@@ -149,6 +149,23 @@ private func apply(_ store: SessionStore, _ e: RemoteEvent, machine: MachineRef 
         #expect(restored.first?.origin?.lastSeq == 3)
     }
 
+    @Test func theDefaultTransportForwardsNothing() {
+        let transport = Machine.defaultTransport(host: "devbox")
+        #expect(transport.last == "devbox")
+        for option in ["ForwardAgent=no", "ForwardX11=no", "ClearAllForwardings=yes"] {
+            let at = transport.firstIndex(of: option)
+            #expect(at != nil && transport[at! - 1] == "-o", "\(option)")
+        }
+    }
+
+    @Test func aHostIsNeverAnOption() {
+        #expect(Machine.isValidHost("devbox"))
+        #expect(Machine.isValidHost("dev@10.0.0.1"))
+        #expect(!Machine.isValidHost("-oProxyCommand=touch /tmp/x"))
+        #expect(!Machine.isValidHost("-J"))
+        #expect(!Machine.isValidHost(""))
+    }
+
     @Test func machineIdsAndFingerprintsAreStrict() {
         #expect(Machine.isValidID("devbox"))
         #expect(Machine.isValidID("gpu-01.lab"))

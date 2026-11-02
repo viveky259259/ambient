@@ -59,7 +59,9 @@ public final class RemoteLink: @unchecked Sendable {
         public init() {}
     }
 
-    public typealias Deliver = @Sendable ([RemoteDelivery], RemoteCursor) -> Void
+    /// Takes a batch, and calls its last argument once the batch is applied. The link reads nothing more until then, or
+    /// until it's stopped, so a fast machine fills its own pipe and never the queue behind this.
+    public typealias Deliver = @Sendable ([RemoteDelivery], RemoteCursor, @escaping @Sendable () -> Void) -> Void
     public typealias Report = @Sendable (RemoteHealth, RemoteHello?) -> Void
 
     public let machine: Machine
@@ -122,13 +124,19 @@ public final class RemoteLink: @unchecked Sendable {
 
     private func run() {
         var attempt = 0
+        var restarts = 0
         report(.connecting, nil)
         while !isStopped {
             let outcome = connectOnce()
             if isStopped { break }
+            if case .restart = outcome { restarts += 1 } else { restarts = 0 }
             switch outcome {
             case .restart:
-                continue
+                // A rebuilt spool starts over at once. Asking again right away is a machine that won't settle, and each
+                // time costs a transport, so that waits like any other retry.
+                guard restarts > 1 else { continue }
+                report(.reconnecting(attempt: restarts), nil)
+                sleep(options.backoff.delay(attempt: restarts))
             case let .refused(.fingerprintChanged(expected, got)):
                 report(.revoked("Expected \(expected), but the machine reports \(got). If that's expected, pair it again."), nil)
                 return
@@ -245,10 +253,20 @@ public final class RemoteLink: @unchecked Sendable {
                     break
                 }
             }
-            if !batch.isEmpty { deliver(batch, ingest.cursor) }
-            if hold > 0 { sleep(hold) }
+            if !batch.isEmpty { handOver(batch) }
+            // `stop()` may just have been spent on the wait above.
+            if hold > 0, !isStopped { sleep(hold) }
+            // Waiting here says nothing about the connection.
+            lastHeard = Date()
         }
         return finish(nil)
+    }
+
+    /// Delivers a batch and waits until it's applied. `stop()` signals the same semaphore, so nothing hangs on the other
+    /// side answering: not a main thread that's quitting, and not one that's waiting for this link to stop.
+    private func handOver(_ batch: [RemoteDelivery]) {
+        deliver(batch, ingest.cursor) { [wake] in wake.signal() }
+        wake.wait()
     }
 
     /// The transport's words for a refused sign-in. Host key failures are the transport's own alarm, so they stop too.

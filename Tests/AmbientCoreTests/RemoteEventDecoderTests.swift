@@ -139,6 +139,29 @@ private struct SplitMix64: RandomNumberGenerator {
         #expect(rejection(line(base(["message": String(repeating: "[{", count: 500)]))) == nil)
     }
 
+    @Test func aPileOfCombiningMarksIsCutToo() throws {
+        let marks = String(repeating: "\u{301}", count: 9_000)
+        for (key, cap) in [("title", RemoteEventDecoder.Caps.title), ("message", RemoteEventDecoder.Caps.message)] {
+            let e = try RemoteEventDecoder.decode(line(base([key: String(repeating: "a" + marks, count: 3)])))
+            let text = try #require(key == "title" ? e.title : e.message)
+            #expect(text.count <= cap)
+            #expect(text.unicodeScalars.count <= cap * RemoteEventDecoder.Caps.scalarsPerCharacter)
+            #expect(text.unicodeScalars.count == 3 * RemoteEventDecoder.Caps.scalarsPerCharacter)
+        }
+    }
+
+    @Test func realTextKeepsAllOfItsMarks() {
+        for text in ["Tiếng Việt", "สวัสดีครับ", "नमस्ते कृत्स्न्य", "🇮🇳 🇯🇵 1️⃣ 👍🏽", "e\u{301}a\u{308}", "한글", "ﷺ"] {
+            #expect(RemoteEventDecoder.plainText(text, max: 160) == text)
+        }
+    }
+
+    @Test func aMachinesOwnKeysAreNeverPrintedAsTheyCame() {
+        let text = RemoteRejection.unknownField("\u{1B}]0;pwned\u{7}\u{1B}[2J").description
+        #expect(!text.unicodeScalars.contains { $0.properties.generalCategory == .control })
+        #expect(text == "unknown field ]0;pwned[2J")
+    }
+
     @Test func rejectionCodesCarryNoContent() {
         let secret = "sk-live-hunter2"
         for r: RemoteRejection in [.unknownField(secret), .duplicateField(secret), .wrongType(secret), .missingField(secret),

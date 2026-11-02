@@ -631,7 +631,12 @@ struct Commands {
             out.error("Can't find ambient-remote in the app. Run this from an installed Ambient.app.")
             return 1
         }
-        let transport = command.isEmpty ? Machine.defaultTransport(host: option("--host", in: own) ?? name) : command
+        let host = option("--host", in: own) ?? name
+        guard Machine.isValidHost(host) else {
+            out.error("'\(host)' isn't a host name. For ssh options, use `-- ssh ... HOST`.")
+            return 64
+        }
+        let transport = command.isEmpty ? Machine.defaultTransport(host: host) : command
         let request = RemotePairing.Request(
             id: name, label: option("--label", in: own), transport: transport, redaction: redaction,
             agents: option("--agents", in: own)?.split(separator: ",").map(String.init) ?? [],
@@ -676,14 +681,20 @@ struct Commands {
         }
         var failed = false
         if args.contains("--uninstall") {
-            let result = RemoteTransport(argv: machine.transport).run(RemoteTransport.shim("uninstall"), timeout: 60)
-            if result.ok {
+            switch RemoteShim.bundledURL().flatMap({ try? RemoteShim(url: $0) }).map({ RemotePairing.uninstall(machine, shim: $0) }) {
+            case .removed?:
                 out.success("Removed the hooks, spool and shim from \(name)")
-            } else if result.status == 3 {
+            case .needsManualStep?:
                 out.warn("Removed the spool and shim from \(name). It has no python3, so its hooks stay in the agent's config for you to remove by hand. They do nothing now.")
-            } else {
+            case let .differentMachine(identity)?:
                 failed = true
-                out.warn("Couldn't clear \(name), so unpairing it anyway: \(result.timedOut ? "timed out" : "exit status \(result.status)")")
+                out.warn("\(name)'s transport reaches another machine (\(identity)), so that one was left alone. Unpairing it anyway.")
+            case let .failed(reason)?:
+                failed = true
+                out.warn("Couldn't clear \(name), so unpairing it anyway: \(reason)")
+            case nil:
+                failed = true
+                out.warn("Can't find ambient-remote in the app to check who \(name) is, so unpairing it without clearing it.")
             }
         }
         list.removeAll { $0.id == name }

@@ -6,11 +6,17 @@ directory), the agent config files it edits, and, if you pair remote machines, w
 ## Remote machines
 
 Ambient follows only machines you pair, over a transport you configure (your own `ssh` by default). It never forwards
-or exposes the socket, opens no listening port, and stores no remote credentials. A paired machine's output goes
-through a separate, strict decoder and can only become display data: it can't reach the socket, and no focus route, pid
-check, tty, tmux or AppleScript ever runs for a remote session. A remote machine you don't trust can show you false
-states and text, and nothing more. The threat model is in
-[the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md#threat-model-stride-er-40).
+or exposes the socket, opens no listening port, and stores no remote credentials, and the `ssh` command it builds
+forwards nothing. A paired machine's output goes through a separate, strict decoder and can only become display data:
+it can't reach the socket, and no focus route, pid check, tty, tmux or AppleScript ever runs for a remote session.
+
+A remote machine you don't trust can't run anything on your Mac, but it can do more than lie about itself. It can show
+you false states and text, raise notifications and chimes for them, and use up its own limits: 50 events a second, 1,000
+sessions and 5,000 board tasks, which pushes out its own older tasks and costs the app some work. It can claim the
+identity you pinned, because that's something it reports about itself. An agent on that machine can do all of this if
+something it reads talks it into it, since it runs as the same user as the spool and the shim.
+
+The threat model is in [the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md#threat-model-stride-er-40).
 
 ## What Ambient reads on your Mac
 
