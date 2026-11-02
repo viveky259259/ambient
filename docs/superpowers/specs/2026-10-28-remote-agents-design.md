@@ -1,8 +1,8 @@
 # Remote agents: one hub Mac for agents on any machine
 
 Date: 2026-10-28
-Status: P0 and P1 are built. P2 and P3 are not started. The threat model (ER-40) still needs its review by someone
-other than its author before P1 ships.
+Status: P0 and P1 are built. P2 and P3 are not started. An independent agent reviewed the threat model (ER-40) on
+2026-11-01, and the project owner accepted that review for shipping P1 on 2026-11-03.
 
 ## Problem
 
@@ -417,8 +417,7 @@ which changed this document too:
   no way for a remote session to withdraw a local permission prompt.
 
 The same agent then made those fixes, and the session coordinating the release read them, so the fixes haven't had an
-independent review of their own. This records what was reviewed and changed. It doesn't settle ER-40: see the open
-questions.
+independent review of their own. The project owner accepted this review for ER-40 on 2026-11-03.
 
 ## Phases
 
@@ -480,9 +479,6 @@ The load test against the ER-37 targets, the SBOM, the whitepaper and the extern
 
 ## Open questions
 
-- Does the agent review below meet ER-40? ER-40 asks for a review before P1 ships. An agent reviewed this threat model
-  and the fixes it asked for are in, but whether an agent's review counts is the project owner's decision, and it hasn't
-  been made. Until it is, treat ER-40 as open.
 - Is native Windows needed on the remote side, beyond WSL2?
 - Should the pin bind to the key the transport verified? Today the machine reports its own host key. Parsing it from
   `ssh -v` would hold against a malicious machine, but only for ssh, and only by reading debug output.
