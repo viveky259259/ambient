@@ -78,8 +78,9 @@ public struct TaskModelChange: Codable, Equatable, Sendable {
     }
 }
 
-/// What `ambient task model` and `ambient mcp` say about the board's model: what the path is and how it runs.
-public struct TaskModelReport: Sendable {
+/// What `ambient task model` and `ambient mcp` say about the board's model: what the path is and how it runs. The app
+/// makes it, so it describes the runtimes and `PATH` the board actually has, not the CLI's.
+public struct TaskModelReport: Codable, Equatable, Sendable {
     public var config: TaskLLMConfig
     public var model: LocalModelPath?
     public var resolution: TaskModelResolution
@@ -125,7 +126,7 @@ public struct TaskModelReport: Sendable {
 }
 
 /// Calm status for Settings › Board.
-public enum TaskLLMStatus: Equatable, Sendable {
+public enum TaskLLMStatus: Codable, Equatable, Sendable {
     case disabled
     case ready
     case summarizing
@@ -159,7 +160,7 @@ public enum TaskLLMStatus: Equatable, Sendable {
 }
 
 /// The model the board will use and how it runs, or why it can't use one.
-public enum TaskModelResolution: Equatable, Sendable {
+public enum TaskModelResolution: Codable, Equatable, Sendable {
     case ready(TaskModelRoute)
     case unavailable(TaskLLMStatus)
 
@@ -400,6 +401,8 @@ public struct TaskSummarizer: Sendable {
         case "chat", "vision": true
         case "custom":
             textOutputs.contains(URL(fileURLWithPath: entry["output_name"] as? String ?? "").pathExtension.lowercased())
+        // An older local-agent lists no kind, and the routes take that for chat, unless the name says speech or images.
+        case nil: !LocalModelPath.mediaName(entry["id"] as? String ?? "")
         default: false
         }
     }

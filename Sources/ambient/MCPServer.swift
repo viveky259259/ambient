@@ -20,9 +20,27 @@ struct MCPServer {
 
     /// The reply line for one request line; nil for notifications.
     func handle(_ line: String) -> String? {
-        guard let message = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any] else {
-            return encode(["jsonrpc": "2.0", "id": NSNull(), "error": ["code": -32700, "message": "Parse error"]])
+        guard let parsed = try? JSONSerialization.jsonObject(with: Data(line.utf8), options: .fragmentsAllowed) else {
+            return encode(Self.failure(-32700, "Parse error"))
         }
+        // 2025-03-26 allows a batch: an array of messages, answered with an array of the replies they get.
+        if let batch = parsed as? [Any] {
+            guard !batch.isEmpty else { return encode(Self.failure(-32600, "Invalid Request")) }
+            let replies = batch.compactMap { item in
+                (item as? [String: Any]).map(respond) ?? Self.failure(-32600, "Invalid Request")
+            }
+            return replies.isEmpty ? nil : encode(replies)
+        }
+        guard let message = parsed as? [String: Any] else { return encode(Self.failure(-32600, "Invalid Request")) }
+        return respond(message).flatMap(encode)
+    }
+
+    private static func failure(_ code: Int, _ message: String) -> [String: Any] {
+        ["jsonrpc": "2.0", "id": NSNull(), "error": ["code": code, "message": message]]
+    }
+
+    /// The reply to one message; nil for a notification.
+    private func respond(_ message: [String: Any]) -> [String: Any]? {
         guard let id = message["id"] else { return nil }
         let params = message["params"] as? [String: Any] ?? [:]
         switch message["method"] as? String {
@@ -43,8 +61,8 @@ struct MCPServer {
             let (text, isError) = call(params["name"] as? String ?? "", arguments)
             return reply(id, ["content": [["type": "text", "text": text]], "isError": isError])
         default:
-            return encode(["jsonrpc": "2.0", "id": id,
-                           "error": ["code": -32601, "message": "Method not found: \(message["method"] ?? "")"]])
+            return ["jsonrpc": "2.0", "id": id,
+                    "error": ["code": -32601, "message": "Method not found: \(message["method"] ?? "")"]]
         }
     }
 
@@ -203,15 +221,15 @@ struct MCPServer {
             return render(memory.forget(key: key, scope: scope, folder: folder))
         case "get_task_model":
             let reply = request(.taskModelRequest)
-            guard case let .taskModel(config)? = reply else { return (Self.noConfig(reply, changing: false), true) }
-            return (Self.render(report(config)), false)
+            guard let report = Self.report(from: reply) else { return (Self.noConfig(reply, changing: false), true) }
+            return (Self.render(report), false)
         case "set_task_model_path":
             guard let path = arguments["path"] as? String else { return ("path is required.", true) }
             if let problem = LocalModelPath.problem(with: path) { return (problem, true) }
             let change = TaskModelChange(modelPath: path, enabled: arguments["enable"] as? Bool)
             let reply = request(.setTaskModel(change))
-            guard case let .taskModel(config)? = reply else { return (Self.noConfig(reply, changing: true), true) }
-            return (Self.render(report(config)), false)
+            guard let report = Self.report(from: reply) else { return (Self.noConfig(reply, changing: true), true) }
+            return (Self.render(report), false)
         default:
             return ("Unknown tool: \(name)", true)
         }
@@ -237,8 +255,13 @@ struct MCPServer {
         return (String(decoding: data, as: UTF8.self), false)
     }
 
-    private func report(_ config: TaskLLMConfig) -> TaskModelReport {
-        blocking { await TaskModelReport.make(config) }
+    /// The app's report, or one made here when the app sent only its settings; nil when it sent neither.
+    static func report(from reply: WireMessage?) -> TaskModelReport? {
+        switch reply {
+        case let .taskModelReport(report)?: report
+        case let .taskModel(config)?: blocking { await TaskModelReport.make(config) }
+        default: nil
+        }
     }
 
     static func render(_ report: TaskModelReport) -> String {
@@ -248,11 +271,11 @@ struct MCPServer {
         return String(decoding: data, as: UTF8.self)
     }
 
-    private func reply(_ id: Any, _ result: [String: Any]) -> String? {
-        encode(["jsonrpc": "2.0", "id": id, "result": result])
+    private func reply(_ id: Any, _ result: [String: Any]) -> [String: Any] {
+        ["jsonrpc": "2.0", "id": id, "result": result]
     }
 
-    private func encode(_ object: [String: Any]) -> String? {
+    private func encode(_ object: Any) -> String? {
         // Without .withoutEscapingSlashes paths come out as \/Users\/…, which is valid but noisy.
         guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.withoutEscapingSlashes]) else { return nil }
         return String(decoding: data, as: UTF8.self)

@@ -102,14 +102,17 @@ the files to decide how to run it:
 | An MLX or Hugging Face folder (`config.json` + safetensors) | Directly with **mlx-lm** |
 | The same with a `vision_config` (Qwen-VL, Qwen3.5 and similar) | Directly with **mlx-vlm**, text only |
 | A Hugging Face cache folder (`models--org--name`) | Its pinned snapshot, as above |
-| A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion`, or `llama-cli -no-cnv`) |
+| A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion` or `llama-cli`), one chat turn with the model's own template |
 | Speech, transcription, image or video weights | Refused: they can't write a summary |
 
 Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, and ask reasoning models (Qwen3 and later) not to
-think first. MLX runs get the prompt on standard input. llama.cpp reads it from a temporary file that only you can
-read (`0600`), deleted when the run ends. Ambient uses **Python for MLX** if you set one, otherwise the
-Python local-agent uses for MLX, otherwise a `python3` that can import the package. To let Claude Code or Codex
-read and set the board's model, add Ambient as an MCP server:
+think first. An MLX model stays loaded for two minutes after a summary, so a busy board reads the weights once, and
+gets the prompt on standard input. llama.cpp reads it from a temporary file that only you can read (`0600`), deleted
+when the run ends, or on the next run if Ambient quit or crashed first. Quitting Ambient stops the model. Ambient
+uses **Python for MLX** if you set one, otherwise the Python local-agent uses for MLX, otherwise a `python3` that can
+import the package (`/usr/bin/python3` only when the developer tools are installed, since without them it offers
+to install them). `ambient task model` and `get_task_model` say how the app would run the model, with its own
+`PATH`. To let Claude Code or Codex read and set the board's model, add Ambient as an MCP server:
 
 ```bash
 claude mcp add ambient -- ~/.ambient/bin/ambient mcp

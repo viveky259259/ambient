@@ -1,7 +1,7 @@
 import Foundation
 
 /// What a model on disk is, judged only from its files, and so which runtime can run it.
-public enum LocalModelFormat: Equatable, Sendable {
+public enum LocalModelFormat: Codable, Equatable, Sendable {
     /// `config.json` with safetensors weights: an MLX (or MLX-loadable Hugging Face) text model, run with mlx-lm.
     case mlxText
     /// The same with a `vision_config`: run with mlx-vlm, text only for board summaries.
@@ -36,7 +36,7 @@ public enum LocalModelFormat: Equatable, Sendable {
 }
 
 /// A model folder or file the user pointed Ambient at, and what a runtime should load from it.
-public struct LocalModelPath: Equatable, Sendable {
+public struct LocalModelPath: Codable, Equatable, Sendable {
     /// What was chosen, with `~` expanded.
     public var requested: String
     /// What a runtime loads: a Hugging Face cache repo resolves to its snapshot, a folder of `.gguf` files to the first.
@@ -148,10 +148,27 @@ public enum LocalRuntimes {
         var list: [String] = []
         if !configured.isEmpty { list.append(configured) }
         list += gatewayPythons
-        list += searchPath(environment).map { $0 + "/python3" }
-        list += ["/opt/homebrew/bin/python3", "/usr/local/bin/python3"]
+        var found = searchPath(environment).map { $0 + "/python3" } + ["/opt/homebrew/bin/python3", "/usr/local/bin/python3"]
+        // Without the developer tools /usr/bin/python3 offers to install them, a dialog every status check would reopen.
+        if !developerToolsHavePython(environment) { found.removeAll { $0 == "/usr/bin/python3" } }
+        list += found
         var seen = Set<String>()
-        return list.filter { FileManager.default.isExecutableFile(atPath: $0) && seen.insert($0).inserted }
+        return list.filter { isExecutable($0) && seen.insert($0).inserted }
+    }
+
+    /// An executable file. `isExecutableFile` is true for folders too.
+    public static func isExecutable(_ path: String) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDir) && !isDir.boolValue
+            && FileManager.default.isExecutableFile(atPath: path)
+    }
+
+    /// Whether `/usr/bin/python3` runs a real Python: it runs the one in the selected developer tools, if they have one.
+    static func developerToolsHavePython(_ environment: [String: String]) -> Bool {
+        let selected = environment["DEVELOPER_DIR"]
+            ?? (try? FileManager.default.destinationOfSymbolicLink(atPath: "/var/db/xcode_select_link"))
+        let folders = selected.map { [$0] } ?? ["/Applications/Xcode.app/Contents/Developer", "/Library/Developer/CommandLineTools"]
+        return folders.contains { isExecutable($0 + "/usr/bin/python3") }
     }
 
     /// The first candidate that can import `module`. A user-chosen Python that can't is still the only one tried,
@@ -170,7 +187,7 @@ public enum LocalRuntimes {
         let home = environment["HOME"] ?? NSHomeDirectory()
         let dirs = searchPath(environment) + ["/opt/homebrew/bin", "/usr/local/bin", home + "/.local/bin"]
         for tool in ["llama-completion", "llama-cli"] {
-            if let hit = dirs.map({ $0 + "/" + tool }).first(where: FileManager.default.isExecutableFile(atPath:)) {
+            if let hit = dirs.map({ $0 + "/" + tool }).first(where: isExecutable) {
                 return hit
             }
         }
@@ -181,12 +198,20 @@ public enum LocalRuntimes {
         (environment["PATH"] ?? "").split(separator: ":").map(String.init).filter { $0.hasPrefix("/") }
     }
 
-    /// Successful probes only: a runtime installed later is found on the next status check.
+    /// Successes for good. Failures for a while, so a Python without the runtime isn't started again on every
+    /// 30-second status check; checks someone asks for clear them, so a runtime just installed is found at once.
     private static let cache = ImportCache()
+
+    static let failureLifetime: TimeInterval = 300
+
+    /// Forgets failed probes, for a status check someone asked for.
+    public static func forgetFailedProbes() {
+        cache.forgetFailures()
+    }
 
     static func canImport(_ module: String, python: String) -> Bool {
         let key = python + "\u{0}" + module
-        if cache.contains(key) { return true }
+        if let known = cache.result(for: key, failureLifetime: failureLifetime) { return known }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-c", "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('\(module)') else 1)"]
@@ -196,20 +221,39 @@ public enum LocalRuntimes {
         process.standardError = FileHandle.nullDevice
         let finished = DispatchSemaphore(value: 0)
         process.terminationHandler = { _ in finished.signal() }
-        do { try process.run() } catch { return false }
-        if finished.wait(timeout: .now() + 10) == .timedOut {
-            process.terminate()
+        do { try process.run() } catch {
+            cache.record(key, false)
             return false
         }
-        guard process.terminationStatus == 0 else { return false }
-        cache.insert(key)
-        return true
+        if finished.wait(timeout: .now() + 10) == .timedOut {
+            process.terminate()
+            cache.record(key, false)
+            return false
+        }
+        let ok = process.terminationStatus == 0
+        cache.record(key, ok)
+        return ok
     }
 
     private final class ImportCache: @unchecked Sendable {
         private let lock = NSLock()
         private var found = Set<String>()
-        func contains(_ key: String) -> Bool { lock.lock(); defer { lock.unlock() }; return found.contains(key) }
-        func insert(_ key: String) { lock.lock(); defer { lock.unlock() }; found.insert(key) }
+        private var failed: [String: Date] = [:]
+
+        func result(for key: String, failureLifetime: TimeInterval) -> Bool? {
+            lock.lock()
+            defer { lock.unlock() }
+            if found.contains(key) { return true }
+            if let at = failed[key], Date().timeIntervalSince(at) < failureLifetime { return false }
+            return nil
+        }
+
+        func record(_ key: String, _ ok: Bool) {
+            lock.lock()
+            defer { lock.unlock() }
+            if ok { found.insert(key); failed[key] = nil } else { failed[key] = Date() }
+        }
+
+        func forgetFailures() { lock.lock(); failed.removeAll(); lock.unlock() }
     }
 }

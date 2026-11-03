@@ -16,10 +16,13 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case upsertTaskResult(AgentTask)
     /// Open the most urgent linked session for a task id.
     case openTask(String)
-    /// The board's local-LLM settings; the reply is `taskModel`.
+    /// The board's local-LLM settings; the reply is `taskModelReport`.
     case taskModelRequest
-    /// Change them (`ambient task model`, `ambient mcp`); the reply is `taskModel` with the result.
+    /// Change them (`ambient task model`, `ambient mcp`); the reply is `taskModelReport` with the result.
     case setTaskModel(TaskModelChange)
+    /// The settings and how the app runs that model.
+    case taskModelReport(TaskModelReport)
+    /// The settings alone, when the app couldn't work out in time how it runs the model.
     case taskModel(TaskLLMConfig)
     /// Reply when the app didn't get to a task-model request in time; a change may still apply.
     case taskModelTimedOut

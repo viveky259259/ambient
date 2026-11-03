@@ -107,12 +107,12 @@ struct BoardPane: View {
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                         .task(id: prefs.taskLLMModelPath) { await inspectModelPath() }
-                    Text(prefs.taskLLMModelPath.isEmpty ? "Model id" : "Model id (unused while a model path is set)")
+                    Text(usesModelPath ? "Model id (unused while a model path is set)" : "Model id")
                         .font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     TextField("hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit", text: $prefs.taskLLMModelID)
                         .textFieldStyle(.roundedBorder)
                         .font(Theme.Fonts.mono)
-                        .disabled(!prefs.taskLLMModelPath.isEmpty)
+                        .disabled(usesModelPath)
                     Text("Python for MLX (optional)").font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     TextField("Found automatically", text: $prefs.taskLLMPython)
                         .textFieldStyle(.roundedBorder)
@@ -153,9 +153,12 @@ struct BoardPane: View {
         }
     }
 
+    /// The config's own test: spaces alone leave the board on the model id.
+    private var usesModelPath: Bool { prefs.taskLLMConfig.usesModelPath }
+
     /// What the chosen path is and how it runs: through local-agent when it knows the path, else directly.
     private var modelPathCaption: String {
-        guard !prefs.taskLLMModelPath.isEmpty else {
+        guard usesModelPath else {
             return "Empty: local-agent runs the model id below. Or choose an MLX or Hugging Face folder, or a .gguf file."
         }
         guard let inspected, inspected.path == prefs.taskLLMModelPath else { return "Checking…" }
@@ -190,7 +193,7 @@ struct BoardPane: View {
         panel.showsHiddenFiles = true
         panel.prompt = "Use Model"
         panel.message = "Choose a model folder (config.json and safetensors), a Hugging Face cache folder, or a .gguf file."
-        if !prefs.taskLLMModelPath.isEmpty {
+        if usesModelPath {
             panel.directoryURL = URL(fileURLWithPath: (prefs.taskLLMModelPath as NSString).expandingTildeInPath)
                 .deletingLastPathComponent()
         }

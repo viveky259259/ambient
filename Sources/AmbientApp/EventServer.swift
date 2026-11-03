@@ -76,11 +76,21 @@ final class EventServer {
                     }
                     done.signal()
                 }
-                // The CLI waits longer than this, so it hears either the settings or that they may still change.
+                // The CLI waits longer than all of this, so it hears either the settings or that they may still change.
                 guard done.wait(timeout: .now() + 2) == .success, let config = box.value else {
                     return try? Wire.encode(.taskModelTimedOut)
                 }
-                return try? Wire.encode(.taskModel(config))
+                // Resolved here: the app's PATH and Pythons decide how the board runs the model, not the CLI's.
+                let made = ReplyBox<TaskModelReport>()
+                let resolved = DispatchSemaphore(value: 0)
+                Task.detached {
+                    made.value = await TaskModelReport.make(config)
+                    resolved.signal()
+                }
+                guard resolved.wait(timeout: .now() + 20) == .success, let report = made.value else {
+                    return try? Wire.encode(.taskModel(config))
+                }
+                return try? Wire.encode(.taskModelReport(report))
             case let .memory(request):
                 let box = ReplyBox<MemoryReply>()
                 let done = DispatchSemaphore(value: 0)
@@ -98,7 +108,8 @@ final class EventServer {
                 DispatchQueue.main.async { model.value.apply(ask.event) }
                 // Holds this connection's thread until the user answers or the prompt goes back to the agent.
                 return try? Wire.encode(.permissionAnswer(permissions.value.answer(for: ask)))
-            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModel, .taskModelTimedOut, .memoryReply, .permissionAnswer:
+            case .status, .pong, .opened, .tasks, .upsertTaskResult, .taskModelReport, .taskModel, .taskModelTimedOut, .memoryReply,
+                 .permissionAnswer:
                 return nil
             }
         }

@@ -41,7 +41,8 @@ final class AppModel: ObservableObject {
     private let llmQueue = DispatchQueue(label: "com.viveky259259.Ambient.taskllm", qos: .utility)
     private var titleCheckedAt: [String: Date] = [:]
     private var lastSummarizedAt: [String: Date] = [:]
-    private var summarizingTaskIDs = Set<String>()
+    /// Summaries under way by task id, with the settings each started under.
+    private var summaries: [String: (config: TaskLLMConfig, task: Task<Void, Never>)] = [:]
     private var llmProbeGeneration = 0
     /// How far each machine has been applied. Saved with the sessions, in the same file.
     private var remoteCursors: [String: RemoteCursor] = [:]
@@ -89,7 +90,7 @@ final class AppModel: ObservableObject {
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer?.tolerance = 1
         llmProbeTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.refreshTaskLLMStatus()
+            self?.refreshTaskLLMStatus(recheck: false)
         }
         llmProbeTimer?.tolerance = 5
         refreshTaskLLMStatus()
@@ -307,9 +308,13 @@ final class AppModel: ObservableObject {
         if let task { scheduleSummary(for: task, session: change.session) }
     }
 
-    /// Re-probe local-agent MCP / Models volume / the model path's runtime. Safe to call from Settings.
-    func refreshTaskLLMStatus() {
+    /// Re-probe local-agent MCP / Models volume / the model path's runtime. Safe to call from Settings. `recheck` also
+    /// retries Pythons that lacked the runtime a moment ago, for someone who may have just installed it.
+    func refreshTaskLLMStatus(recheck: Bool = true) {
         let config = prefs.taskLLMConfig
+        if recheck { LocalRuntimes.forgetFailedProbes() }
+        // Runs for settings that have since changed would load a model only to throw its answer away.
+        for summary in summaries.values where summary.config != config { summary.task.cancel() }
         llmProbeGeneration += 1
         guard config.enabled else {
             taskLLMStatus = .disabled
@@ -347,44 +352,48 @@ final class AppModel: ObservableObject {
         }
         let now = Date()
         if let last = lastSummarizedAt[task.id], now.timeIntervalSince(last) < config.minRefreshSeconds { return }
-        if summarizingTaskIDs.contains(task.id) { return }
-        summarizingTaskIDs.insert(task.id)
+        if summaries[task.id] != nil { return }
         taskLLMStatus = .summarizing
         let titles = self.titles
         let readTranscripts = config.readTranscripts
         let taskID = task.id
-        llmQueue.async { [weak self] in
-            guard let model = self else { return }
-            let excerpt = readTranscripts ? titles?.excerpt(for: session) : nil
-            let context = SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt)
-            let summarizer = TaskSummarizer(config: config)
-            Task { @MainActor in
-                defer {
-                    model.summarizingTaskIDs.remove(taskID)
-                    // Failures count too: a model that can't run mustn't reload on every session event.
-                    model.lastSummarizedAt[taskID] = Date()
-                }
-                // Settings changed while this ran (another model, or summaries off): its answer and status no longer count.
-                func stale() -> Bool { model.prefs.taskLLMConfig != config }
-                do {
-                    let resolution = await summarizer.resolve()
-                    guard case let .ready(route) = resolution else {
-                        if !stale() { model.taskLLMStatus = resolution.status }
-                        return
-                    }
-                    let semantics = try await summarizer.summarize(context: context, via: route)
-                    if stale() { return }
-                    // Re-read the live linked session so a stale captured `.waiting` cannot re-block
-                    // after the user has already unblocked.
-                    let live = model.sessions.first { $0.id == session.id }
-                    _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: live)
-                    model.publishTasks()
-                    model.taskLLMStatus = .ready
-                } catch {
-                    if !stale() { model.taskLLMStatus = .failed(error.localizedDescription) }
+        let llmQueue = self.llmQueue
+        // Stored before the task can start, since it runs on the main actor too.
+        summaries[taskID] = (config, Task { @MainActor [weak self] in
+            // Transcripts and the skill pack are files: read them off the main thread.
+            let (context, summarizer) = await withCheckedContinuation { continuation in
+                llmQueue.async {
+                    let excerpt = readTranscripts ? titles?.excerpt(for: session) : nil
+                    continuation.resume(returning: (SessionContextBuilder.make(session: session, transcriptExcerpt: excerpt),
+                                                    TaskSummarizer(config: config)))
                 }
             }
-        }
+            guard let model = self else { return }
+            defer {
+                model.summaries[taskID] = nil
+                // Failures count too: a model that can't run mustn't reload on every session event.
+                model.lastSummarizedAt[taskID] = Date()
+            }
+            // Settings changed while this ran (another model, or summaries off): its answer and status no longer count.
+            func stale() -> Bool { Task.isCancelled || model.prefs.taskLLMConfig != config }
+            do {
+                let resolution = await summarizer.resolve()
+                guard case let .ready(route) = resolution else {
+                    if !stale() { model.taskLLMStatus = resolution.status }
+                    return
+                }
+                let semantics = try await summarizer.summarize(context: context, via: route)
+                if stale() { return }
+                // Re-read the live linked session so a stale captured `.waiting` cannot re-block
+                // after the user has already unblocked.
+                let live = model.sessions.first { $0.id == session.id }
+                _ = model.taskStore.applySemantics(semantics, toTaskID: taskID, session: live)
+                model.publishTasks()
+                model.taskLLMStatus = .ready
+            } catch {
+                if !stale() { model.taskLLMStatus = .failed(error.localizedDescription) }
+            }
+        })
     }
 
     private func userActivated(_ app: NSRunningApplication) {
