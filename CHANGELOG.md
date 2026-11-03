@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Task board model**: an MLX model you point the board at stays loaded for two minutes between summaries, instead
+  of being read from disk for every one (Qwen3.5-9B: 21 seconds for the first summary, half a second for the next).
+  Changing the model cancels summaries still waiting for the old one, and quitting Ambient stops the model. GGUF chat
+  models get their own chat template (llama.cpp's single-turn `-st`, which `llama-completion` and the newer chat-only
+  `llama-cli` both take, instead of `-no-cnv`).
+  `ambient task model` and `get_task_model` report how the app runs the model, not how the CLI's `PATH` would.
+- **Fix**: a run whose runtime left a child process holding its output reported a timeout instead of its error or
+  answer; a model from an older local-agent with no `kind` was refused; on a Mac without the developer tools,
+  `/usr/bin/python3` could keep offering to install them; a Python without the runtime was started again on every
+  30-second status check; `ambient task model --python` accepted a folder; a model path of only spaces showed as set
+  in Settings while the board used the model id; `ambient mcp` answered JSON-RPC batches with a parse error; and a
+  llama.cpp prompt file could outlive a crash.
+
 ## 0.8.0 — 2026-11-03
 
 0.7.0 was tagged but never had a download, so this release also brings everything listed under 0.7.0 below.

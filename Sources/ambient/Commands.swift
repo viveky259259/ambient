@@ -180,10 +180,16 @@ struct Commands {
 
     // MARK: - Status
 
-    /// Waits longer than the 2 seconds the app gives its main thread, so a busy app isn't taken for a closed one.
+    /// Waits longer than the 2 seconds the app gives its main thread, so a busy app isn't taken for a closed one, and
+    /// for the board's model, as long as the app takes to work out how it runs it.
     private func request(_ message: WireMessage) -> WireMessage? {
+        let timeout: TimeInterval
+        switch message {
+        case .taskModelRequest, .setTaskModel: timeout = 30
+        default: timeout = 3
+        }
         guard let data = try? Wire.encode(message),
-              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 3, expectReply: true),
+              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: timeout, expectReply: true),
               !reply.isEmpty else { return nil }
         return try? Wire.decode(reply)
     }
@@ -341,42 +347,54 @@ struct Commands {
         return URL(fileURLWithPath: trimmed).standardizedFileURL.path
     }
 
-    /// Shows the board's model, or points it at a model folder or `.gguf` file first.
-    private func taskModel(_ args: [String]) -> Int32 {
-        let usage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
-        var change = TaskModelChange()
+    static let taskModelUsage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
+
+    /// What `ambient task model` was asked: the change, and whether to print JSON. Nil for a usage error.
+    static func parseTaskModel(_ args: [String]) -> (change: TaskModelChange, json: Bool)? {
+        var change = TaskModelChange(), json = false
         var rest = args[...]
         while let arg = rest.popFirst() {
             switch arg {
             case "--clear": change.modelPath = ""
             case "--enable": change.enabled = true
             case "--disable": change.enabled = false
-            case "--json": continue
+            case "--json": json = true
             case "--python":
-                guard let python = rest.popFirst() else { out.error(usage); return 64 }
-                change.pythonPath = Self.absolute(python)
-            case "--help", "-h": print(usage); return 0
+                guard let python = rest.popFirst() else { return nil }
+                change.pythonPath = absolute(python)
             default:
-                guard !arg.hasPrefix("--"), change.modelPath == nil else { out.error(usage); return 64 }
+                guard !arg.hasPrefix("--"), change.modelPath == nil else { return nil }
                 change.modelPath = arg
             }
         }
-        if let path = change.modelPath, let problem = LocalModelPath.problem(with: path) {
-            out.error(problem)
-            return 1
+        return (change, json)
+    }
+
+    /// Why the app shouldn't get `change`, or nil when it can.
+    static func problem(with change: TaskModelChange) -> String? {
+        if let path = change.modelPath, let problem = LocalModelPath.problem(with: path) { return problem }
+        if let python = change.pythonPath, !python.isEmpty, !LocalRuntimes.isExecutable(python) {
+            return "No executable Python at \(python). Nothing changed."
         }
-        if let python = change.pythonPath, !python.isEmpty, !FileManager.default.isExecutableFile(atPath: python) {
-            out.error("No executable Python at \(python). Nothing changed.")
+        return nil
+    }
+
+    /// Shows the board's model, or points it at a model folder or `.gguf` file first.
+    private func taskModel(_ args: [String]) -> Int32 {
+        if args.contains("--help") || args.contains("-h") { print(Self.taskModelUsage); return 0 }
+        guard let parsed = Self.parseTaskModel(args) else { out.error(Self.taskModelUsage); return 64 }
+        let change = parsed.change
+        if let problem = Self.problem(with: change) {
+            out.error(problem)
             return 1
         }
         let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
         let reply = request(message)
-        guard case let .taskModel(config)? = reply else {
+        guard let report = MCPServer.report(from: reply) else {
             out.error(MCPServer.noConfig(reply, changing: message != .taskModelRequest))
             return 1
         }
-        let report = blocking { await TaskModelReport.make(config) }
-        if args.contains("--json") {
+        if parsed.json {
             print(MCPServer.render(report))
             return 0
         }
