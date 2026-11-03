@@ -21,6 +21,7 @@ final class IslandController {
     private let prefs: Preferences
     private let speech: SpeechController
     private let permissions: PermissionDesk
+    private let voice: VoiceSyncController
     private let viewModel: IslandViewModel
     private let panel: IslandPanel
     private var cancellables: Set<AnyCancellable> = []
@@ -37,13 +38,14 @@ final class IslandController {
     private var reportedMenu: (size: CGSize, geometry: IslandGeometry)?
 
     init?(model: AppModel, prefs: Preferences, speech: SpeechController, permissions: PermissionDesk,
-          onSettings: @escaping () -> Void) {
+          voice: VoiceSyncController, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
         self.model = model
         self.prefs = prefs
         self.speech = speech
         self.permissions = permissions
-        viewModel = IslandViewModel(geometry: geometry)
+        self.voice = voice
+        viewModel = IslandViewModel(geometry: geometry, voice: voice)
 
         panel = IslandPanel(contentRect: geometry.panelFrame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -131,6 +133,15 @@ final class IslandController {
                 self?.refresh()
             }
             .store(in: &cancellables)
+        // Read a turn later: objectWillChange comes before the change. The view model republishes it, since the voice card's
+        // size follows what it shows.
+        voice.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.viewModel.objectWillChange.send()
+                self?.refresh()
+            }
+            .store(in: &cancellables)
         prefs.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
@@ -180,6 +191,9 @@ final class IslandController {
         } else if let entry = viewModel.permission {
             // Ahead of hovering too: reaching for Allow or Deny mustn't swap the prompt for the session list.
             next = .permission(entry.ask.id)
+        } else if voice.outgoing != nil || voice.arrival != nil || voice.notice != nil {
+            // Ahead of hovering too, so reaching for Send or Copy doesn't swap the card for the session list.
+            next = .voice
         } else if viewModel.speech != .idle {
             // Ahead of hovering, so reaching for the stop button doesn't swap it for the session list.
             next = .speech
@@ -187,6 +201,8 @@ final class IslandController {
             next = .expanded
         } else if let id = bloomID, sessions.contains(where: { $0.id == id }) {
             next = .bloom(id)
+        } else if !voice.incoming.isEmpty {
+            next = .voiceIncoming
         } else if IslandPolicy.isVisible(sessions, showWhileWorking: prefs.islandShowsWorking) {
             next = .collapsed
         } else {

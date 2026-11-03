@@ -3,16 +3,18 @@
 #
 # Agent hooks call `emit`, which redacts the event and appends it to a private spool. The hub Mac dials
 # in over the user's own transport and runs `follow`, which streams the spool as JSON lines on stdout.
+# On a Mac running Ambient, `follow` also streams the voices its user recorded for that hub.
 # Nothing here listens on a port, runs as a daemon, needs root or talks to anything but this spool.
 #
 # Plain POSIX sh, reviewable as text. `emit` and `follow` need only awk and coreutils. `install` uses
 # python3 to edit agent config files safely, and prints a snippet to add by hand when it can't.
 #
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
+#       docs/superpowers/specs/2026-11-03-voice-sync-design.md (voices)
 
-AR_VERSION=1.0.4
+AR_VERSION=1.0.5
 AR_PROTO=1
-AR_CAPS=exit,title,heartbeat
+AR_CAPS=exit,title,heartbeat,voice
 
 LC_ALL=C
 export LC_ALL
@@ -29,6 +31,12 @@ AR_EPOCH=$AR_SPOOL/epoch
 AR_LOCK=$AR_SPOOL/lock.holder
 AR_LOCK_BREAK=$AR_SPOOL/lock.break
 AR_LIVE=$AR_SPOOL/live
+# Each hub that follows with --hub leaves its label here; the file's mtime says when it was last connected.
+AR_HUBS=$AR_SPOOL/hubs
+# Written only by the Ambient app on this machine, when its user records a voice for a hub.
+AR_OUTBOX=$AR_HOME/voice-sync/outbox.jsonl
+AR_OUTBOX_SEQ=$AR_HOME/voice-sync/outbox.seq
+AR_OUTBOX_LIVE=$AR_HOME/voice-sync/outbox.live
 
 AR_HOOK_MARKER=.ambient/bin/ambient-remote
 AR_CLAUDE_EVENTS='SessionStart UserPromptSubmit PreToolUse PostToolUse PostToolUseFailure PermissionRequest Notification PreCompact PostCompact SubagentStart SubagentStop Stop StopFailure SessionEnd'
@@ -390,6 +398,21 @@ END {
 }
 '
 
+# Prints the outbox lines in (from, to] addressed to `hub`. The app writes every line with this prefix, in this order.
+AWK_VOICE='
+match($0, /^\{"v":[0-9]+,"type":"voice","vseq":[0-9]+,"to":"[0-9a-f]+",/) {
+    head = substr($0, 1, RLENGTH)
+    vseq = head
+    sub(/^\{"v":[0-9]+,"type":"voice","vseq":/, "", vseq)
+    sub(/,.*/, "", vseq)
+    vseq += 0
+    if (vseq <= from || vseq > to) next
+    sub(/^.*"to":"/, "", head)
+    sub(/",$/, "", head)
+    if (head == hub && length($0) <= 65536) print
+}
+'
+
 # --- emit ------------------------------------------------------------------------------------------
 
 # Prints the agent process: the first ancestor that is not a shell. 0 when it cannot be told.
@@ -560,18 +583,57 @@ check_titles() {
     done
 }
 
+# The newest voice in the outbox, from the file the app replaces after each line. 0 when there's none.
+read_vseq() {
+    AR_VN=
+    read -r AR_VN 2>/dev/null < "$AR_OUTBOX_SEQ"
+    case $AR_VN in ''|*[!0-9]*) AR_VN=0 ;; esac
+}
+
+# Tells this machine's Ambient which hub is following it, for the list it records voices for.
+hub_seen() {
+    [ -d "$AR_HUBS" ] || mkdir -p "$AR_HUBS" 2>/dev/null || return 0
+    printf '%s\n' "$follow_hub_label" > "$AR_HUBS/$follow_hub" 2>/dev/null
+}
+
+# Sends what the app has added to the outbox for this hub since the last call.
+voice_forward() {
+    read_vseq
+    if [ "$AR_VN" -gt "$follow_vlast" ]; then
+        if [ -f "$AR_OUTBOX" ]; then
+            awk -v from="$follow_vlast" -v to="$AR_VN" -v hub="$follow_hub" "$AWK_VOICE" "$AR_OUTBOX" 2>/dev/null || exit 0
+        fi
+        follow_vlast=$AR_VN
+    elif [ "$AR_VN" -lt "$follow_vlast" ]; then
+        # The outbox was replaced. Hang up: the next handshake tells the hub where it starts now.
+        exit 0
+    fi
+}
+
 cmd_follow() {
     follow_since=0
     follow_heartbeat=15
+    follow_hub=
+    follow_hub_label=
+    follow_vsince=0
     while [ $# -gt 0 ]; do
         case $1 in
             --since) follow_since=$2; shift 2 ;;
             --heartbeat) follow_heartbeat=$2; shift 2 ;;
+            --hub) follow_hub=$2; shift 2 ;;
+            --hub-label) follow_hub_label=$2; shift 2 ;;
+            --voice-since) follow_vsince=$2; shift 2 ;;
             *) shift ;;
         esac
     done
     case $follow_since in ''|*[!0-9]*) echo "ambient-remote: --since takes a number" >&2; exit 64 ;; esac
     case $follow_heartbeat in ''|0|*[!0-9]*) follow_heartbeat=15 ;; esac
+    # A hub that isn't 32 hex digits gets no voices, and a label outside the pattern a neutral name.
+    case $follow_hub in *[!0-9a-f]*) follow_hub= ;; esac
+    [ "${#follow_hub}" -eq 32 ] || follow_hub=
+    case $follow_hub_label in ''|*[!A-Za-z0-9\ ._-]*) follow_hub_label=Mac ;; esac
+    [ "${#follow_hub_label}" -le 40 ] || follow_hub_label=Mac
+    case $follow_vsince in ''|*[!0-9]*) follow_vsince=0 ;; esac
 
     umask 077
     read_conf
@@ -583,9 +645,16 @@ cmd_follow() {
         printf '%s %s\n' "$AR_N" "$AR_BYTES" > "$AR_SEQ"
         spool_unlock
     fi
-    printf '{%s}\n' "$(hello_fields hello)" || exit 0
+    follow_voice=
+    if [ -n "$follow_hub" ]; then
+        hub_seen
+        read_vseq
+        follow_voice=",\"voice\":$AR_VN"
+    fi
+    printf '{%s%s}\n' "$(hello_fields hello)" "$follow_voice" || exit 0
 
     follow_last=$follow_since
+    follow_vlast=$follow_vsince
     follow_tick=0
     while :; do
         read_seq
@@ -608,11 +677,13 @@ cmd_follow() {
             # The spool was reset under us. Hang up: the handshake on the next connection tells the hub.
             exit 0
         fi
+        [ -z "$follow_hub" ] || voice_forward
         [ $((follow_tick % 5)) -ne 0 ] || check_live
         # Reread so a tightened level stops titles here too, without waiting for this connection to end.
         [ $((follow_tick % 30)) -ne 0 ] || { read_conf; check_titles; }
         if [ $((follow_tick % follow_heartbeat)) -eq 0 ]; then
             printf '{"v":%s,"type":"heartbeat","seq":%s}\n' "$AR_PROTO" "$follow_last" || exit 0
+            [ -z "$follow_hub" ] || hub_seen
         fi
         if [ $((follow_tick % 600)) -eq 599 ] && spool_lock; then
             read_seq
@@ -621,7 +692,19 @@ cmd_follow() {
             spool_unlock
         fi
         follow_tick=$((follow_tick + 1))
-        sleep 1
+        if [ -n "$follow_hub" ] && [ -f "$AR_OUTBOX_LIVE" ]; then
+            # Someone is recording here: check for their voice five times a second. Only a Mac running Ambient makes
+            # this file, and its sleep takes fractions; one that can't sleeps the whole second.
+            follow_quick=0
+            while [ "$follow_quick" -lt 4 ]; do
+                sleep 0.2 2>/dev/null || break
+                voice_forward
+                follow_quick=$((follow_quick + 1))
+            done
+            if [ "$follow_quick" -eq 4 ]; then sleep 0.2 2>/dev/null; else sleep 1; fi
+        else
+            sleep 1
+        fi
     done
 }
 
@@ -877,7 +960,7 @@ case ${1:-} in
     identity) cmd_identity ;;
     version|--version) echo "ambient-remote $AR_VERSION (protocol $AR_PROTO)" ;;
     *)
-        echo "usage: ambient-remote emit <claude|codex> | follow --since SEQ | status | identity | version"
+        echo "usage: ambient-remote emit <claude|codex> | follow --since SEQ [--hub ID --hub-label NAME --voice-since N] | status | identity | version"
         echo "       ambient-remote install [--agents claude,codex] [--redaction metadata|standard|full]"
         echo "       ambient-remote uninstall"
         exit 64

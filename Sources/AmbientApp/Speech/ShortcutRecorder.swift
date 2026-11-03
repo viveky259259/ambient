@@ -2,9 +2,11 @@ import AmbientCore
 import AppKit
 import SwiftUI
 
-/// Shows the read-aloud shortcut; click it and press keys to change it. Esc cancels, Delete puts the default back.
+/// Shows a shortcut; click it and press keys to change it. Esc cancels, Delete puts the default back.
 struct ShortcutRecorder: View {
     @ObservedObject var center: ShortcutCenter
+    /// How VoiceOver names it.
+    var name = "Read-aloud shortcut"
     @State private var recording = false
     @State private var problem: String?
     @State private var monitor: Any?
@@ -19,12 +21,12 @@ struct ShortcutRecorder: View {
                 }
                 .buttonStyle(.pill)
                 .accessibilityLabel(recording ? "Recording shortcut. Press keys, or Escape to cancel."
-                                              : "Read-aloud shortcut, \(center.shortcut.display). Change")
+                                              : "\(name), \(center.shortcut.display). Change")
                 if !center.isDefault, !recording {
                     Button("Reset") { center.set(nil) }.buttonStyle(.pill)
                 }
             }
-            if let message = problem ?? (recording ? "Esc cancels · Delete restores ⌥⎋" : center.note) {
+            if let message = problem ?? (recording ? "Esc cancels · Delete restores \(center.defaultShortcut.display)" : center.note) {
                 Text(message).font(.caption).foregroundStyle(problem != nil || center.note != nil ? .orange : .secondary)
                     .multilineTextAlignment(.trailing)
             }

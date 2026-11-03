@@ -39,6 +39,8 @@ public enum RemoteIngestOutput: Equatable, Sendable {
     case refused(RemoteRefusal)
     case heartbeat
     case deliver(RemoteDelivery)
+    /// A line of a voice, for the link's `VoiceInbox`. Only after the handshake, like an event.
+    case voice(VoiceLine)
     case dropped
 }
 
@@ -136,6 +138,7 @@ public final class RemoteIngest {
         case let .hello(h): return handshake(h, now: now)
         case .heartbeat: return hello == nil ? reject(.invalid("heartbeat"), now: now) : .heartbeat
         case let .event(e): return accept(e, now: now)
+        case let .voice(v): return hello == nil ? reject(.invalid("order"), now: now) : .voice(v)
         }
     }
 

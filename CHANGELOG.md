@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Voice sync** (Settings › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
+  other Mac as you talk, over the same ssh link as remote agents, with a transcript made on the sending Mac only.
+  While you speak, the other Mac's notch shows a waveform; when you stop, it offers Copy Text, Copy Audio and Play for
+  a minute (30 seconds to 5 minutes in Settings). A Mac that's away gets the voice when it's back, for up to a day.
+  Both Macs keep every voice until you delete it. To receive from a Mac, pair it with `ambient remote add`; it needs
+  Remote Login on. `ambient-remote` 1.0.5 streams voices for a hub that asks with `--hub`, and older hubs see nothing
+  new. The menu bar's *Record Voice for…* does the same as the shortcut.
+
 ## 0.8.0 — 2026-11-03
 
 0.7.0 was tagged but never had a download, so this release also brings everything listed under 0.7.0 below.

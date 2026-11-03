@@ -427,6 +427,33 @@ and prints the hooks to add by hand if it isn't there. On Codex, run `/hooks` on
 hooks. The design and threat model are in
 [the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md).
 
+## Voice sync
+
+Talk on one Mac and paste on another. Press **⌃⌥V** on your laptop, say what you want an agent on your desktop to do,
+and press it again. The desktop's notch shows a waveform while you speak. When you stop, a card offers **Copy Text**,
+**Copy Audio** and **Play** for a minute. Nothing to accept or decline.
+
+Voices ride the remote-agents link, so it's set up the same way: on the Mac that should *receive*, pair the one that
+*sends*.
+
+```bash
+ambient remote add laptop                 # on the desktop; the laptop needs Remote Login on
+```
+
+The laptop then lists the desktop under Settings › Voice Sync, and its shortcut records for it. Pairing goes one way;
+to send back, pair the desktop from the laptop too.
+
+**How it works.** The sending Mac transcribes on the Mac itself (Apple's on-device recognizer, never a server) and
+encodes AAC as it records, writing half-second chunks and the transcript so far to `~/.ambient/voice-sync/outbox.jsonl`.
+The receiving Mac's `follow` streams the lines addressed to it, checking five times a second while you record, so
+the voice is already complete when you stop. A Mac that's asleep gets it when it's back, for up to a day. There's no
+server, relay or account, and no port opens on either Mac.
+
+**Where it's kept.** Both Macs keep every voice, sent and received, in `~/.ambient/voice-sync` (`library.json` and
+`audio/`, `0600`) until you delete it in Settings › Voice Sync. `ambient remote purge` also deletes the voices a
+machine sent. A received transcript goes to the clipboard only when you click Copy, and is never read aloud, sent
+online or summarized. The design is in [the spec](docs/superpowers/specs/2026-11-03-voice-sync-design.md).
+
 ## Command line
 
 ```

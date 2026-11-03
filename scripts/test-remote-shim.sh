@@ -157,6 +157,31 @@ check() {
     race between 6
     race quiet 5
 
+    # Voices from the Ambient app on this machine: a hub that says who it is gets only its own, from its cursor on.
+    mine=5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a
+    theirs=7777777777777777777777777777777f
+    mkdir -p "$home/.ambient/voice-sync"
+    for voice_line in "1 $mine" "2 $theirs" "3 $mine" "4 $theirs" "5 $mine"; do
+        set -- $voice_line
+        printf '{"v":1,"type":"voice","vseq":%s,"to":"%s","voice":"%032d","part":"cancel"}\n' "$1" "$2" "$1"
+    done > "$home/.ambient/voice-sync/outbox.jsonl"
+    echo 5 > "$home/.ambient/voice-sync/outbox.seq"
+    read -r voice_since _ < "$home/.ambient/spool/seq"
+    HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
+        --hub "$mine" --hub-label "Mac Studio" --voice-since 1 > "$home/voices" 2> "$home/voices.err" &
+    follower=$!
+    sleep 2
+    kill "$follower" 2> /dev/null || :
+    wait "$follower" 2> /dev/null || :
+    cp "$home/.ambient/spool/hubs/$mine" "$home/hub-label" 2> /dev/null || :
+    # A hub id that isn't one gets the stream it always did.
+    HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
+        --hub "x;y" --hub-label "Bad'Name" > "$home/voices-bad" 2> /dev/null &
+    follower=$!
+    sleep 1
+    kill "$follower" 2> /dev/null || :
+    wait "$follower" 2> /dev/null || :
+
     if python3 scripts/test-remote-shim.py "$home" "$name"; then
         echo "ok   $name"
     else

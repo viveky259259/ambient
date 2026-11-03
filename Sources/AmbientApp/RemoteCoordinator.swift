@@ -7,6 +7,7 @@ import os
 final class RemoteCoordinator {
     private let paths: AmbientPaths
     private let model: AppModel
+    private let voice: VoiceSyncController
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "remote")
     private let bundledShim = RemoteShim.bundledURL().flatMap { try? RemoteShim(url: $0) }
     /// Links stop on this queue: stopping waits for the thread, and the main thread is what that thread feeds.
@@ -17,9 +18,10 @@ final class RemoteCoordinator {
     private var pollTimer: Timer?
     private var limits: RemoteAuditThrottle
 
-    init(paths: AmbientPaths, model: AppModel) {
+    init(paths: AmbientPaths, model: AppModel, voice: VoiceSyncController) {
         self.paths = paths
         self.model = model
+        self.voice = voice
         limits = RemoteAuditThrottle(audit: paths.remoteAudit)
     }
 
@@ -56,6 +58,7 @@ final class RemoteCoordinator {
             return
         }
         paths.remoteAudit.append(.init(action: .unpaired, machine: id))
+        voice.forget(machine: id)
         reload(force: true)
     }
 
@@ -63,6 +66,7 @@ final class RemoteCoordinator {
     func purge(_ id: String) {
         remove(id)
         model.purge(machine: id)
+        voice.purge(machine: id)
         paths.remoteAudit.append(.init(action: .purged, machine: id))
     }
 
@@ -73,6 +77,7 @@ final class RemoteCoordinator {
     private func reload(force: Bool = false) {
         for id in RemotePurge.pendingPurges(paths: paths) {
             model.purge(machine: id)
+            voice.purge(machine: id)
             RemotePurge.clearPurge(id, paths: paths)
         }
         let changedAt = (try? FileManager.default.attributesOfItem(atPath: paths.machinesFile.path))?[.modificationDate] as? Date
@@ -85,6 +90,8 @@ final class RemoteCoordinator {
         model.keepMachines(next)
         for (id, link) in links where !next.contains(where: { $0.id == id }) {
             links[id] = nil
+            // Unpaired from the command line: the app's copy of the library forgets it too, or it'd save the cursor back.
+            voice.forget(machine: id)
             stopping.async { link.stop() }
         }
         for machine in next where previous[machine.id] != machine || links[machine.id] == nil {
@@ -107,8 +114,13 @@ final class RemoteCoordinator {
         let model = MainThreadBox(self.model)
         let ref = machine.ref
         let shimVersion = bundledShim?.version
+        let voice = MainThreadBox(self.voice)
+        let receiver = VoiceReceiver(hub: self.voice.hub, cursor: self.voice.cursor(for: machine.id),
+                                     known: self.voice.received(from: machine.id)) { events, cursor in
+            DispatchQueue.main.async { voice.value.receive(events, cursor: cursor, from: ref) }
+        }
         let link = RemoteLink(
-            machine: machine, cursor: self.model.remoteCursor(machine.id), audit: paths.remoteAudit,
+            machine: machine, cursor: self.model.remoteCursor(machine.id), audit: paths.remoteAudit, voice: receiver,
             deliver: { batch, cursor, applied in
                 DispatchQueue.main.async {
                     coordinator.value.apply(batch, cursor: cursor, from: ref)
