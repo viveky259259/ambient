@@ -313,8 +313,9 @@ final class AppModel: ObservableObject {
     func refreshTaskLLMStatus(recheck: Bool = true) {
         let config = prefs.taskLLMConfig
         if recheck { LocalRuntimes.forgetFailedProbes() }
-        // Runs for settings that have since changed would load a model only to throw its answer away.
-        for summary in summaries.values where summary.config != config { summary.task.cancel() }
+        // Runs for another model would load it only to throw its answer away. Cancelling one stops the loaded model,
+        // so settings that don't change what runs leave it be; their answer is still dropped as stale.
+        for summary in summaries.values where !Self.sameModel(summary.config, config) { summary.task.cancel() }
         llmProbeGeneration += 1
         guard config.enabled else {
             taskLLMStatus = .disabled
@@ -330,6 +331,14 @@ final class AppModel: ObservableObject {
             self.taskLLMStatus = resolution.status
             self.taskModelRoute = resolution.route
         }
+    }
+
+    /// Whether `a` and `b` run the same model the same way: reading transcripts and pacing don't change that.
+    private static func sameModel(_ a: TaskLLMConfig, _ b: TaskLLMConfig) -> Bool {
+        var a = a
+        a.readTranscripts = b.readTranscripts
+        a.minRefreshSeconds = b.minRefreshSeconds
+        return a == b
     }
 
     /// Applies a change from `ambient task model` / `ambient mcp` and returns the settings that result.

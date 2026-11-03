@@ -123,6 +123,16 @@ private let readyReport = TaskModelReport(
         #expect(!result.isError && result.text.contains("\"status\" : \"Local LLM ready\""))
     }
 
+    /// A report worked out with the CLI's own PATH says so, since the app's may find other runtimes.
+    @Test func aReportTheCLIMadeSaysSo() throws {
+        let app = FakeApp(reply: .taskModel(TaskLLMConfig(mcpURL: "http://127.0.0.1:9/mcp", modelPath: "/nonexistent/qwen")))
+        let result = try toolResult(app.server.handle(try call("get_task_model", [:])))
+        let fields = try #require(try JSONSerialization.jsonObject(with: Data(result.text.utf8)) as? [String: String])
+        #expect(fields["status"] == "Nothing at /nonexistent/qwen.")
+        #expect(fields["note"]?.contains("how the CLI would") == true)
+        #expect(MCPServer.report(from: .taskModelReport(readyReport))?.note == nil)
+    }
+
     @Test func saysWhenTheAppIsntThereOrSlow() throws {
         let closed = try toolResult(FakeApp().server.handle(try call("get_task_model", [:])))
         #expect(closed == ("Ambient isn't running. Open Ambient.app, then try again.", true))

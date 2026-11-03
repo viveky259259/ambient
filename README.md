@@ -108,7 +108,7 @@ the files to decide how to run it:
 Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, and ask reasoning models (Qwen3 and later) not to
 think first. An MLX model stays loaded for two minutes after a summary, so a busy board reads the weights once, and
 gets the prompt on standard input. llama.cpp reads it from a temporary file that only you can read (`0600`), deleted
-when the run ends, or on the next run if Ambient quit or crashed first. Quitting Ambient stops the model. Ambient
+when the run ends, or by a later run once it's ten minutes old if Ambient quit or crashed first. Quitting Ambient stops the model. Ambient
 uses **Python for MLX** if you set one, otherwise the Python local-agent uses for MLX, otherwise a `python3` that can
 import the package (`/usr/bin/python3` only when the developer tools are installed, since without them it offers
 to install them). `ambient task model` and `get_task_model` say how the app would run the model, with its own

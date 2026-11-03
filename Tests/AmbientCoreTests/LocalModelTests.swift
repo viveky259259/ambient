@@ -385,7 +385,7 @@ private final class Scratch {
         while read -r line; do echo 'AMBIENT_RESULT {"text":"answer"}'; done
         """#)
         func launches() -> Int { ((try? String(contentsOfFile: log, encoding: .utf8)) ?? "").split(separator: "\n").count }
-        defer { LocalModelRunner.stopAll() }
+        defer { LocalModelRunner.unload() }
         for _ in 0..<3 {
             #expect(try await LocalModelRunner.generate(.mlx(path: "/a", vision: false, python: python),
                                                         prompt: "x", maxTokens: 1, temperature: 0, timeout: 10) == "answer")

@@ -60,6 +60,9 @@ public enum LocalModelRunner {
 
     static let promptPrefix = "ambient-prompt-"
 
+    /// When leftover prompt files were last looked for. Only touched on the shared queue.
+    nonisolated(unsafe) private static var sweptAt = Date.distantPast
+
     /// What's running now, so quitting stops it.
     private static let live = Live()
 
@@ -79,7 +82,10 @@ public enum LocalModelRunner {
             return try parseMarked(reply)
         case let .llamaCpp(path, binary):
             return try await onQueue { job in
-                sweepPromptFiles()
+                if Date().timeIntervalSince(sweptAt) > staleAfter {
+                    sweepPromptFiles()
+                    sweptAt = Date()
+                }
                 // llama.cpp reads prompts from a file; keep it private to the user and gone afterwards.
                 let file = FileManager.default.temporaryDirectory
                     .appendingPathComponent("\(promptPrefix)\(UUID().uuidString).txt")
@@ -98,9 +104,14 @@ public enum LocalModelRunner {
         }
     }
 
-    /// Stops the loaded model and any run under way. For quitting: nothing reads their answers after that.
+    /// Stops the loaded model and any run under way, and starts no runtime after that. For quitting.
     public static func stopAll() {
-        live.stopAll()
+        live.stopAll(closing: true)
+    }
+
+    /// Stops the loaded model and any run under way, for tests.
+    static func unload() {
+        live.stopAll(closing: false)
     }
 
     static func llamaArguments(binary: String, model: String, promptFile: String, maxTokens: Int,
@@ -153,7 +164,10 @@ public enum LocalModelRunner {
     private static func runOnce(_ executable: String, _ arguments: [String], timeout: TimeInterval,
                                 job: Job) throws -> String {
         let runtime = try ModelProcess.launch(executable, arguments, input: false)
-        live.started(runtime)
+        guard live.started(runtime) else {
+            runtime.stop()
+            throw CancellationError()
+        }
         job.attach(runtime)
         defer {
             job.detach()
@@ -189,7 +203,10 @@ public enum LocalModelRunner {
         } else {
             live.worker?.runtime.stop()
             worker = Worker(key: key, runtime: try ModelProcess.launch(key.python, ["-c", mlxScript], input: true))
-            live.worker = worker
+            guard live.adopt(worker) else {
+                worker.runtime.stop()
+                throw CancellationError()
+            }
         }
         worker.uses += 1
         let runtime = worker.runtime
@@ -291,13 +308,29 @@ public enum LocalModelRunner {
         private let lock = NSLock()
         private var loaded: Worker?
         private var running: ModelProcess?
+        /// Set when Ambient quits: a run that was already queued must not start a runtime nobody will stop.
+        private var closed = false
 
         var worker: Worker? {
             get { lock.lock(); defer { lock.unlock() }; return loaded }
             set { lock.lock(); loaded = newValue; lock.unlock() }
         }
 
-        func started(_ runtime: ModelProcess) { lock.lock(); running = runtime; lock.unlock() }
+        /// False once closed.
+        func adopt(_ worker: Worker) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            if !closed { loaded = worker }
+            return !closed
+        }
+
+        /// False once closed.
+        func started(_ runtime: ModelProcess) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            if !closed { running = runtime }
+            return !closed
+        }
 
         func finished(_ runtime: ModelProcess) {
             lock.lock()
@@ -305,11 +338,12 @@ public enum LocalModelRunner {
             lock.unlock()
         }
 
-        func stopAll() {
+        func stopAll(closing: Bool) {
             lock.lock()
             let all = [loaded?.runtime, running].compactMap { $0 }
             loaded = nil
             running = nil
+            if closing { closed = true }
             lock.unlock()
             all.forEach { $0.stop() }
         }
@@ -383,7 +417,8 @@ final class ModelProcess: @unchecked Sendable {
         do { try process.run() } catch { throw LocalModelRunner.RunError.launch(error.localizedDescription) }
         for (pipe, isStdout) in [(stdout, true), (stderr, false)] {
             let handle = pipe.fileHandleForReading
-            DispatchQueue.global(qos: .utility).async {
+            // Threads of their own: a loaded model is read for as long as it stays loaded, too long to hold GCD's.
+            Thread.detachNewThread {
                 var buffer = [UInt8](repeating: 0, count: 65_536)
                 while true {
                     let count = read(handle.fileDescriptor, &buffer, buffer.count)

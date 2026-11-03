@@ -258,9 +258,15 @@ struct MCPServer {
     /// The app's report, or one made here when the app sent only its settings; nil when it sent neither.
     static func report(from reply: WireMessage?) -> TaskModelReport? {
         switch reply {
-        case let .taskModelReport(report)?: report
-        case let .taskModel(config)?: blocking { await TaskModelReport.make(config) }
-        default: nil
+        case let .taskModelReport(report)?:
+            return report
+        case let .taskModel(config)?:
+            var report = blocking { await TaskModelReport.make(config) }
+            report.note = "Ambient didn't work out in time how it runs this model, so this is how the CLI would, "
+                + "with its own PATH. Check again in a moment."
+            return report
+        default:
+            return nil
         }
     }
 

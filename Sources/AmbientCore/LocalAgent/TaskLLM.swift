@@ -84,6 +84,8 @@ public struct TaskModelReport: Codable, Equatable, Sendable {
     public var config: TaskLLMConfig
     public var model: LocalModelPath?
     public var resolution: TaskModelResolution
+    /// Why the report may not match the board, shown last.
+    public var note: String?
 
     /// Resolves as if summaries were on, so it can say how the model would run before they are.
     public static func make(_ config: TaskLLMConfig) async -> TaskModelReport {
@@ -121,6 +123,7 @@ public struct TaskModelReport: Codable, Equatable, Sendable {
             break
         }
         out.append(("status", resolution.status.label))
+        if let note { out.append(("note", note)) }
         return out
     }
 }
