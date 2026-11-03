@@ -171,6 +171,12 @@ private final class Scratch {
         #expect(!TaskSummarizer.writesText(["kind": "custom"]))
     }
 
+    /// An older local-agent lists no kind; the routes already take that for chat.
+    @Test func entriesWithoutAKindAreChatUnlessNamedForMedia() {
+        #expect(TaskSummarizer.writesText(["id": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"]))
+        #expect(!TaskSummarizer.writesText(["id": "hf:mlx-community/whisper-large-v3-turbo"]))
+    }
+
     @Test func readsTextFromEachResultShape() throws {
         #expect(TaskSummarizer.text(fromResult: ["message": ["role": "assistant", "content": "chat"]]) == "chat")
         #expect(TaskSummarizer.text(fromResult: ["text": "agent"]) == "agent")
@@ -195,6 +201,42 @@ private final class Scratch {
         #expect(TaskSummarizer.text(fromResult: ["files": [s.url.appendingPathComponent("job/folder.txt").path]]) == nil)
         let upper = try s.file("job/OUT.TXT", "upper")
         #expect(TaskSummarizer.text(fromResult: ["files": [upper.path]]) == "upper")
+    }
+}
+
+@Suite struct LocalRuntimesTests {
+    @Test func usrBinPythonNeedsTheDeveloperTools() throws {
+        let s = try Scratch()
+        let environment = ["PATH": "/usr/bin", "DEVELOPER_DIR": s.url.path]
+        // Without them it's a stub that offers to install them.
+        #expect(!LocalRuntimes.pythonCandidates(configured: "", environment: environment).contains("/usr/bin/python3"))
+        _ = try s.tool("usr/bin/python3", "exit 0")
+        #expect(LocalRuntimes.pythonCandidates(configured: "", environment: environment).contains("/usr/bin/python3")
+            == FileManager.default.fileExists(atPath: "/usr/bin/python3"))
+    }
+
+    @Test func foldersAreNotExecutables() throws {
+        let s = try Scratch()
+        try s.file("bin/python3/lib")
+        let folder = s.url.appendingPathComponent("bin/python3").path
+        #expect(FileManager.default.isExecutableFile(atPath: folder))
+        #expect(!LocalRuntimes.isExecutable(folder))
+        #expect(LocalRuntimes.isExecutable(try s.tool("python", "exit 0")))
+        let found = LocalRuntimes.pythonCandidates(configured: folder, environment: ["PATH": s.url.appendingPathComponent("bin").path])
+        #expect(!found.contains(folder))
+    }
+
+    @Test func failedProbesWaitUntilACheckAsksAgain() throws {
+        let s = try Scratch()
+        let log = s.url.appendingPathComponent("probes").path
+        let python = try s.tool("python", "echo probe >> '\(log)'\nexit 1")
+        func probes() -> Int { ((try? String(contentsOfFile: log, encoding: .utf8)) ?? "").split(separator: "\n").count }
+        #expect(!LocalRuntimes.canImport("mlx_lm", python: python))
+        #expect(!LocalRuntimes.canImport("mlx_lm", python: python))
+        #expect(probes() == 1)
+        LocalRuntimes.forgetFailedProbes()
+        #expect(!LocalRuntimes.canImport("mlx_lm", python: python))
+        #expect(probes() == 2)
     }
 }
 
@@ -266,7 +308,8 @@ private final class Scratch {
     }
 }
 
-@Suite struct LocalModelRunnerTests {
+/// One shared queue and one loaded model: tests in parallel would replace each other's.
+@Suite(.serialized) struct LocalModelRunnerTests {
     @Test func mlxRouteReadsTheMarkedLineAndIgnoresNoise() async throws {
         let s = try Scratch()
         // Checks the request arrives on stdin, then prints warnings around the result like real runtimes do.
@@ -299,15 +342,109 @@ private final class Scratch {
         }
     }
 
-    /// The shared queue runs one model at a time, so a run that never returns would stall every later one.
+    /// The shared queue runs one model at a time, so a run that never returns would stall every later one. The
+    /// background sleep inherits both pipes and outlives the runtime.
     @Test func childHoldingThePipesAfterExitDoesNotHangTheRun() async throws {
         let s = try Scratch()
-        // The background sleep inherits both pipes and outlives the runtime.
-        let python = try s.tool("python", "sleep 12 &\nexit 0")
-        await #expect(throws: LocalModelRunner.RunError.timedOut) {
+        let started = Date()
+        let python = try s.tool("python", "sleep 30 &\nexit 0")
+        await #expect(throws: LocalModelRunner.RunError.noOutput) {
             try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
-                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 30)
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 60)
         }
+        #expect(Date().timeIntervalSince(started) < 20)
+    }
+
+    @Test func childHoldingThePipesKeepsTheRuntimesError() async throws {
+        let s = try Scratch()
+        let started = Date()
+        let python = try s.tool("python", "sleep 30 &\necho 'Model type x not supported' >&2\nexit 1")
+        await #expect(throws: LocalModelRunner.RunError.failed("Model type x not supported")) {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 60)
+        }
+        #expect(Date().timeIntervalSince(started) < 20)
+    }
+
+    @Test func childHoldingThePipesKeepsTheAnswer() async throws {
+        let s = try Scratch()
+        let python = try s.tool("python", #"""
+        sleep 30 &
+        echo 'AMBIENT_RESULT {"text":"done"}'
+        """#)
+        #expect(try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
+                                                    prompt: "x", maxTokens: 1, temperature: 0, timeout: 60) == "done")
+    }
+
+    /// Reading the weights again for every summary would keep a busy Mac loading models.
+    @Test func theLoadedModelAnswersAgainUntilAnotherIsAskedFor() async throws {
+        let s = try Scratch()
+        let log = s.url.appendingPathComponent("launches").path
+        let python = try s.tool("python", #"""
+        echo launch >> '\#(log)'
+        while read -r line; do echo 'AMBIENT_RESULT {"text":"answer"}'; done
+        """#)
+        func launches() -> Int { ((try? String(contentsOfFile: log, encoding: .utf8)) ?? "").split(separator: "\n").count }
+        defer { LocalModelRunner.unload() }
+        for _ in 0..<3 {
+            #expect(try await LocalModelRunner.generate(.mlx(path: "/a", vision: false, python: python),
+                                                        prompt: "x", maxTokens: 1, temperature: 0, timeout: 10) == "answer")
+        }
+        #expect(launches() == 1)
+        _ = try await LocalModelRunner.generate(.mlx(path: "/b", vision: false, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 10)
+        #expect(launches() == 2)
+    }
+
+    @Test func cancellingARunStopsItsRuntime() async throws {
+        let s = try Scratch()
+        let python = try s.tool("python", "exec sleep 30")
+        let started = Date()
+        let run = Task {
+            try await LocalModelRunner.generate(.mlx(path: "/m", vision: false, python: python),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 60)
+        }
+        try await Task.sleep(nanoseconds: 300_000_000)
+        run.cancel()
+        await #expect(throws: CancellationError.self) { try await run.value }
+        #expect(Date().timeIntervalSince(started) < 10)
+    }
+
+    /// A run queued under settings that have since changed would load a model only for its answer to be dropped.
+    @Test func cancelledRunsStillWaitingNeverStart() async throws {
+        let s = try Scratch()
+        let marker = s.url.appendingPathComponent("started").path
+        let slow = try s.tool("slow", #"sleep 1; echo 'AMBIENT_RESULT {"text":"first"}'"#)
+        let never = try s.tool("never", "touch '\(marker)'")
+        let first = Task {
+            try await LocalModelRunner.generate(.mlx(path: "/a", vision: false, python: slow),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 10)
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        let second = Task {
+            try await LocalModelRunner.generate(.mlx(path: "/b", vision: false, python: never),
+                                                prompt: "x", maxTokens: 1, temperature: 0, timeout: 10)
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        second.cancel()
+        #expect(try await first.value == "first")
+        await #expect(throws: CancellationError.self) { try await second.value }
+        #expect(!FileManager.default.fileExists(atPath: marker))
+    }
+
+    @Test func leftoverPromptFilesAreRemoved() throws {
+        let s = try Scratch()
+        let old = try s.file("ambient-prompt-old.txt", "session text")
+        let recent = try s.file("ambient-prompt-recent.txt", "another run's prompt")
+        let other = try s.file("notes.txt")
+        let hourAgo = Date().addingTimeInterval(-3600)
+        for file in [old, other] {
+            try FileManager.default.setAttributes([.modificationDate: hourAgo], ofItemAtPath: file.path)
+        }
+        LocalModelRunner.sweepPromptFiles(in: s.url)
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+        #expect(FileManager.default.fileExists(atPath: recent.path))
+        #expect(FileManager.default.fileExists(atPath: other.path))
     }
 
     /// mlx-vlm forces `trust_remote_code` on for some tokenizers, so the folder check alone can't stop their code.
@@ -345,7 +482,7 @@ private final class Scratch {
         #expect(LocalAgentMCP.MCPError.transport("Local LLM timed out.").localizedDescription == "Local LLM timed out.")
     }
 
-    @Test func llamaCppGetsThePromptFileAndPlainCompletion() async throws {
+    @Test func llamaCppGetsThePromptFile() async throws {
         let s = try Scratch()
         // Echoes the prompt file back, as a completion would continue it.
         let llama = try s.tool("llama-completion", #"""
@@ -354,10 +491,15 @@ private final class Scratch {
         let text = try await LocalModelRunner.generate(.llamaCpp(path: "/m.gguf", binary: llama),
                                                        prompt: "hello gguf", maxTokens: 5, temperature: 0.2, timeout: 10)
         #expect(text == "hello gguf")
-        #expect(!LocalModelRunner.llamaArguments(binary: llama, model: "/m", promptFile: "/p", maxTokens: 1, temperature: 0)
-            .contains("-no-cnv"))
-        #expect(LocalModelRunner.llamaArguments(binary: "/opt/homebrew/bin/llama-cli", model: "/m", promptFile: "/p",
-                                                maxTokens: 1, temperature: 0).contains("-no-cnv"))
+    }
+
+    /// One chat turn with the model's own template, from either tool.
+    @Test func llamaCppRunsOneChatTurn() {
+        for binary in ["/opt/homebrew/bin/llama-completion", "/opt/homebrew/bin/llama-cli"] {
+            let args = LocalModelRunner.llamaArguments(binary: binary, model: "/m", promptFile: "/p", maxTokens: 1, temperature: 0)
+            #expect(args.contains("-st"))
+            #expect(!args.contains("-no-cnv"))
+        }
     }
 }
 
@@ -368,5 +510,16 @@ private final class Scratch {
         let reply = WireMessage.taskModel(TaskLLMConfig(enabled: true, modelPath: "/models/qwen", pythonPath: "/py"))
         #expect(try Wire.decode(Wire.encode(reply)) == reply)
         #expect(try Wire.decode(Wire.encode(.taskModelTimedOut)) == .taskModelTimedOut)
+    }
+
+    @Test func reportRoundTrips() throws {
+        let ready = TaskModelReport(
+            config: TaskLLMConfig(enabled: true, modelPath: "/models/qwen"),
+            model: LocalModelPath(requested: "/models/qwen", resolved: "/models/qwen/snapshots/a", format: .mlxText, note: nil),
+            resolution: .ready(.mlx(path: "/models/qwen/snapshots/a", vision: false, python: "/py")))
+        #expect(try Wire.decode(Wire.encode(.taskModelReport(ready))) == .taskModelReport(ready))
+        let down = TaskModelReport(config: TaskLLMConfig(), model: nil,
+                                   resolution: .unavailable(.gatewayDown("Connection refused")))
+        #expect(try Wire.decode(Wire.encode(.taskModelReport(down))) == .taskModelReport(down))
     }
 }

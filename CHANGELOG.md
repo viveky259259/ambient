@@ -9,6 +9,18 @@
   Both Macs keep every voice until you delete it. To receive from a Mac, pair it with `ambient remote add`; it needs
   Remote Login on. `ambient-remote` 1.0.5 streams voices for a hub that asks with `--hub`, and older hubs see nothing
   new. The menu bar's *Record Voice for…* does the same as the shortcut.
+- **Task board model**: an MLX model you point the board at stays loaded for two minutes between summaries, instead
+  of being read from disk for every one (Qwen3.5-9B: 21 seconds for the first summary, half a second for the next).
+  Changing the model cancels summaries still waiting for the old one, and quitting Ambient stops the model. GGUF chat
+  models get their own chat template (llama.cpp's single-turn `-st`, which `llama-completion` and the newer chat-only
+  `llama-cli` both take, instead of `-no-cnv`).
+  `ambient task model` and `get_task_model` report how the app runs the model, not how the CLI's `PATH` would.
+- **Fix**: a run whose runtime left a child process holding its output reported a timeout instead of its error or
+  answer; a model from an older local-agent with no `kind` was refused; on a Mac without the developer tools,
+  `/usr/bin/python3` could keep offering to install them; a Python without the runtime was started again on every
+  30-second status check; `ambient task model --python` accepted a folder; a model path of only spaces showed as set
+  in Settings while the board used the model id; `ambient mcp` answered JSON-RPC batches with a parse error; and a
+  llama.cpp prompt file could outlive a crash.
 
 ## 0.8.0 — 2026-11-03
 

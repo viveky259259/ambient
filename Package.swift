@@ -21,6 +21,8 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(name: "AmbientCoreTests", dependencies: ["AmbientCore"]),
+        // The CLI's own parsing: `ambient mcp`'s JSON-RPC and tools, and `ambient task model`'s arguments.
+        .testTarget(name: "AmbientCLITests", dependencies: ["ambient"]),
     ],
     // Core and CLI build in Swift 6 mode; the AppKit app opts into 5 above.
     swiftLanguageModes: [.v5, .v6]

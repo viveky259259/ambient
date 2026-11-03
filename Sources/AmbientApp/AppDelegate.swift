@@ -134,6 +134,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         remote?.stop()
         server?.stop()
         kokoro?.shutDown()
+        // The board's model runs in a process of its own, which would otherwise keep loading or generating.
+        LocalModelRunner.stopAll()
     }
 
     /// Opening the app again (Finder, Spotlight, `open -a Ambient`) shows the settings.
