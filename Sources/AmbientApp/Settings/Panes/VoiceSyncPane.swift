@@ -9,6 +9,8 @@ struct VoiceSyncPane: View {
     @ObservedObject var shortcuts: ShortcutCenter
     @State private var microphone = VoiceSyncController.microphoneAllowed
     @State private var speech = VoiceSyncController.speechAllowed
+    /// Looked up on refresh, not in `body`, which runs many times a second while a voice is recorded.
+    @State private var canTranscribe = VoiceRecorder.recognizer() != nil
     @State private var confirmingDeleteAll = false
 
     private static let copyChoices = [(30, "30 seconds"), (60, "1 minute"), (120, "2 minutes"), (300, "5 minutes")]
@@ -47,10 +49,10 @@ struct VoiceSyncPane: View {
                 }
                 SettingsDivider()
                 SettingsRow(title: "Transcription",
-                            subtitle: VoiceRecorder.recognizer() == nil
+                            subtitle: !canTranscribe
                                 ? "Your language can't be transcribed on this Mac, so voices go as audio only."
                                 : "On this Mac only. Without it, voices go as audio only.") {
-                    if VoiceRecorder.recognizer() == nil {
+                    if !canTranscribe {
                         StatusBadge("Unavailable", .neutral)
                     } else {
                         permission(speech) {
@@ -113,6 +115,7 @@ struct VoiceSyncPane: View {
     private func refresh() {
         microphone = VoiceSyncController.microphoneAllowed
         speech = VoiceSyncController.speechAllowed
+        canTranscribe = VoiceRecorder.recognizer() != nil
         voice.refreshDestinations()
     }
 

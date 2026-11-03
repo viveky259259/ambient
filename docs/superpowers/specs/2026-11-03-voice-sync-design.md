@@ -77,9 +77,10 @@ computer name, sanitized as above.
 | `~/.ambient/spool/hubs/<hub id>` | `follow` | The hub's label. The file's mtime is when the hub was last connected, refreshed with each heartbeat. |
 
 The app is the outbox's only writer. It appends a line, then updates `outbox.seq`, so `follow`, which reads only up to
-`outbox.seq`, never sees half a line. When the app starts, it trims the outbox to voices from the last 24 hours (40 MB at
-most), rewriting the file atomically without changing any `vseq`. It also writes a `cancel` for any voice a crash left
-open, and removes a stale `outbox.live`.
+`outbox.seq`, never sees half a line. When the app starts, and every hour while it runs, it trims the outbox to voices
+from the last 24 hours (40 MB at most), rewriting the file atomically without changing any `vseq`. The hourly trim
+leaves a voice being recorded alone. At start, it also writes a `cancel` for any voice a crash left open, and removes a
+stale `outbox.live`.
 
 ### Voice line
 
@@ -120,9 +121,13 @@ that machine.
   - the caps: 10 minutes, 4 MB of audio, and two voices in flight per machine.
 
   A voice that breaks any of these is dropped and recorded in the audit log, without content.
-- **Cursor.** The voice cursor is saved in `library.json` in the same write as the voice it completes, so a hub killed
-  at any moment loses no voice and duplicates none. The cursor never passes the `start` of a voice still in flight. A
-  link that drops mid-voice discards the partial voice, and the reconnect replays it from its `start`.
+- **Cursor.** The voice cursor is saved in `library.json` after the voices it passes, never before, so a hub killed at
+  any moment loses no voice, and one it gets again is already known, so none is kept twice. A voice the library can't
+  store holds that machine's cursor where it was until the app starts again, and then it comes again. The cursor
+  never passes the `start` of a voice still in flight. A link that drops mid-voice discards the partial voice, and the
+  reconnect replays it from its `start`.
+- **Library file.** A `library.json` this version can't read is moved aside to `library.unreadable-<time>.json` by
+  the first save, not replaced.
 - A voice with no line for 2 minutes on a live link is dropped. That's a sender that crashed; its next launch cancels
   the voice.
 

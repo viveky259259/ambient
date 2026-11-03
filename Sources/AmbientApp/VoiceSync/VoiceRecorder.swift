@@ -17,6 +17,9 @@ final class VoiceRecorder: @unchecked Sendable {
     var onChunk: (Int, Data) -> Void = { _, _ in }
     var onText: (String) -> Void = { _ in }
     var onLevel: (Float) -> Void = { _ in }
+    /// The microphone changed, or its format did, which stops the engine: what's recorded is all there will be. On the
+    /// main thread.
+    var onInterrupted: () -> Void = {}
 
     private let engine = AVAudioEngine()
     private let queue = DispatchQueue(label: "com.viveky259259.Ambient.voice-sync", qos: .userInitiated)
@@ -37,6 +40,7 @@ final class VoiceRecorder: @unchecked Sendable {
     private var task: SFSpeechRecognitionTask?
     private var transcript: String?
     private var transcribed: (() -> Void)?
+    private var configuration: NSObjectProtocol?
 
     init() {
         mono = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: Self.sampleRate, channels: 1, interleaved: false)!
@@ -94,6 +98,8 @@ final class VoiceRecorder: @unchecked Sendable {
             task?.cancel()
             throw VoiceRecorderError(message: "The microphone didn't start: \(error.localizedDescription)")
         }
+        configuration = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
+                                                               queue: .main) { [weak self] _ in self?.onInterrupted() }
     }
 
     /// Stops, then calls back once the last chunk is out and the transcript is final, or after two seconds of waiting for
@@ -138,6 +144,8 @@ final class VoiceRecorder: @unchecked Sendable {
     }
 
     private func stopEngine() {
+        if let configuration { NotificationCenter.default.removeObserver(configuration) }
+        configuration = nil
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
     }

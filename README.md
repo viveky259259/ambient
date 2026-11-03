@@ -401,10 +401,11 @@ leave a different machine as it was.
 | The session's title in its agent | | ✓ | ✓ |
 | Up to 160 characters of the agent's final message, a permission prompt or an error | | | ✓ |
 
-Your prompts, tool input and output, commands, file paths and transcripts are never sent as such at any level, but at
-`full` an agent's final message can quote any of them. Neither are the agent's process id, terminal or tmux pane, which
-`follow` uses on the machine to tell when the agent has exited. Lines already in the spool when you tighten a level
-still cross your transport, and your Mac drops what the new level doesn't allow as they arrive.
+Your prompts, tool input and output, commands, file paths and session transcripts are never sent as such at any level,
+but at `full` an agent's final message can quote any of them. Neither are the agent's process id, terminal or tmux pane,
+which `follow` uses on the machine to tell when the agent has exited. Lines already in the spool when you tighten a
+level still cross your transport, and your Mac drops what the new level doesn't allow as they arrive. A voice you record
+is different: you send it on purpose, with any transcript, at any level (see [Voice sync](#voice-sync)).
 
 **Where it's kept.** On the machine, in `~/.ambient/spool` (folder `0700`, files `0600`), capped at 5 MB and 24 hours;
 set `spool_max_bytes` and `spool_max_age` in `~/.ambient/remote.conf` to change that. The limits are enforced whenever
@@ -447,10 +448,11 @@ The laptop then lists the desktop under Settings › Voice Sync, and its shortcu
 to send back, pair the desktop from the laptop too.
 
 **How it works.** The sending Mac transcribes on the Mac itself (Apple's on-device recognizer, never a server) and
-encodes AAC as it records, writing half-second chunks and the transcript so far to `~/.ambient/voice-sync/outbox.jsonl`.
-The receiving Mac's `follow` streams the lines addressed to it, checking five times a second while you record, so
-the voice is already complete when you stop. A Mac that's asleep gets it when it's back, for up to a day. There's no
-server, relay or account, and no port opens on either Mac.
+encodes AAC as it records. Where it can't transcribe your language on the device, or you don't allow speech recognition,
+the voice goes as audio only. It writes half-second chunks and any transcript so far to
+`~/.ambient/voice-sync/outbox.jsonl`. The receiving Mac's `follow` streams the lines addressed to it, checking five
+times a second while you record, so the voice is already complete when you stop. A Mac that's asleep gets it when it's
+back, for up to a day. There's no server, relay or account, and no port opens on either Mac.
 
 **Where it's kept.** Both Macs keep every voice, sent and received, in `~/.ambient/voice-sync` (`library.json` and
 `audio/`, `0600`) until you delete it in Settings › Voice Sync. `ambient remote purge` also deletes the voices a

@@ -64,6 +64,10 @@ final class VoiceSyncController: ObservableObject {
     private var noticeWork: DispatchWorkItem?
     private var copiedWork: DispatchWorkItem?
     private var refreshTimer: Timer?
+    private var expireTimer: Timer?
+    /// Machines whose cursor stays where it is until Ambient starts again, because a voice from them couldn't be kept.
+    /// The link then starts from there, and the voice comes again.
+    private var held: Set<String> = []
     private var player: AVAudioPlayer?
     private var playerDelegate: PlayerDelegate?
 
@@ -82,6 +86,13 @@ final class VoiceSyncController: ObservableObject {
         refreshDestinations()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.refreshDestinations() }
         refreshTimer?.tolerance = 1
+        // A Mac that stays away while this one stays open still doesn't get a voice after a day.
+        expireTimer = Timer.scheduledTimer(withTimeInterval: 3_600, repeats: true) { [weak self] _ in
+            guard let self, self.outgoing == nil else { return }
+            let outbox = self.outbox
+            DispatchQueue.global(qos: .utility).async { outbox.expire() }
+        }
+        expireTimer?.tolerance = 300
     }
 
     /// Quitting mid-recording: the receiving Mac stops waiting for it.
@@ -163,6 +174,7 @@ final class VoiceSyncController: ObservableObject {
         }
         recorder.onText = { [weak self] text in self?.outgoing?.text = text }
         recorder.onLevel = { [weak self] level in self?.level = level }
+        recorder.onInterrupted = { [weak self] in self?.end(note: "The microphone changed, so the voice stopped there.") }
         do {
             try recorder.start(transcribe: transcribe)
         } catch {
@@ -187,7 +199,10 @@ final class VoiceSyncController: ObservableObject {
     }
 
     /// Stops recording and sends the end, with the final transcript.
-    func send() {
+    func send() { end(note: nil) }
+
+    /// `send()`, with `note` saying why when it wasn't the user.
+    private func end(note: String?) {
         guard var current = outgoing, !current.sending, let recorder else { return }
         current.sending = true
         outgoing = current
@@ -218,7 +233,8 @@ final class VoiceSyncController: ObservableObject {
             self.voices = self.library.voices
             self.refreshDestinations()
             let online = self.destinations.first { $0.id == destination.id }?.isOnline() ?? false
-            self.show(online ? "Sent to \(destination.label)" : "\(destination.label) gets it when it's back", for: 3)
+            let sent = online ? "Sent to \(destination.label)" : "\(destination.label) gets it when it's back"
+            self.show(note.map { "\($0) \(sent)." } ?? sent, for: note == nil ? 3 : 6)
         }
     }
 
@@ -261,7 +277,7 @@ final class VoiceSyncController: ObservableObject {
     func received(from machine: String) -> Set<String> { library.received(from: machine) }
 
     /// What a link heard. The cursor is saved after the voices it covers, so a crash in between only repeats a voice the
-    /// library already has, which the next link skips.
+    /// library already has, which the next link skips. A voice that couldn't be kept holds the cursor before it.
     func receive(_ events: [VoiceInboxEvent], cursor: Int64, from machine: MachineRef) {
         for event in events {
             switch event {
@@ -275,13 +291,14 @@ final class VoiceSyncController: ObservableObject {
                     try library.add(voice.record, audio: voice.audio)
                     show(arrival: voice.record)
                 } catch {
+                    held.insert(machine.id)
                     log.error("Couldn't keep a voice from \(machine.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 }
             case let .ended(id):
                 incoming.removeAll { $0.id == id }
             }
         }
-        try? library.setCursor(cursor, machine: machine.id)
+        if !held.contains(machine.id) { try? library.setCursor(cursor, machine: machine.id) }
         voices = library.voices
     }
 
@@ -300,12 +317,14 @@ final class VoiceSyncController: ObservableObject {
 
     /// Unpaired: its voices stay, where it got to goes.
     func forget(machine id: String) {
+        held.remove(id)
         try? library.forget(machine: id)
         incoming.removeAll { $0.from.id == id }
     }
 
     /// Purged: everything it sent goes too.
     func purge(machine id: String) {
+        held.remove(id)
         try? library.purge(machine: id)
         incoming.removeAll { $0.from.id == id }
         if arrival?.record.peer.id == id { dismissArrival() }

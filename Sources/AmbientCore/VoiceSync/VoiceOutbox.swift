@@ -46,6 +46,18 @@ public final class VoiceOutbox: @unchecked Sendable {
     public func tidy(now: Date = Date(), maxAge: TimeInterval = 86_400, maxBytes: Int = 40 << 20) {
         lock.lock(); defer { lock.unlock() }
         try? FileManager.default.removeItem(at: liveFile)
+        trim(now: now, maxAge: maxAge, maxBytes: maxBytes, endingOpen: true)
+    }
+
+    /// While Ambient runs: keeps the last `maxAge` of voices and at most `maxBytes`, as `tidy` does, but a voice that's
+    /// still open is being recorded, so it stays as it is.
+    public func expire(now: Date = Date(), maxAge: TimeInterval = 86_400, maxBytes: Int = 40 << 20) {
+        lock.lock(); defer { lock.unlock() }
+        trim(now: now, maxAge: maxAge, maxBytes: maxBytes, endingOpen: false)
+    }
+
+    /// Only with `lock` held.
+    private func trim(now: Date, maxAge: TimeInterval, maxBytes: Int, endingOpen: Bool) {
         guard let data = try? Data(contentsOf: file) else { return }
 
         struct Voice { var to: String; var start: Date?; var open = true; var bytes = 0 }
@@ -68,13 +80,16 @@ public final class VoiceOutbox: @unchecked Sendable {
             kept.append((v.voice, line))
         }
 
-        var dropped = Set(order.filter { (voices[$0]?.start ?? .distantPast) < now.addingTimeInterval(-maxAge) })
+        let recording = endingOpen ? [] : Set(order.filter { voices[$0]?.open == true })
+        var dropped = Set(order.filter {
+            !recording.contains($0) && (voices[$0]?.start ?? .distantPast) < now.addingTimeInterval(-maxAge)
+        })
         var total = order.filter { !dropped.contains($0) }.reduce(0) { $0 + (voices[$1]?.bytes ?? 0) }
-        for id in order where total > maxBytes && !dropped.contains(id) {
+        for id in order where total > maxBytes && !dropped.contains(id) && !recording.contains(id) {
             dropped.insert(id)
             total -= voices[id]?.bytes ?? 0
         }
-        let open = order.filter { voices[$0]?.open == true && !dropped.contains($0) }
+        let open = endingOpen ? order.filter { voices[$0]?.open == true && !dropped.contains($0) } : []
 
         var rewritten = Data()
         for entry in kept where !dropped.contains(entry.voice) {

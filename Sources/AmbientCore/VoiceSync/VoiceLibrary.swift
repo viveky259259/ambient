@@ -27,8 +27,9 @@ public struct VoiceRecord: Codable, Equatable, Identifiable, Sendable {
 }
 
 /// Every voice this Mac sent or received, kept until the user deletes it: `library.json` for what each one is and how far
-/// each machine's voices have been received, `audio/<id>.aac` for the sound. The cursor is saved in the same write as the
-/// voice that moves it, so a hub killed at any point loses no voice and keeps none twice. Not thread-safe: one owner.
+/// each machine's voices have been received, `audio/<id>.aac` for the sound. A cursor is saved with the voice that moves
+/// it, or after it, never before, so a hub killed at any point loses no voice; one it gets again is already known. Not
+/// thread-safe: one owner.
 public final class VoiceLibrary {
     private struct Envelope: Codable {
         var version = 1
@@ -42,6 +43,8 @@ public final class VoiceLibrary {
     public private(set) var voices: [VoiceRecord] = []
     /// The `vseq` each machine's voices have been received up to.
     public private(set) var cursors: [String: Int64] = [:]
+    /// `library.json` is there, but this version can't read it.
+    private var unreadable = false
 
     public init(paths: AmbientPaths) {
         url = paths.voiceLibrary
@@ -49,11 +52,15 @@ public final class VoiceLibrary {
         reload()
     }
 
-    /// Reads the file again. A missing or unreadable one is an empty library, and is never overwritten until a voice
-    /// arrives.
+    /// Reads the file again. A missing one is an empty library. So is one this version can't read, which may be a newer
+    /// version's or damaged: the first save moves it aside, to `library.unreadable-<time>.json`, rather than replace it.
     public func reload() {
-        guard let data = try? Data(contentsOf: url),
-              let envelope = try? JSONDecoder.voice.decode(Envelope.self, from: data), envelope.version == 1 else { return }
+        guard let data = try? Data(contentsOf: url) else { return }
+        guard let envelope = try? JSONDecoder.voice.decode(Envelope.self, from: data), envelope.version == 1 else {
+            unreadable = true
+            return
+        }
+        unreadable = false
         voices = envelope.voices.filter { VoiceLine.isID($0.id) }.sorted { $0.recordedAt > $1.recordedAt }
         cursors = envelope.cursors
     }
@@ -156,11 +163,28 @@ public final class VoiceLibrary {
 
     private func save() throws {
         try prepare()
+        if unreadable {
+            try setAside()
+            unreadable = false
+        }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(Envelope(voices: voices, cursors: cursors)).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+
+    /// Moves the unreadable file to a name of its own, next to it. One set aside before stays as it is.
+    private func setAside() throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let dir = url.deletingLastPathComponent(), stamp = Int(Date().timeIntervalSince1970)
+        var aside = dir.appendingPathComponent("library.unreadable-\(stamp).json")
+        var n = 1
+        while FileManager.default.fileExists(atPath: aside.path) {
+            aside = dir.appendingPathComponent("library.unreadable-\(stamp)-\(n).json")
+            n += 1
+        }
+        try FileManager.default.moveItem(at: url, to: aside)
     }
 }
 

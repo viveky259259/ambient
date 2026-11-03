@@ -228,6 +228,24 @@ private func scratch() -> AmbientPaths {
         })
         #expect(voices == [voiceID(2), voiceID(3)])
     }
+
+    @Test func expiringWhileRunningLeavesTheVoiceBeingRecorded() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .start(at: now.addingTimeInterval(-100_000)))
+        try box.append(to: hub, voice: voiceID(1), .end(text: "old"))
+        try box.append(to: hub, voice: voiceID(2), .start(at: now.addingTimeInterval(-60)))
+        try box.append(to: hub, voice: voiceID(2), .audio(n: 0, data: audio(frames: 40)))
+        box.setLive(true)
+        box.expire(now: now, maxBytes: 10)
+
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept.map(\.vseq) == [3, 4], "the old voice goes, the open one stays over the cap, and nothing is cancelled")
+        #expect(FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
+        #expect(try box.append(to: hub, voice: voiceID(2), .end(text: nil)) == 5)
+    }
 }
 
 @Suite struct VoiceInboxTests {
@@ -393,5 +411,27 @@ private func scratch() -> AmbientPaths {
         #expect(library.voices.isEmpty)
         #expect(VoiceLibrary(paths: paths).voices.isEmpty)
         #expect(!FileManager.default.fileExists(atPath: library.audioURL(for: record(3)).path))
+    }
+
+    @Test func anUnreadableLibraryIsSetAsideNotReplaced() throws {
+        let paths = scratch()
+        let dir = paths.voiceLibrary.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        func asides() throws -> [String] {
+            try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("library.unreadable-") }.sorted()
+        }
+
+        for (n, unreadable) in ["{\"version\":2,\"voices\":[],\"cursors\":{}}", "not json"].enumerated() {
+            try Data(unreadable.utf8).write(to: paths.voiceLibrary)
+            let library = VoiceLibrary(paths: paths)
+            #expect(library.voices.isEmpty)
+            #expect(try Data(contentsOf: paths.voiceLibrary) == Data(unreadable.utf8), "opening it changes nothing")
+
+            try library.add(record(n + 1), audio: audio(), cursor: ("daily", 4))
+            #expect(VoiceLibrary(paths: paths).voices.map(\.id) == [voiceID(n + 1)])
+            let kept = try asides()
+            #expect(kept.count == n + 1, "an earlier one stays")
+            #expect(try kept.contains { try Data(contentsOf: dir.appendingPathComponent($0)) == Data(unreadable.utf8) })
+        }
     }
 }
