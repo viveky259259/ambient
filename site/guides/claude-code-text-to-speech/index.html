@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code text to speech: have replies read aloud on Mac</title>
+  <meta name="description" content="Claude Code can't speak its replies. A Stop hook can pipe each one to say, or Ambient reads what you select: a Mac voice, Kokoro offline, OpenAI or ElevenLabs.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-text-to-speech/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-text-to-speech/">
+  <meta property="og:title" content="Claude Code text to speech: have replies read aloud on Mac">
+  <meta property="og:description" content="A Stop hook that pipes each reply to the Mac&#x27;s say command, a spoken permission prompt, and Ambient&#x27;s Read Aloud with offline or online voices.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-11-05">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/claude-code-text-to-speech/#article",
+      "headline": "Claude Code text to speech: have replies read aloud on Mac",
+      "description": "Claude Code can't speak its replies. A Stop hook can pipe each one to say, or Ambient reads what you select: a Mac voice, Kokoro offline, OpenAI or ElevenLabs.",
+      "url": "https://yaml.cafe/guides/claude-code-text-to-speech/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-text-to-speech/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-11-05T00:00:00+00:00",
+      "dateModified": "2026-11-05T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Claude Code text to speech",
+          "item": "https://yaml.cafe/guides/claude-code-text-to-speech/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does Claude Code have a voice mode?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For input, yes. Type /voice and hold the space bar to talk to Claude Code instead of typing; it has been rolling out since March 2026. Nothing in Claude Code speaks the reply back. For that you need a hook or an app like Ambient."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does the hook read out asterisks, backticks and file paths?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "say reads the text as written, and Claude writes markdown. Most punctuation is silent, but a path like src/App.swift and a code block get spelled out. Ambient's Read Aloud rewrites markdown, paths and code blocks into something worth hearing before it speaks; with a plain hook, the fix is to keep the spoken part short."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can the hook read only the end of the reply?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Replace head -c 600 with tail -c 300 to hear the last few sentences, where Claude usually sums up. Or ask Claude in CLAUDE.md to finish every reply with a one-sentence summary and read only that."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does any of this work offline?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "say does, with the voices installed on your Mac. In Ambient, a Mac voice and the Kokoro model both run entirely on your Mac; only the OpenAI and ElevenLabs voices need a connection and send the selected text to that service with your key."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-text-to-speech-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>Claude Code text to speech: have replies read aloud on Mac</h1>
+    <p class="meta">Updated <time datetime="2026-11-05">November 5, 2026</time> · 4 min read</p>
+
+    <p class="answer">Claude Code can't speak its replies. Its <code>/voice</code> mode is for talking <em>to</em> it, not hearing it. On a Mac you have two ways to add text to speech: a <code>Stop</code> hook that pipes the final message through the built-in <code>say</code> command after every turn, or Ambient's Read Aloud, where you select the part of a reply you want to hear and press <kbd>⌥⎋</kbd>, with a Mac voice, Kokoro running offline, or OpenAI and ElevenLabs with your own key.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-text-to-speech-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
+
+    <h2>What Claude Code does on its own</h2>
+    <p>Claude Code has had a voice mode since March 2026: type <code>/voice</code>, hold the space bar, speak, and release to send. That covers input only. When Claude finishes a turn, the most it does is show a desktop notification or ring the terminal bell, depending on your settings. There is no option to have the reply read aloud, so everything below adds it from outside.</p>
+
+    <h2>A Stop hook that reads every reply</h2>
+    <p><code>Stop</code> runs when Claude finishes responding, and its input includes <code>last_assistant_message</code>, the text of Claude's final message. The hooks reference recommends that field over the transcript file for exactly this kind of read-aloud hook. Add this to <code>~/.claude/settings.json</code>:</p>
+    <pre><code>{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "killall say 2&gt;/dev/null; jq -r '.last_assistant_message // empty' | head -c 600 | say", "async": true }] }
+    ]
+  }
+}</code></pre>
+    <p>What each part does: <code>killall say</code> cuts off a reply that's still being read when the next one arrives. <code>jq</code> pulls the message out of the JSON on stdin (it ships with macOS 15 and later; <code>brew install jq</code> on older systems). <code>head -c 600</code> keeps it to a few sentences, because a long reply is tedious to sit through. <code>say</code> speaks it with your system voice, and <code>"async": true</code> lets Claude carry on while it talks. If your file already has a <code>hooks</code> key, add <code>Stop</code> next to the events in it, then restart open sessions or type <code>/hooks</code> to check it's registered.</p>
+
+    <h3>Pick a voice and a pace</h3>
+    <p><code>say</code> uses the system voice from System Settings › Accessibility › Spoken Content. To choose one for the hook alone, add <code>-v</code>: <code>say -v Samantha</code>. List what's installed with <code>say -v '?'</code>, and download more under Spoken Content › System voice › Manage Voices. <code>-r 200</code> sets the pace in words per minute.</p>
+
+    <h2>A spoken prompt when Claude needs you</h2>
+    <p>If you want to hear only the moments that need you, use the <code>Notification</code> event instead. It carries a <code>message</code> like “Claude needs your permission”, and its <code>permission_prompt</code> and <code>idle_prompt</code> matchers fire when Claude is waiting on you:</p>
+    <pre><code>{
+  "hooks": {
+    "Notification": [
+      { "matcher": "permission_prompt|idle_prompt", "hooks": [{ "type": "command", "command": "jq -r .message | say", "async": true }] }
+    ]
+  }
+}</code></pre>
+    <p>The built-in permission notification waits a few seconds before it fires; the <a href="/guides/claude-code-permission-notification/">permission notifications guide</a> covers a <code>PermissionRequest</code> hook that doesn't, and the same <code>say</code> command works there.</p>
+
+    <h2>Ambient: read the part you choose, in a voice worth hearing</h2>
+    <p>A hook reads whatever Claude wrote, markdown and all. Ambient's Read Aloud goes the other way: you pick what to hear. Select part of a reply in the Claude desktop app, in Codex or in your terminal, and press <kbd>⌥⎋</kbd>, or choose <strong>Read Selection Aloud</strong> from the menu bar, or, in apps that support it, the app's menu › Services › Speak with Ambient. Ambient turns markdown, paths and code blocks into something that makes sense spoken, and the notch island shows it speaking, with pause, continue and stop. The keyboard's <kbd>⏯</kbd> key and AirPods or other headphones pause and continue it too.</p>
+    <p>Choose the voice in Settings › Voice: a Mac voice, Kokoro running offline on your Mac after a one-time download of about 330 MB, OpenAI or ElevenLabs with your own key, or your own OpenAI-compatible server. With a Mac voice or Kokoro the text never leaves your Mac. With an online voice, each selection is sent to the service you chose, using your key, which is kept in your login Keychain. The shortcut reads the selection through Accessibility, which you allow once, and Ambient uses that for nothing else.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-text-to-speech-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Does Claude Code have a voice mode?</h3>
+    <p>For input, yes. Type <code>/voice</code> and hold the space bar to talk to Claude Code instead of typing; it has been rolling out since March 2026. Nothing in Claude Code speaks the reply back. For that you need a hook or an app like Ambient.</p>
+    <h3>Why does the hook read out asterisks, backticks and file paths?</h3>
+    <p><code>say</code> reads the text as written, and Claude writes markdown. Most punctuation is silent, but a path like <code>src/App.swift</code> and a code block get spelled out. Ambient's Read Aloud rewrites markdown, paths and code blocks into something worth hearing before it speaks; with a plain hook, the fix is to keep the spoken part short.</p>
+    <h3>Can the hook read only the end of the reply?</h3>
+    <p>Yes. Replace <code>head -c 600</code> with <code>tail -c 300</code> to hear the last few sentences, where Claude usually sums up. Or ask Claude in <code>CLAUDE.md</code> to finish every reply with a one-sentence summary and read only that.</p>
+    <h3>Does any of this work offline?</h3>
+    <p><code>say</code> does, with the voices installed on your Mac. In Ambient, a Mac voice and the Kokoro model both run entirely on your Mac; only the OpenAI and ElevenLabs voices need a connection and send the selected text to that service with your key.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/hooks">Hooks reference</a>, Claude Code docs (Stop input, <code>last_assistant_message</code>, Notification matchers)</li>
+      <li><a href="https://techcrunch.com/2026/03/03/claude-code-rolls-out-a-voice-mode-capability/">Claude Code rolls out a voice mode capability</a>, TechCrunch, March 2026</li>
+      <li><a href="https://support.apple.com/guide/mac-help/have-your-mac-speak-text-thats-on-the-screen-mh27448/mac">Have your Mac speak text that's on the screen</a>, macOS User Guide</li>
+      <li><a href="https://github.com/viveky259259/ambient#readme">Ambient README</a>, Read aloud and Privacy</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-sound-when-done/">Claude Code sound when done</a> · <a href="/guides/claude-code-permission-notification/">Claude Code permission notifications</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>
