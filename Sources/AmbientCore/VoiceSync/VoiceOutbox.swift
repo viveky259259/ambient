@@ -3,10 +3,21 @@ import Foundation
 /// The sending Mac's outbox: the voice lines `follow` streams, each to the hub it's addressed to. The app is its only
 /// writer. Each line is appended before `outbox.seq` names it, and `follow` reads only as far as `outbox.seq`, so it never
 /// sees half a line. Safe from any thread.
+///
+/// `outbox.seq` is two lines: the newest `vseq`, which is all a shim from before 1.0.6 reads, then the epoch, the file's
+/// length after that line and the generation, as `<epoch> <bytes> <generation>`.
 public final class VoiceOutbox: @unchecked Sendable {
     public let dir: URL
     private let lock = NSLock()
     private var last: Int64
+    /// Names this outbox for the hubs that follow it. A new one is made whenever `outbox.seq` names none: a new outbox, a
+    /// lost seq file, or one from before epochs. So a hub whose cursor was for another outbox starts over, however far
+    /// this one has grown.
+    public private(set) var epoch: String
+    /// The file's length after line `last`, which is where `follow` reads on from.
+    private var bytes: Int64 = 0
+    /// How many times `trim` has rewritten the file, moving every line. A `follow` that sees it change reads it all again.
+    private var generation: Int64 = 0
     /// `last` when this outbox was opened: a voice that starts after it is this process's own.
     private var opened: Int64
     /// This process put the live marker there.
@@ -21,8 +32,16 @@ public final class VoiceOutbox: @unchecked Sendable {
         self.dir = dir
         last = 0
         opened = 0
-        last = readSeq()
+        epoch = ""
+        let saved = readSeq()
+        last = saved.last
         opened = last
+        if let place = saved.place {
+            epoch = place.epoch
+            generation = place.generation
+        } else {
+            epoch = Self.newEpoch()
+        }
     }
 
     /// Appends one line and returns its `vseq`.
@@ -109,8 +128,11 @@ public final class VoiceOutbox: @unchecked Sendable {
             rewritten.append(UInt8(ascii: "\n"))
         }
         // Replaced in one step, so `follow` reads the old file or the new one. The folder is the user's alone.
+        bytes = Int64(data.count)
         if rewritten.count != data.count, (try? rewritten.write(to: file, options: .atomic)) != nil {
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+            bytes = Int64(rewritten.count)
+            generation += 1
         }
         for id in open {
             guard let to = voices[id]?.to else { continue }
@@ -132,23 +154,41 @@ public final class VoiceOutbox: @unchecked Sendable {
         defer { close(fd) }
         let written = line.withUnsafeBytes { Darwin.write(fd, $0.baseAddress, $0.count) }
         guard written == line.count else { throw CocoaError(.fileWriteOutOfSpace) }
+        // Appending leaves the offset at the end of the file, whatever was there before.
+        bytes = Int64(lseek(fd, 0, SEEK_CUR))
     }
 
     private func saveSeq() throws {
-        try Data("\(last)\n".utf8).write(to: seqFile, options: .atomic)
+        try Data("\(last)\n\(epoch) \(bytes) \(generation)\n".utf8).write(to: seqFile, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: seqFile.path)
     }
 
-    /// The saved `vseq`, or the outbox's last line's when the seq file is lost.
-    private func readSeq() -> Int64 {
-        if let text = try? String(contentsOf: seqFile, encoding: .utf8),
-           let n = Int64(text.trimmingCharacters(in: .whitespacesAndNewlines)), n >= 0 {
-            return n
+    /// The saved `vseq`, or the outbox's last line's when the seq file is lost, and the epoch and generation when the
+    /// file has them. One from before epochs has only the `vseq`.
+    private func readSeq() -> (last: Int64, place: (epoch: String, generation: Int64)?) {
+        if let text = try? String(contentsOf: seqFile, encoding: .utf8) {
+            let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+            if let n = Int64(lines[0].trimmingCharacters(in: .whitespaces)), n >= 0 {
+                let words = lines.count > 1 ? lines[1].split(separator: " ") : []
+                guard words.count == 3, Self.isEpoch(String(words[0])), Int64(words[1]) != nil,
+                      let generation = Int64(words[2]) else { return (n, nil) }
+                return (n, (String(words[0]), generation))
+            }
         }
-        guard let data = try? Data(contentsOf: file) else { return 0 }
-        return data.split(separator: UInt8(ascii: "\n")).compactMap { raw -> Int64? in
+        guard let data = try? Data(contentsOf: file) else { return (0, nil) }
+        let last = data.split(separator: UInt8(ascii: "\n")).compactMap { raw -> Int64? in
             guard case let .voice(v)? = try? RemoteLineDecoder.decode(Data(raw)) else { return nil }
             return v.vseq
         }.max() ?? 0
+        return (last, nil)
+    }
+
+    /// 16 lowercase hex digits, as the spool's epoch is.
+    static func isEpoch(_ s: String) -> Bool {
+        s.range(of: #"\A[0-9a-f]{16}\z"#, options: .regularExpression) != nil
+    }
+
+    static func newEpoch() -> String {
+        (0..<8).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
     }
 }

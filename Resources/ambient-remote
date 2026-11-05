@@ -12,7 +12,7 @@
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
 #       docs/superpowers/specs/2026-11-03-voice-sync-design.md (voices)
 
-AR_VERSION=1.0.5
+AR_VERSION=1.0.6
 AR_PROTO=1
 AR_CAPS=exit,title,heartbeat,voice
 
@@ -399,6 +399,8 @@ END {
 '
 
 # Prints the outbox lines in (from, to] addressed to `hub`. The app writes every line with this prefix, in this order.
+# Given `expect`, the input starts where line `expect` should. If it doesn't start with that line, this prints nothing
+# and exits 3: the file was rewritten, and has to be read whole.
 AWK_VOICE='
 match($0, /^\{"v":[0-9]+,"type":"voice","vseq":[0-9]+,"to":"[0-9a-f]+",/) {
     head = substr($0, 1, RLENGTH)
@@ -406,11 +408,15 @@ match($0, /^\{"v":[0-9]+,"type":"voice","vseq":[0-9]+,"to":"[0-9a-f]+",/) {
     sub(/^\{"v":[0-9]+,"type":"voice","vseq":/, "", vseq)
     sub(/,.*/, "", vseq)
     vseq += 0
+    if (NR == 1 && expect != "" && vseq != expect + 0) exit 3
     if (vseq <= from || vseq > to) next
     sub(/^.*"to":"/, "", head)
     sub(/",$/, "", head)
     if (head == hub && length($0) <= 65536) print
+    next
 }
+NR == 1 && expect != "" { exit 3 }
+END { if (NR == 0 && expect != "") exit 3 }
 '
 
 # --- emit ------------------------------------------------------------------------------------------
@@ -583,11 +589,24 @@ check_titles() {
     done
 }
 
-# The newest voice in the outbox, from the file the app replaces after each line. 0 when there's none.
+# The newest voice in the outbox, from the file the app replaces after each line. 0 when there's none. The file's second
+# line, which an app from before 1.0.6 doesn't write, is "<epoch> <bytes> <generation>": which outbox this is, how long
+# the file is after that voice's line, and how many times the app has rewritten it.
 read_vseq() {
     AR_VN=
-    read -r AR_VN 2>/dev/null < "$AR_OUTBOX_SEQ"
+    AR_VEPOCH=
+    AR_VBYTES=
+    AR_VGEN=
+    # Most machines a hub follows never run Ambient, so they have no outbox, and it's asked for every second.
+    [ ! -f "$AR_OUTBOX_SEQ" ] || {
+        read -r AR_VN
+        read -r AR_VEPOCH AR_VBYTES AR_VGEN
+    } 2>/dev/null < "$AR_OUTBOX_SEQ"
     case $AR_VN in ''|*[!0-9]*) AR_VN=0 ;; esac
+    case $AR_VEPOCH in *[!0-9a-f]*) AR_VEPOCH= ;; esac
+    [ "${#AR_VEPOCH}" -eq 16 ] || AR_VEPOCH=
+    case $AR_VBYTES in ''|*[!0-9]*) AR_VBYTES= ;; esac
+    case $AR_VGEN in ''|*[!0-9]*) AR_VBYTES= ;; esac
 }
 
 # Tells this machine's Ambient which hub is following it, for the list it records voices for.
@@ -596,11 +615,23 @@ hub_seen() {
     printf '%s\n' "$follow_hub_label" > "$AR_HUBS/$follow_hub" 2>/dev/null
 }
 
-# Sends what the app has added to the outbox for this hub since the last call.
+# Sends what the app has added to the outbox for this hub since the last call. Lines are only ever appended between two
+# rewrites, so while the generation holds, the next line starts where the file ended after the last one sent, and only
+# what's past that is read.
 voice_forward() {
     read_vseq
+    # Another outbox, whatever its numbers say. Hang up: the next handshake tells the hub.
+    [ "$AR_VEPOCH" = "$follow_vepoch" ] || exit 0
     if [ "$AR_VN" -gt "$follow_vlast" ]; then
-        if [ -f "$AR_OUTBOX" ]; then
+        voice_whole=1
+        if [ -n "$follow_voff" ] && [ "$AR_VGEN" = "$follow_vgen" ]; then
+            # A rewrite can still land between reading outbox.seq and opening the file. Then the line there isn't the
+            # next one, and awk says so.
+            tail -c +$((follow_voff + 1)) "$AR_OUTBOX" 2>/dev/null |
+                awk -v from="$follow_vlast" -v to="$AR_VN" -v hub="$follow_hub" -v expect=$((follow_vlast + 1)) "$AWK_VOICE" 2>/dev/null
+            case $? in 0) voice_whole= ;; 3) ;; *) exit 0 ;; esac
+        fi
+        if [ -n "$voice_whole" ] && [ -f "$AR_OUTBOX" ]; then
             awk -v from="$follow_vlast" -v to="$AR_VN" -v hub="$follow_hub" "$AWK_VOICE" "$AR_OUTBOX" 2>/dev/null || exit 0
         fi
         follow_vlast=$AR_VN
@@ -608,6 +639,9 @@ voice_forward() {
         # The outbox was replaced. Hang up: the next handshake tells the hub where it starts now.
         exit 0
     fi
+    # Where the file ends after line follow_vlast, in this generation. Empty from an app before 1.0.6: it's read whole.
+    follow_voff=$AR_VBYTES
+    follow_vgen=$AR_VGEN
 }
 
 cmd_follow() {
@@ -616,6 +650,7 @@ cmd_follow() {
     follow_hub=
     follow_hub_label=
     follow_vsince=0
+    follow_vask=
     while [ $# -gt 0 ]; do
         case $1 in
             --since) follow_since=$2; shift 2 ;;
@@ -623,6 +658,7 @@ cmd_follow() {
             --hub) follow_hub=$2; shift 2 ;;
             --hub-label) follow_hub_label=$2; shift 2 ;;
             --voice-since) follow_vsince=$2; shift 2 ;;
+            --voice-epoch) follow_vask=1; shift ;;
             *) shift ;;
         esac
     done
@@ -646,15 +682,21 @@ cmd_follow() {
         spool_unlock
     fi
     follow_voice=
+    follow_vepoch=
     if [ -n "$follow_hub" ]; then
         hub_seen
         read_vseq
         follow_voice=",\"voice\":$AR_VN"
+        follow_vepoch=$AR_VEPOCH
+        # Only for a hub that asks: one from before 1.0.6 refuses a hello with a field it doesn't know.
+        [ -z "$follow_vask" ] || [ -z "$AR_VEPOCH" ] || follow_voice="$follow_voice,\"voiceEpoch\":\"$AR_VEPOCH\""
     fi
     printf '{%s%s}\n' "$(hello_fields hello)" "$follow_voice" || exit 0
 
     follow_last=$follow_since
     follow_vlast=$follow_vsince
+    follow_voff=
+    follow_vgen=
     follow_tick=0
     while :; do
         read_seq
@@ -960,7 +1002,7 @@ case ${1:-} in
     identity) cmd_identity ;;
     version|--version) echo "ambient-remote $AR_VERSION (protocol $AR_PROTO)" ;;
     *)
-        echo "usage: ambient-remote emit <claude|codex> | follow --since SEQ [--hub ID --hub-label NAME --voice-since N] | status | identity | version"
+        echo "usage: ambient-remote emit <claude|codex> | follow --since SEQ [--hub ID --hub-label NAME --voice-since N --voice-epoch] | status | identity | version"
         echo "       ambient-remote install [--agents claude,codex] [--redaction metadata|standard|full]"
         echo "       ambient-remote uninstall"
         exit 64

@@ -8,8 +8,10 @@
   only. While you speak, the other Mac's notch shows a waveform; when you stop, it offers Copy Text, Copy Audio and Play
   for a minute (30 seconds to 5 minutes in Settings). A Mac that's away gets the voice when it's back, for up to a day.
   Both Macs keep every voice until you delete it. To receive from a Mac, pair it with `ambient remote add`; it needs
-  Remote Login on. `ambient-remote` 1.0.5 streams voices for a hub that asks with `--hub`, and older hubs see nothing
-  new. The menu bar's *Record Voice for…* does the same as the shortcut.
+  Remote Login on. `ambient-remote` 1.0.6 streams voices for a hub that asks with `--hub`, and older hubs see nothing
+  new. It reads only what the outbox has gained since the last line it sent, and each outbox has a random epoch, so a
+  Mac that comes back to an outbox made anew starts it over instead of skipping its first voices. The menu bar's
+  *Record Voice for…* does the same as the shortcut.
 - **Task board model**: an MLX model you point the board at stays loaded for two minutes between summaries, instead
   of being read from disk for every one (Qwen3.5-9B: 21 seconds for the first summary, half a second for the next).
   Changing the model cancels summaries still waiting for the old one, and quitting Ambient stops the model. GGUF chat

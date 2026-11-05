@@ -340,12 +340,12 @@ final class VoiceSyncController: ObservableObject {
     // MARK: - Receiving
 
     /// The cursor and the voices already kept, for a new link to `machine`.
-    func cursor(for machine: String) -> Int64 { library.cursors[machine] ?? 0 }
+    func cursor(for machine: String) -> VoiceCursor { library.cursor(for: machine) }
     func received(from machine: String) -> Set<String> { library.received(from: machine) }
 
     /// What a link heard. The cursor is saved after the voices it covers, so a crash in between only repeats a voice the
     /// library already has, which the next link skips. A voice that couldn't be kept holds the cursor before it.
-    func receive(_ events: [VoiceInboxEvent], cursor: Int64, from machine: MachineRef) {
+    func receive(_ events: [VoiceInboxEvent], cursor: VoiceCursor, from machine: MachineRef) {
         for event in events {
             switch event {
             case let .incoming(id, since):

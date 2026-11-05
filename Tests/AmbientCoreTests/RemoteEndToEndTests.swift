@@ -910,10 +910,10 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
 private final class VoiceSink: @unchecked Sendable {
     private let lock = NSLock()
     private var events: [VoiceInboxEvent] = []
-    private var saved: Int64 = 0
+    private var saved = VoiceCursor()
     private var handed = 0
 
-    func add(_ batch: [VoiceInboxEvent], cursor: Int64) {
+    func add(_ batch: [VoiceInboxEvent], cursor: VoiceCursor) {
         lock.lock(); defer { lock.unlock() }
         events += batch
         saved = cursor
@@ -931,10 +931,12 @@ private final class VoiceSink: @unchecked Sendable {
         return events
     }
 
-    var cursor: Int64 {
+    var savedCursor: VoiceCursor {
         lock.lock(); defer { lock.unlock() }
         return saved
     }
+
+    var cursor: Int64 { savedCursor.vseq }
 
     var arrivals: [VoiceArrival] { all.compactMap { if case let .arrived(a) = $0 { a } else { nil } } }
 
@@ -962,9 +964,10 @@ extension RemoteEndToEndTests {
             VoiceOutbox(dir: stub.home.appendingPathComponent(".ambient/voice-sync"))
         }
 
-        private func link(_ machine: Machine, _ sink: VoiceSink, cursor: Int64 = 0, known: Set<String> = [],
-                          hub: String? = nil) -> RemoteLink {
-            let receiver = VoiceReceiver(hub: VoiceHub(id: hub ?? hubID, label: "Mac Studio"), cursor: cursor, known: known) {
+        private func link(_ machine: Machine, _ sink: VoiceSink, cursor: Int64 = 0, epoch: String? = nil,
+                          known: Set<String> = [], hub: String? = nil) -> RemoteLink {
+            let receiver = VoiceReceiver(hub: VoiceHub(id: hub ?? hubID, label: "Mac Studio"),
+                                         cursor: VoiceCursor(vseq: cursor, epoch: epoch), known: known) {
                 sink.add($0, cursor: $1)
             }
             return RemoteLink(machine: machine, cursor: RemoteCursor(), voice: receiver,
@@ -1113,6 +1116,93 @@ extension RemoteEndToEndTests {
             #expect(waitUntil(5) { sink.deliveries > 0 })
             #expect(sink.cursor == 0)
             #expect(sink.all.isEmpty)
+        }
+
+        @Test func aRecreatedOutboxThatGrewPastTheCursorStartsOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let earlier = VoiceHub.randomID()
+            let old = outbox(stub)
+            try old.append(to: hubID, voice: earlier, .start(at: Date()))
+            try old.append(to: hubID, voice: earlier, .audio(n: 0, data: chunk()))
+            try old.append(to: hubID, voice: earlier, .end(text: nil))
+            let first = VoiceSink()
+            do {
+                let link = link(machine, first)
+                link.start()
+                #expect(waitUntil(5) { first.arrivals.count == 1 })
+                link.stop()
+            }
+            #expect(first.savedCursor == VoiceCursor(vseq: 3, epoch: old.epoch))
+
+            // While the hub is away, the outbox is made again, and grows past where the hub got to.
+            try FileManager.default.removeItem(at: old.dir)
+            let new = outbox(stub)
+            let ids = [VoiceHub.randomID(), VoiceHub.randomID()]
+            for id in ids {
+                try new.append(to: hubID, voice: id, .start(at: Date()))
+                try new.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try new.append(to: hubID, voice: id, .end(text: nil))
+            }
+            #expect(new.epoch != old.epoch)
+            let second = VoiceSink()
+            let link = link(machine, second, cursor: first.cursor, epoch: first.savedCursor.epoch, known: [earlier])
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { second.arrivals.count == 2 })
+            #expect(second.arrivals.map(\.id) == ids, "the first one too, though its lines are behind the old cursor")
+            #expect(second.savedCursor == VoiceCursor(vseq: 6, epoch: new.epoch))
+        }
+
+        @Test func aCursorFromBeforeEpochsTakesTheOutboxsWithoutStartingOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let kept = VoiceHub.randomID(), fresh = VoiceHub.randomID()
+            for id in [kept, fresh] {
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hubID, voice: id, .end(text: nil))
+            }
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 3)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.savedCursor == VoiceCursor(vseq: 6, epoch: box.epoch))
+            Thread.sleep(forTimeInterval: 1.2)
+            #expect(sink.arrivals.map(\.id) == [fresh])
+            #expect(!sink.heard(kept))
+        }
+
+        @Test func anOutboxFromBeforeEpochsStillStreams() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let dir = stub.home.appendingPathComponent(".ambient/voice-sync")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent("outbox.jsonl")
+            // As an app from before epochs writes it: the newest vseq alone in outbox.seq.
+            func append(_ line: VoiceLine) throws {
+                if !FileManager.default.fileExists(atPath: file.path) { FileManager.default.createFile(atPath: file.path, contents: nil) }
+                let handle = try FileHandle(forWritingTo: file)
+                try handle.seekToEnd()
+                try handle.write(contentsOf: line.encoded() + Data("\n".utf8))
+                try handle.close()
+                try Data("\(line.vseq)\n".utf8).write(to: dir.appendingPathComponent("outbox.seq"), options: .atomic)
+            }
+            let id = VoiceHub.randomID()
+            try append(VoiceLine(vseq: 1, to: hubID, voice: id, part: .start(at: Date())))
+            try append(VoiceLine(vseq: 2, to: hubID, voice: id, part: .audio(n: 0, data: chunk())))
+            let sink = VoiceSink()
+            let saved = "0123456789abcdef"
+            let link = link(machine, sink, epoch: saved)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.progressed(id) })
+            try append(VoiceLine(vseq: 3, to: hubID, voice: id, part: .end(text: "still here")))
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.arrivals.first?.text == "still here")
+            #expect(sink.savedCursor == VoiceCursor(vseq: 3, epoch: saved), "a hello with no epoch leaves the saved one")
         }
 
         @Test func aHubFromBeforeVoiceSyncSeesWhatItAlwaysDid() throws {

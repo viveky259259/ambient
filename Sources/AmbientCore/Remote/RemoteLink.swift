@@ -51,11 +51,12 @@ public struct RemoteBackoff: Sendable {
 /// only the cursor moved.
 public struct VoiceReceiver: Sendable {
     public let hub: VoiceHub
-    public let cursor: Int64
+    public let cursor: VoiceCursor
     public let known: Set<String>
-    public let deliver: @Sendable ([VoiceInboxEvent], Int64) -> Void
+    public let deliver: @Sendable ([VoiceInboxEvent], VoiceCursor) -> Void
 
-    public init(hub: VoiceHub, cursor: Int64, known: Set<String>, deliver: @escaping @Sendable ([VoiceInboxEvent], Int64) -> Void) {
+    public init(hub: VoiceHub, cursor: VoiceCursor, known: Set<String>,
+                deliver: @escaping @Sendable ([VoiceInboxEvent], VoiceCursor) -> Void) {
         self.hub = hub
         self.cursor = cursor
         self.known = known
@@ -268,13 +269,14 @@ public final class RemoteLink: @unchecked Sendable {
                 let now = Date()
                 switch ingest.receive(line, now: now) {
                 case let .linked(hello):
-                    // The machine's outbox isn't the one this hub's voice cursor was for: start its voices over. The
-                    // cursor is saved now, with no voice to go with it, or a launch before one comes would skip what the
-                    // new outbox has grown past the old cursor by then.
-                    if let voice, let inbox, let head = hello.voice, inbox.cursor > head {
-                        inbox.resetCursor()
-                        voice.deliver([], inbox.cursor)
-                        return finish(.restart)
+                    // When the machine's outbox isn't the one this hub's voice cursor was for, its voices start over. The
+                    // cursor is saved now, with no voice to go with it, or a launch before one comes would follow the
+                    // new outbox from the old cursor. So is a first epoch: it's what tells the next outbox from this one.
+                    if let voice, let inbox, let head = hello.voice {
+                        let before = inbox.saved
+                        let replaced = inbox.linked(head: head, epoch: hello.voiceEpoch)
+                        if inbox.saved != before { voice.deliver([], inbox.saved) }
+                        if replaced { return finish(.restart) }
                     }
                     linkedAt = now
                     audit?.append(.init(ts: now, action: .linkUp, machine: machine.id, detail: hello.shim))
@@ -307,7 +309,7 @@ public final class RemoteLink: @unchecked Sendable {
     /// Voices don't wait to be applied: the inbox has already bounded them, and the cursor goes with them.
     private func handOver(_ events: [VoiceInboxEvent]) {
         guard let voice, let inbox, !events.isEmpty else { return }
-        voice.deliver(events, inbox.cursor)
+        voice.deliver(events, inbox.saved)
     }
 
     /// Delivers a batch and waits until it's applied. `stop()` signals the same semaphore, so nothing hangs on the other

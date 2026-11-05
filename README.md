@@ -452,8 +452,11 @@ to send back, pair the desktop from the laptop too.
 encodes AAC as it records. Where it can't transcribe your language on the device, or you don't allow speech recognition,
 the voice goes as audio only. It writes half-second chunks and any transcript so far to
 `~/.ambient/voice-sync/outbox.jsonl`. The receiving Mac's `follow` streams the lines addressed to it, checking five
-times a second while you record, so the voice is already complete when you stop. A Mac that's asleep gets it when it's
-back, for up to a day. There's no server, relay or account, and no port opens on either Mac.
+times a second while you record and reading only what's new since the last line it sent, so the voice is already
+complete when you stop. A Mac that's asleep gets it when it's back, for up to a day. Each outbox has a random epoch, so
+if that folder is made anew while the other Mac is away (say you deleted it), the other Mac starts its voices over
+instead of skipping the first ones, and keeps none twice. There's no server, relay or account, and no port opens on
+either Mac.
 
 **Where it's kept.** Both Macs keep every voice, sent and received, in `~/.ambient/voice-sync` (`library.json` and
 `audio/`, `0600`) until you delete it in Settings › Voice Sync. `ambient remote purge` also deletes the voices a
