@@ -95,7 +95,7 @@ private struct RecordingCard: View {
                 .accessibilityLabel("Cancel the voice")
                 CardButton(title: "Send", prominent: true, action: onSend)
             }
-            .disabled(outgoing.sending)
+            .disabled(outgoing.stage != .recording)
             Text(outgoing.text.isEmpty ? "Listening…" : outgoing.text)
                 .font(.system(size: 11.5))
                 .foregroundStyle(.white.opacity(outgoing.text.isEmpty ? 0.45 : 0.75))

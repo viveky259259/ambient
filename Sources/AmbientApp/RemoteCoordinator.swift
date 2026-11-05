@@ -117,7 +117,12 @@ final class RemoteCoordinator {
         let voice = MainThreadBox(self.voice)
         let receiver = VoiceReceiver(hub: self.voice.hub, cursor: self.voice.cursor(for: machine.id),
                                      known: self.voice.received(from: machine.id)) { events, cursor in
-            DispatchQueue.main.async { voice.value.receive(events, cursor: cursor, from: ref) }
+            DispatchQueue.main.async {
+                // A link that's stopping can still hand over a voice. Once its machine is unpaired that's dropped, as
+                // its sessions are, or a purged voice would come back with its cursor.
+                guard coordinator.value.machines.contains(where: { $0.id == ref.id }) else { return }
+                voice.value.receive(events, cursor: cursor, from: ref)
+            }
         }
         let link = RemoteLink(
             machine: machine, cursor: self.model.remoteCursor(machine.id), audit: paths.remoteAudit, voice: receiver,

@@ -11,12 +11,23 @@ import os
 /// and the library keeps. Main thread only.
 final class VoiceSyncController: ObservableObject {
     struct Outgoing: Equatable {
+        enum Stage: Equatable {
+            case recording
+            /// Stopped, and waiting a moment for the last words.
+            case sending
+            /// Being thrown away.
+            case cancelling
+        }
+
         let id: String
         let destination: VoiceDestination
         let startedAt: Date
         var text = ""
-        /// Stopped, and waiting a moment for the last words.
-        var sending = false
+        var stage = Stage.recording
+        /// Why a chunk didn't make it into the outbox, after which the other Mac can't have the voice whole.
+        var lost: String?
+
+        var sending: Bool { stage == .sending }
     }
 
     struct Incoming: Equatable, Identifiable {
@@ -80,7 +91,10 @@ final class VoiceSyncController: ObservableObject {
     }
 
     func start() {
-        outbox.tidy()
+        // Tidying reads the whole outbox, up to 40 MB, so the launch doesn't wait for it. A voice started meanwhile is
+        // left as it is.
+        let outbox = self.outbox
+        DispatchQueue.global(qos: .utility).async { outbox.tidy() }
         library.removeParts()
         voices = library.voices
         refreshDestinations()
@@ -95,11 +109,23 @@ final class VoiceSyncController: ObservableObject {
         expireTimer?.tolerance = 300
     }
 
-    /// Quitting mid-recording: the receiving Mac stops waiting for it.
+    /// Quitting mid-recording: the receiving Mac stops waiting for it. A voice already sent, still waiting for its last
+    /// words, goes now with the words so far, and both Macs keep it.
     func quit() {
         guard let outgoing else { return }
-        _ = try? outbox.append(to: outgoing.destination.id, voice: outgoing.id, .cancel)
+        guard outgoing.sending, outgoing.lost == nil else {
+            _ = try? outbox.append(to: outgoing.destination.id, voice: outgoing.id, .cancel)
+            outbox.setLive(false)
+            return
+        }
+        let text = outgoing.text.isEmpty ? nil : VoiceLine.cap(outgoing.text)
+        _ = try? outbox.append(to: outgoing.destination.id, voice: outgoing.id, .end(text: text))
         outbox.setLive(false)
+        try? part?.close()
+        part = nil
+        self.outgoing = nil
+        let audio = (try? Data(contentsOf: library.partURL(for: outgoing.id))) ?? Data()
+        if let seconds = ADTS.frames(in: audio)?.seconds, seconds > 0 { keep(outgoing, seconds: seconds, text: text) }
     }
 
     // MARK: - Sending
@@ -164,11 +190,12 @@ final class VoiceSyncController: ObservableObject {
 
         let recorder = VoiceRecorder()
         let outbox = self.outbox, part = self.part, log = self.log
-        recorder.onChunk = { n, data in
+        recorder.onChunk = { [weak self] n, data in
             do {
                 try outbox.append(to: destination.id, voice: id, .audio(n: n, data: data))
             } catch {
                 log.error("Couldn't add to the outbox: \(error.localizedDescription, privacy: .public)")
+                DispatchQueue.main.async { self?.lose(id, error) }
             }
             try? part?.write(contentsOf: data)
         }
@@ -203,47 +230,64 @@ final class VoiceSyncController: ObservableObject {
 
     /// `send()`, with `note` saying why when it wasn't the user.
     private func end(note: String?) {
-        guard var current = outgoing, !current.sending, let recorder else { return }
-        current.sending = true
+        guard var current = outgoing, current.stage == .recording, let recorder else { return }
+        current.stage = .sending
         outgoing = current
         stopTimers()
+        let id = current.id
         recorder.finish { [weak self] text, seconds in
-            guard let self else { return }
+            // Quitting may have sent it already. What it is now says whether a chunk was lost meanwhile.
+            guard let self, let current = self.outgoing, current.id == id else { return }
             let destination = current.destination
             let final = text.map(VoiceLine.cap)
-            _ = try? self.outbox.append(to: destination.id, voice: current.id, .end(text: final))
+            // A chunk is missing, so the other Mac would refuse it: it's called off there instead.
+            _ = try? self.outbox.append(to: destination.id, voice: current.id, current.lost == nil ? .end(text: final) : .cancel)
             self.outbox.setLive(false)
             try? self.part?.close()
             self.part = nil
             self.recorder = nil
             self.outgoing = nil
             self.level = 0
+            if let lost = current.lost {
+                try? FileManager.default.removeItem(at: self.library.partURL(for: current.id))
+                self.show("The voice couldn't be sent. \(lost)")
+                return
+            }
             guard seconds > 0 else {
                 try? FileManager.default.removeItem(at: self.library.partURL(for: current.id))
                 self.show("Nothing was recorded. Check the microphone in System Settings › Sound.")
                 return
             }
-            let record = VoiceRecord(id: current.id, direction: .sent, peer: MachineRef(id: destination.id, label: destination.label),
-                                     recordedAt: current.startedAt, seconds: seconds, text: final)
-            do {
-                try self.library.addRecorded(record)
-            } catch {
-                self.log.error("Couldn't keep the sent voice: \(error.localizedDescription, privacy: .public)")
-            }
-            self.voices = self.library.voices
-            self.refreshDestinations()
+            self.keep(current, seconds: seconds, text: final)
             let online = self.destinations.first { $0.id == destination.id }?.isOnline() ?? false
             let sent = online ? "Sent to \(destination.label)" : "\(destination.label) gets it when it's back"
             self.show(note.map { "\($0) \(sent)." } ?? sent, for: note == nil ? 3 : 6)
         }
     }
 
+    /// Adds a voice sent from here to the library, from its part.
+    private func keep(_ sent: Outgoing, seconds: Double, text: String?) {
+        let destination = sent.destination
+        let record = VoiceRecord(id: sent.id, direction: .sent, peer: MachineRef(id: destination.id, label: destination.label),
+                                 recordedAt: sent.startedAt, seconds: seconds, text: text)
+        do {
+            try library.addRecorded(record)
+        } catch {
+            log.error("Couldn't keep the sent voice: \(error.localizedDescription, privacy: .public)")
+        }
+        voices = library.voices
+        refreshDestinations()
+    }
+
     /// Throws the voice away. Once it's sending, it's too late: the end is on its way.
     func cancel() {
-        guard let current = outgoing, !current.sending, let recorder else { return }
+        guard var current = outgoing, current.stage == .recording, let recorder else { return }
+        current.stage = .cancelling
+        outgoing = current
         stopTimers()
+        let id = current.id
         recorder.cancel { [weak self] in
-            guard let self else { return }
+            guard let self, let current = self.outgoing, current.id == id else { return }
             _ = try? self.outbox.append(to: current.destination.id, voice: current.id, .cancel)
             self.outbox.setLive(false)
             try? self.part?.close()
@@ -252,7 +296,17 @@ final class VoiceSyncController: ObservableObject {
             self.recorder = nil
             self.outgoing = nil
             self.level = 0
+            if let lost = current.lost { self.show("The voice couldn't be sent. \(lost)") }
         }
+    }
+
+    /// A chunk didn't make it into the outbox, so the other Mac can't have the voice whole: it stops here and is called
+    /// off there. One already sending is called off when its last words are in.
+    private func lose(_ id: String, _ error: Error) {
+        guard var current = outgoing, current.id == id, current.lost == nil else { return }
+        current.lost = error.localizedDescription
+        outgoing = current
+        if current.stage == .recording { cancel() }
     }
 
     private func stopTimers() {

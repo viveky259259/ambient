@@ -201,7 +201,9 @@ private func scratch() -> AmbientPaths {
         try box.append(to: otherHub, voice: voiceID(3), .start(at: now))
         try box.append(to: otherHub, voice: voiceID(3), .end(text: nil))
         box.setLive(true)
-        box.tidy(now: now)
+        // The next launch.
+        let launched = VoiceOutbox(dir: box.dir)
+        launched.tidy(now: now)
 
         let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
             guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
@@ -210,7 +212,28 @@ private func scratch() -> AmbientPaths {
         #expect(kept.map(\.vseq) == [3, 4, 5, 6, 7], "numbers never change, and the cancel comes last")
         #expect(kept.last == VoiceLine(vseq: 7, to: hub, voice: voiceID(2), part: .cancel))
         #expect(!FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
-        #expect(try box.append(to: hub, voice: voiceID(4), .cancel) == 8)
+        #expect(try launched.append(to: hub, voice: voiceID(4), .cancel) == 8)
+    }
+
+    @Test func tidyingLeavesAVoiceStartedSinceLaunch() throws {
+        let dir = scratch().voiceOutbox
+        try VoiceOutbox(dir: dir).append(to: hub, voice: voiceID(1), .start(at: now))
+        // Launched again, and recording before the tidy got going.
+        let box = VoiceOutbox(dir: dir)
+        box.setLive(true)
+        try box.append(to: hub, voice: voiceID(2), .start(at: now))
+        box.tidy(now: now)
+
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept == [VoiceLine(vseq: 1, to: hub, voice: voiceID(1), part: .start(at: now)),
+                         VoiceLine(vseq: 2, to: hub, voice: voiceID(2), part: .start(at: now)),
+                         VoiceLine(vseq: 3, to: hub, voice: voiceID(1), part: .cancel)],
+                "only the voice the crash left is ended")
+        #expect(FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
+        #expect(try box.append(to: hub, voice: voiceID(2), .end(text: nil)) == 4)
     }
 
     @Test func tidyingKeepsTheNewestVoicesUnderTheSizeCap() throws {
