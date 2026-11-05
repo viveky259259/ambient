@@ -49,6 +49,7 @@ offline voice download, and the text you select when you choose an online voice.
 ## Install
 
 1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag **Ambient** to Applications.
+   Or install it with Homebrew: `brew install --cask viveky259259/tap/ambient`.
 2. Open Ambient. Settings opens on **Welcome**: click **Connect All** to hook up every agent it found
    (or connect them one at a time under **Agents**).
 3. Click **Play Demo** to see every state, then **Get Started**.
