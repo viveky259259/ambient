@@ -64,10 +64,11 @@ public struct VoiceFollow: Equatable, Sendable {
         self.since = since
     }
 
-    /// The arguments for `follow`. The id is hex and the label checked, so neither can break the quoting.
+    /// The arguments for `follow`. The id is hex and the label checked, so neither can break the quoting. A shim from
+    /// before 1.0.6 skips `--voice-epoch`, as it does any argument it doesn't know.
     var arguments: String {
         guard VoiceLine.isID(hub.id) else { return "" }
-        return #" --hub \#(hub.id) --hub-label "\#(VoiceHub.label(hub.label))" --voice-since \#(max(0, since))"#
+        return #" --hub \#(hub.id) --hub-label "\#(VoiceHub.label(hub.label))" --voice-since \#(max(0, since)) --voice-epoch"#
     }
 }
 

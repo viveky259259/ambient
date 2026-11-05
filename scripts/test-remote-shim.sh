@@ -57,6 +57,26 @@ EOF
     echo "$bin"
 }
 
+# Every awk that reads the voice outbox for `follow`, logged as "whole" for the file or "tail" for what's past an offset.
+voice_awk() {
+    bin=$ROOT/bin-voice
+    mkdir -p "$bin"
+    cat > "$bin/awk" <<'EOF'
+#!/bin/sh
+read_kind=
+for arg; do
+    case $arg in
+        hub=*) [ -n "$read_kind" ] || read_kind=whole ;;
+        expect=*) read_kind=tail ;;
+    esac
+done
+[ -z "$read_kind" ] || echo "$read_kind" >> "$HOME/voice-reads"
+exec "$REAL_AWK" "$@"
+EOF
+    chmod 755 "$bin/awk"
+    echo "$bin"
+}
+
 check() {
     name=$1 shell=$2 path=$3
     home=$ROOT/home-$name
@@ -165,6 +185,7 @@ check() {
         set -- $voice_line
         printf '{"v":1,"type":"voice","vseq":%s,"to":"%s","voice":"%032d","part":"cancel"}\n' "$1" "$2" "$1"
     done > "$home/.ambient/voice-sync/outbox.jsonl"
+    # As an app from before 1.0.6 writes it: the vseq alone, so `follow` reads the whole file each time.
     echo 5 > "$home/.ambient/voice-sync/outbox.seq"
     read -r voice_since _ < "$home/.ambient/spool/seq"
     HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
@@ -177,6 +198,81 @@ check() {
     # A hub id that isn't one gets the stream it always did.
     HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
         --hub "x;y" --hub-label "Bad'Name" > "$home/voices-bad" 2> /dev/null &
+    follower=$!
+    sleep 1
+    kill "$follower" 2> /dev/null || :
+    wait "$follower" 2> /dev/null || :
+
+    # Offsets: the app writes "<epoch> <bytes> <generation>" under the vseq, and `follow` reads on from where the file
+    # ended after the last line it sent, until a rewrite moves the generation on. Lines 2 and 3 are the catch-up.
+    vdir=$home/.ambient/voice-sync
+    vepoch=0123456789abcdef
+    vgen=0
+    vline() {
+        printf '{"v":1,"type":"voice","vseq":%s,"to":"%s","voice":"%032d","part":"cancel"}\n' "$1" "$mine" "$1" >> "$vdir/outbox.jsonl"
+    }
+    # As the app does it: the line, then outbox.seq replaced.
+    vappend() {
+        vline "$1"
+        set -- "$1" $(wc -c < "$vdir/outbox.jsonl")
+        printf '%s\n%s %s %s\n' "$1" "$vepoch" "$2" "$vgen" > "$vdir/outbox.seq.new"
+        mv -f "$vdir/outbox.seq.new" "$vdir/outbox.seq"
+    }
+    # Rewrites the file without line $1, in one step.
+    vdrop() {
+        grep -v "\"vseq\":$1," "$vdir/outbox.jsonl" > "$vdir/outbox.jsonl.new"
+        mv -f "$vdir/outbox.jsonl.new" "$vdir/outbox.jsonl"
+    }
+    vawait() {
+        i=0
+        while [ "$i" -lt 50 ] && ! grep -qs "\"vseq\":$1," "$home/offsets"; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+    }
+    # A machine with no outbox at all, as most a hub follows are: `follow` keeps going, and sends no voices.
+    mv -f "$vdir" "$vdir.aside"
+    HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
+        --hub "$mine" --hub-label "Mac Studio" --voice-since 0 --voice-epoch > "$home/no-outbox" 2> "$home/no-outbox.err" &
+    follower=$!
+    sleep 2.5
+    kill "$follower" 2> /dev/null || :
+    wait "$follower" 2> /dev/null || :
+    mv -f "$vdir.aside" "$vdir"
+    : > "$vdir/outbox.jsonl"
+    : > "$home/voice-reads"
+    for i in 1 2 3; do vappend "$i"; done
+    HOME=$home PATH=$(voice_awk):$path REAL_AWK=$(PATH=$path; command -v awk) $shell "$home/.ambient/bin/ambient-remote" \
+        follow --since "$voice_since" --heartbeat 1 --hub "$mine" --hub-label "Mac Studio" --voice-since 1 --voice-epoch \
+        > "$home/offsets" 2> "$home/offsets.err" &
+    follower=$!
+    vawait 3
+    vappend 4; vawait 4
+    vappend 5; vawait 5
+    # The app's trim: lines 1 and 2 go, every other line moves, and the generation says so.
+    vdrop 1; vdrop 2; vgen=1
+    vappend 6; vawait 6
+    vappend 7; vawait 7
+    # A rewrite the generation doesn't show yet, as when one lands between `follow` reading outbox.seq and opening the
+    # file: line 3 goes, so where line 8 should start, line 9 does.
+    vdrop 3
+    vline 8
+    vappend 9; vawait 9
+    vappend 10; vawait 10
+    # A new outbox: `follow` hangs up by itself, so the hub hears of it in the next hello.
+    vepoch=fedcba9876543210
+    vappend 11
+    i=0
+    while [ "$i" -lt 30 ] && kill -0 "$follower" 2> /dev/null; do
+        sleep 0.1
+        i=$((i + 1))
+    done
+    if kill -0 "$follower" 2> /dev/null; then echo stayed; else echo hung up; fi > "$home/epoch-change"
+    kill "$follower" 2> /dev/null || :
+    wait "$follower" 2> /dev/null || :
+    # A hub from before 1.0.6 doesn't ask, and gets the hello it knows.
+    HOME=$home PATH=$path $shell "$home/.ambient/bin/ambient-remote" follow --since "$voice_since" --heartbeat 1 \
+        --hub "$mine" --hub-label "Mac Studio" --voice-since 11 > "$home/offsets-unasked" 2> /dev/null &
     follower=$!
     sleep 1
     kill "$follower" 2> /dev/null || :

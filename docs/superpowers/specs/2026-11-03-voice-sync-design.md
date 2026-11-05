@@ -38,10 +38,10 @@ the receiving Mac dialing out.
 ## Key decisions
 
 1. **The remote-agents link carries voices.** The receiving Mac already runs
-   `ssh <sender> ambient-remote follow --since N`. `follow` gains three arguments, `--hub ID --hub-label NAME
-   --voice-since N`, and streams the outbox lines addressed to that hub along with the events. This adds no listener,
-   port, relay or credentials, and no new trust boundary. It also inherits ProxyJump, Tailscale SSH, certificates and
-   the rest. Each direction is its own pairing: to send both ways, each Mac pairs the other.
+   `ssh <sender> ambient-remote follow --since N`. `follow` gains four arguments, `--hub ID --hub-label NAME
+   --voice-since N --voice-epoch`, and streams the outbox lines addressed to that hub along with the events. This adds
+   no listener, port, relay or credentials, and no new trust boundary. It also inherits ProxyJump, Tailscale SSH,
+   certificates and the rest. Each direction is its own pairing: to send both ways, each Mac pairs the other.
 2. **Real time, by streaming chunks.** The sender writes about 0.5 s of AAC at a time, and every 5 s the transcript so
    far, as JSON lines. Each `text` line carries the whole transcript, so sending it with every chunk would make a long
    voice's text outweigh its audio; the `end` carries the final words.
@@ -74,7 +74,7 @@ computer name, sanitized as above.
 | Path | Written by | What |
 |---|---|---|
 | `~/.ambient/voice-sync/outbox.jsonl` | the app | Voice lines, oldest first. |
-| `~/.ambient/voice-sync/outbox.seq` | the app | The newest `vseq`, replaced atomically after each append. |
+| `~/.ambient/voice-sync/outbox.seq` | the app | The newest `vseq`, then `<epoch> <bytes> <generation>` on a second line. Replaced atomically after each append and each trim. |
 | `~/.ambient/voice-sync/outbox.live` | the app | Present while recording; `follow` polls fast. |
 | `~/.ambient/spool/hubs/<hub id>` | `follow` | The hub's label. The file's mtime is when the hub was last connected, refreshed with each heartbeat. |
 
@@ -83,6 +83,27 @@ The app is the outbox's only writer. It appends a line, then updates `outbox.seq
 from the last 24 hours (40 MB at most), rewriting the file atomically without changing any `vseq`. The hourly trim
 leaves a voice being recorded alone. At start, it also writes a `cancel` for any voice a crash left open, and removes a
 stale `outbox.live`.
+
+### Which outbox, and where `follow` reads from
+
+The first line of `outbox.seq` is the newest `vseq` alone, which is all a shim from before 1.0.6 reads. The second
+names the outbox and the place after that line:
+
+- **epoch**: 16 random lowercase hex digits. The app makes a new one whenever `outbox.seq` names none as it opens the
+  outbox: a new outbox, a lost `outbox.seq`, or one written by an app from before epochs. Numbering carries on from the
+  last line either way.
+- **bytes**: the length of `outbox.jsonl` after the newest line.
+- **generation**: how many times the trim has rewritten the file. Appending never moves a line, and a rewrite moves
+  them all, so the trim adds one each time it rewrites, and only then.
+
+`follow` keeps the epoch from its hello, and the bytes and generation from the last time it read `outbox.seq`. While
+the generation holds, it reads only what's past those bytes, with `tail -c`, and checks that the first line there is
+the one after the last it sent. If it isn't, a rewrite landed between reading `outbox.seq` and opening the file, so it
+reads the whole file. It also reads the whole file after the generation changes, on a connection's first read when the
+hub is behind, and for an outbox from before epochs. So a follower reads the outbox, up to 40 MB, whole at most once
+per connection and once after each trim that rewrites it, not up to five times a second while someone records. An
+epoch other than the hello's ends the connection, as a `vseq` below the last one sent does, so the next hello tells the
+hub.
 
 ### Voice line
 
@@ -106,11 +127,22 @@ Any other field, a wrong type or a bad value rejects the line. The line cap stay
 
 ### The handshake
 
-When `follow` is given a valid `--hub`, its hello adds `"voice":<newest vseq>`. A hub whose voice cursor is past that
-number has seen a different outbox: it resets the cursor to 0 and reconnects. Saved voice ids keep the reset from
-duplicating anything. Without `--hub`, the hello is exactly what it was, so hubs from before voice sync never see
-anything new. A new hub running against an older shim gets no `voice` capability, and Settings asks the user to update
-that machine.
+When `follow` is given a valid `--hub`, its hello adds `"voice":<newest vseq>`. With `--voice-epoch` as well, it also
+adds `"voiceEpoch":"<epoch>"`, once the outbox has one. The hub has to ask, because a hub from before 1.0.6 rejects a
+hello with a field it doesn't know. A shim from before 1.0.6 skips `--voice-epoch`, as it does any argument it doesn't
+know, and sends no `voiceEpoch`.
+
+The hub keeps an epoch with each machine's voice cursor. That machine's voices start over at 0 when:
+
+- the cursor is past `voice`, whatever the epochs say, or
+- the hello's `voiceEpoch` isn't the saved one, however far the outbox has grown. Without it, an outbox made again
+  while the hub was away and grown past the cursor looked like the old one, and its first voices were skipped.
+
+A reset is saved at once, with the hello's epoch (none if it had none), and the hub reconnects. A cursor with no epoch,
+saved before 1.0.6 or while following an older shim, takes the first one it's given, and that's saved at once too. A
+hello with no `voiceEpoch` leaves the saved epoch as it is. Saved voice ids keep a reset from duplicating anything.
+Without `--hub`, the hello is exactly what it was, so hubs from before voice sync never see anything new. A new hub
+running against an older shim gets no `voice` capability, and Settings asks the user to update that machine.
 
 ### Delivery
 
@@ -136,9 +168,10 @@ that machine.
 ### Hub storage
 
 `~/.ambient/voice-sync/library.json` (`0600`) lists each voice: its id, sent or received, the peer's id and label, when
-it was recorded, its length and its transcript. It also holds the per-machine voice cursors. The audio is in
-`~/.ambient/voice-sync/audio/<id>.aac`. Both Macs keep voices until the user deletes them. Remove (unpairing) drops the
-machine's cursor. Purge also deletes every voice received from that machine (ER-14).
+it was recorded, its length and its transcript. It also holds the per-machine voice cursors, and in `epochs` the outbox
+each is for, which a version from before 1.0.6 ignores. The audio is in `~/.ambient/voice-sync/audio/<id>.aac`. Both
+Macs keep voices until the user deletes them. Remove (unpairing) drops the machine's cursor and epoch. Purge also
+deletes every voice received from that machine (ER-14).
 
 ## Requirements this changes
 

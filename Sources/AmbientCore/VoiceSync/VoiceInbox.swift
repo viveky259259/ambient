@@ -15,6 +15,18 @@ public struct VoiceArrival: Equatable, Sendable {
     }
 }
 
+/// How far a machine's voices have been received: up to `vseq` of the outbox named by `epoch`. The epoch is nil until
+/// a shim reports one; a shim from before 1.0.6 never does.
+public struct VoiceCursor: Equatable, Sendable {
+    public var vseq: Int64
+    public var epoch: String?
+
+    public init(vseq: Int64 = 0, epoch: String? = nil) {
+        self.vseq = vseq
+        self.epoch = epoch
+    }
+}
+
 /// What the receiving Mac shows as voices come in.
 public enum VoiceInboxEvent: Equatable, Sendable {
     /// Someone started recording for this Mac. `since` is this Mac's clock.
@@ -59,18 +71,21 @@ public final class VoiceInbox {
     public let limits: Limits
     /// Where a reconnect resumes: never past the start of a voice still coming in, so a cut-off voice is replayed whole.
     public private(set) var cursor: Int64
+    /// The outbox `cursor` counts in.
+    public private(set) var epoch: String?
     private var seen: Int64
     private var pending: [String: Pending] = [:]
     /// Finished, cancelled or refused: never assembled again.
     private var done: Set<String>
     private var throttle: RemoteAuditThrottle
 
-    public init(machine: MachineRef, hub: String, cursor: Int64, known: Set<String> = [], limits: Limits = Limits(),
+    public init(machine: MachineRef, hub: String, cursor: VoiceCursor, known: Set<String> = [], limits: Limits = Limits(),
                 audit: RemoteAudit? = nil) {
         self.machine = machine
         self.hub = hub
         self.limits = limits
-        self.cursor = max(0, cursor)
+        self.cursor = max(0, cursor.vseq)
+        epoch = cursor.epoch
         seen = self.cursor
         done = known
         throttle = RemoteAuditThrottle(audit: audit)
@@ -91,11 +106,23 @@ public final class VoiceInbox {
         return cut
     }
 
-    /// The machine's outbox is a different one than the cursor was for.
-    public func resetCursor() {
-        cursor = 0
-        seen = 0
-        pending = [:]
+    /// What to save to resume from.
+    public var saved: VoiceCursor { VoiceCursor(vseq: cursor, epoch: epoch) }
+
+    /// The machine said hello: `head` is the newest line in its outbox, and `epoch` names the outbox when its shim says.
+    /// Returns true when the cursor was for another outbox, and so starts over: the outbox is behind the cursor, or it
+    /// has an epoch that isn't the cursor's. A cursor with no epoch takes the first one it's given.
+    public func linked(head: Int64, epoch: String?) -> Bool {
+        let replaced = cursor > head || (epoch != nil && self.epoch != nil && epoch != self.epoch)
+        if replaced {
+            cursor = 0
+            seen = 0
+            pending = [:]
+            self.epoch = epoch
+        } else if let epoch {
+            self.epoch = epoch
+        }
+        return replaced
     }
 
     public func receive(_ line: VoiceLine, now: Date) -> [VoiceInboxEvent] {

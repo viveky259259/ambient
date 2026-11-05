@@ -46,6 +46,8 @@ public final class VoiceLibrary {
         var version = 1
         var voices: [VoiceRecord]
         var cursors: [String: Int64]
+        /// Not in a library from before epochs, and a version from then leaves it out when it saves.
+        var epochs: [String: String]?
     }
 
     public let url: URL
@@ -54,6 +56,8 @@ public final class VoiceLibrary {
     public private(set) var voices: [VoiceRecord] = []
     /// The `vseq` each machine's voices have been received up to.
     public private(set) var cursors: [String: Int64] = [:]
+    /// The outbox each machine's cursor counts in, once its shim has said.
+    public private(set) var epochs: [String: String] = [:]
     /// `library.json` is there, but this version can't read it.
     private var unreadable = false
 
@@ -74,6 +78,7 @@ public final class VoiceLibrary {
         unreadable = false
         voices = envelope.voices.filter { VoiceLine.isID($0.id) }.sorted { $0.recordedAt > $1.recordedAt }
         cursors = envelope.cursors
+        epochs = envelope.epochs ?? [:]
     }
 
     public func audioURL(for record: VoiceRecord) -> URL {
@@ -95,7 +100,7 @@ public final class VoiceLibrary {
     }
 
     /// Adds a voice with its audio. `cursor`, when given, is saved in the same write.
-    public func add(_ record: VoiceRecord, audio: Data, cursor: (machine: String, vseq: Int64)? = nil) throws {
+    public func add(_ record: VoiceRecord, audio: Data, cursor: (machine: String, cursor: VoiceCursor)? = nil) throws {
         try prepare()
         let file = audioURL(for: record)
         try audio.write(to: file, options: .atomic)
@@ -112,9 +117,13 @@ public final class VoiceLibrary {
         try insert(record, cursor: nil)
     }
 
-    public func setCursor(_ vseq: Int64, machine: String) throws {
-        guard cursors[machine] != vseq else { return }
-        try commit { cursors[machine] = vseq }
+    public func cursor(for machine: String) -> VoiceCursor {
+        VoiceCursor(vseq: cursors[machine] ?? 0, epoch: epochs[machine])
+    }
+
+    public func setCursor(_ cursor: VoiceCursor, machine: String) throws {
+        guard cursors[machine] != cursor.vseq || epochs[machine] != cursor.epoch else { return }
+        try commit { put(cursor, machine: machine) }
     }
 
     public func delete(_ id: String) throws {
@@ -131,8 +140,11 @@ public final class VoiceLibrary {
 
     /// Unpairing: the machine's voices stay, but where it got to goes, as its sessions' cursor does.
     public func forget(machine: String) throws {
-        guard cursors[machine] != nil else { return }
-        try commit { cursors[machine] = nil }
+        guard cursors[machine] != nil || epochs[machine] != nil else { return }
+        try commit {
+            cursors[machine] = nil
+            epochs[machine] = nil
+        }
     }
 
     /// Purging: every voice received from the machine goes too. A library this version can't read may hold some, so
@@ -142,10 +154,11 @@ public final class VoiceLibrary {
             throw VoiceLibraryError(message: "This version of Ambient can't read the voice library, so the voices from \(machine) weren't deleted.")
         }
         let gone = voices.filter { $0.direction == .received && $0.peer.id == machine }
-        guard !gone.isEmpty || cursors[machine] != nil else { return }
+        guard !gone.isEmpty || cursors[machine] != nil || epochs[machine] != nil else { return }
         try commit {
             voices.removeAll { $0.direction == .received && $0.peer.id == machine }
             cursors[machine] = nil
+            epochs[machine] = nil
         }
         for record in gone { try? FileManager.default.removeItem(at: audioURL(for: record)) }
     }
@@ -158,24 +171,29 @@ public final class VoiceLibrary {
         }
     }
 
-    private func insert(_ record: VoiceRecord, cursor: (machine: String, vseq: Int64)?) throws {
+    private func insert(_ record: VoiceRecord, cursor: (machine: String, cursor: VoiceCursor)?) throws {
         try commit {
             voices.removeAll { $0.id == record.id }
             voices.append(record)
             voices.sort { $0.recordedAt > $1.recordedAt }
-            if let cursor { cursors[cursor.machine] = cursor.vseq }
+            if let cursor { put(cursor.cursor, machine: cursor.machine) }
         }
+    }
+
+    private func put(_ cursor: VoiceCursor, machine: String) {
+        cursors[machine] = cursor.vseq
+        epochs[machine] = cursor.epoch
     }
 
     /// Makes `change` and saves it. If saving fails, what's held goes back to what's on disk, so a voice that wasn't kept
     /// isn't listed, and a cursor that wasn't saved is saved the next time it's set.
     private func commit(_ change: () -> Void) throws {
-        let before = (voices, cursors)
+        let before = (voices, cursors, epochs)
         change()
         do {
             try save()
         } catch {
-            (voices, cursors) = before
+            (voices, cursors, epochs) = before
             throw error
         }
     }
@@ -196,7 +214,7 @@ public final class VoiceLibrary {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(Envelope(voices: voices, cursors: cursors)).write(to: url, options: .atomic)
+        try encoder.encode(Envelope(voices: voices, cursors: cursors, epochs: epochs)).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 

@@ -114,6 +114,26 @@ expect(read("hub-label") == "Mac Studio\n", f"the hub's label: {read('hub-label'
 plain = [strict(line) for line in read("voices-bad").splitlines()]
 expect(plain and "voice" not in plain[0] and not any(v.get("type") == "voice" for v in plain), "a bad hub id still gets voices")
 
+none = [strict(line) for line in read("no-outbox").splitlines()]
+expect(none and none[0].get("voice") == 0 and "voiceEpoch" not in none[0], f"no outbox: {none[:1]}")
+expect(sum(v.get("type") == "heartbeat" for v in none) >= 2, f"with no outbox, follow kept going: {none[1:4]}")
+expect(not any(v.get("type") == "voice" for v in none), "voices from no outbox")
+expect(read("no-outbox.err") == "", f"follow with no outbox wrote to stderr: {read('no-outbox.err')[:200]}")
+
+offsets = [strict(line) for line in read("offsets").splitlines()]
+expect(offsets and offsets[0]["type"] == "hello" and offsets[0].get("voice") == 3, f"the hello: {offsets[:1]}")
+expect(offsets and offsets[0].get("voiceEpoch") == "0123456789abcdef", f"a hub that asks hears the outbox's epoch: {offsets[:1]}")
+sent = [v["vseq"] for v in offsets if v.get("type") == "voice"]
+expect(sent == list(range(2, 11)), f"every line once, in order, across both rewrites: {sent}")
+# The catch-up reads it all, then each line is read from where the last ended, but for the line after each rewrite.
+reads = read("voice-reads").split()
+want = ["whole", "tail", "tail", "whole", "tail", "tail", "whole", "tail"]
+expect(reads == want, f"follow read the outbox {reads}, not {want}")
+expect(read("offsets.err") == "", f"follow wrote to stderr: {read('offsets.err')[:200]}")
+expect(read("epoch-change") == "hung up\n", f"with a new epoch, follow {read('epoch-change').strip()}")
+unasked = [strict(line) for line in read("offsets-unasked").splitlines()]
+expect(unasked and unasked[0].get("voice") == 11 and "voiceEpoch" not in unasked[0], f"a hub that doesn't ask: {unasked[:1]}")
+
 for problem in problems:
     print(f"  {name}: {problem}")
 sys.exit(1 if problems else 0)
