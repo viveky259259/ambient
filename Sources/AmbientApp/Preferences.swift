@@ -89,6 +89,15 @@ final class Preferences: ObservableObject {
     /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
     @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
 
+    // MARK: - Voice sync
+
+    /// A `Shortcut.stored` value; nil for the default (⌃⌥V).
+    @Published var voiceSyncShortcut: String? { didSet { defaults.set(voiceSyncShortcut, forKey: "voiceSyncShortcut") } }
+    /// The hub id voices go to; nil for one that's connected (`VoiceDestination.preferred`).
+    @Published var voiceSyncDestination: String? { didSet { defaults.set(voiceSyncDestination, forKey: "voiceSyncDestination") } }
+    /// Seconds a received voice's Copy card stays under the notch.
+    @Published var voiceSyncCopySeconds: Int { didSet { defaults.set(voiceSyncCopySeconds, forKey: "voiceSyncCopySeconds") } }
+
     init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
         self.paths = paths
@@ -132,6 +141,7 @@ final class Preferences: ObservableObject {
             "taskLLMReadTranscripts": false,
             "taskLLMModelsVolume": "/Volumes/Models",
             "remoteSummaries": false,
+            "voiceSyncCopySeconds": 60,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -178,6 +188,9 @@ final class Preferences: ObservableObject {
         taskLLMPython = defaults.string(forKey: "taskLLMPython") ?? ""
         taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
         remoteSummaries = defaults.bool(forKey: "remoteSummaries")
+        voiceSyncShortcut = defaults.string(forKey: "voiceSyncShortcut")
+        voiceSyncDestination = defaults.string(forKey: "voiceSyncDestination")
+        voiceSyncCopySeconds = defaults.integer(forKey: "voiceSyncCopySeconds")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 

@@ -7,7 +7,7 @@ struct IslandView: View {
     private var size: CGSize { model.currentSize }
     private var expandedLike: Bool {
         switch model.presentation {
-        case .bloom, .expanded, .speech, .permission: true
+        case .bloom, .expanded, .speech, .permission, .voice: true
         default: false
         }
     }
@@ -36,6 +36,16 @@ struct IslandView: View {
             Color.clear
         case .collapsed:
             wings
+        case .voiceIncoming:
+            if let incoming = model.voice?.incoming.first {
+                VoiceIncomingWings(incoming: incoming, notchWidth: model.geometry.notchWidth, height: model.geometry.notchHeight)
+            }
+        case .voice:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                if let voice = model.voice { VoiceCard(voice: voice) }
+            }
+            .transition(.opacity)
         case .bloom:
             VStack(spacing: 0) {
                 Color.clear.frame(height: model.geometry.notchHeight)
@@ -270,7 +280,7 @@ private struct PermissionCard: View {
     }
 }
 
-private struct CardButton: View {
+struct CardButton: View {
     let title: String
     let prominent: Bool
     let action: () -> Void

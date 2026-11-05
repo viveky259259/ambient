@@ -12,6 +12,8 @@ struct SettingsView: View {
     let speech: SpeechController
     let voicePack: VoicePackInstaller
     let shortcuts: ShortcutCenter
+    let voiceSync: VoiceSyncController
+    let voiceShortcuts: ShortcutCenter
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
@@ -98,6 +100,8 @@ struct SettingsView: View {
             PetPane(prefs: prefs)
         case .voice:
             VoicePane(prefs: prefs, voicePack: voicePack, speech: speech, shortcuts: shortcuts)
+        case .voiceSync:
+            VoiceSyncPane(voice: voiceSync, prefs: prefs, shortcuts: voiceShortcuts)
         case .alerts:
             AlertsPane(setup: setup, prefs: prefs, onPreviewSound: onPreviewSound)
         case .dock:

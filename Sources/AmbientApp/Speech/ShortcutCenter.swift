@@ -2,8 +2,8 @@ import AmbientCore
 import Combine
 import Foundation
 
-/// Owns the read-aloud shortcut: which one is in effect, registering it, and re-registering when you change it.
-/// Used from the main thread.
+/// Owns one shortcut: which one is in effect, registering it, and re-registering when you change it. The read-aloud
+/// shortcut by default; voice sync has its own. Used from the main thread.
 final class ShortcutCenter: ObservableObject {
     /// The shortcut in effect.
     @Published private(set) var shortcut: Shortcut
@@ -13,12 +13,25 @@ final class ShortcutCenter: ObservableObject {
     var onPress: () -> Void = {}
 
     private let prefs: Preferences
+    private let key: ReferenceWritableKeyPath<Preferences, String?>
+    private let fallback: () -> Shortcut
     private var hotKey: HotKey?
 
-    init(prefs: Preferences) {
-        self.prefs = prefs
-        shortcut = Self.chosen(prefs) ?? Self.systemDefault
+    /// The read-aloud shortcut.
+    convenience init(prefs: Preferences) {
+        self.init(prefs: prefs, key: \.speechShortcut, fallback: { ShortcutCenter.systemDefault })
     }
+
+    /// A shortcut saved at `key`, which is `fallback()` until one is chosen.
+    init(prefs: Preferences, key: ReferenceWritableKeyPath<Preferences, String?>, fallback: @escaping () -> Shortcut) {
+        self.prefs = prefs
+        self.key = key
+        self.fallback = fallback
+        shortcut = prefs[keyPath: key].flatMap(Shortcut.init(stored:)) ?? fallback()
+    }
+
+    /// What Delete in the recorder goes back to.
+    var defaultShortcut: Shortcut { fallback() }
 
     /// ⌥⎋, or ⌃⌥S when macOS's own Speak Selection key is turned on (it uses ⌥⎋).
     static var systemDefault: Shortcut {
@@ -27,18 +40,14 @@ final class ShortcutCenter: ObservableObject {
         return Shortcut.default(systemSpeakSelectionOn: on)
     }
 
-    private static func chosen(_ prefs: Preferences) -> Shortcut? {
-        prefs.speechShortcut.flatMap(Shortcut.init(stored:))
-    }
-
     func start() {
         register()
     }
 
     /// Saves and registers `new`; nil goes back to the default.
     func set(_ new: Shortcut?) {
-        prefs.speechShortcut = new?.stored
-        shortcut = new ?? Self.systemDefault
+        prefs[keyPath: key] = new?.stored
+        shortcut = new ?? fallback()
         register()
     }
 
@@ -51,14 +60,14 @@ final class ShortcutCenter: ObservableObject {
         register()
     }
 
-    var isDefault: Bool { prefs.speechShortcut == nil }
+    var isDefault: Bool { prefs[keyPath: key] == nil }
 
     private func register() {
         hotKey = nil
         hotKey = HotKey(shortcut) { [weak self] in self?.onPress() }
         if hotKey == nil {
             note = "\(shortcut.display) is used by another app. Pick another shortcut."
-        } else if isDefault, shortcut == .controlOptionS {
+        } else if isDefault, key == \Preferences.speechShortcut, shortcut == .controlOptionS {
             note = "macOS Speak Selection already uses ⌥⎋, so Ambient uses ⌃⌥S."
         } else {
             note = nil

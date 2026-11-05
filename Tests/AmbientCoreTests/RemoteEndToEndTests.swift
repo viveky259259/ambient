@@ -905,3 +905,228 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         #expect(alerts == ["a@3", "a@5", "b@8", "b@10"].sorted())
     }
 }
+
+/// What the app hears from a link about voices.
+private final class VoiceSink: @unchecked Sendable {
+    private let lock = NSLock()
+    private var events: [VoiceInboxEvent] = []
+    private var saved: Int64 = 0
+    private var handed = 0
+
+    func add(_ batch: [VoiceInboxEvent], cursor: Int64) {
+        lock.lock(); defer { lock.unlock() }
+        events += batch
+        saved = cursor
+        handed += 1
+    }
+
+    /// Times the link handed something over, events or only a cursor.
+    var deliveries: Int {
+        lock.lock(); defer { lock.unlock() }
+        return handed
+    }
+
+    var all: [VoiceInboxEvent] {
+        lock.lock(); defer { lock.unlock() }
+        return events
+    }
+
+    var cursor: Int64 {
+        lock.lock(); defer { lock.unlock() }
+        return saved
+    }
+
+    var arrivals: [VoiceArrival] { all.compactMap { if case let .arrived(a) = $0 { a } else { nil } } }
+
+    func heard(_ id: String) -> Bool {
+        all.contains { if case let .incoming(got, _) = $0 { got == id } else { false } }
+    }
+
+    func progressed(_ id: String) -> Bool {
+        all.contains { if case let .progress(got, _, _) = $0 { got == id } else { false } }
+    }
+}
+
+extension RemoteEndToEndTests {
+    /// Voice sync over the same `sh -c` transport and shim: a Mac records into its outbox, and the hub following it gets
+    /// the voice as it's recorded. It's nested so it runs one test at a time with the suite it's in: both pair stub
+    /// machines through real shims, and side by side they stalled a three-core CI runner for a minute.
+    @Suite struct VoiceSync {
+        private let hubID = String(repeating: "5a", count: 16)
+
+        private func chunk(_ frames: Int = 10) -> Data {
+            (0..<frames).reduce(into: Data()) { data, i in data += ADTS.frame(Data(repeating: UInt8(i), count: 80), sampleRate: 24_000)! }
+        }
+
+        private func outbox(_ stub: StubMachine) -> VoiceOutbox {
+            VoiceOutbox(dir: stub.home.appendingPathComponent(".ambient/voice-sync"))
+        }
+
+        private func link(_ machine: Machine, _ sink: VoiceSink, cursor: Int64 = 0, known: Set<String> = [],
+                          hub: String? = nil) -> RemoteLink {
+            let receiver = VoiceReceiver(hub: VoiceHub(id: hub ?? hubID, label: "Mac Studio"), cursor: cursor, known: known) {
+                sink.add($0, cursor: $1)
+            }
+            return RemoteLink(machine: machine, cursor: RemoteCursor(), voice: receiver,
+                              deliver: { _, _, applied in applied() }, report: { _, _ in })
+        }
+
+        @Test func aVoiceStreamsToItsHubAsItIsRecorded() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let sink = VoiceSink()
+            let link = link(machine, sink)
+            link.start()
+            defer { link.stop() }
+
+            // The hub says who it is, so Ambient on that Mac can offer it as a destination.
+            let hubs = stub.spool.appendingPathComponent("hubs")
+            #expect(waitUntil { VoiceDestination.load(from: hubs).map(\.label) == ["Mac Studio"] })
+            #expect(VoiceDestination.load(from: hubs).first?.isOnline() == true)
+
+            let id = VoiceHub.randomID()
+            box.setLive(true)
+            try box.append(to: hubID, voice: id, .start(at: Date()))
+            #expect(waitUntil(5) { sink.heard(id) })
+            // Live, a chunk crosses in a fifth of a second plus the transport.
+            let sent = Date()
+            try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+            #expect(waitUntil(5) { sink.progressed(id) })
+            let latency = Date().timeIntervalSince(sent)
+            #expect(latency < 0.8, "\(latency) s")
+            try box.append(to: hubID, voice: id, .text("hello from daily"))
+            try box.append(to: hubID, voice: id, .audio(n: 1, data: chunk(4)))
+            try box.append(to: hubID, voice: id, .end(text: "Hello from Daily."))
+            box.setLive(false)
+
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            let arrival = try #require(sink.arrivals.first)
+            #expect(arrival.id == id)
+            #expect(arrival.machine == machine.ref)
+            #expect(arrival.audio == chunk() + chunk(4))
+            #expect(arrival.text == "Hello from Daily.")
+            #expect(abs(arrival.seconds - 14 * 1024 / 24_000.0) < 0.001)
+            #expect(sink.cursor == 5)
+        }
+
+        @Test func aHubHearsOnlyItsOwnVoices() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let elsewhere = VoiceHub.randomID(), mine = VoiceHub.randomID()
+            for (hub, id) in [(String(repeating: "77", count: 16), elsewhere), (hubID, mine)] {
+                try box.append(to: hub, voice: id, .start(at: Date()))
+                try box.append(to: hub, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hub, voice: id, .end(text: nil))
+            }
+            let sink = VoiceSink()
+            let link = link(machine, sink)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            Thread.sleep(forTimeInterval: 1.2)
+            #expect(sink.arrivals.map(\.id) == [mine])
+            #expect(!sink.heard(elsewhere))
+        }
+
+        @Test func aHubCutOffMidVoiceGetsItWholeOnceItsBack() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let first = VoiceSink()
+            let id = VoiceHub.randomID()
+            do {
+                let link = link(machine, first)
+                link.start()
+                box.setLive(true)
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                #expect(waitUntil(5) { first.progressed(id) })
+                link.stop()
+            }
+            #expect(first.all.last == .ended(id: id), "the cut-off voice stops showing")
+            #expect(first.cursor == 0)
+
+            // The rest is recorded while the hub is away, and the replay starts from the voice's start.
+            try box.append(to: hubID, voice: id, .audio(n: 1, data: chunk()))
+            try box.append(to: hubID, voice: id, .end(text: "done"))
+            box.setLive(false)
+            let second = VoiceSink()
+            let link = link(machine, second, cursor: first.cursor)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { second.arrivals.count == 1 })
+            #expect(second.arrivals.first?.audio == chunk() + chunk())
+            #expect(second.cursor == 4)
+        }
+
+        @Test func aVoiceAlreadyKeptIsntKeptTwice() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let kept = VoiceHub.randomID(), fresh = VoiceHub.randomID()
+            for id in [kept, fresh] {
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hubID, voice: id, .end(text: nil))
+            }
+            // As after a hub killed between saving the voice and moving its cursor.
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 0, known: [kept])
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.cursor == 6 })
+            #expect(sink.arrivals.map(\.id) == [fresh])
+        }
+
+        @Test func aReplacedOutboxStartsTheHubsVoicesOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let id = VoiceHub.randomID()
+            try box.append(to: hubID, voice: id, .start(at: Date()))
+            try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+            try box.append(to: hubID, voice: id, .end(text: nil))
+            // The hub remembers an outbox that got to 40.
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 40)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.cursor == 3)
+        }
+
+        @Test func aReplacedOutboxSavesTheCursorItStartsOverFrom() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            // Only another hub's voice: nothing comes for this one to carry the cursor.
+            let id = VoiceHub.randomID()
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .start(at: Date()))
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .cancel)
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 40)
+            link.start()
+            defer { link.stop() }
+            // Saved as it's reset, so a launch before the next voice doesn't follow from 40 again.
+            #expect(waitUntil(5) { sink.deliveries > 0 })
+            #expect(sink.cursor == 0)
+            #expect(sink.all.isEmpty)
+        }
+
+        @Test func aHubFromBeforeVoiceSyncSeesWhatItAlwaysDid() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            try outbox(stub).append(to: hubID, voice: VoiceHub.randomID(), .start(at: Date()))
+            let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+            let link = hub.link(audit: stub.paths.remoteAudit)
+            link.start()
+            defer { link.stop() }
+            try stub.hook("UserPromptSubmit")
+            #expect(waitUntil { !hub.sessions().isEmpty })
+            #expect(!FileManager.default.fileExists(atPath: stub.spool.appendingPathComponent("hubs").path))
+            #expect(!stub.paths.remoteAudit.records().contains { $0.action == .rejected })
+        }
+    }
+}

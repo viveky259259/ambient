@@ -35,9 +35,10 @@ public struct RemoteTransport: Sendable {
     /// Runs the shim sent on stdin and asks who the machine is. Nothing is read from there or left behind.
     public static let identify = "sh -s identity"
 
-    /// `follow` replaces that `sh`, so ending the transport ends it.
-    public static func follow(since seq: Int64) -> String {
-        #"sh -c 'exec "$HOME/.ambient/bin/ambient-remote" follow --since \#(seq)'"#
+    /// `follow` replaces that `sh`, so ending the transport ends it. With `voice`, it also streams the voices recorded on
+    /// the machine for this hub; a shim from before voice sync ignores the extra arguments.
+    public static func follow(since seq: Int64, voice: VoiceFollow? = nil) -> String {
+        #"sh -c 'exec "$HOME/.ambient/bin/ambient-remote" follow --since \#(seq)\#(voice?.arguments ?? "")'"#
     }
 
     /// Writes stdin to the shim's path atomically, private to the user.

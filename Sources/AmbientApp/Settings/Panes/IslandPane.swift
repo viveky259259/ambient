@@ -9,7 +9,9 @@ struct IslandPane: View {
             PaneHeader(pane: .island)
             IslandPreview(enabled: prefs.islandEnabled, showsWorking: prefs.islandShowsWorking)
             SettingsSection {
-                SettingsToggleRow(title: "Show agent status at the notch", isOn: $prefs.islandEnabled)
+                SettingsToggleRow(title: "Show agent status at the notch",
+                                  subtitle: "Voices you record or receive show there either way.",
+                                  isOn: $prefs.islandEnabled)
                 SettingsDivider()
                 SettingsToggleRow(title: "Show while agents are working",
                                   subtitle: "Otherwise the island appears only when an agent needs you, finishes, or fails.",

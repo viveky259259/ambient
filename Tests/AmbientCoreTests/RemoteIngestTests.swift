@@ -7,8 +7,9 @@ private let pin = "id:" + String(repeating: "a", count: 32)
 private let machine = Machine(id: "devbox", label: "Devbox", transport: ["ssh", "devbox"], fingerprint: pin)
 
 private func hello(seq: Int64 = 10, epoch: String = "0123456789abcdef", identity: String = pin, proto: Int = 1,
-                   ts: Date = now, level: String = "standard") -> Data {
-    Data(#"{"v":1,"type":"hello","shim":"1.0.0","proto":\#(proto),"caps":"exit,title,heartbeat","level":"\#(level)","seq":\#(seq),"epoch":"\#(epoch)","identity":"\#(identity)","ts":\#(Int(ts.timeIntervalSince1970))}"#.utf8)
+                   ts: Date = now, level: String = "standard", voice: Int64? = nil) -> Data {
+    let outbox = voice.map { #","voice":\#($0)"# } ?? ""
+    return Data(#"{"v":1,"type":"hello","shim":"1.0.0","proto":\#(proto),"caps":"exit,title,heartbeat","level":"\#(level)","seq":\#(seq),"epoch":"\#(epoch)","identity":"\#(identity)","ts":\#(Int(ts.timeIntervalSince1970))\#(outbox)}"#.utf8)
 }
 
 private func event(_ seq: Int64, kind: String = "toolStarted", id: String? = nil, ts: Date = now, extra: String = "") -> Data {
@@ -150,6 +151,23 @@ private func auditFile() -> RemoteAudit {
         #expect(live(103) == 1.0 / 50)
         #expect(abs(live(104) - 2.0 / 50) < 1e-9)
         #expect(audit.records().map(\.action) == [.rateLimited])
+    }
+
+    @Test func voiceLinesArePacedOnTheirOwn() {
+        let ingest = RemoteIngest(machine: machine, cursor: .init(), limiter: RemoteRateLimiter(rate: 50, burst: 2),
+                                  voiceLimiter: RemoteRateLimiter(rate: 50, burst: 2),
+                                  voiceReplayLimiter: RemoteRateLimiter(rate: 50, burst: 3))
+        _ = ingest.receive(hello(seq: 0, voice: 3), now: now)
+        func voice(_ vseq: Int64) -> TimeInterval {
+            ingest.delay(afterVoice: VoiceLine(vseq: vseq, to: String(repeating: "b", count: 32),
+                                               voice: String(repeating: "c", count: 32), part: .cancel), now: now)
+        }
+        for vseq in Int64(1)...3 { #expect(voice(vseq) == 0, "what the outbox held at hello is a replay") }
+        #expect(voice(4) == 0)
+        #expect(voice(5) == 0)
+        #expect(voice(6) == 1.0 / 50, "a flood of live lines is held back")
+        #expect(ingest.delay(after: RemoteEvent(seq: 1, id: "", ts: now, agent: .claude, session: "s", kind: .notice), now: now) == 0,
+                "and events still have their own bucket")
     }
 
     /// `hello.seq` is whatever the machine says: this one says every event it will ever send is a replay.

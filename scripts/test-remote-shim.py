@@ -103,6 +103,17 @@ for moment, want in [("before", [3, 4, 5, 3, 4, 5, 6]), ("between", [3, 4, 5, 6]
     heard = [e["seq"] for e in raced if e.get("kind") == "toolStarted"]
     expect(heard == want, f"a rotation {moment} the two files: follow sent {heard}, not {want}")
 
+voices = [strict(line) for line in read("voices").splitlines()]
+expect(voices and voices[0]["type"] == "hello" and voices[0].get("voice") == 5, f"a hub's hello says where the outbox is: {voices[:1]}")
+expect("voice" in voices[0]["caps"].split(","), "the voice capability")
+sent = [v["vseq"] for v in voices if v.get("type") == "voice"]
+expect(sent == [3, 5], f"a hub got only its own voices past its cursor: {sent}")
+expect(all(v["to"] == "5a" * 16 for v in voices if v.get("type") == "voice"), "voices for another hub")
+expect(read("voices.err") == "", f"follow --hub wrote to stderr: {read('voices.err')[:200]}")
+expect(read("hub-label") == "Mac Studio\n", f"the hub's label: {read('hub-label')!r}")
+plain = [strict(line) for line in read("voices-bad").splitlines()]
+expect(plain and "voice" not in plain[0] and not any(v.get("type") == "voice" for v in plain), "a bad hub id still gets voices")
+
 for problem in problems:
     print(f"  {name}: {problem}")
 sys.exit(1 if problems else 0)

@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var kokoro: KokoroVoice?
     private var selectionService: SelectionService?
     private lazy var shortcuts = ShortcutCenter(prefs: prefs)
+    private lazy var voiceSync = VoiceSyncController(paths: paths, prefs: prefs)
+    private lazy var voiceShortcuts = ShortcutCenter(prefs: prefs, key: \.voiceSyncShortcut, fallback: { .controlOptionV })
     private lazy var nowPlaying = NowPlaying(speech: speech)
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
@@ -57,7 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do { try server.start() } catch { log.error("Socket server failed: \(String(describing: error))") }
         self.server = server
 
-        let remote = RemoteCoordinator(paths: paths, model: model)
+        voiceSync.start()
+        let remote = RemoteCoordinator(paths: paths, model: model, voice: voiceSync)
         remote.start()
         self.remote = remote
 
@@ -65,13 +68,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notifier.start()
         self.notifier = notifier
 
-        island = IslandController(model: model, prefs: prefs, speech: speech, permissions: permissions) { [weak self] in self?.showSetup() }
+        island = IslandController(model: model, prefs: prefs, speech: speech, permissions: permissions,
+                                  voice: voiceSync) { [weak self] in self?.showSetup() }
         island?.start()
 
         pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         pet?.start()
 
         menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts, hookDoctor: hookDoctor,
+                                    voice: voiceSync, voiceShortcuts: voiceShortcuts,
                                     onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
                                     onDemo: { [weak self] in self?.playDemo() },
@@ -101,6 +106,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.speakFrontmostSelection()
         }
         shortcuts.start()
+        voiceShortcuts.onPress = { [weak self] in self?.voiceSync.toggle() }
+        voiceShortcuts.start()
         nowPlaying.start()
         showShortcutHintOnce()
         voicePack.onRemove = { [weak self] in
@@ -123,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         model.saveNow()
+        voiceSync.quit()
         remote?.stop()
         server?.stop()
         kokoro?.shutDown()
@@ -143,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let setup = SetupModel(paths: paths, notifier: notifier)
             let view = SettingsView(setup: setup, prefs: prefs, model: model, remote: remote, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
+                                    voiceSync: voiceSync, voiceShortcuts: voiceShortcuts,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
