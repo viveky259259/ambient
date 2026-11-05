@@ -250,8 +250,9 @@ public final class RemoteLink: @unchecked Sendable {
         while !isStopped {
             let ready = poll(&poller, 1, 1_000)
             if ready < 0 && errno != EINTR { return finish(nil) }
-            if let inbox { handOver(inbox.sweep(now: Date())) }
             if ready <= 0 {
+                // Only with nothing waiting: after a sleep, what's waiting may be the rest of a voice that looks stalled.
+                if let inbox { handOver(inbox.sweep(now: Date())) }
                 if Date().timeIntervalSince(lastHeard) > options.silenceLimit { return finish(nil) }
                 continue
             }
@@ -288,6 +289,7 @@ public final class RemoteLink: @unchecked Sendable {
                     hold = max(hold, ingest.delay(after: delivery.event, now: now))
                 case let .voice(line):
                     voices += inbox?.receive(line, now: now) ?? []
+                    hold = max(hold, ingest.delay(afterVoice: line, now: now))
                 case .heartbeat, .dropped:
                     break
                 }

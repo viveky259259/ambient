@@ -494,6 +494,11 @@ private func scratch() -> AmbientPaths {
             let library = VoiceLibrary(paths: paths)
             #expect(library.voices.isEmpty)
             #expect(try Data(contentsOf: paths.voiceLibrary) == Data(unreadable.utf8), "opening it changes nothing")
+            #expect(throws: VoiceLibraryError.self, "a purge can't tell what it holds, so it isn't done") {
+                try library.purge(machine: "daily")
+            }
+            #expect(throws: VoiceLibraryError.self) { try RemotePurge.scrub(machine: "daily", paths: paths) }
+            #expect(RemotePurge.pendingPurges(paths: paths).isEmpty, "the app isn't told it's done either")
 
             try library.add(record(n + 1), audio: audio(), cursor: ("daily", 4))
             #expect(VoiceLibrary(paths: paths).voices.map(\.id) == [voiceID(n + 1)])

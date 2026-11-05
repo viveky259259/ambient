@@ -68,6 +68,8 @@ final class VoiceSyncController: ObservableObject {
     private let library: VoiceLibrary
     private let outbox: VoiceOutbox
     private let log = Logger(subsystem: "com.viveky259259.Ambient", category: "voice-sync")
+    /// Where Copy Audio makes its `.m4a`.
+    private let exporting = DispatchQueue(label: "com.viveky259259.Ambient.voice-sync.export", qos: .userInitiated)
     private var recorder: VoiceRecorder?
     private var part: FileHandle?
     private var textSent = ""
@@ -390,7 +392,11 @@ final class VoiceSyncController: ObservableObject {
     /// Purged: everything it sent goes too.
     func purge(machine id: String) {
         held.remove(id)
-        try? library.purge(machine: id)
+        do {
+            try library.purge(machine: id)
+        } catch {
+            show("Couldn't delete the voices from \(id). \(error.localizedDescription)")
+        }
         incoming.removeAll { $0.from.id == id }
         if arrival?.record.peer.id == id { dismissArrival() }
         voices = library.voices
@@ -412,18 +418,25 @@ final class VoiceSyncController: ObservableObject {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Ambient Voices", isDirectory: true)
         let name = Self.fileName(for: record)
         let target = folder.appendingPathComponent(name + ".m4a")
-        var file = source
-        do {
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try? FileManager.default.removeItem(at: target)
-            try Self.exportM4A(from: source, to: target)
-            file = target
-        } catch {
-            log.error("Couldn't make an m4a: \(error.localizedDescription, privacy: .public)")
+        let log = self.log
+        // Converting a ten-minute voice takes a moment, so it isn't on the main thread. One at a time, since two copies
+        // of the same voice write the same file.
+        exporting.async { [weak self] in
+            var file = source
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try? FileManager.default.removeItem(at: target)
+                try Self.exportM4A(from: source, to: target)
+                file = target
+            } catch {
+                log.error("Couldn't make an m4a: \(error.localizedDescription, privacy: .public)")
+            }
+            DispatchQueue.main.async {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.writeObjects([file as NSURL])
+                self?.flash(.audio(record.id))
+            }
         }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.writeObjects([file as NSURL])
-        flash(.audio(record.id))
     }
 
     func togglePlay(_ record: VoiceRecord) {
@@ -455,14 +468,22 @@ final class VoiceSyncController: ObservableObject {
     func delete(_ record: VoiceRecord) {
         if playing == record.id { stopPlaying() }
         if arrival?.record.id == record.id { dismissArrival() }
-        try? library.delete(record.id)
+        do {
+            try library.delete(record.id)
+        } catch {
+            show("Couldn't delete the voice. \(error.localizedDescription)")
+        }
         voices = library.voices
     }
 
     func deleteAll() {
         stopPlaying()
         dismissArrival()
-        try? library.deleteAll()
+        do {
+            try library.deleteAll()
+        } catch {
+            show("Couldn't delete the voices. \(error.localizedDescription)")
+        }
         voices = library.voices
     }
 

@@ -26,6 +26,17 @@ public struct VoiceRecord: Codable, Equatable, Identifiable, Sendable {
     public var audioFile: String { "\(id).aac" }
 }
 
+/// Why the library couldn't do what was asked, in words the user can act on.
+public struct VoiceLibraryError: Error, Equatable, LocalizedError {
+    public let message: String
+
+    public init(message: String) {
+        self.message = message
+    }
+
+    public var errorDescription: String? { message }
+}
+
 /// Every voice this Mac sent or received, kept until the user deletes it: `library.json` for what each one is and how far
 /// each machine's voices have been received, `audio/<id>.aac` for the sound. A cursor is saved with the voice that moves
 /// it, or after it, never before, so a hub killed at any point loses no voice; one it gets again is already known. Not
@@ -124,8 +135,12 @@ public final class VoiceLibrary {
         try commit { cursors[machine] = nil }
     }
 
-    /// Purging: every voice received from the machine goes too.
+    /// Purging: every voice received from the machine goes too. A library this version can't read may hold some, so
+    /// purging fails rather than look done.
     public func purge(machine: String) throws {
+        guard !unreadable else {
+            throw VoiceLibraryError(message: "This version of Ambient can't read the voice library, so the voices from \(machine) weren't deleted.")
+        }
         let gone = voices.filter { $0.direction == .received && $0.peer.id == machine }
         guard !gone.isEmpty || cursors[machine] != nil else { return }
         try commit {

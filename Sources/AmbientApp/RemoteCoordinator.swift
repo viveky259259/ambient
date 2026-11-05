@@ -48,23 +48,26 @@ final class RemoteCoordinator {
         _ = done.wait(timeout: .now() + 2)
     }
 
-    /// Unpairs a machine from Settings, as `ambient remote remove` does.
-    func remove(_ id: String) {
+    /// Unpairs a machine from Settings, as `ambient remote remove` does. False when it's still paired.
+    @discardableResult
+    func remove(_ id: String) -> Bool {
         let list = MachineFile.load(from: paths.machinesFile).filter { $0.id != id }
         do {
             try MachineFile.save(list, to: paths.machinesFile)
         } catch {
             log.error("Couldn't update the machine list: \(error.localizedDescription)")
-            return
+            return false
         }
         paths.remoteAudit.append(.init(action: .unpaired, machine: id))
         voice.forget(machine: id)
         reload(force: true)
+        return true
     }
 
-    /// Unpairs it and deletes everything it left on this Mac, as `ambient remote purge` does.
+    /// Unpairs it and deletes everything it left on this Mac, as `ambient remote purge` does. Nothing goes while it's
+    /// still paired, or its link would bring the voices in its outbox back.
     func purge(_ id: String) {
-        remove(id)
+        guard remove(id) else { return }
         model.purge(machine: id)
         voice.purge(machine: id)
         paths.remoteAudit.append(.init(action: .purged, machine: id))

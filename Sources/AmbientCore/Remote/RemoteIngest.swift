@@ -96,6 +96,11 @@ public final class RemoteIngest {
     private var limiter: RemoteRateLimiter
     /// Lives here rather than on a connection, so reconnecting doesn't refill it.
     private var replayLimiter: RemoteRateLimiter
+    /// Voice lines have buckets of their own, so a flood of them can't spend what events get. A live voice is about two
+    /// lines a second, each half a second of audio. The replay bucket holds hours of voices, and past it they still
+    /// come 25 times faster than they were spoken.
+    private var voiceLimiter: RemoteRateLimiter
+    private var voiceReplayLimiter: RemoteRateLimiter
     private var hello: RemoteHello?
     private var skew: TimeInterval = 0
     private var seenIDs = Set<String>()
@@ -106,12 +111,15 @@ public final class RemoteIngest {
 
     public init(machine: Machine, cursor: RemoteCursor, policy: Policy = Policy(),
                 limiter: RemoteRateLimiter = RemoteRateLimiter(), replayLimiter: RemoteRateLimiter = .replay,
+                voiceLimiter: RemoteRateLimiter = RemoteRateLimiter(), voiceReplayLimiter: RemoteRateLimiter = .replay,
                 audit: RemoteAudit? = nil) {
         self.machine = machine
         self.cursor = cursor
         self.policy = policy
         self.limiter = limiter
         self.replayLimiter = replayLimiter
+        self.voiceLimiter = voiceLimiter
+        self.voiceReplayLimiter = voiceReplayLimiter
         self.audit = audit
         self.throttle = RemoteAuditThrottle(audit: audit)
     }
@@ -148,6 +156,16 @@ public final class RemoteIngest {
     public func delay(after e: RemoteEvent, now: Date) -> TimeInterval {
         let replay = e.seq <= (hello?.seq ?? 0)
         let wait = replay ? replayLimiter.delay(now: now) : limiter.delay(now: now)
+        guard wait > 0 else { return 0 }
+        throttle.record(.rateLimited, machine: machine.id, now: now)
+        return wait
+    }
+
+    /// `delay(after:)` for a voice line: one already in the outbox when the machine said hello is a replay. The inbox
+    /// bounds each voice; this bounds how fast they come.
+    public func delay(afterVoice v: VoiceLine, now: Date) -> TimeInterval {
+        let replay = v.vseq <= (hello?.voice ?? 0)
+        let wait = replay ? voiceReplayLimiter.delay(now: now) : voiceLimiter.delay(now: now)
         guard wait > 0 else { return 0 }
         throttle.record(.rateLimited, machine: machine.id, now: now)
         return wait

@@ -189,7 +189,9 @@ final class IslandController {
         let sessions = viewModel.sessions
         let next: IslandViewModel.Presentation
         if !prefs.islandEnabled {
-            next = .hidden
+            // Off, it still shows a voice, which has nowhere else to go: the one being recorded, one that came, and what
+            // the shortcut has to say.
+            next = voice.outgoing != nil || voice.arrival != nil || voice.notice != nil ? .voice : .hidden
         } else if let entry = viewModel.permission {
             // Ahead of hovering too: reaching for Allow or Deny mustn't swap the prompt for the session list.
             next = .permission(entry.ask.id)
