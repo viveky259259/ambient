@@ -129,6 +129,12 @@ final class VoiceRecorder: @unchecked Sendable {
         }
     }
 
+    /// Waits until what's recorded so far, and after `finish` the last chunk, has gone to `onChunk`. For quitting, which
+    /// can't wait for `finish` to call back. `onChunk` must not wait on the main thread.
+    func flush() {
+        queue.sync {}
+    }
+
     /// Stops and throws away what wasn't sent; calls back once nothing more will come.
     func cancel(_ done: @escaping () -> Void) {
         stopEngine()

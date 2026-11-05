@@ -89,6 +89,13 @@ public struct VoiceDestination: Equatable, Identifiable, Sendable {
         now.timeIntervalSince(lastSeen) < 45
     }
 
+    /// Where a voice goes: `chosen` when it's listed; else, of those connected now, the same one every time, since each
+    /// heartbeat reorders them; else the one seen most recently.
+    public static func preferred(in destinations: [VoiceDestination], chosen: String?, now: Date = Date()) -> VoiceDestination? {
+        if let match = destinations.first(where: { $0.id == chosen }) { return match }
+        return destinations.filter { $0.isOnline(now: now) }.min { ($0.label, $0.id) < ($1.label, $1.id) } ?? destinations.first
+    }
+
     /// The hubs `follow` has registered, most recently seen first. A file that isn't a hub's is skipped.
     public static func load(from dir: URL) -> [VoiceDestination] {
         let fm = FileManager.default

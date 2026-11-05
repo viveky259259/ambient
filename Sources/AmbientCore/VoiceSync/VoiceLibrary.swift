@@ -103,38 +103,35 @@ public final class VoiceLibrary {
 
     public func setCursor(_ vseq: Int64, machine: String) throws {
         guard cursors[machine] != vseq else { return }
-        cursors[machine] = vseq
-        try save()
+        try commit { cursors[machine] = vseq }
     }
 
     public func delete(_ id: String) throws {
         guard let record = record(id) else { return }
-        voices.removeAll { $0.id == id }
-        try save()
+        try commit { voices.removeAll { $0.id == id } }
         try? FileManager.default.removeItem(at: audioURL(for: record))
     }
 
     public func deleteAll() throws {
         let gone = voices
-        voices = []
-        try save()
+        try commit { voices = [] }
         for record in gone { try? FileManager.default.removeItem(at: audioURL(for: record)) }
     }
 
     /// Unpairing: the machine's voices stay, but where it got to goes, as its sessions' cursor does.
     public func forget(machine: String) throws {
         guard cursors[machine] != nil else { return }
-        cursors[machine] = nil
-        try save()
+        try commit { cursors[machine] = nil }
     }
 
     /// Purging: every voice received from the machine goes too.
     public func purge(machine: String) throws {
         let gone = voices.filter { $0.direction == .received && $0.peer.id == machine }
         guard !gone.isEmpty || cursors[machine] != nil else { return }
-        voices.removeAll { $0.direction == .received && $0.peer.id == machine }
-        cursors[machine] = nil
-        try save()
+        try commit {
+            voices.removeAll { $0.direction == .received && $0.peer.id == machine }
+            cursors[machine] = nil
+        }
         for record in gone { try? FileManager.default.removeItem(at: audioURL(for: record)) }
     }
 
@@ -147,11 +144,25 @@ public final class VoiceLibrary {
     }
 
     private func insert(_ record: VoiceRecord, cursor: (machine: String, vseq: Int64)?) throws {
-        voices.removeAll { $0.id == record.id }
-        voices.append(record)
-        voices.sort { $0.recordedAt > $1.recordedAt }
-        if let cursor { cursors[cursor.machine] = cursor.vseq }
-        try save()
+        try commit {
+            voices.removeAll { $0.id == record.id }
+            voices.append(record)
+            voices.sort { $0.recordedAt > $1.recordedAt }
+            if let cursor { cursors[cursor.machine] = cursor.vseq }
+        }
+    }
+
+    /// Makes `change` and saves it. If saving fails, what's held goes back to what's on disk, so a voice that wasn't kept
+    /// isn't listed, and a cursor that wasn't saved is saved the next time it's set.
+    private func commit(_ change: () -> Void) throws {
+        let before = (voices, cursors)
+        change()
+        do {
+            try save()
+        } catch {
+            (voices, cursors) = before
+            throw error
+        }
     }
 
     private func prepare() throws {

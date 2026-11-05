@@ -133,9 +133,11 @@ final class IslandController {
                 self?.refresh()
             }
             .store(in: &cancellables)
-        // Read a turn later: objectWillChange comes before the change. The view model republishes it, since the voice card's
-        // size follows what it shows.
-        voice.objectWillChange
+        // Only what picks the presentation or the card's size. The level changes many times a second while recording, and
+        // the card follows it, and what's playing or copied, itself. Read a turn later, since a @Published publisher fires
+        // before the change. The view model republishes it, since the voice card's size follows what it shows.
+        Publishers.Merge4(voice.$outgoing.map { _ in () }, voice.$arrival.map { _ in () }, voice.$notice.map { _ in () },
+                          voice.$incoming.map { _ in () })
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.viewModel.objectWillChange.send()

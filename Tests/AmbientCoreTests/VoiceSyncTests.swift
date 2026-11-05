@@ -167,6 +167,18 @@ private func scratch() -> AmbientPaths {
         #expect(found[0].isOnline(now: now))
         #expect(!found[1].isOnline(now: now))
     }
+
+    @Test func theDefaultDestinationDoesntFollowEachHeartbeat() {
+        let studio = VoiceDestination(id: hub, label: "Mac Studio", lastSeen: now.addingTimeInterval(-10))
+        let air = VoiceDestination(id: otherHub, label: "MacBook Air", lastSeen: now.addingTimeInterval(-2))
+        let mini = VoiceDestination(id: String(repeating: "ef", count: 16), label: "Old Mini", lastSeen: now.addingTimeInterval(-3_600))
+        // Both are connected, and whichever beat last comes first: the default is the same one either way.
+        #expect(VoiceDestination.preferred(in: [air, studio, mini], chosen: nil, now: now) == studio)
+        #expect(VoiceDestination.preferred(in: [studio, air, mini], chosen: nil, now: now) == studio)
+        #expect(VoiceDestination.preferred(in: [air, studio, mini], chosen: mini.id, now: now) == mini)
+        #expect(VoiceDestination.preferred(in: [mini], chosen: "gone", now: now) == mini, "none connected: the last seen")
+        #expect(VoiceDestination.preferred(in: [], chosen: nil, now: now) == nil)
+    }
 }
 
 @Suite struct VoiceOutboxTests {
@@ -370,6 +382,18 @@ private func scratch() -> AmbientPaths {
         #expect(box.cursor == 4)
     }
 
+    @Test func anEndWhoseWordsWereStrippedKeepsTheTranscriptSoFar() throws {
+        let box = inbox()
+        _ = box.receive(line(1, .start(at: now)), now: now)
+        _ = box.receive(line(2, .audio(n: 0, data: audio())), now: now)
+        _ = box.receive(line(3, .text("Call me back")), now: now)
+        // Nothing but a zero-width space: the decoder leaves an empty end.
+        let end = try #require(try decode(#"{"v":1,"type":"voice","vseq":4,"to":"\#(hub)","voice":"\#(voiceID(1))","part":"end","text":"\u200b"}"#))
+        #expect(end.part == .end(text: ""))
+        guard case let .arrived(voice)? = box.receive(end, now: now).first else { Issue.record("no arrival"); return }
+        #expect(voice.text == "Call me back")
+    }
+
     @Test func aVoiceWhoseSenderWentQuietIsDropped() {
         let box = inbox()
         _ = box.receive(line(1, .start(at: now)), now: now)
@@ -434,6 +458,27 @@ private func scratch() -> AmbientPaths {
         #expect(library.voices.isEmpty)
         #expect(VoiceLibrary(paths: paths).voices.isEmpty)
         #expect(!FileManager.default.fileExists(atPath: library.audioURL(for: record(3)).path))
+    }
+
+    @Test func aChangeThatCouldntBeSavedIsntKept() throws {
+        let paths = scratch()
+        let library = VoiceLibrary(paths: paths)
+        try library.add(record(1), audio: audio(), cursor: ("daily", 3))
+        let dir = paths.voiceLibrary.deletingLastPathComponent()
+        // A folder that can't be written to: every save fails.
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path) }
+
+        #expect(throws: (any Error).self) { try library.setCursor(8, machine: "daily") }
+        #expect(library.cursors == ["daily": 3], "the cursor on disk")
+        #expect(throws: (any Error).self) { try library.add(record(2), audio: audio()) }
+        #expect(library.voices.map(\.id) == [voiceID(1)], "a voice that wasn't kept isn't listed")
+        #expect(throws: (any Error).self) { try library.delete(voiceID(1)) }
+        #expect(library.voices.map(\.id) == [voiceID(1)])
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        try library.setCursor(8, machine: "daily")
+        #expect(VoiceLibrary(paths: paths).cursors == ["daily": 8], "saved once it can be")
     }
 
     @Test func anUnreadableLibraryIsSetAsideNotReplaced() throws {

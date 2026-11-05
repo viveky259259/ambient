@@ -93,7 +93,7 @@ final class Preferences: ObservableObject {
 
     /// A `Shortcut.stored` value; nil for the default (⌃⌥V).
     @Published var voiceSyncShortcut: String? { didSet { defaults.set(voiceSyncShortcut, forKey: "voiceSyncShortcut") } }
-    /// The hub id voices go to; nil for whichever Mac followed this one most recently.
+    /// The hub id voices go to; nil for one that's connected (`VoiceDestination.preferred`).
     @Published var voiceSyncDestination: String? { didSet { defaults.set(voiceSyncDestination, forKey: "voiceSyncDestination") } }
     /// Seconds a received voice's Copy card stays under the notch.
     @Published var voiceSyncCopySeconds: Int { didSet { defaults.set(voiceSyncCopySeconds, forKey: "voiceSyncCopySeconds") } }

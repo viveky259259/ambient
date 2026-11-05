@@ -42,7 +42,9 @@ the receiving Mac dialing out.
    --voice-since N`, and streams the outbox lines addressed to that hub along with the events. This adds no listener,
    port, relay or credentials, and no new trust boundary. It also inherits ProxyJump, Tailscale SSH, certificates and
    the rest. Each direction is its own pairing: to send both ways, each Mac pairs the other.
-2. **Real time, by streaming chunks.** The sender writes about 0.5 s of AAC and the transcript so far as JSON lines.
+2. **Real time, by streaming chunks.** The sender writes about 0.5 s of AAC at a time, and every 5 s the transcript so
+   far, as JSON lines. Each `text` line carries the whole transcript, so sending it with every chunk would make a long
+   voice's text outweigh its audio; the `end` carries the final words.
    `follow` normally polls once a second. While `outbox.live` exists, it checks the outbox every 0.2 s, so a line
    reaches the hub in roughly 0.2 s plus the SSH round trip. The receiver doesn't play the voice live. Streaming means
    the voice is complete the moment it ends, and the destination knows a voice is coming.

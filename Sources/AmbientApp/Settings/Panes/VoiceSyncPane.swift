@@ -86,7 +86,7 @@ struct VoiceSyncPane: View {
                 }
                 ForEach(Array(voice.voices.enumerated()), id: \.element.id) { index, record in
                     if index > 0 { SettingsDivider() }
-                    VoiceRow(record: record, voice: voice)
+                    VoiceRow(record: record, voice: voice, playing: voice.playing == record.id)
                 }
                 if !voice.voices.isEmpty {
                     SettingsDivider()
@@ -135,9 +135,11 @@ struct VoiceSyncPane: View {
     }
 }
 
+/// Not observing `voice`: its level changes many times a second while recording, and every row would follow it.
 private struct VoiceRow: View {
     let record: VoiceRecord
-    @ObservedObject var voice: VoiceSyncController
+    let voice: VoiceSyncController
+    let playing: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: Theme.Space.sm) {
@@ -161,10 +163,10 @@ private struct VoiceRow: View {
             Button {
                 voice.togglePlay(record)
             } label: {
-                Image(systemName: voice.playing == record.id ? "stop.fill" : "play.fill")
+                Image(systemName: playing ? "stop.fill" : "play.fill")
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(voice.playing == record.id ? "Stop" : "Play")
+            .accessibilityLabel(playing ? "Stop" : "Play")
             Menu {
                 if record.text != nil { Button("Copy Text") { voice.copyText(record) } }
                 Button("Copy Audio") { voice.copyAudio(record) }

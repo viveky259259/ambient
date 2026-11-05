@@ -47,7 +47,8 @@ public struct RemoteBackoff: Sendable {
 }
 
 /// What a link needs to bring a machine's voices to this Mac: who this hub is, where its voices got to, which it has,
-/// and where to hand what arrives. `deliver` gets the events and the cursor to save once they're handled.
+/// and where to hand what arrives. `deliver` gets the events and the cursor to save once they're handled; no events when
+/// only the cursor moved.
 public struct VoiceReceiver: Sendable {
     public let hub: VoiceHub
     public let cursor: Int64
@@ -266,9 +267,12 @@ public final class RemoteLink: @unchecked Sendable {
                 let now = Date()
                 switch ingest.receive(line, now: now) {
                 case let .linked(hello):
-                    // The machine's outbox isn't the one this hub's voice cursor was for: start its voices over.
-                    if let inbox, let head = hello.voice, inbox.cursor > head {
+                    // The machine's outbox isn't the one this hub's voice cursor was for: start its voices over. The
+                    // cursor is saved now, with no voice to go with it, or a launch before one comes would skip what the
+                    // new outbox has grown past the old cursor by then.
+                    if let voice, let inbox, let head = hello.voice, inbox.cursor > head {
                         inbox.resetCursor()
+                        voice.deliver([], inbox.cursor)
                         return finish(.restart)
                     }
                     linkedAt = now

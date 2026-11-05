@@ -141,7 +141,8 @@ public final class VoiceInbox {
             pending[id] = nil
             done.insert(id)
             guard !voice.audio.isEmpty else { return [.ended(id: id)] }
-            let final = (text ?? voice.text).flatMap { $0.isEmpty ? nil : $0 }
+            // An end whose words were all stripped falls back to the transcript so far, as one without words does.
+            let final = (text.flatMap { $0.isEmpty ? nil : $0 } ?? voice.text).flatMap { $0.isEmpty ? nil : $0 }
             return [.arrived(VoiceArrival(id: id, machine: machine, recordedAt: voice.recordedAt, seconds: voice.seconds,
                                           text: final, audio: voice.audio))]
         case .cancel:

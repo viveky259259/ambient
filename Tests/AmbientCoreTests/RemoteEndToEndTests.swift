@@ -911,11 +911,19 @@ private final class VoiceSink: @unchecked Sendable {
     private let lock = NSLock()
     private var events: [VoiceInboxEvent] = []
     private var saved: Int64 = 0
+    private var handed = 0
 
     func add(_ batch: [VoiceInboxEvent], cursor: Int64) {
         lock.lock(); defer { lock.unlock() }
         events += batch
         saved = cursor
+        handed += 1
+    }
+
+    /// Times the link handed something over, events or only a cursor.
+    var deliveries: Int {
+        lock.lock(); defer { lock.unlock() }
+        return handed
     }
 
     var all: [VoiceInboxEvent] {
@@ -1087,6 +1095,24 @@ extension RemoteEndToEndTests {
             defer { link.stop() }
             #expect(waitUntil(5) { sink.arrivals.count == 1 })
             #expect(sink.cursor == 3)
+        }
+
+        @Test func aReplacedOutboxSavesTheCursorItStartsOverFrom() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            // Only another hub's voice: nothing comes for this one to carry the cursor.
+            let id = VoiceHub.randomID()
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .start(at: Date()))
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .cancel)
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 40)
+            link.start()
+            defer { link.stop() }
+            // Saved as it's reset, so a launch before the next voice doesn't follow from 40 again.
+            #expect(waitUntil(5) { sink.deliveries > 0 })
+            #expect(sink.cursor == 0)
+            #expect(sink.all.isEmpty)
         }
 
         @Test func aHubFromBeforeVoiceSyncSeesWhatItAlwaysDid() throws {

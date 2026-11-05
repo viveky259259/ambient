@@ -60,6 +60,8 @@ final class VoiceSyncController: ObservableObject {
     let hub: VoiceHub
     /// Where a recording stops by itself.
     static let maxSeconds: TimeInterval = 600
+    /// How often the transcript so far goes to the outbox while recording.
+    static let textInterval: TimeInterval = 5
 
     private let paths: AmbientPaths
     private let prefs: Preferences
@@ -118,6 +120,8 @@ final class VoiceSyncController: ObservableObject {
             outbox.setLive(false)
             return
         }
+        // The recorder is still writing its last chunk: it goes before the end, or the other Mac would leave it off.
+        recorder?.flush()
         let text = outgoing.text.isEmpty ? nil : VoiceLine.cap(outgoing.text)
         _ = try? outbox.append(to: outgoing.destination.id, voice: outgoing.id, .end(text: text))
         outbox.setLive(false)
@@ -130,9 +134,9 @@ final class VoiceSyncController: ObservableObject {
 
     // MARK: - Sending
 
-    /// The Mac voices go to: the one chosen in Settings, or the one that followed this Mac most recently.
+    /// The Mac voices go to: the one chosen in Settings, or one that's connected.
     var destination: VoiceDestination? {
-        destinations.first { $0.id == prefs.voiceSyncDestination } ?? destinations.first
+        VoiceDestination.preferred(in: destinations, chosen: prefs.voiceSyncDestination)
     }
 
     func choose(_ destination: VoiceDestination) {
@@ -213,8 +217,9 @@ final class VoiceSyncController: ObservableObject {
         textSent = ""
         outgoing = Outgoing(id: id, destination: destination, startedAt: Date())
         notice = nil
-        // The transcript goes out at most twice a second; each line carries all of it.
-        textTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.sendText() }
+        // Each line carries the whole transcript so far, so it goes out every few seconds, not with every chunk: twice a
+        // second, a long voice's text would outweigh its audio in the outbox. The end carries the final words.
+        textTimer = Timer.scheduledTimer(withTimeInterval: Self.textInterval, repeats: true) { [weak self] _ in self?.sendText() }
         limitTimer = Timer.scheduledTimer(withTimeInterval: Self.maxSeconds, repeats: false) { [weak self] _ in self?.send() }
         if !transcribe { log.notice("Recording without a transcript: on-device recognition isn't available or allowed.") }
     }
@@ -237,11 +242,17 @@ final class VoiceSyncController: ObservableObject {
         let id = current.id
         recorder.finish { [weak self] text, seconds in
             // Quitting may have sent it already. What it is now says whether a chunk was lost meanwhile.
-            guard let self, let current = self.outgoing, current.id == id else { return }
+            guard let self, var current = self.outgoing, current.id == id else { return }
             let destination = current.destination
             let final = text.map(VoiceLine.cap)
             // A chunk is missing, so the other Mac would refuse it: it's called off there instead.
-            _ = try? self.outbox.append(to: destination.id, voice: current.id, current.lost == nil ? .end(text: final) : .cancel)
+            do {
+                try self.outbox.append(to: destination.id, voice: current.id, current.lost == nil ? .end(text: final) : .cancel)
+            } catch {
+                // Without its end the other Mac drops it once it hears nothing more, so it wasn't sent.
+                self.log.error("Couldn't end the voice in the outbox: \(error.localizedDescription, privacy: .public)")
+                if current.lost == nil { current.lost = error.localizedDescription }
+            }
             self.outbox.setLive(false)
             try? self.part?.close()
             self.part = nil
@@ -534,7 +545,9 @@ final class VoiceSyncController: ObservableObject {
                                        AVNumberOfChannelsKey: 1, AVEncoderBitRateKey: 48_000]
         let output = try AVAudioFile(forWriting: target, settings: settings, commonFormat: input.processingFormat.commonFormat,
                                      interleaved: input.processingFormat.isInterleaved)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 8_192) else { return }
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 8_192) else {
+            throw VoiceRecorderError(message: "Couldn't convert the audio.")
+        }
         while input.framePosition < input.length {
             try input.read(into: buffer)
             if buffer.frameLength == 0 { break }
