@@ -34,7 +34,7 @@
         "mainEntityOfPage": "https://yaml.cafe/guides/codex-notifications-mac/",
         "image": "https://yaml.cafe/assets/og.png",
         "datePublished": "2026-09-27T00:00:00+00:00",
-        "dateModified": "2026-09-27T00:00:00+00:00",
+        "dateModified": "2026-11-03T00:00:00+00:00",
         "inLanguage": "en",
         "proficiencyLevel": "Beginner",
         "about": { "@type": "Thing", "name": "Codex" },
@@ -56,7 +56,9 @@
           { "@type": "Question", "name": "Why doesn't my Codex notify program run?", "acceptedAnswer": { "@type": "Answer", "text": "In TOML, every key after a [table] header belongs to that table. Put notify = [...] near the top of ~/.codex/config.toml, before [tui], [mcp_servers] or any other table. Also check that the program is executable and that its path is absolute." } },
           { "@type": "Question", "name": "Can notify tell me when Codex needs approval?", "acceptedAnswer": { "@type": "Answer", "text": "No. notify currently fires only for agent-turn-complete. For approvals, use the built-in TUI notification, a PermissionRequest hook in ~/.codex/hooks.json, or Ambient, which shows an amber 'needs you' state." } },
           { "@type": "Question", "name": "Do these work with the Codex desktop app?", "acceptedAnswer": { "@type": "Answer", "text": "The tui settings apply to the Codex CLI. Ambient works with both the Codex CLI and the Codex app, and a click on an Ambient notification opens the exact thread in the Codex app." } },
-          { "@type": "Question", "name": "Why did my new Codex hooks do nothing?", "acceptedAnswer": { "@type": "Answer", "text": "Codex asks you to trust new hooks before it runs them. Type /hooks inside Codex and approve them, then restart sessions that were already open." } }
+          { "@type": "Question", "name": "Why did my new Codex hooks do nothing?", "acceptedAnswer": { "@type": "Answer", "text": "Codex asks you to trust new hooks before it runs them. Type /hooks inside Codex and approve them, then restart sessions that were already open." } },
+          { "@type": "Question", "name": "How do I make Codex play a sound when it's done?", "acceptedAnswer": { "@type": "Answer", "text": "Point notify in ~/.codex/config.toml at a program that runs afplay /System/Library/Sounds/Glass.aiff, and keep that line above every [table]. Ambient plays a soft chime when a Codex turn ends, in the CLI and the Codex app, and stays quiet while you're already looking." } },
+          { "@type": "Question", "name": "Why are Codex notifications not working?", "acceptedAnswer": { "@type": "Answer", "text": "Three usual causes: notifications is missing or under the wrong table in config.toml; your terminal ignores OSC 9 desktop notifications, as Terminal.app does; or you're inside tmux without allow-passthrough. The notify program has its own catch: it must sit above every [table] in config.toml." } }
         ]
       }
     ]
@@ -75,7 +77,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get notified when Codex finishes or needs approval on Mac</h1>
-    <p class="meta">Updated <time datetime="2026-09-27">September 27, 2026</time> · 5 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 5 min read</p>
 
     <p class="answer">Codex can alert you on its own: turn on <code>notifications</code> under <code>[tui]</code> in <code>~/.codex/config.toml</code> and it sends an OSC&nbsp;9 desktop notification in terminals that support it, or rings the bell. For a custom alert, point <code>notify</code> at a program that Codex runs after every turn. For a live status across sessions and the Codex app, use Ambient.</p>
 
@@ -151,6 +153,10 @@ notify = ["bash", "-c", "osascript -e 'display notification \"Codex finished a t
     <p>The <code>tui</code> settings apply to the Codex CLI. Ambient works with both the Codex CLI and the Codex app, and a click on an Ambient notification opens the exact thread in the Codex app.</p>
     <h3>Why did my new Codex hooks do nothing?</h3>
     <p>Codex asks you to trust new hooks before it runs them. Type <code>/hooks</code> inside Codex and approve them, then restart sessions that were already open.</p>
+    <h3>How do I make Codex play a sound when it&#x27;s done?</h3>
+    <p>Point <code>notify</code> in <code>~/.codex/config.toml</code> at a program that runs <code>afplay /System/Library/Sounds/Glass.aiff</code>, and keep that line above every <code>[table]</code>. Ambient plays a soft chime when a Codex turn ends, in the CLI and the Codex app, and stays quiet while you're already looking.</p>
+    <h3>Why are Codex notifications not working?</h3>
+    <p>Three usual causes: <code>notifications</code> is missing or under the wrong table in <code>config.toml</code>; your terminal ignores OSC 9 desktop notifications, as Terminal.app does; or you're inside tmux without <code>allow-passthrough</code>. The notify program has its own catch: it must sit above every <code>[table]</code> in <code>config.toml</code>.</p>
 
     <h2>Sources</h2>
     <ul class="sources">
