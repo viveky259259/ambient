@@ -34,7 +34,7 @@
         "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-mac/",
         "image": "https://yaml.cafe/assets/og.png",
         "datePublished": "2026-09-27T00:00:00+00:00",
-        "dateModified": "2026-11-01T00:00:00+00:00",
+        "dateModified": "2026-11-03T00:00:00+00:00",
         "inLanguage": "en",
         "proficiencyLevel": "Beginner",
         "about": { "@type": "Thing", "name": "Claude Code" },
@@ -53,10 +53,13 @@
       {
         "@type": "FAQPage",
         "mainEntity": [
-          { "@type": "Question", "name": "Why don't I get Claude Code notifications in the VS Code terminal?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code sends desktop notifications by default only in Ghostty, Kitty and iTerm2. In the VS Code or Cursor integrated terminal, Terminal.app or Warp, set preferredNotifChannel to terminal_bell, add a Notification hook, or use Ambient, which works in any terminal or editor." } },
+          { "@type": "Question", "name": "Why don't I get Claude Code notifications in the VS Code, Cursor or Warp terminal?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code sends desktop notifications by default only in Ghostty, Kitty and iTerm2. In the VS Code or Cursor integrated terminal, Terminal.app or Warp, set preferredNotifChannel to terminal_bell, add a Notification hook, or use Ambient, which works in any terminal or editor." } },
           { "@type": "Question", "name": "Why does the \"Claude is done\" notification take a minute to arrive?", "acceptedAnswer": { "@type": "Answer", "text": "The idle_prompt notification fires about 60 seconds after Claude finishes responding, and only if you haven't typed since. For an alert the moment Claude finishes, add a Stop hook, or use Ambient, which marks the session done as soon as the turn ends." } },
           { "@type": "Question", "name": "Do Claude Code notifications work inside tmux?", "acceptedAnswer": { "@type": "Answer", "text": "Built-in desktop notifications need set -g allow-passthrough on in ~/.tmux.conf so they reach the outer terminal. Hooks don't pass through the terminal, so a Notification hook and Ambient work in tmux without that setting, and Ambient returns you to the exact pane." } },
-          { "@type": "Question", "name": "Do Claude Code notifications work over SSH?", "acceptedAnswer": { "@type": "Answer", "text": "The built-in desktop notification reaches your local machine over SSH in Ghostty, Kitty and iTerm2. Hooks run on the machine where Claude Code runs, so an osascript hook only works when Claude Code runs on your Mac. Ambient can follow agents on another machine: pair it with ambient remote add, and its sessions show up on your Mac over your own ssh." } }
+          { "@type": "Question", "name": "Do Claude Code notifications work over SSH?", "acceptedAnswer": { "@type": "Answer", "text": "The built-in desktop notification reaches your local machine over SSH in Ghostty, Kitty and iTerm2. Hooks run on the machine where Claude Code runs, so an osascript hook only works when Claude Code runs on your Mac. Ambient can follow agents on another machine: pair it with ambient remote add, and its sessions show up on your Mac over your own ssh." } },
+          { "@type": "Question", "name": "How do I get a notification when Claude Code is done?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code's built-in idle_prompt notification fires about a minute after a reply, and only in Ghostty, Kitty and iTerm2. For an alert the moment it finishes, add a Stop hook that runs osascript -e 'display notification \"Claude is done\"', or install Ambient, which posts a notification and a soft chime when any session's turn ends and shows green at the notch until you look." } },
+          { "@type": "Question", "name": "Can I get Claude Code notifications on my phone?", "acceptedAnswer": { "@type": "Answer", "text": "Not from the built-in channels, which only reach your terminal. A Stop or Notification hook can call a push service instead, for example curl -d \"Claude is done\" ntfy.sh/your-topic, and the alert lands on your phone. Ambient shows agents on your Mac, not on a phone; it can follow Claude Code running on another machine over your own ssh." } },
+          { "@type": "Question", "name": "Do Claude Code notifications work on Windows and Linux?", "acceptedAnswer": { "@type": "Answer", "text": "The hooks do; only the command changes. On Linux a Notification hook can run notify-send, and on Windows a PowerShell toast. The built-in desktop notification still depends on the terminal you use. Ambient is a macOS app." } }
         ]
       }
     ]
@@ -75,7 +78,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get notified when Claude Code finishes or needs you on Mac</h1>
-    <p class="meta">Updated <time datetime="2026-11-01">November 1, 2026</time> · 6 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 6 min read</p>
 
     <p class="answer">Claude Code already sends a desktop notification in Ghostty, Kitty and iTerm2 when it finishes or waits for permission. In any other terminal, set <code>preferredNotifChannel</code> to <code>"terminal_bell"</code>, or add a <code>Notification</code> hook to <code>~/.claude/settings.json</code>. To watch several sessions at once and click straight back to the right tab, use a notch status app such as Ambient.</p>
 
@@ -176,7 +179,7 @@
     </div>
 
     <h2>Common questions</h2>
-    <h3>Why don't I get Claude Code notifications in the VS Code terminal?</h3>
+    <h3>Why don't I get Claude Code notifications in the VS Code, Cursor or Warp terminal?</h3>
     <p>Claude Code sends desktop notifications by default only in Ghostty, Kitty and iTerm2. In the VS Code or Cursor integrated terminal, Terminal.app or Warp, set <code>preferredNotifChannel</code> to <code>terminal_bell</code>, add a Notification hook, or use Ambient, which works in any terminal or editor.</p>
     <h3>Why does the "Claude is done" notification take a minute to arrive?</h3>
     <p>The <code>idle_prompt</code> notification fires about 60 seconds after Claude finishes responding, and only if you haven't typed since. For an alert the moment Claude finishes, add a <code>Stop</code> hook, or use Ambient, which marks the session done as soon as the turn ends.</p>
@@ -184,6 +187,12 @@
     <p>Built-in desktop notifications need <code>set -g allow-passthrough on</code> in <code>~/.tmux.conf</code> so they reach the outer terminal. Hooks don't pass through the terminal, so a Notification hook and Ambient work in tmux without that setting, and Ambient returns you to the exact pane.</p>
     <h3>Do Claude Code notifications work over SSH?</h3>
     <p>The built-in desktop notification reaches your local machine over SSH in Ghostty, Kitty and iTerm2. Hooks run on the machine where Claude Code runs, so an <code>osascript</code> hook only works when Claude Code runs on your Mac. Ambient can follow agents on another machine: pair it with <code>ambient remote add</code>, and its sessions show up on your Mac over your own ssh.</p>
+    <h3>How do I get a notification when Claude Code is done?</h3>
+    <p>Claude Code's built-in <code>idle_prompt</code> notification fires about a minute after a reply, and only in Ghostty, Kitty and iTerm2. For an alert the moment it finishes, add a <code>Stop</code> hook that runs <code>osascript -e 'display notification "Claude is done"'</code>, or install Ambient, which posts a notification and a soft chime when any session's turn ends and shows green at the notch until you look.</p>
+    <h3>Can I get Claude Code notifications on my phone?</h3>
+    <p>Not from the built-in channels, which only reach your terminal. A <code>Stop</code> or <code>Notification</code> hook can call a push service instead, for example <code>curl -d "Claude is done" ntfy.sh/your-topic</code>, and the alert lands on your phone. Ambient shows agents on your Mac, not on a phone; it can follow Claude Code running on another machine over your own ssh.</p>
+    <h3>Do Claude Code notifications work on Windows and Linux?</h3>
+    <p>The hooks do; only the command changes. On Linux a Notification hook can run <code>notify-send</code>, and on Windows a PowerShell toast. The built-in desktop notification still depends on the terminal you use. Ambient is a macOS app.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

@@ -130,6 +130,14 @@ Step-by-step guides for each agent's own options:
 
 **How do I ask for a feature?** Suggest it or vote on the [feature requests board](https://yaml.cafe/requests/), or choose **Suggest a Feature…** from Ambient's menu bar menu.
 
+**How do I get notified when Claude Code is done or needs input?** Install Ambient and click Connect All. A notification and a soft chime arrive the moment a turn ends or Claude asks for permission or a question, the island turns green or amber, and a click takes you to that session. Without Ambient, Claude Code's Stop and Notification hooks can post a desktop alert or play a sound; see [Claude Code notifications on Mac](https://yaml.cafe/guides/claude-code-notifications-mac/).
+
+**Can Ambient read Claude Code's answer aloud?** Yes. Select part of a reply in the Claude app, Codex or your terminal and press ⌥⎋, or choose **Read Selection Aloud** from the menu bar. Ambient reads it with a Mac voice, with Kokoro running offline on your Mac after a one-time download, or with OpenAI or ElevenLabs using your own key.
+
+**Is Ambient a free alternative to Vibe Island or a Dynamic Island app for MacBook?** Yes. It's a free, open-source notch app for coding agents, and it also runs on Macs without a notch, where the island sits at the top of the menu bar. See [Vibe Island alternatives for Mac](https://yaml.cafe/guides/vibe-island-alternatives-mac/).
+
+**Which coding agents does Ambient support?** Claude Code (terminal, editors and the Claude desktop app), Codex (CLI and the Codex app), Gemini CLI, Antigravity, Cursor, and in beta GitHub Copilot CLI and OpenCode. Any other agent or script can drive it with `ambient emit`.
+
 ## More
 
 - [yaml.cafe](https://yaml.cafe/): download and the full page

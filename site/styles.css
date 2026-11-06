@@ -36,7 +36,7 @@ body {
 img, video { max-width: 100%; display: block; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-code { font-family: var(--mono); font-size: 0.9em; }
+code, kbd { font-family: var(--mono); font-size: 0.9em; }
 
 .wrap { max-width: 1024px; margin: 0 auto; padding: 0 var(--gutter); }
 .center { text-align: center; }
