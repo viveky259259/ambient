@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code notifications on your phone: ntfy, Pushover, ssh</title>
+  <meta name="description" content="Claude Code can't push to a phone, but a Stop or Notification hook posting to ntfy or Pushover can. Ambient is Mac-only; it follows agents elsewhere over ssh.">
+  <link rel="canonical" href="https://yaml.cafe/guides/claude-code-notifications-on-phone/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/claude-code-notifications-on-phone/">
+  <meta property="og:title" content="How to get Claude Code notifications on your phone">
+  <meta property="og:description" content="A hook that posts to ntfy or Pushover when Claude finishes or needs you, and what Ambient can and can&#x27;t do from a Mac.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-11-05">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/claude-code-notifications-on-phone/#article",
+      "headline": "How to get Claude Code notifications on your phone",
+      "description": "Claude Code can't push to a phone, but a Stop or Notification hook posting to ntfy or Pushover can. Ambient is Mac-only; it follows agents elsewhere over ssh.",
+      "url": "https://yaml.cafe/guides/claude-code-notifications-on-phone/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-on-phone/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-11-05T00:00:00+00:00",
+      "dateModified": "2026-11-05T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": {
+        "@type": "Thing",
+        "name": "Claude Code"
+      },
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Claude Code notifications on your phone",
+          "item": "https://yaml.cafe/guides/claude-code-notifications-on-phone/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can Ambient send Claude Code notifications to my phone?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Ambient is a macOS app with no phone app and no server, so its island, banners and chimes stay on your Mac. What it can do is follow Claude Code and Codex running on another machine over your own ssh, so a devbox's sessions show up on your Mac next to the local ones. For a phone, use the ntfy or Pushover hook."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is ntfy free, and is a topic private?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ntfy.sh is free for ordinary use and the apps are open source. A topic is only as private as its name: anyone who guesses it can read and post, so pick a long random one, or reserve it with a paid ntfy.sh plan, or run your own ntfy server. Pushover is a one-time purchase per platform and ties messages to your user key."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why do I get a push for every little turn?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Stop fires every time Claude finishes responding, including a one-line answer. If that's too much, drop the Stop hook and keep only the Notification one with the permission_prompt and idle_prompt matchers, which fire when Claude is waiting on you."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the hook work when Claude Code runs on a Linux server or in the desktop app?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Hooks run wherever Claude Code runs, so the same curl line works from a Linux devbox, a container or the Claude desktop app; it only needs jq and curl on that machine. Put it in ~/.claude/settings.json there, or in the project's .claude/settings.json to share it with a team."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-on-phone-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get Claude Code notifications on your phone</h1>
+    <p class="meta">Updated <time datetime="2026-11-05">November 5, 2026</time> · 4 min read</p>
+
+    <p class="answer">Nothing built into Claude Code reaches a phone: its notifications go to the terminal it runs in. A <code>Stop</code> or <code>Notification</code> hook can send a push instead, with one <code>curl</code> to <a href="https://ntfy.sh/">ntfy</a> (free, with iOS and Android apps) or <a href="https://pushover.net/">Pushover</a>. Ambient is a Mac app and has no phone app; if the agent you want to follow runs on another machine, <code>ambient remote add</code> brings its sessions to your Mac over ssh.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-on-phone-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
+
+    <h2>A hook that posts to ntfy</h2>
+    <p>Install the ntfy app on your phone and subscribe to a topic. The topic name is the only secret, so make it long and unguessable, something like <code>claude-7f3a9c2e1b</code>. Then add this to <code>~/.claude/settings.json</code>, with your topic in place of <code>your-topic</code>:</p>
+    <pre><code>{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "curl -s -H 'Title: Claude Code' -d \"Done in $(jq -r .cwd | xargs basename)\" ntfy.sh/your-topic &gt;/dev/null", "async": true }] }
+    ],
+    "Notification": [
+      { "matcher": "permission_prompt|idle_prompt", "hooks": [{ "type": "command", "command": "curl -s -H 'Title: Claude Code needs you' -d \"$(jq -r .message)\" ntfy.sh/your-topic &gt;/dev/null", "async": true }] }
+    ]
+  }
+}</code></pre>
+    <p><code>Stop</code> runs when Claude finishes responding, and the hook reads the project folder from the JSON on stdin so the push says which one. <code>Notification</code> with the <code>permission_prompt</code> and <code>idle_prompt</code> matchers runs when Claude is about to ask you to approve a tool, or has been waiting for input for a minute; its <code>message</code> field is the text Claude Code would have shown. <code>"async": true</code> keeps the request from holding Claude up. <code>jq</code> ships with macOS 15 and later and is a package install elsewhere. Restart open sessions, or type <code>/hooks</code> to check the hooks are registered, and test with <code>curl -d test ntfy.sh/your-topic</code>.</p>
+    <p>If you'd like the push to carry Claude's last words, <code>Stop</code> also receives <code>last_assistant_message</code>; <code>$(jq -r .last_assistant_message | head -c 200)</code> adds the first couple of sentences. Remember that text then passes through ntfy's server, so leave it out if replies may quote anything private, or run your own ntfy server.</p>
+
+    <h2>Or Pushover</h2>
+    <p>Pushover needs an application token, from registering an app on its site, and your user key, from the dashboard. Keep both out of settings files that might get committed: put the command in a small script, <code>~/.claude/hooks/push.sh</code>, and point the hook at it.</p>
+    <pre><code>#!/bin/sh
+# ~/.claude/hooks/push.sh, run with: chmod +x ~/.claude/hooks/push.sh
+msg=$(jq -r '.message // "Claude Code is done"')
+curl -s https://api.pushover.net/1/messages.json \
+  -F token=APP_TOKEN -F user=USER_KEY \
+  -F title="Claude Code" -F "message=$msg" &gt;/dev/null</code></pre>
+    <pre><code>{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "~/.claude/hooks/push.sh", "async": true }] }
+    ],
+    "Notification": [
+      { "matcher": "permission_prompt|idle_prompt", "hooks": [{ "type": "command", "command": "~/.claude/hooks/push.sh", "async": true }] }
+    ]
+  }
+}</code></pre>
+    <p>The same script serves both events: <code>Notification</code> has a <code>message</code>, <code>Stop</code> doesn't, and the <code>//</code> in the <code>jq</code> filter fills in the default.</p>
+
+    <h2>Which event to use</h2>
+    <p><code>Stop</code> is every finished turn, including a one-line answer to a quick question, which gets noisy on a phone. <code>Notification</code> with the two matchers is only the moments Claude is waiting on you, which is usually what you want while you're away. Keep both if you want to know the long tasks are done; keep <code>Notification</code> alone if you want quiet until something needs you. The <a href="/guides/claude-code-permission-notification/">permission notifications guide</a> covers the timing of the permission alert and a <code>PermissionRequest</code> hook that fires immediately.</p>
+
+    <h2>Where Ambient fits, and where it doesn't</h2>
+    <p>Ambient runs on a Mac and shows agents there: a notch island, banners and chimes, a menu bar list, a Dock glow. It has no phone app, no server and no account, so it can't push anything to a phone, and this page's honest answer to “Claude Code notifications on phone” is the hook above.</p>
+    <p>What it can do is follow Claude Code running somewhere else. If your agents run on a devbox, a cloud VM or a Mac mini in a closet and you're at your Mac, pair the machine once:</p>
+    <pre><code>~/.ambient/bin/ambient remote add devbox      # ssh devbox, using your own ~/.ssh/config
+~/.ambient/bin/ambient doctor --remote devbox</code></pre>
+    <p>That copies a small POSIX shell script to the machine, adds background hooks for Claude Code and Codex there, and from then on your Mac dials out over your own ssh and streams the machine's events back. Its sessions appear beside the local ones, labeled with the machine's name, in the island, menu bar, notifications and board. No server, no root, no daemon, no open port on your Mac, and the remote machine can only send display data: it can't reach anything on your Mac or run anything there. A <code>--redaction</code> level decides how much leaves the machine, from metadata only to the last 160 characters of an agent's message. If your Mac sleeps, events wait in a spool on the machine and arrive on reconnect.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-on-phone-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Can Ambient send Claude Code notifications to my phone?</h3>
+    <p>No. Ambient is a macOS app with no phone app and no server, so its island, banners and chimes stay on your Mac. What it can do is follow Claude Code and Codex running on another machine over your own ssh, so a devbox's sessions show up on your Mac next to the local ones. For a phone, use the ntfy or Pushover hook.</p>
+    <h3>Is ntfy free, and is a topic private?</h3>
+    <p>ntfy.sh is free for ordinary use and the apps are open source. A topic is only as private as its name: anyone who guesses it can read and post, so pick a long random one, or reserve it with a paid ntfy.sh plan, or run your own ntfy server. Pushover is a one-time purchase per platform and ties messages to your user key.</p>
+    <h3>Why do I get a push for every little turn?</h3>
+    <p><code>Stop</code> fires every time Claude finishes responding, including a one-line answer. If that's too much, drop the <code>Stop</code> hook and keep only the <code>Notification</code> one with the <code>permission_prompt</code> and <code>idle_prompt</code> matchers, which fire when Claude is waiting on you.</p>
+    <h3>Does the hook work when Claude Code runs on a Linux server or in the desktop app?</h3>
+    <p>Yes. Hooks run wherever Claude Code runs, so the same <code>curl</code> line works from a Linux devbox, a container or the Claude desktop app; it only needs <code>jq</code> and <code>curl</code> on that machine. Put it in <code>~/.claude/settings.json</code> there, or in the project's <code>.claude/settings.json</code> to share it with a team.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://code.claude.com/docs/en/hooks">Hooks reference</a>, Claude Code docs (Stop and Notification input, matchers)</li>
+      <li><a href="https://docs.ntfy.sh/publish/">Publishing</a> and <a href="https://docs.ntfy.sh/subscribe/phone/">Subscribe from your phone</a>, ntfy docs</li>
+      <li><a href="https://pushover.net/api">Pushover Message API</a>, Pushover</li>
+      <li><a href="https://github.com/viveky259259/ambient#remote-agents">Ambient README</a>, Remote agents</li>
+    </ul>
+    <p>More guides: <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a> · <a href="/guides/claude-code-permission-notification/">Claude Code permission notifications</a> · <a href="/guides/claude-code-notifications-not-working/">Notifications not working</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
+  </div>
+</footer>
+</body>
+</html>

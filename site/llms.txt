@@ -62,6 +62,9 @@ Not a fit: running the app on Linux or Windows (it needs a Mac, which can follow
 - [Claude Code in tmux](https://yaml.cafe/guides/claude-code-in-tmux/): The four tmux.conf lines it needs, one window per session, and finding the pane that needs you.
 - [tmux focus events](https://yaml.cafe/guides/tmux-focus-events-claude-code/): What set -g focus-events on does, how to check it, and the pane-activity side effect.
 - [Notifications not working](https://yaml.cafe/guides/claude-code-notifications-not-working/): Timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.
+- [Claude Code text to speech](https://yaml.cafe/guides/claude-code-text-to-speech/): Claude Code has no TTS of its own; a Stop hook that pipes each reply to `say`, a spoken permission prompt, and Ambient's Read Aloud (Mac voice, Kokoro offline, OpenAI or ElevenLabs with your key).
+- [OpenCode and Copilot CLI notifications on Mac](https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/): OpenCode's `attention` settings and a plugin, Copilot CLI's `agentStop` and `notification` hooks, and Ambient's beta support for both.
+- [Claude Code notifications on your phone](https://yaml.cafe/guides/claude-code-notifications-on-phone/): A Stop or Notification hook that posts to ntfy or Pushover; Ambient is Mac-only but follows agents on another machine over ssh with `ambient remote add`.
 
 ## Site
 

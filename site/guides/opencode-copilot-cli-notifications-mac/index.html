@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenCode and Copilot CLI notifications on Mac</title>
+  <meta name="description" content="Get a Mac notification when OpenCode or GitHub Copilot CLI finishes or needs you: OpenCode's attention settings and plugins, Copilot CLI hooks, and Ambient.">
+  <link rel="canonical" href="https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambient">
+  <meta property="og:url" content="https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/">
+  <meta property="og:title" content="How to get notified when OpenCode or Copilot CLI finishes on Mac">
+  <meta property="og:description" content="OpenCode&#x27;s attention settings and a plugin, Copilot CLI&#x27;s agentStop and notification hooks, and Ambient, compared.">
+  <meta property="og:image" content="https://yaml.cafe/assets/og.png">
+  <meta property="article:modified_time" content="2026-11-05">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
+  <script defer src="/vendor/web-vitals-6.2.2.js"></script>
+  <script defer src="/perf.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/#article",
+      "headline": "How to get notified when OpenCode or Copilot CLI finishes on Mac",
+      "description": "Get a Mac notification when OpenCode or GitHub Copilot CLI finishes or needs you: OpenCode's attention settings and plugins, Copilot CLI hooks, and Ambient.",
+      "url": "https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/",
+      "mainEntityOfPage": "https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/",
+      "image": "https://yaml.cafe/assets/og.png",
+      "datePublished": "2026-11-05T00:00:00+00:00",
+      "dateModified": "2026-11-05T00:00:00+00:00",
+      "inLanguage": "en",
+      "proficiencyLevel": "Beginner",
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "OpenCode"
+        },
+        {
+          "@type": "Thing",
+          "name": "GitHub Copilot CLI"
+        }
+      ],
+      "mentions": {
+        "@id": "https://yaml.cafe/#app"
+      },
+      "author": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "url": "https://yaml.cafe/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://yaml.cafe/#org",
+        "name": "yaml.cafe",
+        "logo": "https://yaml.cafe/assets/icon-256.png"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ambient",
+          "item": "https://yaml.cafe/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://yaml.cafe/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "OpenCode and Copilot CLI notifications on Mac",
+          "item": "https://yaml.cafe/guides/opencode-copilot-cli-notifications-mac/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does OpenCode notify me when it's done out of the box?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not until you turn it on. The TUI's attention feature is off by default; set attention.enabled to true in ~/.config/opencode/tui.json and you get a desktop notification and a sound for completed sessions, questions, permissions and errors. The OpenCode desktop app sends system notifications on its own."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Copilot CLI have a notification setting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not one documented in its command or settings reference. What it does have is hooks: a JSON file in ~/.copilot/hooks/ can run a command on agentStop, when a turn ends, and on notification, when it asks for permission or a question. Ambient uses those same hooks."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does Ambient call its OpenCode and Copilot CLI support beta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Both connections follow each tool's documented events but haven't yet been exercised against the tool itself the way the Claude Code, Codex and Gemini CLI ones have. If something doesn't show, run ambient doctor and open an issue on GitHub."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I get a sound instead of a banner?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. OpenCode's attention settings play a sound of their own, with a volume and custom sound files per event. In a Copilot CLI hook, swap osascript for afplay /System/Library/Sounds/Glass.aiff. Ambient plays a different two-note chime for needs you, done and error, for every agent it tracks."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
+    <a class="btn small push" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-opencode-copilot-cli-notifications-mac-nav">Get Ambient</a>
+  </div>
+</nav>
+
+<main class="page">
+  <article>
+    <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to get notified when OpenCode or Copilot CLI finishes on Mac</h1>
+    <p class="meta">Updated <time datetime="2026-11-05">November 5, 2026</time> · 5 min read</p>
+
+    <p class="answer"><strong>OpenCode:</strong> set <code>attention.enabled</code> to <code>true</code> in <code>~/.config/opencode/tui.json</code> for a desktop notification and a sound when a session finishes, asks a question, needs permission or fails; or write a small plugin on <code>session.idle</code>. <strong>Copilot CLI:</strong> it has no notification setting of its own, but a hook file in <code>~/.copilot/hooks/</code> can run <code>osascript</code> on <code>agentStop</code> and <code>notification</code>. <strong>Ambient</strong> connects to both, in beta, with one click, and shows them next to your Claude Code, Codex and Gemini CLI sessions.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-opencode-copilot-cli-notifications-mac-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
+
+    <h2>OpenCode: the built-in attention settings</h2>
+    <p>OpenCode's terminal UI can ask for your attention, but the feature is off by default. Turn it on in <code>~/.config/opencode/tui.json</code> (or a <code>tui.json</code> in the project root):</p>
+    <pre><code>{
+  "$schema": "https://opencode.ai/tui.json",
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true,
+    "volume": 0.4
+  }
+}</code></pre>
+    <p>With that on, OpenCode requests attention for questions, permission requests, session errors and completed sessions. Sounds play for each of them; desktop notifications are sent only when the terminal isn't in front, so you aren't interrupted while you're watching. <code>sounds</code> lets you swap in your own files for the <code>question</code>, <code>permission</code>, <code>error</code>, <code>done</code> and <code>subagent_done</code> events, and <code>sound_pack</code> picks a different set. The OpenCode desktop app sends system notifications on its own when a reply is ready or a session errors, without any of this.</p>
+
+    <h2>OpenCode: a plugin for anything else</h2>
+    <p>OpenCode has no command hooks, but it loads every JavaScript file in <code>~/.config/opencode/plugins/</code> at startup and hands each one its events. This plugin posts a macOS notification when a session goes idle, which is OpenCode's “finished responding”, and when it asks for permission:</p>
+    <pre><code>// ~/.config/opencode/plugins/notify.js
+export const Notify = async ({ $ }) =&gt; ({
+  event: async ({ event }) =&gt; {
+    if (event.type === "session.idle") {
+      await $`osascript -e 'display notification "OpenCode is done" with title "OpenCode"'`
+    }
+    if (event.type === "permission.asked") {
+      await $`osascript -e 'display notification "OpenCode needs your permission" with title "OpenCode"'`
+    }
+  },
+})</code></pre>
+    <p>Swap <code>osascript</code> for <code>afplay /System/Library/Sounds/Glass.aiff</code> if you'd rather hear it, or run anything else: a <code>curl</code> to a push service, a <code>tmux display-message</code>. Notifications from <code>osascript</code> appear as coming from Script Editor, so allow that under System Settings › Notifications if nothing shows. Restart OpenCode after adding the file.</p>
+
+    <h2>Copilot CLI: hooks, since there's no setting</h2>
+    <p>GitHub Copilot CLI's command and settings references list no notification, sound or bell option. Its hooks reference does list the events you need. Hook files are JSON, loaded from <code>.github/hooks/*.json</code> in a repository and, for every project, from <code>~/.copilot/hooks/*.json</code>. <code>agentStop</code> runs when the main agent finishes a turn; <code>notification</code> runs, without blocking, when Copilot would tell you something, including a <code>permission_prompt</code> or an <code>elicitation_dialog</code>, its name for a question. Save this as <code>~/.copilot/hooks/notify.json</code>:</p>
+    <pre><code>{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      { "type": "command", "bash": "osascript -e 'display notification \"Copilot is done\" with title \"Copilot CLI\"'", "timeoutSec": 5 }
+    ],
+    "notification": [
+      { "type": "command", "matcher": "permission_prompt|elicitation_dialog", "bash": "osascript -e 'display notification \"Copilot needs you\" with title \"Copilot CLI\"'", "timeoutSec": 5 }
+    ]
+  }
+}</code></pre>
+    <p>Copilot waits for an <code>agentStop</code> hook and reads its output as a decision, so keep the command quick and silent: printing nothing means “carry on as usual”. The <code>matcher</code> on <code>notification</code> is a regular expression on the notification type; without it the hook also fires for finished background shells and subagents. Start a new session for the file to be picked up.</p>
+
+    <h2>Ambient: both agents, one place</h2>
+    <p>Ambient shows every agent on your Mac in one notch island, menu bar list and set of notifications, most urgent first: <em>needs you</em>, then <em>error</em>, <em>done</em> and <em>working</em>. OpenCode and GitHub Copilot CLI are supported in beta alongside Claude Code, Codex, Gemini CLI, Antigravity and Cursor. Connect them under Settings › Agents, or from a terminal:</p>
+    <pre><code>~/.ambient/bin/ambient install opencode copilot
+~/.ambient/bin/ambient doctor</code></pre>
+    <p>For OpenCode that writes a plugin of Ambient's own, <code>~/.config/opencode/plugins/ambient.js</code>, which turns <code>session.idle</code>, <code>permission.asked</code>, <code>session.error</code> and the rest into events for the local <code>ambient</code> command without waiting for it. For Copilot CLI it writes a hook file of its own, <code>~/.copilot/hooks/ambient.json</code>, one entry per event. Neither touches any file you wrote, and <code>ambient uninstall</code> removes them. Ambient then shows prompts, tools and finished or failed turns for both, and <em>needs you</em> for OpenCode's permission requests and Copilot's permission prompts and questions. As with every agent, banners and chimes come only for moments that need you, and stay quiet while you're already in the terminal running the agent.</p>
+    <p><em>Beta</em> means the connection follows each tool's documented events but hasn't yet been run against the tool itself the way the others have. If a state doesn't show, <code>ambient doctor</code> checks the chain, and the <a href="https://github.com/viveky259259/ambient/issues">issue tracker</a> is the place to say so.</p>
+
+    <div class="try">
+      <h2>Stop babysitting terminals.</h2>
+      <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
+      <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-opencode-copilot-cli-notifications-mac-body">Get Ambient</a>
+    </div>
+
+    <h2>Common questions</h2>
+    <h3>Does OpenCode notify me when it&#x27;s done out of the box?</h3>
+    <p>Not until you turn it on. The TUI's attention feature is off by default; set <code>attention.enabled</code> to <code>true</code> in <code>~/.config/opencode/tui.json</code> and you get a desktop notification and a sound for completed sessions, questions, permissions and errors. The OpenCode desktop app sends system notifications on its own.</p>
+    <h3>Does Copilot CLI have a notification setting?</h3>
+    <p>Not one documented in its command or settings reference. What it does have is hooks: a JSON file in <code>~/.copilot/hooks/</code> can run a command on <code>agentStop</code>, when a turn ends, and on <code>notification</code>, when it asks for permission or a question. Ambient uses those same hooks.</p>
+    <h3>Why does Ambient call its OpenCode and Copilot CLI support beta?</h3>
+    <p>Both connections follow each tool's documented events but haven't yet been exercised against the tool itself the way the Claude Code, Codex and Gemini CLI ones have. If something doesn't show, run <code>ambient doctor</code> and open an issue on GitHub.</p>
+    <h3>Can I get a sound instead of a banner?</h3>
+    <p>Yes. OpenCode's attention settings play a sound of their own, with a volume and custom sound files per event. In a Copilot CLI hook, swap <code>osascript</code> for <code>afplay /System/Library/Sounds/Glass.aiff</code>. Ambient plays a different two-note chime for <em>needs you</em>, <em>done</em> and <em>error</em>, for every agent it tracks.</p>
+
+    <h2>Sources</h2>
+    <ul class="sources">
+      <li><a href="https://opencode.ai/docs/tui/">TUI</a>, OpenCode docs (attention, sounds)</li>
+      <li><a href="https://opencode.ai/docs/plugins/">Plugins</a>, OpenCode docs (plugin folders, <code>session.idle</code>, the notification example)</li>
+      <li><a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-hooks-reference">Copilot CLI hooks reference</a>, GitHub Docs (hook file locations, <code>agentStop</code>, <code>notification</code> types)</li>
+      <li><a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference">Copilot CLI command reference</a>, GitHub Docs</li>
+      <li><a href="https://github.com/viveky259259/ambient#readme">Ambient README</a>, Supported agents</li>
+    </ul>
+    <p>More guides: <a href="/guides/codex-notifications-mac/">Codex notifications on Mac</a> · <a href="/guides/gemini-cli-notifications-mac/">Gemini CLI notifications on Mac</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 yaml.cafe</span>
+    <a href="/guides/">Guides</a>
+    <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
+    <a href="/contact/">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <span class="spacer">Claude, Codex, Gemini, Copilot and OpenCode are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI, Google, GitHub or the OpenCode project.</span>
+  </div>
+</footer>
+</body>
+</html>
