@@ -13,6 +13,10 @@ final class IslandViewModel: ObservableObject {
         case speech
         /// A permission prompt to answer, by its id.
         case permission(String)
+        /// A voice being recorded here for another Mac, one that just arrived, or a note about either.
+        case voice
+        /// Another Mac is recording a voice for this one: shown in the wings.
+        case voiceIncoming
         /// Hovered: every session.
         case expanded
     }
@@ -28,6 +32,8 @@ final class IslandViewModel: ObservableObject {
     /// The permission prompt on show, and how many are waiting in all.
     @Published var permission: PermissionQueue.Entry?
     @Published var permissionCount = 0
+    /// Voice sync, for the voice card and the incoming wings. None in the Settings preview.
+    let voice: VoiceSyncController?
 
     var onOpen: (Session) -> Void = { _ in }
     var onStopSpeech: () -> Void = {}
@@ -47,8 +53,9 @@ final class IslandViewModel: ObservableObject {
     /// Showing every session, the island grows to this many rows and scrolls the rest.
     static let maxAllRows = 10
 
-    init(geometry: IslandGeometry) {
+    init(geometry: IslandGeometry, voice: VoiceSyncController? = nil) {
         self.geometry = geometry
+        self.voice = voice
     }
 
     var primary: Session? { IslandPolicy.primary(sessions) }
@@ -72,6 +79,8 @@ final class IslandViewModel: ObservableObject {
         case .collapsed: return CGSize(width: collapsed, height: h)
         case .bloom: return CGSize(width: max(collapsed, 400), height: h + 74)
         case .speech: return CGSize(width: max(collapsed, 360), height: h + 48)
+        case .voice: return CGSize(width: max(collapsed, 440), height: h + (voice.map(VoiceCard.height(for:)) ?? 52))
+        case .voiceIncoming: return CGSize(width: collapsed, height: h)
         case .permission:
             let hintLines = permission?.ask.hintLines ?? 1
             return CGSize(width: max(collapsed, 440), height: h + 100 + CGFloat(hintLines) * 15)

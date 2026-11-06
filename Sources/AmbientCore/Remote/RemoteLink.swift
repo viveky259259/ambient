@@ -46,6 +46,24 @@ public struct RemoteBackoff: Sendable {
     }
 }
 
+/// What a link needs to bring a machine's voices to this Mac: who this hub is, where its voices got to, which it has,
+/// and where to hand what arrives. `deliver` gets the events and the cursor to save once they're handled; no events when
+/// only the cursor moved.
+public struct VoiceReceiver: Sendable {
+    public let hub: VoiceHub
+    public let cursor: VoiceCursor
+    public let known: Set<String>
+    public let deliver: @Sendable ([VoiceInboxEvent], VoiceCursor) -> Void
+
+    public init(hub: VoiceHub, cursor: VoiceCursor, known: Set<String>,
+                deliver: @escaping @Sendable ([VoiceInboxEvent], VoiceCursor) -> Void) {
+        self.hub = hub
+        self.cursor = cursor
+        self.known = known
+        self.deliver = deliver
+    }
+}
+
 /// One machine's connection: it spawns the transport, runs `follow`, feeds lines through `RemoteIngest` and reconnects
 /// with backoff. One way by construction: stdin is closed and nothing is ever sent back.
 public final class RemoteLink: @unchecked Sendable {
@@ -71,6 +89,8 @@ public final class RemoteLink: @unchecked Sendable {
     private let options: Options
     private let deliver: Deliver
     private let report: Report
+    private let voice: VoiceReceiver?
+    private let inbox: VoiceInbox?
 
     private let lock = NSLock()
     private var stopped = false
@@ -79,7 +99,8 @@ public final class RemoteLink: @unchecked Sendable {
     private let finished = DispatchSemaphore(value: 0)
 
     public init(machine: Machine, cursor: RemoteCursor, policy: RemoteIngest.Policy = .init(), options: Options = Options(),
-                audit: RemoteAudit? = nil, deliver: @escaping Deliver, report: @escaping Report) {
+                audit: RemoteAudit? = nil, voice: VoiceReceiver? = nil, voiceLimits: VoiceInbox.Limits = .init(),
+                deliver: @escaping Deliver, report: @escaping Report) {
         self.machine = machine
         self.ingest = RemoteIngest(machine: machine, cursor: cursor, policy: policy, audit: audit)
         self.transport = RemoteTransport(argv: machine.transport)
@@ -87,6 +108,10 @@ public final class RemoteLink: @unchecked Sendable {
         self.options = options
         self.deliver = deliver
         self.report = report
+        self.voice = voice
+        self.inbox = voice.map {
+            VoiceInbox(machine: machine.ref, hub: $0.hub.id, cursor: $0.cursor, known: $0.known, limits: voiceLimits, audit: audit)
+        }
     }
 
     public func start() {
@@ -162,7 +187,9 @@ public final class RemoteLink: @unchecked Sendable {
 
     private func connectOnce() -> Outcome {
         ingest.beginConnection()
-        let child = transport.process(for: RemoteTransport.follow(since: ingest.cursor.seq))
+        inbox?.beginConnection()
+        let following = voice.flatMap { v in inbox.map { VoiceFollow(hub: v.hub, since: $0.cursor) } }
+        let child = transport.process(for: RemoteTransport.follow(since: ingest.cursor.seq, voice: following))
         let out = Pipe(), err = Pipe()
         child.standardOutput = out
         child.standardError = err
@@ -200,6 +227,7 @@ public final class RemoteLink: @unchecked Sendable {
         lock.unlock()
 
         ingest.flush(now: Date())
+        if let inbox { handOver(inbox.connectionEnded(now: Date())) }
         if result.wasLinked { audit?.append(.init(action: .linkDown, machine: machine.id)) }
         if let outcome = result.outcome { return outcome }
         if !result.wasLinked, let message = Self.signInProblem(errors.text) {
@@ -224,6 +252,8 @@ public final class RemoteLink: @unchecked Sendable {
             let ready = poll(&poller, 1, 1_000)
             if ready < 0 && errno != EINTR { return finish(nil) }
             if ready <= 0 {
+                // Only with nothing waiting: after a sleep, what's waiting may be the rest of a voice that looks stalled.
+                if let inbox { handOver(inbox.sweep(now: Date())) }
                 if Date().timeIntervalSince(lastHeard) > options.silenceLimit { return finish(nil) }
                 continue
             }
@@ -233,11 +263,21 @@ public final class RemoteLink: @unchecked Sendable {
             lastHeard = Date()
 
             var batch: [RemoteDelivery] = []
+            var voices: [VoiceInboxEvent] = []
             var hold: TimeInterval = 0
             for line in splitter.feed(Data(buffer[0..<count])) {
                 let now = Date()
                 switch ingest.receive(line, now: now) {
                 case let .linked(hello):
+                    // When the machine's outbox isn't the one this hub's voice cursor was for, its voices start over. The
+                    // cursor is saved now, with no voice to go with it, or a launch before one comes would follow the
+                    // new outbox from the old cursor. So is a first epoch: it's what tells the next outbox from this one.
+                    if let voice, let inbox, let head = hello.voice {
+                        let before = inbox.saved
+                        let replaced = inbox.linked(head: head, epoch: hello.voiceEpoch)
+                        if inbox.saved != before { voice.deliver([], inbox.saved) }
+                        if replaced { return finish(.restart) }
+                    }
                     linkedAt = now
                     audit?.append(.init(ts: now, action: .linkUp, machine: machine.id, detail: hello.shim))
                     report(.connected, hello)
@@ -249,10 +289,14 @@ public final class RemoteLink: @unchecked Sendable {
                     batch.append(delivery)
                     // Each delay is the whole wait from now, not a step on top of the last one.
                     hold = max(hold, ingest.delay(after: delivery.event, now: now))
+                case let .voice(line):
+                    voices += inbox?.receive(line, now: now) ?? []
+                    hold = max(hold, ingest.delay(afterVoice: line, now: now))
                 case .heartbeat, .dropped:
                     break
                 }
             }
+            if !voices.isEmpty { handOver(voices) }
             if !batch.isEmpty { handOver(batch) }
             // `stop()` may just have been spent on the wait above.
             if hold > 0, !isStopped { sleep(hold) }
@@ -260,6 +304,12 @@ public final class RemoteLink: @unchecked Sendable {
             lastHeard = Date()
         }
         return finish(nil)
+    }
+
+    /// Voices don't wait to be applied: the inbox has already bounded them, and the cursor goes with them.
+    private func handOver(_ events: [VoiceInboxEvent]) {
+        guard let voice, let inbox, !events.isEmpty else { return }
+        voice.deliver(events, inbox.saved)
     }
 
     /// Delivers a batch and waits until it's applied. `stop()` signals the same semaphore, so nothing hangs on the other

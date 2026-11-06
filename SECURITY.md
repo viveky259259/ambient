@@ -5,10 +5,11 @@ directory), the agent config files it edits, and, if you pair remote machines, w
 
 ## Remote machines
 
-Ambient follows only machines you pair, over a transport you configure (your own `ssh` by default). It never forwards
-or exposes the socket, opens no listening port, and stores no remote credentials, and the `ssh` command it builds
-forwards nothing. A paired machine's output goes through a separate, strict decoder and can only become display data:
-it can't reach the socket, and no focus route, pid check, tty, tmux or AppleScript ever runs for a remote session.
+Ambient follows only machines you pair, over a transport you configure (your own `ssh` by default). It never forwards or
+exposes the socket, opens no listening port, and stores no remote credentials, and the `ssh` command it builds forwards
+nothing. A paired machine's output goes through a separate, strict decoder and can only become display data, or a voice
+you play or copy ([below](#voices-from-your-other-macs)): it can't reach the socket, and no focus route, pid check, tty,
+tmux or AppleScript ever runs for a remote session.
 
 A remote machine you don't trust can't run anything on your Mac, but it can do more than lie about itself. It can show
 you false states and text, raise notifications and chimes for them, and use up its own limits: 50 events a second, 1,000
@@ -17,6 +18,17 @@ identity you pinned, because that's something it reports about itself. An agent 
 something it reads talks it into it, since it runs as the same user as the spool and the shim.
 
 The threat model is in [the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md#threat-model-stride-er-40).
+
+## Voices from your other Macs
+
+Voice sync uses the same links. A paired Mac can send voices only to a Mac that follows it, and only lines addressed to
+that Mac's random id. Each line goes through its own strict decoder. Audio must be well-formed AAC-LC frames before it's
+saved, and is decoded only when you press Play or Copy Audio. A voice is capped at 10 minutes and 4 MB, with two at a
+time per machine. The transcript, when the sending Mac could make one, is plain text, capped at 10,000 characters, and
+reaches the clipboard only when you click Copy. A Mac you don't trust can fill your voice history until you unpair it,
+and its audio reaches Apple's AAC decoder when you play it. The hub's computer name, cut to letters, digits and a few
+marks, is the one thing a following Mac now tells the machine it follows.
+See [the spec](docs/superpowers/specs/2026-11-03-voice-sync-design.md#threat-model-additions).
 
 ## What Ambient reads on your Mac
 
@@ -41,7 +53,8 @@ Ambient makes network requests only for reading aloud, and only when you choose 
   entered, with your API key. Keys are stored only in your login Keychain, under the service
   `com.viveky259259.Ambient.voice`, never in files or preferences.
 
-With a Mac voice or the installed offline model, reading aloud makes no network requests.
+With a Mac voice or the installed offline model, reading aloud makes no network requests. Voice sync makes none
+either: it transcribes on your Mac and travels over your paired machines' transport.
 
 Separately, paired remote machines are reached through the transport command you chose. Ambient runs that command and
 makes no other connection for them.

@@ -1,0 +1,620 @@
+import Foundation
+import Testing
+@testable import AmbientCore
+
+private let now = Date(timeIntervalSince1970: 1_793_000_000)
+private let hub = String(repeating: "ab", count: 16)
+private let otherHub = String(repeating: "cd", count: 16)
+private let daily = MachineRef(id: "daily", label: "Daily")
+
+private func voiceID(_ n: Int) -> String { String(format: "%032x", n) }
+
+/// `count` frames of a pretend AAC packet each, at `rate`.
+private func audio(frames count: Int = 12, rate: Int = 24_000, size: Int = 90) -> Data {
+    (0..<count).reduce(into: Data()) { data, i in data += ADTS.frame(Data(repeating: UInt8(i % 250), count: size), sampleRate: rate)! }
+}
+
+private func line(_ vseq: Int64, _ voice: Int, to: String = hub, _ part: VoiceLine.Part) -> VoiceLine {
+    VoiceLine(vseq: vseq, to: to, voice: voiceID(voice), part: part)
+}
+
+private func line(_ vseq: Int64, to: String = hub, _ part: VoiceLine.Part) -> VoiceLine {
+    line(vseq, 1, to: to, part)
+}
+
+private func decode(_ text: String) throws(RemoteRejection) -> VoiceLine? {
+    if case let .voice(v) = try RemoteLineDecoder.decode(Data(text.utf8)) { return v }
+    return nil
+}
+
+private func scratch() -> AmbientPaths {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("vs-" + UUID().uuidString.prefix(8))
+    return AmbientPaths(userHome: root, home: root.appendingPathComponent(".ambient"))
+}
+
+@Suite struct ADTSTests {
+    @Test func framesAreCountedAndTimed() {
+        let frames = ADTS.frames(in: audio(frames: 47))
+        #expect(frames == ADTS.Frames(count: 47, sampleRate: 24_000))
+        #expect(abs((frames?.seconds ?? 0) - 47 * 1024 / 24_000.0) < 0.0001)
+    }
+
+    @Test func anythingButWholeFramesIsRefused() {
+        let good = audio(frames: 3)
+        #expect(ADTS.frames(in: Data()) == nil)
+        #expect(ADTS.frames(in: good.dropLast()) == nil, "a partial frame at the end")
+        #expect(ADTS.frames(in: good + Data([0x00])) == nil, "trailing bytes")
+        #expect(ADTS.frames(in: Data(repeating: 0xFF, count: 64)) == nil)
+        var stereo = good
+        stereo[3] = stereo[3] & 0x3F | 0x80 // channel configuration 2
+        #expect(ADTS.frames(in: stereo) == nil)
+        var crc = good
+        crc[1] = 0xF0 // a CRC follows the header
+        #expect(ADTS.frames(in: crc) == nil)
+        var main = good
+        main[2] = main[2] & 0x3F // AAC Main, not LC
+        #expect(ADTS.frames(in: main) == nil)
+        #expect(ADTS.frames(in: audio(frames: 1) + audio(frames: 1, rate: 16_000)) == nil, "two rates in one chunk")
+        #expect(ADTS.frame(Data([1]), sampleRate: 8_000) == nil, "a rate voices don't use")
+        #expect(ADTS.frame(Data(), sampleRate: 24_000) == nil)
+    }
+}
+
+@Suite struct VoiceLineTests {
+    @Test func everyPartGoesThroughTheDecoderUnchanged() throws {
+        let parts: [VoiceLine.Part] = [.start(at: now), .audio(n: 3, data: audio()), .text("Ship the fix, then tag 0.9"),
+                                       .end(text: "Ship the fix."), .end(text: nil), .cancel]
+        for (i, part) in parts.enumerated() {
+            let sent = line(Int64(i + 1), part)
+            #expect(try decode(String(decoding: sent.encoded(), as: UTF8.self)) == sent)
+        }
+    }
+
+    @Test func theLineStartsTheWayFollowMatchesIt() {
+        let text = String(decoding: line(42, .cancel).encoded(), as: UTF8.self)
+        #expect(text.hasPrefix(#"{"v":1,"type":"voice","vseq":42,"to":"\#(hub)","#))
+    }
+
+    @Test func aBadLineIsRejectedWhole() {
+        let id = voiceID(1)
+        let base = #""v":1,"type":"voice","vseq":1,"to":"\#(hub)","voice":"\#(id)""#
+        let bad: [(String, RemoteRejection)] = [
+            (#"{\#(base),"part":"start"}"#, .missingField("ts")),
+            (#"{\#(base),"part":"start","ts":1,"data":"AAAA"}"#, .invalid("data")),
+            (#"{\#(base),"part":"shout"}"#, .invalid("part")),
+            (#"{\#(base),"part":"cancel","prompt":"x"}"#, .unknownField("prompt")),
+            (#"{"v":1,"type":"voice","vseq":1,"to":"\#(hub)","voice":"XYZ","part":"cancel"}"#, .invalid("voice")),
+            (#"{"v":1,"type":"voice","vseq":1,"to":"\#(hub.uppercased())","voice":"\#(id)","part":"cancel"}"#, .invalid("to")),
+            (#"{"v":1,"type":"voice","vseq":0,"to":"\#(hub)","voice":"\#(id)","part":"cancel"}"#, .invalid("vseq")),
+            (#"{"v":9,"type":"voice","vseq":1,"to":"\#(hub)","voice":"\#(id)","part":"cancel"}"#, .unsupportedVersion(9)),
+            (#"{\#(base),"part":"audio","n":0,"data":"not base64!"}"#, .invalid("data")),
+            (#"{\#(base),"part":"audio","n":0,"data":"\#(Data(repeating: 7, count: 300).base64EncodedString())"}"#, .invalid("data")),
+            (#"{\#(base),"part":"audio","n":-1,"data":"\#(audio().base64EncodedString())"}"#, .invalid("n")),
+            (#"{\#(base),"part":"audio","n":0,"data":"\#(audio(frames: 400).base64EncodedString())"}"#, .invalid("data")),
+            (#"{\#(base),"part":"text","text":{"x":1}}"#, .wrongType("text")),
+        ]
+        for (text, rejection) in bad {
+            #expect(throws: rejection, "\(text.prefix(120))") { _ = try decode(text) }
+        }
+    }
+
+    @Test func aTranscriptIsPlainTextUnderItsCap() throws {
+        let sneaky = "rm -rf ~\u{202E}gpj.exe\u{0007}\nnext line"
+        let got = try decode(String(decoding: line(1, .text(sneaky)).encoded(), as: UTF8.self))
+        #expect(got?.part == .text("rm -rf ~gpj.exe next line"))
+        let long = try decode(String(decoding: line(1, .text(String(repeating: "word ", count: 4_000))).encoded(), as: UTF8.self))
+        guard case let .text(text)? = long?.part else { Issue.record("no text"); return }
+        #expect(text.count <= VoiceLine.maxText)
+    }
+
+    @Test func aSentTranscriptKeepsItsLineUnderTheCap() {
+        let family = String(repeating: "👨‍👩‍👧‍👦 ", count: 6_000)
+        let capped = VoiceLine.cap(family)
+        #expect(capped.count <= VoiceLine.maxText)
+        #expect(capped.utf8.count <= 40_000)
+        #expect(line(1, .text(capped)).encoded().count < RemoteEventDecoder.maxLineBytes)
+        #expect(VoiceLine.cap("short  and\nsweet") == "short and sweet")
+    }
+
+    @Test func helloSaysWhereTheOutboxIsOnlyWhenAsked() throws {
+        let fields = #""v":1,"type":"hello","shim":"1.0.5","proto":1,"caps":"exit,title,heartbeat,voice","level":"standard","seq":0,"epoch":"0123456789abcdef","identity":"id:\#(String(repeating: "a", count: 32))","ts":1"#
+        guard case let .hello(plain) = try RemoteLineDecoder.decode(Data("{\(fields)}".utf8)),
+              case let .hello(asked) = try RemoteLineDecoder.decode(Data(#"{\#(fields),"voice":17}"#.utf8)) else {
+            Issue.record("not a hello"); return
+        }
+        #expect(plain.voice == nil)
+        #expect(asked.voice == 17)
+        #expect(asked.caps.contains("voice"))
+        #expect(asked.voiceEpoch == nil, "a shim from before 1.0.6, or a hub that didn't ask")
+    }
+
+    @Test func helloNamesTheOutboxWhenTheShimKnowsIt() throws {
+        let fields = #""v":1,"type":"hello","shim":"1.0.6","proto":1,"caps":"exit,title,heartbeat,voice","level":"standard","seq":0,"epoch":"0123456789abcdef","identity":"id:\#(String(repeating: "a", count: 32))","ts":1,"voice":17"#
+        guard case let .hello(named) = try RemoteLineDecoder.decode(Data(#"{\#(fields),"voiceEpoch":"fedcba9876543210"}"#.utf8)) else {
+            Issue.record("not a hello"); return
+        }
+        #expect(named.voiceEpoch == "fedcba9876543210")
+        let bad: [(String, RemoteRejection)] = [
+            (#""nope""#, .invalid("voiceEpoch")), (#""FEDCBA9876543210""#, .invalid("voiceEpoch")),
+            ("null", .invalid("voiceEpoch")), ("12", .wrongType("voiceEpoch")),
+        ]
+        for (value, rejection) in bad {
+            #expect(throws: rejection) { _ = try RemoteLineDecoder.decode(Data(#"{\#(fields),"voiceEpoch":\#(value)}"#.utf8)) }
+        }
+    }
+
+    @Test func followIsAskedForVoicesWithArgumentsThatCantBreakItsQuoting() {
+        let plain = RemoteTransport.follow(since: 5)
+        #expect(plain == #"sh -c 'exec "$HOME/.ambient/bin/ambient-remote" follow --since 5'"#)
+        let asked = RemoteTransport.follow(since: 5, voice: VoiceFollow(hub: VoiceHub(id: hub, label: #"Vivek's "Studio" $(rm) `x`"#), since: 9))
+        #expect(asked == #"sh -c 'exec "$HOME/.ambient/bin/ambient-remote" follow --since 5 --hub \#(hub) --hub-label "Viveks Studio rm x" --voice-since 9 --voice-epoch'"#)
+        #expect(RemoteTransport.follow(since: 5, voice: VoiceFollow(hub: VoiceHub(id: "nope", label: "Mac"), since: 9)) == plain)
+    }
+}
+
+@Suite struct VoiceHubTests {
+    @Test func aLabelKeepsOnlyWhatTheShimAccepts() {
+        #expect(VoiceHub.label("Advait’s Mac Studio") == "Advaits Mac Studio")
+        #expect(VoiceHub.label("  ") == "Mac")
+        #expect(VoiceHub.label("José's  MacBook\tAir") == "Joss MacBookAir")
+        #expect(VoiceHub.label(String(repeating: "x", count: 99)).count == 40)
+    }
+
+    @Test func theIDIsMadeOnceAndKept() {
+        let paths = scratch()
+        let first = VoiceHub.load(paths, name: "Studio")
+        #expect(VoiceLine.isID(first.id))
+        #expect(VoiceHub.load(paths, name: "Studio").id == first.id)
+        #expect((try? FileManager.default.attributesOfItem(atPath: paths.voiceHubID.path))?[.posixPermissions] as? Int == 0o600)
+    }
+
+    @Test func destinationsAreTheHubsThatFollowedMostRecentFirst() throws {
+        let dir = scratch().voiceHubsSeen
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "Mac Studio\n".write(to: dir.appendingPathComponent(hub), atomically: true, encoding: .utf8)
+        try "Old Mini\n".write(to: dir.appendingPathComponent(otherHub), atomically: true, encoding: .utf8)
+        try "junk".write(to: dir.appendingPathComponent("not-a-hub"), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: now.addingTimeInterval(-3_600)],
+                                              ofItemAtPath: dir.appendingPathComponent(otherHub).path)
+        try FileManager.default.setAttributes([.modificationDate: now.addingTimeInterval(-10)],
+                                              ofItemAtPath: dir.appendingPathComponent(hub).path)
+        let found = VoiceDestination.load(from: dir)
+        #expect(found.map(\.label) == ["Mac Studio", "Old Mini"])
+        #expect(found[0].isOnline(now: now))
+        #expect(!found[1].isOnline(now: now))
+    }
+
+    @Test func theDefaultDestinationDoesntFollowEachHeartbeat() {
+        let studio = VoiceDestination(id: hub, label: "Mac Studio", lastSeen: now.addingTimeInterval(-10))
+        let air = VoiceDestination(id: otherHub, label: "MacBook Air", lastSeen: now.addingTimeInterval(-2))
+        let mini = VoiceDestination(id: String(repeating: "ef", count: 16), label: "Old Mini", lastSeen: now.addingTimeInterval(-3_600))
+        // Both are connected, and whichever beat last comes first: the default is the same one either way.
+        #expect(VoiceDestination.preferred(in: [air, studio, mini], chosen: nil, now: now) == studio)
+        #expect(VoiceDestination.preferred(in: [studio, air, mini], chosen: nil, now: now) == studio)
+        #expect(VoiceDestination.preferred(in: [air, studio, mini], chosen: mini.id, now: now) == mini)
+        #expect(VoiceDestination.preferred(in: [mini], chosen: "gone", now: now) == mini, "none connected: the last seen")
+        #expect(VoiceDestination.preferred(in: [], chosen: nil, now: now) == nil)
+    }
+}
+
+@Suite struct VoiceOutboxTests {
+    @Test func linesAreNumberedAndTheSeqFileFollows() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        #expect(try box.append(to: hub, voice: voiceID(1), .start(at: now)) == 1)
+        #expect(try box.append(to: hub, voice: voiceID(1), .audio(n: 0, data: audio())) == 2)
+        let seq = try String(contentsOf: box.dir.appendingPathComponent("outbox.seq"), encoding: .utf8)
+        let size = try Data(contentsOf: box.file).count
+        // The number alone on the first line, which is all a shim from before 1.0.6 reads.
+        #expect(seq == "2\n\(box.epoch) \(size) 0\n")
+        let lines = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n")
+        #expect(lines.count == 2)
+        #expect(try FileManager.default.attributesOfItem(atPath: box.file.path)[.posixPermissions] as? Int == 0o600)
+        // A new writer carries on from the same number, in the same outbox.
+        let again = VoiceOutbox(dir: box.dir)
+        #expect(again.epoch == box.epoch)
+        #expect(try again.append(to: hub, voice: voiceID(1), .cancel) == 3)
+    }
+
+    @Test func anOutboxIsNamedAfreshOnlyWhenItsSeqFileSaysNothing() throws {
+        let dir = scratch().voiceOutbox
+        let seqFile = dir.appendingPathComponent("outbox.seq")
+        let box = VoiceOutbox(dir: dir)
+        #expect(VoiceOutbox.isEpoch(box.epoch))
+        #expect(VoiceOutbox(dir: scratch().voiceOutbox).epoch != box.epoch, "another outbox")
+        try box.append(to: hub, voice: voiceID(1), .start(at: now))
+
+        // Lost: the lines say where the numbers got to, but nothing says this is the outbox a hub's cursor was for.
+        try FileManager.default.removeItem(at: seqFile)
+        let found = VoiceOutbox(dir: dir)
+        #expect(found.epoch != box.epoch)
+        #expect(try found.append(to: hub, voice: voiceID(1), .cancel) == 2)
+
+        // Written by an app from before epochs.
+        try Data("7\n".utf8).write(to: seqFile)
+        let upgraded = VoiceOutbox(dir: dir)
+        #expect(upgraded.epoch != found.epoch)
+        #expect(try upgraded.append(to: hub, voice: voiceID(2), .cancel) == 8)
+        #expect(VoiceOutbox(dir: dir).epoch == upgraded.epoch, "saved with the line")
+    }
+
+    @Test func onlyARewriteMovesTheGeneration() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        func place() throws -> [String] {
+            let text = try String(contentsOf: box.dir.appendingPathComponent("outbox.seq"), encoding: .utf8)
+            return text.split(separator: "\n").last!.split(separator: " ").map(String.init)
+        }
+        func size() throws -> String { "\(try Data(contentsOf: box.file).count)" }
+        try box.append(to: hub, voice: voiceID(1), .start(at: now.addingTimeInterval(-100_000)))
+        try box.append(to: hub, voice: voiceID(1), .end(text: "old"))
+        try box.append(to: hub, voice: voiceID(2), .start(at: now))
+        #expect(try place() == [box.epoch, try size(), "0"])
+
+        box.expire(now: now)
+        #expect(try place() == [box.epoch, try size(), "1"], "the old voice went, so every line moved")
+        box.expire(now: now)
+        #expect(try place() == [box.epoch, try size(), "1"], "nothing to drop, so nothing moved")
+        try box.append(to: hub, voice: voiceID(2), .end(text: nil))
+        #expect(try place() == [box.epoch, try size(), "1"])
+
+        // The next launch carries on from it.
+        VoiceOutbox(dir: box.dir).tidy(now: now.addingTimeInterval(200_000))
+        #expect(try place() == [box.epoch, "0", "2"])
+    }
+
+    @Test func theLiveMarkerComesAndGoes() {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        let marker = box.dir.appendingPathComponent("outbox.live")
+        box.setLive(true)
+        #expect(FileManager.default.fileExists(atPath: marker.path))
+        box.setLive(false)
+        #expect(!FileManager.default.fileExists(atPath: marker.path))
+    }
+
+    @Test func tidyingEndsOpenVoicesAndDropsOldOnesWhole() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .start(at: now.addingTimeInterval(-100_000)))
+        try box.append(to: hub, voice: voiceID(1), .end(text: "old"))
+        try box.append(to: hub, voice: voiceID(2), .start(at: now.addingTimeInterval(-60)))
+        try box.append(to: hub, voice: voiceID(2), .audio(n: 0, data: audio()))
+        try box.append(to: otherHub, voice: voiceID(3), .start(at: now))
+        try box.append(to: otherHub, voice: voiceID(3), .end(text: nil))
+        box.setLive(true)
+        // The next launch.
+        let launched = VoiceOutbox(dir: box.dir)
+        launched.tidy(now: now)
+
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept.map(\.vseq) == [3, 4, 5, 6, 7], "numbers never change, and the cancel comes last")
+        #expect(kept.last == VoiceLine(vseq: 7, to: hub, voice: voiceID(2), part: .cancel))
+        #expect(!FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
+        #expect(try launched.append(to: hub, voice: voiceID(4), .cancel) == 8)
+    }
+
+    @Test func tidyingLeavesAVoiceStartedSinceLaunch() throws {
+        let dir = scratch().voiceOutbox
+        try VoiceOutbox(dir: dir).append(to: hub, voice: voiceID(1), .start(at: now))
+        // Launched again, and recording before the tidy got going.
+        let box = VoiceOutbox(dir: dir)
+        box.setLive(true)
+        try box.append(to: hub, voice: voiceID(2), .start(at: now))
+        box.tidy(now: now)
+
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept == [VoiceLine(vseq: 1, to: hub, voice: voiceID(1), part: .start(at: now)),
+                         VoiceLine(vseq: 2, to: hub, voice: voiceID(2), part: .start(at: now)),
+                         VoiceLine(vseq: 3, to: hub, voice: voiceID(1), part: .cancel)],
+                "only the voice the crash left is ended")
+        #expect(FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
+        #expect(try box.append(to: hub, voice: voiceID(2), .end(text: nil)) == 4)
+    }
+
+    @Test func tidyingKeepsTheNewestVoicesUnderTheSizeCap() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        for v in 1...3 {
+            try box.append(to: hub, voice: voiceID(v), .start(at: now))
+            try box.append(to: hub, voice: voiceID(v), .audio(n: 0, data: audio(frames: 40)))
+            try box.append(to: hub, voice: voiceID(v), .end(text: nil))
+        }
+        let size = try Data(contentsOf: box.file).count
+        box.tidy(now: now, maxBytes: size * 2 / 3 + 10)
+        let voices = Set(try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> String? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v.voice
+        })
+        #expect(voices == [voiceID(2), voiceID(3)])
+    }
+
+    @Test func expiringWhileRunningLeavesTheVoiceBeingRecorded() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .start(at: now.addingTimeInterval(-100_000)))
+        try box.append(to: hub, voice: voiceID(1), .end(text: "old"))
+        try box.append(to: hub, voice: voiceID(2), .start(at: now.addingTimeInterval(-60)))
+        try box.append(to: hub, voice: voiceID(2), .audio(n: 0, data: audio(frames: 40)))
+        box.setLive(true)
+        box.expire(now: now, maxBytes: 10)
+
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept.map(\.vseq) == [3, 4], "the old voice goes, the open one stays over the cap, and nothing is cancelled")
+        #expect(FileManager.default.fileExists(atPath: box.dir.appendingPathComponent("outbox.live").path))
+        #expect(try box.append(to: hub, voice: voiceID(2), .end(text: nil)) == 5)
+    }
+}
+
+@Suite struct VoiceInboxTests {
+    private func inbox(cursor: Int64 = 0, known: Set<String> = [], limits: VoiceInbox.Limits = .init(),
+                       audit: RemoteAudit? = nil) -> VoiceInbox {
+        VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor(vseq: cursor), known: known, limits: limits, audit: audit)
+    }
+
+    @Test func aWholeVoiceArrivesWithItsAudioAndLastWords() {
+        let box = inbox()
+        let a = audio(frames: 12), b = audio(frames: 12)
+        #expect(box.receive(line(1, .start(at: now)), now: now) == [.incoming(id: voiceID(1), since: now)])
+        #expect(box.cursor == 0, "never past the start of a voice still coming in")
+        _ = box.receive(line(2, .audio(n: 0, data: a)), now: now)
+        let progress = box.receive(line(3, .text("ship it")), now: now)
+        #expect(progress == [.progress(id: voiceID(1), seconds: 12 * 1024 / 24_000.0, text: "ship it")])
+        _ = box.receive(line(4, .audio(n: 1, data: b)), now: now)
+        let end = box.receive(line(5, .end(text: "Ship it.")), now: now)
+        let expected = VoiceArrival(id: voiceID(1), machine: daily, recordedAt: now, seconds: 24 * 1024 / 24_000.0,
+                                    text: "Ship it.", audio: a + b)
+        #expect(end == [.arrived(expected)])
+        #expect(box.cursor == 5)
+        #expect(expected.record.direction == .received)
+    }
+
+    @Test func aRepeatOrAVoiceAlreadyKeptChangesNothing() {
+        let box = inbox(known: [voiceID(9)])
+        _ = box.receive(line(1, .start(at: now)), now: now)
+        #expect(box.receive(line(1, .start(at: now)), now: now) == [])
+        #expect(box.receive(line(2, 9, .start(at: now)), now: now) == [])
+        #expect(box.receive(line(3, 9, .end(text: nil)), now: now) == [])
+        #expect(box.inFlight == [voiceID(1)])
+    }
+
+    @Test func linesOfAVoiceThatStartedBeforeTheCursorAreIgnored() {
+        let box = inbox(cursor: 10)
+        #expect(box.receive(line(11, .audio(n: 4, data: audio())), now: now) == [])
+        #expect(box.receive(line(12, .end(text: "x")), now: now) == [])
+        #expect(box.cursor == 12)
+    }
+
+    @Test func voicesForAnotherMacAreRefused() {
+        let audit = RemoteAudit(url: scratch().home.appendingPathComponent("audit.jsonl"))
+        let box = inbox(audit: audit)
+        #expect(box.receive(line(1, to: otherHub, .start(at: now)), now: now) == [])
+        #expect(box.inFlight.isEmpty)
+        #expect(audit.records().map(\.detail) == ["voiceAddress"])
+    }
+
+    @Test func aVoiceThatBreaksTheRulesIsDroppedAndRecorded() {
+        let audit = RemoteAudit(url: scratch().home.appendingPathComponent("audit.jsonl"))
+        var limits = VoiceInbox.Limits()
+        limits.maxSeconds = 1
+        let box = inbox(limits: limits, audit: audit)
+        // Out of order.
+        _ = box.receive(line(1, 1, .start(at: now)), now: now)
+        #expect(box.receive(line(2, 1, .audio(n: 1, data: audio())), now: now) == [.ended(id: voiceID(1))])
+        #expect(box.receive(line(3, 1, .audio(n: 0, data: audio())), now: now) == [], "refused for good")
+        // A rate that changes.
+        _ = box.receive(line(4, 2, .start(at: now)), now: now)
+        _ = box.receive(line(5, 2, .audio(n: 0, data: audio(rate: 24_000))), now: now)
+        #expect(box.receive(line(6, 2, .audio(n: 1, data: audio(rate: 16_000))), now: now) == [.ended(id: voiceID(2))])
+        // Too long.
+        _ = box.receive(line(7, 3, .start(at: now)), now: now)
+        _ = box.receive(line(8, 3, .audio(n: 0, data: audio(frames: 20))), now: now)
+        #expect(box.receive(line(9, 3, .audio(n: 1, data: audio(frames: 20))), now: now) == [.ended(id: voiceID(3))])
+        // Too many at once.
+        _ = box.receive(line(10, 4, .start(at: now)), now: now)
+        _ = box.receive(line(11, 5, .start(at: now)), now: now)
+        #expect(box.receive(line(12, 6, .start(at: now)), now: now) == [.ended(id: voiceID(6))])
+        #expect(Set(audit.records().compactMap(\.detail)) == ["voiceOrder", "voiceRate", "voiceLength", "voiceBusy"])
+        #expect(box.cursor == 9, "still before the two voices going")
+    }
+
+    @Test func aCursorStartsOverForAnotherOutboxWhateverItsNumbers() {
+        let mine = "0123456789abcdef", other = "fedcba9876543210"
+        let box = VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor(vseq: 9, epoch: mine))
+        #expect(!box.linked(head: 12, epoch: mine))
+        #expect(!box.linked(head: 12, epoch: nil), "a shim from before 1.0.6 doesn't say")
+        #expect(box.saved == VoiceCursor(vseq: 9, epoch: mine))
+        #expect(box.linked(head: 12, epoch: other), "grown past the cursor, but not the outbox it was for")
+        #expect(box.saved == VoiceCursor(vseq: 0, epoch: other))
+        #expect(box.receive(line(1, .start(at: now)), now: now) == [.incoming(id: voiceID(1), since: now)])
+    }
+
+    @Test func aCursorWithNoEpochTakesTheFirstOne() {
+        let box = VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor(vseq: 9))
+        #expect(!box.linked(head: 9, epoch: nil))
+        #expect(box.saved == VoiceCursor(vseq: 9))
+        #expect(!box.linked(head: 9, epoch: "0123456789abcdef"))
+        #expect(box.saved == VoiceCursor(vseq: 9, epoch: "0123456789abcdef"))
+        // Behind the cursor, from a shim that can't name it: the cursor was for another outbox, and this one is unnamed.
+        #expect(box.linked(head: 4, epoch: nil))
+        #expect(box.saved == VoiceCursor())
+    }
+
+    @Test func aCutOffVoiceComesBackWholeFromItsStart() {
+        let box = inbox()
+        _ = box.receive(line(1, 1, .start(at: now)), now: now)
+        _ = box.receive(line(2, 1, .end(text: nil)), now: now)
+        _ = box.receive(line(3, 2, .start(at: now)), now: now)
+        _ = box.receive(line(4, 2, .audio(n: 0, data: audio())), now: now)
+        #expect(box.connectionEnded(now: now) == [.ended(id: voiceID(2))])
+        #expect(box.cursor == 2)
+        box.beginConnection()
+        // The replay, from 3.
+        #expect(box.receive(line(3, 2, .start(at: now)), now: now) == [.incoming(id: voiceID(2), since: now)])
+        _ = box.receive(line(4, 2, .audio(n: 0, data: audio())), now: now)
+        guard case .arrived? = box.receive(line(5, 2, .end(text: nil)), now: now).first else {
+            Issue.record("no arrival"); return
+        }
+        #expect(box.cursor == 5)
+    }
+
+    @Test func aVoiceWithNoAudioOrACancelJustEnds() {
+        let box = inbox()
+        _ = box.receive(line(1, 1, .start(at: now)), now: now)
+        #expect(box.receive(line(2, 1, .end(text: "said nothing")), now: now) == [.ended(id: voiceID(1))])
+        _ = box.receive(line(3, 2, .start(at: now)), now: now)
+        #expect(box.receive(line(4, 2, .cancel), now: now) == [.ended(id: voiceID(2))])
+        #expect(box.cursor == 4)
+    }
+
+    @Test func anEndWhoseWordsWereStrippedKeepsTheTranscriptSoFar() throws {
+        let box = inbox()
+        _ = box.receive(line(1, .start(at: now)), now: now)
+        _ = box.receive(line(2, .audio(n: 0, data: audio())), now: now)
+        _ = box.receive(line(3, .text("Call me back")), now: now)
+        // Nothing but a zero-width space: the decoder leaves an empty end.
+        let end = try #require(try decode(#"{"v":1,"type":"voice","vseq":4,"to":"\#(hub)","voice":"\#(voiceID(1))","part":"end","text":"\u200b"}"#))
+        #expect(end.part == .end(text: ""))
+        guard case let .arrived(voice)? = box.receive(end, now: now).first else { Issue.record("no arrival"); return }
+        #expect(voice.text == "Call me back")
+    }
+
+    @Test func aVoiceWhoseSenderWentQuietIsDropped() {
+        let box = inbox()
+        _ = box.receive(line(1, .start(at: now)), now: now)
+        #expect(box.sweep(now: now.addingTimeInterval(60)) == [])
+        #expect(box.sweep(now: now.addingTimeInterval(121)) == [.ended(id: voiceID(1))])
+        #expect(box.cursor == 1)
+    }
+}
+
+@Suite struct VoiceLibraryTests {
+    private func record(_ n: Int, _ direction: VoiceRecord.Direction = .received, from peer: MachineRef = daily,
+                        at: Date = now) -> VoiceRecord {
+        VoiceRecord(id: voiceID(n), direction: direction, peer: peer, recordedAt: at, seconds: 2, text: "voice \(n)")
+    }
+
+    @Test func voicesAndTheirCursorSurviveARestart() throws {
+        let paths = scratch()
+        let library = VoiceLibrary(paths: paths)
+        try library.add(record(1, at: now), audio: audio(), cursor: ("daily", VoiceCursor(vseq: 7)))
+        try library.add(record(2, at: now.addingTimeInterval(5)), audio: audio())
+        let again = VoiceLibrary(paths: paths)
+        #expect(again.voices.map(\.id) == [voiceID(2), voiceID(1)], "newest first")
+        #expect(again.cursors == ["daily": 7])
+        #expect(again.received(from: "daily") == [voiceID(1), voiceID(2)])
+        #expect(try Data(contentsOf: again.audioURL(for: record(1))) == audio())
+        for path in [paths.voiceLibrary.path, again.audioURL(for: record(1)).path] {
+            #expect(try FileManager.default.attributesOfItem(atPath: path)[.posixPermissions] as? Int == 0o600)
+        }
+    }
+
+    @Test func aCursorKeepsItsEpochAndALibraryFromBeforeEpochsStillOpens() throws {
+        let paths = scratch()
+        try FileManager.default.createDirectory(at: paths.voiceLibrary.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"version":1,"voices":[],"cursors":{"daily":7,"devbox":2}}"#.utf8).write(to: paths.voiceLibrary)
+        let library = VoiceLibrary(paths: paths)
+        #expect(library.cursor(for: "daily") == VoiceCursor(vseq: 7))
+        #expect(library.cursor(for: "nowhere") == VoiceCursor())
+
+        let epoch = "0123456789abcdef"
+        try library.setCursor(VoiceCursor(vseq: 2, epoch: epoch), machine: "daily")
+        try library.setCursor(VoiceCursor(vseq: 2, epoch: epoch), machine: "devbox")
+        #expect(VoiceLibrary(paths: paths).cursor(for: "daily") == VoiceCursor(vseq: 2, epoch: epoch))
+        try library.setCursor(VoiceCursor(vseq: 0), machine: "daily")
+        #expect(VoiceLibrary(paths: paths).cursor(for: "daily") == VoiceCursor(vseq: 0), "an outbox with no name yet")
+
+        try library.setCursor(VoiceCursor(vseq: 2, epoch: epoch), machine: "daily")
+        try library.forget(machine: "daily")
+        try library.purge(machine: "devbox")
+        #expect(library.epochs.isEmpty)
+        #expect(VoiceLibrary(paths: paths).epochs.isEmpty)
+    }
+
+    @Test func aRecordingHereMovesInFromItsPart() throws {
+        let library = VoiceLibrary(paths: scratch())
+        let sent = record(3, .sent, from: MachineRef(id: hub, label: "Mac Studio"))
+        try FileManager.default.createDirectory(at: library.audioDir, withIntermediateDirectories: true)
+        try audio().write(to: library.partURL(for: sent.id))
+        try library.addRecorded(sent)
+        #expect(FileManager.default.fileExists(atPath: library.audioURL(for: sent).path))
+        #expect(!FileManager.default.fileExists(atPath: library.partURL(for: sent.id).path))
+        #expect(library.voices == [sent])
+    }
+
+    @Test func deletingForgettingAndPurging() throws {
+        let paths = scratch()
+        let library = VoiceLibrary(paths: paths)
+        let devbox = MachineRef(id: "devbox", label: "Devbox")
+        try library.add(record(1), audio: audio(), cursor: ("daily", VoiceCursor(vseq: 3)))
+        try library.add(record(2, from: devbox), audio: audio(), cursor: ("devbox", VoiceCursor(vseq: 9)))
+        try library.add(record(3, .sent, from: MachineRef(id: hub, label: "Mac Studio")), audio: audio())
+
+        try library.forget(machine: "devbox")
+        #expect(library.cursors == ["daily": 3])
+        #expect(library.voices.count == 3, "unpairing keeps the voices")
+
+        try library.purge(machine: "daily")
+        #expect(library.voices.map(\.id).sorted() == [voiceID(2), voiceID(3)])
+        #expect(library.cursors.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: library.audioURL(for: record(1)).path))
+
+        try library.delete(voiceID(2))
+        #expect(library.voices.map(\.id) == [voiceID(3)])
+        try library.deleteAll()
+        #expect(library.voices.isEmpty)
+        #expect(VoiceLibrary(paths: paths).voices.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: library.audioURL(for: record(3)).path))
+    }
+
+    @Test func aChangeThatCouldntBeSavedIsntKept() throws {
+        let paths = scratch()
+        let library = VoiceLibrary(paths: paths)
+        try library.add(record(1), audio: audio(), cursor: ("daily", VoiceCursor(vseq: 3)))
+        let dir = paths.voiceLibrary.deletingLastPathComponent()
+        // A folder that can't be written to: every save fails.
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path) }
+
+        #expect(throws: (any Error).self) { try library.setCursor(VoiceCursor(vseq: 8), machine: "daily") }
+        #expect(library.cursors == ["daily": 3], "the cursor on disk")
+        #expect(throws: (any Error).self) { try library.add(record(2), audio: audio()) }
+        #expect(library.voices.map(\.id) == [voiceID(1)], "a voice that wasn't kept isn't listed")
+        #expect(throws: (any Error).self) { try library.delete(voiceID(1)) }
+        #expect(library.voices.map(\.id) == [voiceID(1)])
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        try library.setCursor(VoiceCursor(vseq: 8), machine: "daily")
+        #expect(VoiceLibrary(paths: paths).cursors == ["daily": 8], "saved once it can be")
+    }
+
+    @Test func anUnreadableLibraryIsSetAsideNotReplaced() throws {
+        let paths = scratch()
+        let dir = paths.voiceLibrary.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        func asides() throws -> [String] {
+            try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("library.unreadable-") }.sorted()
+        }
+
+        for (n, unreadable) in ["{\"version\":2,\"voices\":[],\"cursors\":{}}", "not json"].enumerated() {
+            try Data(unreadable.utf8).write(to: paths.voiceLibrary)
+            let library = VoiceLibrary(paths: paths)
+            #expect(library.voices.isEmpty)
+            #expect(try Data(contentsOf: paths.voiceLibrary) == Data(unreadable.utf8), "opening it changes nothing")
+            #expect(throws: VoiceLibraryError.self, "a purge can't tell what it holds, so it isn't done") {
+                try library.purge(machine: "daily")
+            }
+            #expect(throws: VoiceLibraryError.self) { try RemotePurge.scrub(machine: "daily", paths: paths) }
+            #expect(RemotePurge.pendingPurges(paths: paths).isEmpty, "the app isn't told it's done either")
+
+            try library.add(record(n + 1), audio: audio(), cursor: ("daily", VoiceCursor(vseq: 4)))
+            #expect(VoiceLibrary(paths: paths).voices.map(\.id) == [voiceID(n + 1)])
+            let kept = try asides()
+            #expect(kept.count == n + 1, "an earlier one stays")
+            #expect(try kept.contains { try Data(contentsOf: dir.appendingPathComponent($0)) == Data(unreadable.utf8) })
+        }
+    }
+}

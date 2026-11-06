@@ -34,7 +34,7 @@
         "mainEntityOfPage": "https://yaml.cafe/guides/gemini-cli-notifications-mac/",
         "image": "https://yaml.cafe/assets/og.png",
         "datePublished": "2026-09-27T00:00:00+00:00",
-        "dateModified": "2026-09-27T00:00:00+00:00",
+        "dateModified": "2026-11-03T00:00:00+00:00",
         "inLanguage": "en",
         "proficiencyLevel": "Beginner",
         "about": { "@type": "Thing", "name": "Gemini CLI" },
@@ -55,7 +55,9 @@
         "mainEntity": [
           { "@type": "Question", "name": "Why doesn't enableNotifications do anything?", "acceptedAnswer": { "@type": "Answer", "text": "The feature is experimental and may need enabling under /settings. It needs a terminal that supports OSC 9, such as iTerm2, WezTerm, Ghostty or Kitty; elsewhere you get only the terminal bell. Inside tmux, add set -g allow-passthrough on to ~/.tmux.conf, and check that your terminal may post notifications in System Settings." } },
           { "@type": "Question", "name": "Why does my Gemini CLI hook break the session?", "acceptedAnswer": { "@type": "Answer", "text": "Gemini CLI reads a hook's stdout as JSON, so a hook must not print plain text there. Send any output to stderr or /dev/null. Hooks also run synchronously, so keep them fast and set a timeout in milliseconds." } },
-          { "@type": "Question", "name": "Can I see Gemini CLI and Claude Code sessions in one place?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows every Gemini CLI, Claude Code and Codex session together at the notch, in the menu bar and on the Dock, with the most urgent state first." } }
+          { "@type": "Question", "name": "Can I see Gemini CLI and Claude Code sessions in one place?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows every Gemini CLI, Claude Code and Codex session together at the notch, in the menu bar and on the Dock, with the most urgent state first." } },
+          { "@type": "Question", "name": "Does Gemini CLI support hooks?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Gemini CLI has hook events including AfterAgent, which runs when a turn finishes, and Notification, which runs when it needs your attention, configured in ~/.gemini/settings.json. This guide shows a hook for each, and Ambient installs its own with one click." } },
+          { "@type": "Question", "name": "Can Gemini CLI play a sound when it's done?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Give the AfterAgent hook a command like afplay /System/Library/Sounds/Glass.aiff, or let Ambient's chime do it for Gemini CLI, Claude Code and Codex alike." } }
         ]
       }
     ]
@@ -74,7 +76,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get notified when Gemini CLI finishes or needs you on Mac</h1>
-    <p class="meta">Updated <time datetime="2026-09-27">September 27, 2026</time> · 4 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 4 min read</p>
 
     <p class="answer">Turn on Gemini CLI's own notifications by setting <code>general.enableNotifications</code> to <code>true</code> in <code>~/.gemini/settings.json</code>. It's experimental, and it alerts you when a task needs approval or finishes: a desktop notification in iTerm2, WezTerm, Ghostty and Kitty, the terminal bell elsewhere. For custom alerts, use <code>AfterAgent</code> and <code>Notification</code> hooks. For a live status, use Ambient.</p>
 
@@ -162,6 +164,10 @@
     <p>Gemini CLI reads a hook's stdout as JSON, so a hook must not print plain text there. Send any output to stderr or <code>/dev/null</code>. Hooks also run synchronously, so keep them fast and set a timeout in milliseconds.</p>
     <h3>Can I see Gemini CLI and Claude Code sessions in one place?</h3>
     <p>Yes. Ambient shows every Gemini CLI, Claude Code and Codex session together at the notch, in the menu bar and on the Dock, with the most urgent state first.</p>
+    <h3>Does Gemini CLI support hooks?</h3>
+    <p>Yes. Gemini CLI has hook events including <code>AfterAgent</code>, which runs when a turn finishes, and <code>Notification</code>, which runs when it needs your attention, configured in <code>~/.gemini/settings.json</code>. This guide shows a hook for each, and Ambient installs its own with one click.</p>
+    <h3>Can Gemini CLI play a sound when it&#x27;s done?</h3>
+    <p>Yes. Give the <code>AfterAgent</code> hook a command like <code>afplay /System/Library/Sounds/Glass.aiff</code>, or let Ambient's chime do it for Gemini CLI, Claude Code and Codex alike.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

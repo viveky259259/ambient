@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Claude Code permission notification: know instantly (Mac)</title>
-  <meta name="description" content="Get alerted the moment Claude Code asks for permission on a Mac. Why the built-in alert waits six seconds, the PermissionRequest hook that doesn&#x27;t, and Ambient.">
+  <meta name="description" content="Get alerted the moment Claude Code asks for permission or waits for input on a Mac. Why the built-in alert takes six seconds, the PermissionRequest hook that doesn&#x27;t, and Ambient.">
   <link rel="canonical" href="https://yaml.cafe/guides/claude-code-permission-notification/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Ambient">
@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-permission-notification/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-09T00:00:00+00:00",
-      "dateModified": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-11-03T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -106,7 +106,23 @@
             "@type": "Answer",
             "text": "Yes. Hooks run in any terminal, because they don't depend on the terminal showing notifications."
           }
-        }
+        },
+          {
+            "@type": "Question",
+            "name": "How do I get notified when Claude Code is waiting for input?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Claude Code fires the Notification event with type permission_prompt when it needs permission, and idle_prompt about a minute after it finishes if you haven't typed. A Notification hook can post a desktop alert or play a sound for either. Ambient marks the session Needs you in amber the moment Claude asks for permission or a question, and its notification takes you back to that tab, pane or chat."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do approval notifications work for Codex and Gemini CLI too?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, each with its own mechanism: Codex's notify program and hooks, and Gemini CLI's Notification hook. Ambient shows Needs you for all three in one place. See the Codex and Gemini CLI guides."
+            }
+          }
       ]
     }
   ]
@@ -125,7 +141,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get notified the moment Claude Code needs permission</h1>
-    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 5 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 5 min read</p>
 
     <p class="answer">Claude Code's permission notification, and a <code>Notification</code> hook with the <code>permission_prompt</code> matcher, only fire after the prompt has waited about six seconds. To hear about it the moment Claude asks, add a <code>PermissionRequest</code> hook to <code>~/.claude/settings.json</code>. Ambient shows an amber <em>needs you</em> pulse at the notch at that same moment, and a click takes you to the waiting tab.</p>
 
@@ -183,6 +199,10 @@ osascript -e "display notification \"Claude wants to use $tool\" with title \"Cl
     <p>Yes. A <code>PermissionRequest</code> hook can return <code>decision.behavior</code> as <code>allow</code> or <code>deny</code>. Use it carefully; permission rules in your settings are usually the safer way to pre-approve tools.</p>
     <h3>Does this work in the VS Code or Cursor terminal?</h3>
     <p>Yes. Hooks run in any terminal, because they don't depend on the terminal showing notifications.</p>
+    <h3>How do I get notified when Claude Code is waiting for input?</h3>
+    <p>Claude Code fires the <code>Notification</code> event with type <code>permission_prompt</code> when it needs permission, and <code>idle_prompt</code> about a minute after it finishes if you haven't typed. A Notification hook can post a desktop alert or play a sound for either. Ambient marks the session Needs you in amber the moment Claude asks for permission or a question, and its notification takes you back to that tab, pane or chat.</p>
+    <h3>Do approval notifications work for Codex and Gemini CLI too?</h3>
+    <p>Yes, each with its own mechanism: Codex's <code>notify</code> program and hooks, and Gemini CLI's <code>Notification</code> hook. Ambient shows Needs you for all three in one place. See the <a href="/guides/codex-notifications-mac/">Codex</a> and <a href="/guides/gemini-cli-notifications-mac/">Gemini CLI</a> guides.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

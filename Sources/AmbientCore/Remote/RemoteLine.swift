@@ -24,6 +24,11 @@ public struct RemoteHello: Equatable, Sendable {
     public let identity: String
     /// The remote clock, for measuring skew.
     public let ts: Date
+    /// The newest line in the machine's voice outbox. Sent only to a hub that said who it is with `--hub`.
+    public var voice: Int64? = nil
+    /// Names the voice outbox, which changes when it's replaced. Sent only to a hub that asks with `--voice-epoch`, by a
+    /// shim from 1.0.6 on, and only once the outbox has one.
+    public var voiceEpoch: String? = nil
 }
 
 /// `ambient-remote status`: the handshake's fields and the health of the remote side.
@@ -42,13 +47,15 @@ public enum RemoteLine: Equatable, Sendable {
     case hello(RemoteHello)
     case heartbeat(seq: Int64)
     case event(RemoteEvent)
+    case voice(VoiceLine)
 }
 
-/// Decodes `follow`'s output. Control lines have a `type` and their own allowlist; everything else must pass
-/// `RemoteEventDecoder`. Neither path can produce a `WireMessage`.
+/// Decodes `follow`'s output. Control and voice lines have a `type` and their own allowlist; everything else must pass
+/// `RemoteEventDecoder`. No path can produce a `WireMessage`.
 public enum RemoteLineDecoder {
-    private static let helloFields: Set<String> = ["v", "type", "shim", "proto", "caps", "level", "seq", "epoch", "identity", "ts"]
-    private static let statusFields = helloFields.union(["spoolBytes", "spoolPerms", "claude", "codex"])
+    private static let statusBase: Set<String> = ["v", "type", "shim", "proto", "caps", "level", "seq", "epoch", "identity", "ts"]
+    private static let helloFields = statusBase.union(["voice", "voiceEpoch"])
+    private static let statusFields = statusBase.union(["spoolBytes", "spoolPerms", "claude", "codex"])
 
     public static func decode(_ line: Data) throws(RemoteRejection) -> RemoteLine {
         let members = try RemoteEventDecoder.members(of: line)
@@ -62,6 +69,8 @@ public enum RemoteLineDecoder {
             let fields = try RemoteEventDecoder.flatFields(members, allowed: ["v", "type", "seq"])
             try checkVersion(fields)
             return .heartbeat(seq: try RemoteEventDecoder.integer(fields, "seq", in: 0...(1 << 53)))
+        case .string("voice"):
+            return .voice(try VoiceLineDecoder.line(from: members))
         default:
             throw .invalid("type")
         }
@@ -99,9 +108,17 @@ public enum RemoteLineDecoder {
         guard let identity = try RemoteEventDecoder.string(fields, "identity"), Machine.isValidFingerprint(identity) else {
             throw .invalid("identity")
         }
+        let voice = fields["voice"] == nil ? nil : try RemoteEventDecoder.integer(fields, "voice", in: 0...(1 << 53))
+        var voiceEpoch: String?
+        if fields["voiceEpoch"] != nil {
+            guard let given = try RemoteEventDecoder.string(fields, "voiceEpoch"), VoiceOutbox.isEpoch(given) else {
+                throw .invalid("voiceEpoch")
+            }
+            voiceEpoch = given
+        }
         return RemoteHello(shim: shim, proto: Int(proto), caps: Set(caps.split(separator: ",").map(String.init)), level: level,
                            seq: try RemoteEventDecoder.integer(fields, "seq", in: 0...(1 << 53)), epoch: epoch, identity: identity,
-                           ts: try RemoteEventDecoder.timestamp(fields))
+                           ts: try RemoteEventDecoder.timestamp(fields), voice: voice, voiceEpoch: voiceEpoch)
     }
 
     private static func hookState(_ fields: [String: JSONValue], _ key: String) throws(RemoteRejection) -> RemoteStatus.HookState {

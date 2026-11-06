@@ -262,8 +262,9 @@ public enum RemotePurge {
         paths.remoteDir.appendingPathComponent("purged", isDirectory: true).appendingPathComponent(id)
     }
 
-    /// Takes a machine's sessions and cursor out of the saved state.
+    /// Takes a machine's sessions and cursors out of the saved state. Its voices stay, as a sent message would.
     public static func removeSessions(machine id: String, paths: AmbientPaths) throws {
+        try VoiceLibrary(paths: paths).forget(machine: id)
         var cursors = StateFile.loadCursors(from: paths.stateFile)
         let sessions = StateFile.load(from: paths.stateFile)
         let kept = sessions.filter { $0.origin?.machine.id != id }
@@ -272,10 +273,11 @@ public enum RemotePurge {
         try StateFile.save(kept, cursors: cursors, to: paths.stateFile)
     }
 
-    /// Also takes it off the board and out of today's moments. A running app does the same to what it holds in
-    /// memory when it next finds the marker left here, and clears it.
+    /// Also takes it off the board and out of today's moments, and deletes the voices it sent. A running app does the
+    /// same to what it holds in memory when it next finds the marker left here, and clears it.
     public static func scrub(machine id: String, paths: AmbientPaths) throws {
         try removeSessions(machine: id, paths: paths)
+        try VoiceLibrary(paths: paths).purge(machine: id)
         let tasks = TaskFile.load(from: paths.tasksFile)
         let kept = tasks.filter { $0.machine?.id != id }
         if kept.count != tasks.count { try TaskFile.save(kept, to: paths.tasksFile) }

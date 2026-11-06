@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Claude Code sound when done: make it chime on Mac</title>
-  <meta name="description" content="Make Claude Code play a sound on your Mac when it finishes or needs permission: a Stop hook with afplay, a permission sound, the bell, or Ambient&#x27;s chimes.">
+  <meta name="description" content="Make Claude Code beep, ding or chime on your Mac when it finishes or needs input: a Stop hook with afplay, a permission sound, the bell, or Ambient&#x27;s chimes.">
   <link rel="canonical" href="https://yaml.cafe/guides/claude-code-sound-when-done/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Ambient">
@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-sound-when-done/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-09T00:00:00+00:00",
-      "dateModified": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-11-03T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -106,7 +106,31 @@
             "@type": "Answer",
             "text": "No. Stop runs when the main agent finishes responding. Subagents have their own SubagentStop event, which a Stop hook doesn't hear."
           }
-        }
+        },
+          {
+            "@type": "Question",
+            "name": "How do I make Claude Code beep, ding or chime when it's done?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Add a Stop hook that runs afplay with a system sound, as shown above; Glass.aiff is a clear two-tone ding. If the terminal's own beep is enough, set preferredNotifChannel to terminal_bell. Ambient plays a soft two-note chime when a turn ends or Claude needs you, and stays quiet while you're already looking at the agent."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can Claude Code play a sound when it needs input?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Add a Notification hook, or a PermissionRequest hook for the instant version, that plays a different sound from your Stop hook, so you can tell \"done\" from \"waiting for you\" by ear. The permission notification guide has the hook."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can Claude Code read its answer aloud?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Claude Code has no text-to-speech of its own. With Ambient, select part of a reply in the Claude app, Codex or your terminal and press ⌥⎋: it reads the selection with a Mac voice, with Kokoro running offline on your Mac, or with OpenAI or ElevenLabs using your own key, and turns paths and code blocks into something worth hearing."
+            }
+          }
       ]
     }
   ]
@@ -125,7 +149,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to make Claude Code play a sound when it&#x27;s done</h1>
-    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 4 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 4 min read</p>
 
     <p class="answer">Add a <code>Stop</code> hook to <code>~/.claude/settings.json</code> that runs <code>afplay /System/Library/Sounds/Glass.aiff</code>. Claude Code runs it the moment Claude finishes responding. For a different sound when Claude asks for permission, add a <code>PermissionRequest</code> hook too. For a plain bell, set <code>preferredNotifChannel</code> to <code>"terminal_bell"</code>; for distinct chimes across every agent, use Ambient.</p>
 
@@ -182,6 +206,12 @@
     <p>If you accepted Claude Code's first-run terminal setup in Apple's Terminal, it turned off the audible bell. Turn it back on in Settings › Profiles › Advanced › Audible bell, and check that your Mac's volume is up.</p>
     <h3>Will the sound play every time a subagent finishes?</h3>
     <p>No. <code>Stop</code> runs when the main agent finishes responding. Subagents have their own <code>SubagentStop</code> event, which a <code>Stop</code> hook doesn't hear.</p>
+    <h3>How do I make Claude Code beep, ding or chime when it&#x27;s done?</h3>
+    <p>Add a <code>Stop</code> hook that runs <code>afplay</code> with a system sound, as shown above; <code>Glass.aiff</code> is a clear two-tone ding. If the terminal's own beep is enough, set <code>preferredNotifChannel</code> to <code>terminal_bell</code>. Ambient plays a soft two-note chime when a turn ends or Claude needs you, and stays quiet while you're already looking at the agent.</p>
+    <h3>Can Claude Code play a sound when it needs input?</h3>
+    <p>Yes. Add a <code>Notification</code> hook, or a <code>PermissionRequest</code> hook for the instant version, that plays a different sound from your Stop hook, so you can tell "done" from "waiting for you" by ear. The <a href="/guides/claude-code-permission-notification/">permission notification guide</a> has the hook.</p>
+    <h3>Can Claude Code read its answer aloud?</h3>
+    <p>Claude Code has no text-to-speech of its own. With Ambient, select part of a reply in the Claude app, Codex or your terminal and press ⌥⎋: it reads the selection with a Mac voice, with Kokoro running offline on your Mac, or with OpenAI or ElevenLabs using your own key, and turns paths and code blocks into something worth hearing.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-tmux-notifications/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-09T00:00:00+00:00",
-      "dateModified": "2026-10-31T00:00:00+00:00",
+      "dateModified": "2026-11-03T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -106,7 +106,15 @@
             "@type": "Answer",
             "text": "Yes. Hooks run as commands from Claude Code itself, not through the terminal, so they work in tmux without extra settings."
           }
-        }
+        },
+          {
+            "@type": "Question",
+            "name": "Do Claude Code notifications work in zellij or cmux?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Hooks don't go through the multiplexer, so a Notification or Stop hook, and Ambient, work the same in tmux, zellij and cmux. The built-in desktop notification is the fragile one: it's an escape sequence that the multiplexer has to pass to the outer terminal. Ambient returns you to the exact pane in tmux and cmux."
+            }
+          }
       ]
     }
   ]
@@ -125,7 +133,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get Claude Code notifications inside tmux</h1>
-    <p class="meta">Updated <time datetime="2026-10-31">October 31, 2026</time> · 4 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 4 min read</p>
 
     <p class="answer">Inside tmux, Claude Code's desktop notifications never reach your terminal until you add <code>set -g allow-passthrough on</code> to <code>~/.tmux.conf</code> and reload it. Hooks don't go through the terminal, so a <code>Stop</code> or <code>PermissionRequest</code> hook works in tmux as it is, and Ambient takes you back to the exact pane.</p>
 
@@ -170,6 +178,8 @@ set -as terminal-features 'xterm*:extkeys'</code></pre>
     <p>tmux can't tell Shift+Enter from Enter until extended keys are on. Add <code>set -s extended-keys on</code> and <code>set -as terminal-features 'xterm*:extkeys'</code> to <code>~/.tmux.conf</code>.</p>
     <h3>Do hooks work inside tmux?</h3>
     <p>Yes. Hooks run as commands from Claude Code itself, not through the terminal, so they work in tmux without extra settings.</p>
+    <h3>Do Claude Code notifications work in zellij or cmux?</h3>
+    <p>Hooks don't go through the multiplexer, so a Notification or Stop hook, and Ambient, work the same in tmux, zellij and cmux. The built-in desktop notification is the fragile one: it's an escape sequence that the multiplexer has to pass to the outer terminal. Ambient returns you to the exact pane in tmux and cmux.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

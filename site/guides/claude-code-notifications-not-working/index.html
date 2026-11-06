@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-not-working/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-31T00:00:00+00:00",
-      "dateModified": "2026-10-31T00:00:00+00:00",
+      "dateModified": "2026-11-03T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -106,7 +106,23 @@
             "@type": "Answer",
             "text": "osascript posts through Script Editor, and it fails silently without permission. Run it once, then allow Script Editor in System Settings → Notifications."
           }
-        }
+        },
+          {
+            "@type": "Question",
+            "name": "Why doesn't my Claude Code notification or Stop hook fire?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Check in this order: the hook sits under hooks in ~/.claude/settings.json or the project's .claude/settings.json; you restarted Claude Code or opened /hooks after editing, since hooks are read at startup; /hooks lists it; and the command works when you paste it into a terminal. A hook that exits non-zero or prints invalid JSON shows an error in the transcript rather than failing silently."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do Claude Code notifications not work in Warp?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Warp isn't one of the terminals where Claude Code posts desktop notifications (Ghostty, Kitty and iTerm2), so by default you get the bell at most. Set preferredNotifChannel to terminal_bell and turn on Warp's bell notifications, add a Notification hook with osascript, or use Ambient, which doesn't depend on the terminal."
+            }
+          }
       ]
     }
   ]
@@ -125,7 +141,7 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>Claude Code notifications not working on Mac: how to fix them</h1>
-    <p class="meta">Updated <time datetime="2026-10-31">October 31, 2026</time> · 4 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 4 min read</p>
 
     <p class="answer">Most missing Claude Code notifications come from one of three causes: you were still typing, your terminal doesn't show them (only Ghostty, Kitty and iTerm2 get desktop notifications), or macOS is blocking the app that posts them. Start with the table below.</p>
 
@@ -190,6 +206,10 @@
     <p>Claude Code doesn&#x27;t send a desktop notification there. Use a Notification hook, or set preferredNotifChannel to terminal_bell.</p>
     <h3>Why does my osascript notification hook do nothing?</h3>
     <p>osascript posts through Script Editor, and it fails silently without permission. Run it once, then allow Script Editor in System Settings → Notifications.</p>
+    <h3>Why doesn&#x27;t my Claude Code notification or Stop hook fire?</h3>
+    <p>Check in this order: the hook sits under <code>hooks</code> in <code>~/.claude/settings.json</code> or the project's <code>.claude/settings.json</code>; you restarted Claude Code or opened <code>/hooks</code> after editing, since hooks are read at startup; <code>/hooks</code> lists it; and the command works when you paste it into a terminal. A hook that exits non-zero or prints invalid JSON shows an error in the transcript rather than failing silently.</p>
+    <h3>Why do Claude Code notifications not work in Warp?</h3>
+    <p>Warp isn't one of the terminals where Claude Code posts desktop notifications (Ghostty, Kitty and iTerm2), so by default you get the bell at most. Set <code>preferredNotifChannel</code> to <code>terminal_bell</code> and turn on Warp's bell notifications, add a Notification hook with <code>osascript</code>, or use Ambient, which doesn't depend on the terminal.</p>
 
     <h2>Sources</h2>
     <ul class="sources">

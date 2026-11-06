@@ -9,6 +9,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let speech: SpeechController
     private let shortcuts: ShortcutCenter
     private let hookDoctor: HookDoctor
+    private let voice: VoiceSyncController
+    private let voiceShortcuts: ShortcutCenter
     /// The problems listed in the open menu, so a click knows which one it fixes.
     private var listedProblems: [HookProblem] = []
     private let onReadSelection: () -> Void
@@ -19,6 +21,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let onOpenBoard: () -> Void
 
     init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter, hookDoctor: HookDoctor,
+         voice: VoiceSyncController, voiceShortcuts: ShortcutCenter,
          onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void,
          onOpenBoard: @escaping () -> Void) {
         self.model = model
@@ -26,6 +29,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         self.speech = speech
         self.shortcuts = shortcuts
         self.hookDoctor = hookDoctor
+        self.voice = voice
+        self.voiceShortcuts = voiceShortcuts
         self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
@@ -49,11 +54,21 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         hookDoctor.$problems
             .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
             .store(in: &cancellables)
+        voice.$outgoing
+            .map { $0 != nil }
+            .removeDuplicates()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
+            .store(in: &cancellables)
         updateIcon()
     }
 
     private func updateIcon() {
         guard let button = item.button else { return }
+        if let outgoing = voice.outgoing {
+            button.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Recording a voice for \(outgoing.destination.label)")
+            button.title = ""
+            return
+        }
         switch speech.state {
         case .preparing, .speaking:
             button.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Ambient is reading aloud")
@@ -198,6 +213,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(quiet)
         }
         menu.addItem(readSelectionItem())
+        voiceItems().forEach(menu.addItem)
         let pet = item("Show Desktop Pet", #selector(togglePet))
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
@@ -214,8 +230,34 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     /// Reads the selection in the app you were in (a status menu doesn't take focus from it), and shows the shortcut
     /// beside it so it's easy to learn.
     private func readSelectionItem() -> NSMenuItem {
-        let shortcut = shortcuts.shortcut
-        let i = item("Read Selection Aloud", #selector(readSelection))
+        shortcutItem("Read Selection Aloud", #selector(readSelection), shortcuts.shortcut)
+    }
+
+    /// Record a voice for the default Mac, or for any of them; or, while recording, send or cancel it.
+    private func voiceItems() -> [NSMenuItem] {
+        if voice.outgoing != nil {
+            return [shortcutItem("Send Voice", #selector(sendVoice), voiceShortcuts.shortcut), item("Cancel Voice", #selector(cancelVoice))]
+        }
+        guard let main = voice.destination else {
+            return [shortcutItem("Record a Voice", #selector(recordVoice(_:)), voiceShortcuts.shortcut)]
+        }
+        let record = shortcutItem("Record Voice for \(main.label)", #selector(recordVoice(_:)), voiceShortcuts.shortcut)
+        record.representedObject = main.id
+        guard voice.destinations.count > 1 else { return [record] }
+        let others = NSMenuItem(title: "Record Voice For", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for d in voice.destinations {
+            let i = item(d.isOnline() ? d.label : "\(d.label) (away)", #selector(recordVoice(_:)))
+            i.representedObject = d.id
+            i.state = d.id == main.id ? .on : .off
+            sub.addItem(i)
+        }
+        others.submenu = sub
+        return [record, others]
+    }
+
+    private func shortcutItem(_ title: String, _ action: Selector, _ shortcut: Shortcut) -> NSMenuItem {
+        let i = item(title, action)
         if let key = Self.keyEquivalent(shortcut) {
             i.keyEquivalent = key
             var mask: NSEvent.ModifierFlags = []
@@ -288,4 +330,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func resumeSpeaking() { speech.resume(from: "menu bar") }
     @objc private func useMacVoice() { speech.useMacVoice() }
     @objc private func readSelection() { onReadSelection() }
+    @objc private func sendVoice() { voice.send() }
+    @objc private func cancelVoice() { voice.cancel() }
+    @objc private func recordVoice(_ sender: NSMenuItem) {
+        let id = sender.representedObject as? String
+        voice.record(to: voice.destinations.first { $0.id == id })
+    }
 }

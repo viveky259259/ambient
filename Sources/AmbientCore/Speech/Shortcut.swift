@@ -43,6 +43,9 @@ public struct Shortcut: Codable, Equatable, Sendable {
     /// Used instead when macOS's own Speak Selection already has ⌥⎋.
     public static let controlOptionS = Shortcut(keyCode: 1, modifiers: [.control, .option], key: "S")
 
+    /// Voice sync's: press to start recording a voice for another Mac, press again to send it.
+    public static let controlOptionV = Shortcut(keyCode: 9, modifiers: [.control, .option], key: "V")
+
     public static func `default`(systemSpeakSelectionOn: Bool) -> Shortcut {
         systemSpeakSelectionOn ? .controlOptionS : .optionEscape
     }
