@@ -27,6 +27,17 @@ public struct HookPayload: @unchecked Sendable {
         (raw[key] as? [Any])?.compactMap { $0 as? String } ?? []
     }
 
+    /// The objects in an array, skipping anything else.
+    public func objects(_ key: String) -> [HookPayload] {
+        (raw[key] as? [Any])?.compactMap { ($0 as? [String: Any]).map(HookPayload.init) } ?? []
+    }
+
+    /// A number, but not a boolean.
+    public func number(_ key: String) -> Double? {
+        guard let n = raw[key] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+        return n.doubleValue
+    }
+
     public func object(_ key: String) -> HookPayload? {
         (raw[key] as? [String: Any]).map(HookPayload.init)
     }

@@ -179,8 +179,18 @@ public final class SessionStore {
             if s.turnStartedAt == nil || s.turnEndedAt != nil { startTurn(&s, at: date) }
             s.activity = .thinking
         case let .needsInput(reason, message):
-            if case .waiting = s.activity {} else { s.acknowledged = false }
+            if case let .waiting(shown, shownMessage) = s.activity {
+                if Self.addsNothing(Need(reason: reason), message, to: Need(reason: shown), shownMessage) { break }
+            } else {
+                s.acknowledged = false
+                s.beforeWaiting = s.activity
+            }
             s.activity = .waiting(reason: reason, message: message)
+        case .answered:
+            guard case .waiting = s.activity else { break }
+            let before = s.beforeWaiting ?? .thinking
+            s.activity = before.isBusy ? before : .thinking
+            s.beforeWaiting = nil
         case .compactStarted:
             if s.activity != .compacting { s.beforeCompaction = s.activity }
             s.activity = .compacting
@@ -199,6 +209,15 @@ public final class SessionStore {
             s.activity = .error(message: message)
             finishTurn(&s, at: date)
         }
+    }
+
+    /// Whether a prompt arriving while another is on show says nothing more, as when Claude follows its permission
+    /// request with a notification of the same prompt. A different need, or a new detail, replaces it.
+    static func addsNothing(_ need: Need, _ message: String?, to shown: Need, _ shownMessage: String?) -> Bool {
+        if need == .permission, shown != .permission { return true }
+        guard need == shown else { return false }
+        guard let message else { return true }
+        return shownMessage?.hasPrefix(message) == true
     }
 
     private func startTurn(_ s: inout Session, at date: Date) {

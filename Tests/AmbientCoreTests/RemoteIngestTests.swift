@@ -298,7 +298,7 @@ private func auditFile() -> RemoteAudit {
         #expect(AlertPolicy.decide(change, settings: settings, hostIsFrontmost: false) == nil)
         #expect(IslandPolicy.bloomDuration(for: change, quiet: false) == nil)
         #expect(Describe.remoteState(change.session) == "Missed")
-        #expect(Describe.status(change.session) == "Missed · Needs permission")
+        #expect(Describe.status(change.session) == "Missed · Approve a tool")
         #expect(Describe.shortStatus(change.session) == "Missed")
 
         // The same event on time does alert.

@@ -42,7 +42,7 @@ extension AmbientPaths {
 /// A permission prompt the island may answer for the agent.
 public struct PermissionAsk: Codable, Equatable, Sendable, Identifiable {
     public let id: String
-    /// The prompt as an event: a `needsInput(reason: "permission")` for the session.
+    /// The prompt as an event: a `needsInput` for the session, whose need is a permission.
     public let event: AgentEvent
     /// The tool as the agent names it, e.g. "Bash".
     public let toolName: String
@@ -56,9 +56,10 @@ public struct PermissionAsk: Codable, Equatable, Sendable, Identifiable {
         self.hint = hint
     }
 
-    /// The ask for a permission hook's payload, or nil when the event isn't a permission request.
+    /// The ask for a permission hook's payload, or nil when the event isn't a permission request. A question, like
+    /// Claude's AskUserQuestion, comes through the same hook, but Allow and Deny can't answer it.
     public static func make(event: AgentEvent, payload: HookPayload) -> PermissionAsk? {
-        guard case .needsInput(reason: "permission", _) = event.kind,
+        guard case let .needsInput(reason, _) = event.kind, Need(reason: reason).isPermission,
               payload.string("hook_event_name") == "PermissionRequest" else { return nil }
         let name = payload.string("tool_name") ?? "tool"
         return PermissionAsk(event: event, toolName: name,
@@ -164,7 +165,7 @@ public struct PermissionQueue: Sendable {
             guard ask.event.agent == event.agent, ask.event.sessionId == event.sessionId,
                   event.timestamp > ask.event.timestamp else { return false }
             switch event.kind {
-            case .promptSubmitted, .turnCompleted, .turnFailed, .sessionEnded: return true
+            case .promptSubmitted, .answered, .turnCompleted, .turnFailed, .sessionEnded: return true
             case let .toolFinished(name, _): return name == ask.toolName
             default: return false
             }
