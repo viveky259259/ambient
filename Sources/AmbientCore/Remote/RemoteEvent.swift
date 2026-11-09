@@ -58,7 +58,7 @@ public struct RemoteEvent: Equatable, Sendable {
         case .toolStarted: .toolStarted(name: tool ?? "tool", detail: nil)
         case .toolFinished: .toolFinished(name: tool ?? "tool", failed: false)
         case .toolFailed: .toolFinished(name: tool ?? "tool", failed: true)
-        case .needsInput: Self.needsInput(reason: reason, message: message)
+        case .needsInput: Self.needsInput(reason: reason, tool: tool, message: message)
         case .compactStarted: .compactStarted
         case .compactFinished: .compactFinished
         case .subagentStarted: .subagentStarted
@@ -71,11 +71,17 @@ public struct RemoteEvent: Equatable, Sendable {
         }
     }
 
-    /// Remote machines say only `permission` or `question`, so older hubs can read them. A permission's message, sent
-    /// at the full level, is the tool's name or the agent's own words for the prompt, and those give the need.
-    private static func needsInput(reason: String?, message: String?) -> EventKind {
+    /// Remote machines say only `permission` or `question`, so older hubs can read them. From `ambient-remote` 1.0.7 a
+    /// permission request names its tool from the standard level on, and the tool gives the need. Otherwise only the
+    /// full level says more: a message that is the tool's name or the agent's own words for the prompt.
+    private static func needsInput(reason: String?, tool: String?, message: String?) -> EventKind {
         guard reason == Need.permission.rawValue else {
             return .needsInput(reason: reason ?? Need.question.rawValue, message: message)
+        }
+        if let tool {
+            // The message, if any, is this same name: nothing the headline doesn't say, unless no need fits the tool.
+            let need = Need.forTool(tool)
+            return .needsInput(reason: need.rawValue, message: need == .permission ? ToolNames.display(tool) : nil)
         }
         let (need, detail) = Need.fromText(message)
         return .needsInput(reason: need.rawValue, message: detail)

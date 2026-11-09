@@ -274,6 +274,30 @@ private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> B
         #expect(FocusPlanner.routes(for: s).isEmpty)
     }
 
+    /// At the default level a machine names the tool behind a permission request, never what it would run, so the hub
+    /// says what's needed: "Approve a command", not "Approve a tool".
+    @Test func aPermissionRequestSaysWhatItNeedsAtTheDefaultLevel() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try stub.hook("PermissionRequest", ["tool_name": "Bash", "tool_input": ["command": "rm -rf build"]])
+        let line = try #require(try stub.spoolLines().last)
+        let object = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+        #expect(object["tool"] as? String == "Bash")
+        #expect(object["reason"] as? String == "permission")
+        #expect(object["message"] == nil)
+        #expect(!line.contains("rm -rf"))
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.sessions().first?.mood == .waiting })
+        let s = try #require(hub.sessions().first)
+        #expect(s.activity == .waiting(reason: "command", message: nil))
+        #expect(Describe.activity(s.activity) == "Approve a command")
+        #expect(!stub.paths.remoteAudit.records().contains { $0.action == .rejected })
+    }
+
     @Test func redactionLevelsApplyOnTheRemote() throws {
         for (level, wantTool, wantMessage) in [(RemoteRedaction.metadata, false, false), (.standard, true, false), (.full, true, true)] {
             let stub = try StubMachine()

@@ -153,6 +153,37 @@ import Testing
         #expect(kind(nil, nil) == .needsInput(reason: "question", message: nil))
     }
 
+    /// From `ambient-remote` 1.0.7 a permission request names its tool at the standard level too. The decoder is the
+    /// one hubs have had since 0.8.0, so this is also what an older hub reads: the same reason, and `tool` it allowed.
+    @Test func remotePromptsNameTheirToolFromTheStandardLevelOn() throws {
+        func line(_ more: String, reason: String = "permission") throws -> RemoteEvent {
+            let id = String(repeating: "a", count: 32)
+            return try RemoteEventDecoder.decode(Data(#"{"v":1,"seq":1,"id":"\#(id)","ts":1800000000,"agent":"claude","session":"s","kind":"needsInput","reason":"\#(reason)"\#(more)}"#.utf8))
+        }
+        let bash = try line(#","tool":"Bash""#)
+        #expect(bash.reason == "permission" && bash.tool == "Bash")
+        let standard = bash.redacted(to: .standard).eventKind
+        #expect(standard == .needsInput(reason: "command", message: nil))
+        if case let .needsInput(reason, message)? = standard {
+            #expect(Describe.activity(.waiting(reason: reason, message: message)) == "Approve a command")
+        }
+        #expect(try line(#","tool":"Edit""#).redacted(to: .standard).eventKind == .needsInput(reason: "edit", message: nil))
+        #expect(try line(#","tool":"WebFetch""#).redacted(to: .standard).eventKind == .needsInput(reason: "web", message: nil))
+        #expect(try line(#","tool":"AskUserQuestion""#).redacted(to: .standard).eventKind == .needsInput(reason: "question", message: nil))
+        // No need fits this tool, so its name is the detail, as at the full level.
+        #expect(try line(#","tool":"mcp__github__create_pr""#).redacted(to: .standard).eventKind
+            == .needsInput(reason: "permission", message: "github · create_pr"))
+        // At full the message is the same name, which adds nothing to the headline.
+        #expect(try line(#","tool":"Bash","message":"Bash""#).redacted(to: .full).eventKind == .needsInput(reason: "command", message: nil))
+        // At metadata the name stays on the machine, and the hub drops one spooled before the level was tightened.
+        #expect(bash.redacted(to: .metadata).tool == nil)
+        #expect(bash.redacted(to: .metadata).eventKind == .needsInput(reason: "permission", message: nil))
+        // A question is a question whatever tool it came with.
+        #expect(try line(#","tool":"Bash""#, reason: "question").eventKind == .needsInput(reason: "question", message: nil))
+        // Older hubs refuse any reason but these two, which is why the machine never sends the finer need.
+        #expect(throws: RemoteRejection.invalid("reason")) { try line("", reason: "command") }
+    }
+
     @Test func answeredRoundTripsOverTheWire() throws {
         let e = AgentEvent(agent: .opencode, sessionId: "s", cwd: nil, kind: .answered, timestamp: t0)
         #expect(try Wire.decode(Wire.encode(.event(e))) == .event(e))
