@@ -148,6 +148,17 @@ check() {
     done
     wc -c "$home/.ambient/spool"/events* | tail -n 1 > "$home/spool-bytes"
 
+    # A permission request at full, at the default level with no remote.conf, then at metadata: the tool's name from
+    # standard on, the message only at full.
+    permission='{"session_id":"s-7","cwd":"/x","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf build"}}'
+    emit "$permission"
+    rm "$home/.ambient/remote.conf"
+    emit "$permission"
+    echo redaction=metadata > "$home/.ambient/remote.conf"
+    emit "$permission"
+    rm "$home/.ambient/remote.conf"
+    cat "$home/.ambient/spool"/events*.jsonl | grep '"s-7"' > "$home/levels" || :
+
     # Events 1 and 2 are in the rotated file and already sent, and 3 to 5 are in the live one when `follow` starts.
     # `quiet` is a rotation with nothing written since, which leaves no live file at all.
     race() {
@@ -172,7 +183,6 @@ check() {
         kill "$follower" 2> /dev/null || :
         wait "$follower" 2> /dev/null || :
     }
-    rm "$home/.ambient/remote.conf"
     race before 6
     race between 6
     race quiet 5

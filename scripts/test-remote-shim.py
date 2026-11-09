@@ -84,6 +84,12 @@ expect(any(e["kind"] == "sessionEnded" for e in events), "session end")
 expect(any(e["kind"] == "agentExited" and e["session"] == "ghost-1" for e in events), "agent exit reported")
 expect(not any(e["session"] == "alive-1" for e in events), "a running agent was reported gone")
 
+levels = sorted((strict(line) for line in read("levels").splitlines()), key=lambda e: e["seq"])
+got = [(e.get("tool"), e.get("message")) for e in levels]
+expect(got == [("Bash", "Bash"), ("Bash", None), (None, None)], f"a permission request at full, standard, metadata: {got}")
+# Exactly as before: older hubs refuse any other reason.
+expect(all(e["kind"] == "needsInput" and e["reason"] == "permission" for e in levels), f"permission requests {levels}")
+
 stream = read("follow").splitlines()
 expect(strict(stream[0])["type"] == "hello", "follow starts with hello")
 expect(isinstance(strict(stream[0])["ts"], int), "hello has a time")
