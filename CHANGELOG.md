@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Fix**: Settings › Board drew every card on a long-lived board and redrew them all on every agent event, and kept
+  doing so after Settings closed, so a board of thousands of tasks held the main thread at 100% and requests to the
+  app (`ambient mcp`, `ambient memory`) timed out. Settings now shows each column's latest eight cards, with a link to
+  the rest in the Task Board window, and lets its views go when it closes. In both boards a card redraws only when its
+  task or session changes. `scripts/measure-perf.sh --board TASKS` measures the board with each window open.
 - **Voice sync** (Settings › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
   other Mac as you talk, over the same ssh link as remote agents, with a transcript made on the sending Mac only. Where
   that Mac can't transcribe your language on the device, or you don't allow speech recognition, the voice goes as audio

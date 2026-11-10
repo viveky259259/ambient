@@ -88,3 +88,26 @@ public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
         return names.joined(separator: " · ")
     }
 }
+
+/// One column of the task board: a status, the tasks it draws, and how many it holds in all.
+public struct TaskBoardColumn: Identifiable, Equatable, Sendable {
+    public let status: TaskStatus
+    /// The first tasks with this status, in the order they came.
+    public internal(set) var tasks: [AgentTask] = []
+    /// Every task with this status, drawn or not.
+    public internal(set) var total = 0
+
+    public var id: TaskStatus { status }
+
+    /// The board's columns in board order, without empty ones, from one pass over `tasks`. Each keeps its first `limit`
+    /// tasks: `TaskStore` sorts each status newest first, so those are the latest.
+    public static func columns(_ tasks: [AgentTask], limit: Int = .max) -> [TaskBoardColumn] {
+        var columns = TaskStatus.boardOrder.map { TaskBoardColumn(status: $0) }
+        for task in tasks {
+            guard let i = TaskStatus.boardOrder.firstIndex(of: task.status) else { continue }
+            columns[i].total += 1
+            if columns[i].tasks.count < limit { columns[i].tasks.append(task) }
+        }
+        return columns.filter { $0.total > 0 }
+    }
+}

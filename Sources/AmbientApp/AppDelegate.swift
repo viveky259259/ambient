@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
+    private var setupClosing: NSObjectProtocol?
     private var boardWindow: NSWindow?
     private var boardClosing: NSObjectProtocol?
     private var demoTimers: [Timer] = []
@@ -118,7 +119,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.selectionService = selectionService
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
+        #if DEBUG || AMBIENT_DEV
+        openForMeasuring(ProcessInfo.processInfo.environment["AMBIENT_PERF_OPEN"])
+        #endif
     }
+
+    #if DEBUG || AMBIENT_DEV
+    /// `scripts/measure-perf.sh --board` can't click, so it names the window to open: "settings", "board", or
+    /// "settings-closed" (Settings, closed again a moment later). Developer builds only.
+    private func openForMeasuring(_ window: String?) {
+        switch window {
+        case "settings": showSetup()
+        case "board": showBoard()
+        case "settings-closed":
+            showSetup()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.setupWindow?.close() }
+        default: break
+        }
+    }
+    #endif
 
     /// The system prompt appears only while permission is undecided.
     private func askForNotificationsOnce() {
@@ -176,8 +195,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             setupModel = setup
             setupWindow = window
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            setupClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
                 self?.prefs.setupCompleted = true
+                // Let its views go, as the Task Board's do: kept, Settings › Board redraws on every agent event with
+                // nobody looking.
+                self?.setupWindow = nil
+                self?.setupModel = nil
+                if let closing = self?.setupClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.setupClosing = nil
                 NSApp.setActivationPolicy(.accessory)
             }
         }
