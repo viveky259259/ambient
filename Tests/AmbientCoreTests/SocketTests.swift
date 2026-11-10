@@ -77,6 +77,36 @@ final class Inbox<T>: @unchecked Sendable {
         #expect(reply?.count == big.count)
     }
 
+    @Test func aClientThatGaveUpDoesntTakeTheServerDown() throws {
+        let path = try shortTempDir().appendingPathComponent("s.sock").path
+        let server = UnixSocketServer(path: path)
+        // Slower than the client waits, as when the app has been stopped or is busy.
+        try server.start { _ in Thread.sleep(forTimeInterval: 0.4); return Data(repeating: UInt8(ascii: "a"), count: 300_000) }
+        defer { server.stop() }
+
+        #expect(throws: (any Error).self) {
+            try UnixSocket.send(Wire.encode(.statusRequest), to: path, timeout: 0.1, expectReply: true)
+        }
+        // The reply goes to a closed socket. Writing it used to raise SIGPIPE, which ends the whole process.
+        Thread.sleep(forTimeInterval: 0.8)
+        #expect(UnixSocketServer.isListening(path))
+    }
+
+    @Test func aClientThatLeftBeforeItWasServedDoesntTakeTheServerDown() {
+        var fds: [Int32] = [0, 0]
+        #expect(socketpair(AF_UNIX, SOCK_STREAM, 0, &fds) == 0)
+        _ = "hello\n".withCString { write(fds[1], $0, 6) }
+        close(fds[1])
+        let inbox = Inbox<Data>()
+        // Writing the reply raised SIGPIPE here, which ends the whole process, the app or this test run.
+        UnixSocketServer.serve(fds[0], maxMessageSize: 1024) { data in
+            inbox.put(data)
+            return Data("reply".utf8)
+        }
+        // What it sent still counts: a hook's event, or a write it gave up waiting on.
+        #expect(inbox.wait() == [Data("hello".utf8)])
+    }
+
     @Test func sendingToNobodyFailsFast() throws {
         let path = try shortTempDir().appendingPathComponent("missing.sock").path
         let start = Date()
