@@ -4,19 +4,26 @@
 #include <CoreAudio/AudioServerPlugIn.h>
 #include <mach/mach_time.h>
 #include <math.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 void* AmbientSpeaker_Create(CFAllocatorRef allocator, CFUUIDRef requestedType);
 
 static int failures;
 #define CHECK(condition) do { if (!(condition)) { \
     fprintf(stderr, "%s:%d: failed: %s\n", __FILE__, __LINE__, #condition); failures++; } } while (0)
+/// For what the driver does on a queue of its own: waits up to a second for it.
+#define EVENTUALLY(condition) do { \
+    for (int waited = 0; waited < 200 && !(condition); waited++) usleep(5000); CHECK(condition); } while (0)
 
 #pragma mark - A stand-in for coreaudiod
 
-static int changes;
+/// Some come from another thread.
+static _Atomic int changes, restarts;
+static AudioServerPlugInDriverRef driver;
 
 static OSStatus PropertiesChanged(AudioServerPlugInHostRef host, AudioObjectID object, UInt32 count,
                                   const AudioObjectPropertyAddress* addresses) {
@@ -41,10 +48,12 @@ static OSStatus DeleteFromStorage(AudioServerPlugInHostRef host, CFStringRef key
     return noErr;
 }
 
+/// As coreaudiod does, later: stops the device's IO, has the driver change it, and starts it again.
 static OSStatus RequestDeviceConfigurationChange(AudioServerPlugInHostRef host, AudioObjectID device, UInt64 action,
                                                  void* info) {
-    (void)host, (void)device, (void)action, (void)info;
-    return noErr;
+    (void)host;
+    restarts++;
+    return (*driver)->PerformDeviceConfigurationChange(driver, device, action, info);
 }
 
 static const AudioServerPlugInHostInterface host = {
@@ -53,7 +62,6 @@ static const AudioServerPlugInHostInterface host = {
 
 #pragma mark - Asking the driver
 
-static AudioServerPlugInDriverRef driver;
 #define D (*driver)
 static const AudioObjectPropertyScope kGlobal = kAudioObjectPropertyScopeGlobal;
 static const AudioObjectPropertyScope kInput = kAudioObjectPropertyScopeInput;
@@ -216,6 +224,7 @@ static void TestEveryProperty(void) {
         kAudioStreamPropertyAvailablePhysicalFormats, kAudioControlPropertyScope, kAudioControlPropertyElement,
         kAudioLevelControlPropertyScalarValue, kAudioLevelControlPropertyDecibelValue,
         kAudioLevelControlPropertyDecibelRange, kAudioBooleanControlPropertyValue,
+        kAudioObjectPropertyCustomPropertyInfoList,
     };
     static const AudioObjectPropertyScope scopes[] = { kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput,
                                                        kAudioObjectPropertyScopeOutput };
@@ -296,6 +305,120 @@ static void TestSettings(void) {
     CHECK(Set(mute, kAudioBooleanControlPropertyValue, sizeof off, &off) == noErr);
 }
 
+enum { kStreamDelay = 0x61446C79, kRestartForDelay = 0x61446C52 };
+
+static OSStatus SetDelay(CFPropertyListRef value) { return Set(speaker, kStreamDelay, sizeof value, &value); }
+
+static OSStatus SetDelayFrames(SInt64 frames) {
+    CFNumberRef number = CFNumberCreate(NULL, kCFNumberSInt64Type, &frames);
+    OSStatus status = SetDelay(number);
+    CFRelease(number);
+    return status;
+}
+
+static SInt64 Delay(void) {
+    CFPropertyListRef value = NULL;
+    SInt64 frames = -1;
+    CHECK(Get(speaker, kStreamDelay, kGlobal, 0, NULL, sizeof value, &value, NULL) == noErr);
+    if (value) {
+        CHECK(CFGetTypeID(value) == CFNumberGetTypeID() && CFNumberGetValue(value, kCFNumberSInt64Type, &frames));
+        CFRelease(value);
+    }
+    return frames;
+}
+
+static bool Restarts(void) {
+    CFPropertyListRef value = NULL;
+    CHECK(Get(speaker, kRestartForDelay, kGlobal, 0, NULL, sizeof value, &value, NULL) == noErr);
+    bool on = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue(value);
+    if (value) CFRelease(value);
+    return on;
+}
+
+static OSStatus SetRestarts(CFPropertyListRef value) { return Set(speaker, kRestartForDelay, sizeof value, &value); }
+
+static void TestStreamDelay(void) {
+    // The speaker says it has the properties, and what they hold.
+    AudioServerPlugInCustomPropertyInfo info[3];
+    UInt32 size = 0;
+    CHECK(Get(speaker, kAudioObjectPropertyCustomPropertyInfoList, kGlobal, 0, NULL, sizeof info, info, &size) == noErr);
+    CHECK(size == 2 * sizeof info[0] && info[0].mSelector == kStreamDelay && info[1].mSelector == kRestartForDelay);
+    for (int i = 0; i < 2; i++) {
+        CHECK(info[i].mPropertyDataType == kAudioServerPlugInCustomPropertyDataTypeCFPropertyList
+              && info[i].mQualifierDataType == kAudioServerPlugInCustomPropertyDataTypeNone);
+    }
+    CHECK(Get(loopback, kAudioObjectPropertyCustomPropertyInfoList, kGlobal, 0, NULL, sizeof info, info, &size) == noErr);
+    CHECK(size == 0);
+    CHECK(!Has(loopback, kStreamDelay, kGlobal) && !Has(loopback, kRestartForDelay, kGlobal));
+    Boolean settable = false;
+    AudioObjectPropertyAddress delay = Address(kStreamDelay, kGlobal), restart = Address(kRestartForDelay, kGlobal);
+    CHECK(D->IsPropertySettable(driver, speaker, 0, &delay, &settable) == noErr && settable);
+    settable = false;
+    CHECK(D->IsPropertySettable(driver, speaker, 0, &restart, &settable) == noErr && settable);
+
+    // At first the speaker plays at once, and takes up a delay by restarting.
+    CHECK(Delay() == 0);
+    CHECK(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 0);
+    CHECK(Restarts());
+
+    // Told the other Mac plays 170 ms late, the speaker restarts, once, and then its latency is that, and it says so.
+    int before = changes, restartsBefore = restarts;
+    CHECK(SetDelayFrames(8160) == noErr);
+    CHECK(Delay() == 8160);
+    EVENTUALLY(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 8160);
+    EVENTUALLY(changes > before);
+    CHECK(restarts == restartsBefore + 1);
+    CHECK(U32(speaker, kAudioDevicePropertyLatency, kGlobal) == 8160);
+    CHECK(U32(speaker, kAudioDevicePropertyLatency, kInput) == 0);
+    CHECK(U32(loopback, kAudioDevicePropertyLatency, kInput) == 0);
+    CHECK(U32(speaker, kAudioDevicePropertySafetyOffset, kOutput) == 0);
+    // The same again changes nothing.
+    before = changes;
+    CHECK(SetDelayFrames(8160) == noErr);
+    usleep(50000);
+    CHECK(changes == before && restarts == restartsBefore + 1);
+
+    // Without restarting, it takes up a delay at once.
+    CHECK(SetRestarts(kCFBooleanFalse) == noErr);
+    CHECK(!Restarts());
+    before = changes;
+    CHECK(SetDelayFrames(4800) == noErr);
+    CHECK(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 4800);
+    CHECK(changes > before && restarts == restartsBefore + 1);
+    CHECK(SetRestarts(kCFBooleanTrue) == noErr);
+    CHECK(Restarts());
+    CHECK(SetRestarts(CFSTR("yes")) == kAudioHardwareIllegalOperationError);
+    UInt32 one = 1;
+    CHECK(Set(speaker, kRestartForDelay, sizeof one, &one) == kAudioHardwareBadPropertySizeError);
+    CHECK(SetDelayFrames(8160) == noErr);
+    EVENTUALLY(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 8160);
+
+    // Nothing but a number of frames, from none to ten seconds.
+    CHECK(SetDelayFrames(-1) == kAudioHardwareIllegalOperationError);
+    CHECK(SetDelayFrames(10 * 48000 + 1) == kAudioHardwareIllegalOperationError);
+    CHECK(SetDelay(CFSTR("8160")) == kAudioHardwareIllegalOperationError);
+    double fraction = 100.5;
+    CFNumberRef notWhole = CFNumberCreate(NULL, kCFNumberDoubleType, &fraction);
+    CHECK(SetDelay(notWhole) == kAudioHardwareIllegalOperationError);
+    CFRelease(notWhole);
+    UInt32 frames = 4800;
+    CHECK(Set(speaker, kStreamDelay, sizeof frames, &frames) == kAudioHardwareBadPropertySizeError);
+    CHECK(Delay() == 8160);
+    CHECK(Set(loopback, kStreamDelay, sizeof(CFPropertyListRef), &(CFPropertyListRef){ CFSTR("") })
+          == kAudioHardwareUnknownPropertyError);
+
+    // Once nothing records the loopback, nothing streams the speaker: it plays at once again, and says so.
+    CHECK(D->StartIO(driver, loopback, 0) == noErr);
+    CHECK(D->StartIO(driver, loopback, 0) == noErr);
+    CHECK(D->StopIO(driver, loopback, 0) == noErr);
+    CHECK(Delay() == 8160);
+    before = changes;
+    CHECK(D->StopIO(driver, loopback, 0) == noErr);
+    EVENTUALLY(Delay() == 0);
+    EVENTUALLY(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 0);
+    EVENTUALLY(changes > before);
+}
+
 #pragma mark - Playing and recording
 
 enum { kFrames = 512, kRing = 16384 };
@@ -361,6 +484,12 @@ static void TestLoopback(void) {
     // Nothing has been played after it yet.
     Record(t + kFrames, recorded);
     CHECK(Error(played, recorded, 0) == 0);
+    // Restarted, the speaker has played nothing yet either.
+    Play(t, played);
+    CHECK(D->PerformDeviceConfigurationChange(driver, speaker, 0, NULL) == noErr);
+    Record(t, recorded);
+    CHECK(Error(played, recorded, 0) == 0);
+    CHECK(D->PerformDeviceConfigurationChange(driver, loopback, 0, NULL) == noErr);
 
     // At half volume it plays at a quarter of the gain; muted, not at all.
     Float32 half = 0.5f;
@@ -390,6 +519,7 @@ int main(void) {
     TestObjects();
     TestEveryProperty();
     TestSettings();
+    TestStreamDelay();
     TestLoopback();
     if (failures) {
         fprintf(stderr, "%d failed\n", failures);

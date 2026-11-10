@@ -2,10 +2,11 @@
 // out of a hidden input, "Ambient Loopback", where the app can pick it up and send it to another Mac. The driver can't
 // do that itself: coreaudiod runs it in a sandbox, with no network and no way to reach the app.
 //
-// A prototype: one format (48 kHz stereo float), a volume that isn't saved, and nothing yet tells macOS how late the
-// other Mac plays, so video won't wait for it.
+// A prototype: one format (48 kHz stereo float) and a volume that isn't saved. Whatever streams the loopback tells the
+// speaker how late the other Mac plays, and the speaker reports that as its latency, so video here waits for its sound.
 
 #include <CoreAudio/AudioServerPlugIn.h>
+#include <dispatch/dispatch.h>
 #include <mach/mach_time.h>
 #include <math.h>
 #include <pthread.h>
@@ -37,6 +38,12 @@ enum { kRingFrames = 16384 };
 /// Both devices run off one clock, which this names so an aggregate device knows not to correct between them.
 static const UInt32 kClockDomain = 0x616D6269;
 static const Float32 kMinDB = -64, kMaxDB = 0;
+/// The speaker's own properties: how late the other Mac plays what the speaker plays, in frames, as a CFNumber; and
+/// whether the speaker takes up a new delay by restarting for a moment, a CFBoolean, on at first.
+enum { kAmbientPropertyStreamDelay = 0x61446C79 }; // 'aDly'
+enum { kAmbientPropertyRestartForDelay = 0x61446C52 }; // 'aDlR'
+/// Ten seconds, far more than any stream holds.
+enum { kMaxStreamDelay = 10 * 48000 };
 
 #pragma mark - State
 
@@ -54,6 +61,15 @@ static UInt32 gSpeakerIO, gLoopbackIO;
 static Float32 gVolume = 1;
 static bool gMuted;
 static bool gSpeakerStreamActive = true, gLoopbackStreamActive = true;
+/// Frames: the speaker's latency, as what streams it last said, once the speaker has taken it up.
+static UInt32 gStreamDelay;
+/// Frames: what it last said, which the speaker may not have taken up yet.
+static UInt32 gAskedDelay;
+/// A player reads the latency when its sound starts, pauses or seeks, and not when it changes. When the speaker
+/// restarts, the sound of everything playing to it restarts, so they all read it again.
+static bool gRestartForDelay = true;
+/// Takes up new delays one at a time, away from the host's calls.
+static dispatch_queue_t gQueue;
 /// The volume and mute together, as the factor each sample is played at.
 static _Atomic float gGain = 1;
 static Float32 gRing[kRingFrames * kChannels];
@@ -92,6 +108,55 @@ static void SetVolume(Float32 scalar) {
         { kAudioLevelControlPropertyDecibelValue, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
     };
     Notify(kSpeakerVolume, 2, changes);
+}
+
+/// Whatever has the speaker's latency asks again.
+static void NotifyStreamDelay(void* context) {
+    (void)context;
+    AudioObjectPropertyAddress changes[] = {
+        { kAudioDevicePropertyLatency, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+        { kAudioDevicePropertyLatency, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain },
+        { kAmbientPropertyStreamDelay, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+    };
+    Notify(kSpeaker, 3, changes);
+}
+
+/// Call with the lock held. Says whether it changed.
+static bool TakeUpStreamDelay(void) {
+    bool changed = gStreamDelay != gAskedDelay;
+    gStreamDelay = gAskedDelay;
+    return changed;
+}
+
+/// On the queue: the host stops the speaker's IO, calls PerformDeviceConfigurationChange, which takes up the delay
+/// asked for last, and starts it again. Without a host to do that, it's taken up at once.
+static void RestartForDelay(void* context) {
+    (void)context;
+    if (gHost && gHost->RequestDeviceConfigurationChange(gHost, kSpeaker, 0, NULL) == noErr) return;
+    pthread_mutex_lock(&gLock);
+    bool changed = TakeUpStreamDelay();
+    pthread_mutex_unlock(&gLock);
+    if (changed) NotifyStreamDelay(NULL);
+}
+
+static void SetStreamDelay(UInt32 frames) {
+    pthread_mutex_lock(&gLock);
+    bool changed = gAskedDelay != frames, restart = gRestartForDelay;
+    gAskedDelay = frames;
+    if (changed && !restart) TakeUpStreamDelay();
+    pthread_mutex_unlock(&gLock);
+    if (!changed) return;
+    if (restart) dispatch_async_f(gQueue, NULL, RestartForDelay);
+    else NotifyStreamDelay(NULL);
+}
+
+/// On the queue, once nothing records the loopback: nothing streams the speaker, even if what did has crashed.
+static void ClearStreamDelay(void* context) {
+    (void)context;
+    pthread_mutex_lock(&gLock);
+    bool idle = gLoopbackIO == 0;
+    pthread_mutex_unlock(&gLock);
+    if (idle) SetStreamDelay(0);
 }
 
 static void SetMuted(bool muted) {
@@ -242,8 +307,38 @@ static OSStatus DeviceProperty(AudioObjectID device, Request* r) {
     }
     case kAudioDevicePropertyDeviceCanBeDefaultDevice:
     case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: return ReplyU32(r, speaker);
-    case kAudioDevicePropertyLatency:
+    case kAudioDevicePropertyLatency: {
+        // The speaker plays as late as the other Mac does. The loopback records at once.
+        pthread_mutex_lock(&gLock);
+        UInt32 latency = speaker && inScope ? gStreamDelay : 0;
+        pthread_mutex_unlock(&gLock);
+        return ReplyU32(r, latency);
+    }
     case kAudioDevicePropertySafetyOffset: return ReplyU32(r, 0);
+    case kAudioObjectPropertyCustomPropertyInfoList: {
+        AudioServerPlugInCustomPropertyInfo ours[] = {
+            { kAmbientPropertyStreamDelay, kAudioServerPlugInCustomPropertyDataTypeCFPropertyList,
+              kAudioServerPlugInCustomPropertyDataTypeNone },
+            { kAmbientPropertyRestartForDelay, kAudioServerPlugInCustomPropertyDataTypeCFPropertyList,
+              kAudioServerPlugInCustomPropertyDataTypeNone },
+        };
+        return ReplyList(r, ours, speaker ? 2 : 0, sizeof ours[0]);
+    }
+    case kAmbientPropertyStreamDelay:
+    case kAmbientPropertyRestartForDelay: {
+        if (!speaker) return kAudioHardwareUnknownPropertyError;
+        if (!r->data) return Reply(r, NULL, sizeof(CFPropertyListRef));
+        if (r->capacity < sizeof(CFPropertyListRef)) return kAudioHardwareBadPropertySizeError;
+        pthread_mutex_lock(&gLock);
+        SInt32 frames = (SInt32)gAskedDelay;
+        bool restart = gRestartForDelay;
+        pthread_mutex_unlock(&gLock);
+        // The caller releases it.
+        CFPropertyListRef value = r->address->mSelector == kAmbientPropertyStreamDelay
+            ? CFNumberCreate(NULL, kCFNumberSInt32Type, &frames)
+            : CFRetain(restart ? kCFBooleanTrue : kCFBooleanFalse);
+        return Reply(r, &value, sizeof value);
+    }
     case kAudioDevicePropertyNominalSampleRate: return ReplyF64(r, kSampleRate);
     case kAudioDevicePropertyAvailableNominalSampleRates: {
         AudioValueRange rate = { kSampleRate, kSampleRate };
@@ -390,6 +485,7 @@ static Boolean HasProperty(AudioServerPlugInDriverRef driver, AudioObjectID obje
 
 static bool IsSettable(AudioObjectID object, AudioObjectPropertySelector selector) {
     switch (object) {
+    case kSpeaker: return selector == kAmbientPropertyStreamDelay || selector == kAmbientPropertyRestartForDelay;
     case kSpeakerVolume:
         return selector == kAudioLevelControlPropertyScalarValue || selector == kAudioLevelControlPropertyDecibelValue;
     case kSpeakerMute: return selector == kAudioBooleanControlPropertyValue;
@@ -471,6 +567,26 @@ static OSStatus SetPropertyData(AudioServerPlugInDriverRef driver, AudioObjectID
         }
         return noErr;
     }
+    case kAmbientPropertyStreamDelay: {
+        if (dataSize != sizeof(CFPropertyListRef)) return kAudioHardwareBadPropertySizeError;
+        CFPropertyListRef value = *(const CFPropertyListRef*)data;
+        SInt64 frames = -1;
+        if (!value || CFGetTypeID(value) != CFNumberGetTypeID() || !CFNumberGetValue(value, kCFNumberSInt64Type, &frames)
+            || frames < 0 || frames > kMaxStreamDelay) {
+            return kAudioHardwareIllegalOperationError;
+        }
+        SetStreamDelay((UInt32)frames);
+        return noErr;
+    }
+    case kAmbientPropertyRestartForDelay: {
+        if (dataSize != sizeof(CFPropertyListRef)) return kAudioHardwareBadPropertySizeError;
+        CFPropertyListRef value = *(const CFPropertyListRef*)data;
+        if (!value || CFGetTypeID(value) != CFBooleanGetTypeID()) return kAudioHardwareIllegalOperationError;
+        pthread_mutex_lock(&gLock);
+        gRestartForDelay = CFBooleanGetValue(value);
+        pthread_mutex_unlock(&gLock);
+        return noErr;
+    }
     default:
         // A format: there's only the one.
         if (dataSize != sizeof(AudioStreamBasicDescription)) return kAudioHardwareBadPropertySizeError;
@@ -528,9 +644,12 @@ static OSStatus StopIO(AudioServerPlugInDriverRef driver, AudioObjectID device, 
         pthread_mutex_unlock(&gLock);
         return kAudioHardwareIllegalOperationError;
     }
+    bool idle = --*count == 0, delayed = gAskedDelay != 0;
     // Stopped, it's silent: the loopback mustn't keep hearing the last third of a second over and over.
-    if (--*count == 0 && device == kSpeaker) ClearRing();
+    if (idle && device == kSpeaker) ClearRing();
     pthread_mutex_unlock(&gLock);
+    // Not from here, where the host may be busy with the device.
+    if (idle && device == kLoopback && delayed) dispatch_async_f(gQueue, NULL, ClearStreamDelay);
     return noErr;
 }
 
@@ -629,6 +748,7 @@ static OSStatus Initialize(AudioServerPlugInDriverRef driver, AudioServerPlugInH
     gHost = host;
     gTicksPerFrame = (1e9 * timebase.denom / timebase.numer) / kSampleRate;
     gAnchor = mach_absolute_time();
+    if (!gQueue) gQueue = dispatch_queue_create("com.viveky259259.Ambient.speaker", DISPATCH_QUEUE_SERIAL);
     UpdateGain();
     pthread_mutex_unlock(&gLock);
     return noErr;
@@ -660,7 +780,15 @@ static OSStatus RemoveDeviceClient(AudioServerPlugInDriverRef driver, AudioObjec
 static OSStatus PerformDeviceConfigurationChange(AudioServerPlugInDriverRef driver, AudioObjectID device,
                                                  UInt64 action, void* info) {
     (void)action, (void)info;
-    return driver == Driver() && IsDevice(device) ? noErr : kAudioHardwareBadObjectError;
+    if (driver != Driver() || !IsDevice(device)) return kAudioHardwareBadObjectError;
+    if (device != kSpeaker) return noErr;
+    // The speaker's IO has stopped. What it last wrote would come round again in the loopback, so it goes.
+    pthread_mutex_lock(&gLock);
+    bool changed = TakeUpStreamDelay();
+    ClearRing();
+    pthread_mutex_unlock(&gLock);
+    if (changed) dispatch_async_f(gQueue, NULL, NotifyStreamDelay);
+    return noErr;
 }
 
 static OSStatus AbortDeviceConfigurationChange(AudioServerPlugInDriverRef driver, AudioObjectID device,
