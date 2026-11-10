@@ -118,7 +118,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.selectionService = selectionService
 
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
+        #if DEBUG || AMBIENT_DEV
+        openForMeasuring(ProcessInfo.processInfo.environment["AMBIENT_PERF_OPEN"])
+        #endif
     }
+
+    #if DEBUG || AMBIENT_DEV
+    /// `scripts/measure-perf.sh --board` can't click, so it names the window to open: "settings", "board", or
+    /// "settings-closed" (Settings, closed again a moment later). Developer builds only.
+    private func openForMeasuring(_ window: String?) {
+        switch window {
+        case "settings": showSetup()
+        case "board": showBoard()
+        case "settings-closed":
+            showSetup()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.setupWindow?.close() }
+        default: break
+        }
+    }
+    #endif
 
     /// The system prompt appears only while permission is undecided.
     private func askForNotificationsOnce() {
