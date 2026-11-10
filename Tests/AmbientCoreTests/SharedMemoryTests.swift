@@ -75,12 +75,14 @@ import Testing
         defer { try? FileManager.default.removeItem(at: dir) }
         let blobs = MemoryBlobStore(root: dir.appendingPathComponent("memory"))
         let (kept, dropped) = try (oldCopy(named: "kept.txt", in: blobs, dir: dir), oldCopy(named: "dropped.txt", in: blobs, dir: dir))
-        let memory = SharedMemory(url: dir.appendingPathComponent("memory.json"), blobs: blobs)
+        let collector = DispatchQueue(label: "collect")
+        let memory = SharedMemory(url: dir.appendingPathComponent("memory.json"), blobs: blobs, collectQueue: collector)
         memory.load()
         _ = memory.answer(.write(MemoryWrite(key: "log", scope: .global, file: kept), callerPids: []), sessions: [])
 
         memory.sweep()
-        #expect(wait { !FileManager.default.fileExists(atPath: blobs.url(for: dropped).path) })
+        finished(memory, collector)
+        #expect(!FileManager.default.fileExists(atPath: blobs.url(for: dropped).path))
         #expect(FileManager.default.fileExists(atPath: blobs.url(for: kept).path))
     }
 
@@ -93,15 +95,16 @@ import Testing
         let blobs = MemoryBlobStore(root: dir.appendingPathComponent("memory"))
         let copy = try oldCopy(named: "theirs.txt", in: blobs, dir: dir)
 
-        let memory = SharedMemory(url: url, blobs: blobs, saveDelay: 0.05)
+        let collector = DispatchQueue(label: "collect")
+        let memory = SharedMemory(url: url, blobs: blobs, saveDelay: 0.05, collectQueue: collector)
         memory.load()
         guard case .entry = memory.answer(write("meanwhile"), sessions: []) else {
             Issue.record("sharing should still work")
             return
         }
         memory.sweep()
+        finished(memory, collector)
         memory.saveNow()
-        Thread.sleep(forTimeInterval: 0.2)
         #expect(try Data(contentsOf: url) == unreadable)
         #expect(FileManager.default.fileExists(atPath: blobs.url(for: copy).path))
     }
@@ -115,6 +118,12 @@ import Testing
         try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: blobs.url(for: blob).path)
         try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: blobs.url(for: blob).deletingLastPathComponent().path)
         return blob
+    }
+
+    /// Once a sweep has run and any collection it started is done. On a busy machine that can take seconds.
+    private func finished(_ memory: SharedMemory, _ collector: DispatchQueue) {
+        _ = memory.entries
+        collector.sync {}
     }
 
     private func wait(_ condition: () -> Bool) -> Bool {

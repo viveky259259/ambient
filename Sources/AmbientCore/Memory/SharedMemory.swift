@@ -11,13 +11,17 @@ public final class SharedMemory: @unchecked Sendable {
     private let url: URL?
     private let blobs: MemoryBlobStore?
     private let saveDelay: TimeInterval
+    private let collectQueue: DispatchQueue
     private var saveWork: DispatchWorkItem?
     private var nextCollect = Date.distantPast
 
-    public init(url: URL?, blobs: MemoryBlobStore?, saveDelay: TimeInterval = 1) {
+    /// `collectQueue` is where unreferenced copies are deleted, out of the way of requests.
+    public init(url: URL?, blobs: MemoryBlobStore?, saveDelay: TimeInterval = 1,
+                collectQueue: DispatchQueue = .global(qos: .utility)) {
         self.url = url
         self.blobs = blobs
         self.saveDelay = saveDelay
+        self.collectQueue = collectQueue
     }
 
     /// Loads what was saved, without what expired meanwhile.
@@ -63,7 +67,7 @@ public final class SharedMemory: @unchecked Sendable {
             // next change.
             nextCollect = now.addingTimeInterval(Self.collectInterval)
             let keep = store.blobs
-            DispatchQueue.global(qos: .utility).async {
+            collectQueue.async {
                 blobs.collect(keeping: keep, changedBefore: now.addingTimeInterval(-Self.collectInterval))
             }
         }
