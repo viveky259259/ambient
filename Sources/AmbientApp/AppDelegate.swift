@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
+    private var setupClosing: NSObjectProtocol?
     private var boardWindow: NSWindow?
     private var boardClosing: NSObjectProtocol?
     private var demoTimers: [Timer] = []
@@ -194,8 +195,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             setupModel = setup
             setupWindow = window
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            setupClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
                 self?.prefs.setupCompleted = true
+                // Let its views go, as the Task Board's do: kept, Settings › Board redraws on every agent event with
+                // nobody looking.
+                self?.setupWindow = nil
+                self?.setupModel = nil
+                if let closing = self?.setupClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.setupClosing = nil
                 NSApp.setActivationPolicy(.accessory)
             }
         }
