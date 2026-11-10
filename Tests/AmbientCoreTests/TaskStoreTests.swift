@@ -62,3 +62,29 @@ import Testing
         return s
     }
 }
+
+@Suite struct TaskBoardColumnTests {
+    @Test func columnsFollowBoardOrderAndSkipEmptyOnes() {
+        let tasks = [AgentTask(title: "a", status: .done), AgentTask(title: "b", status: .blocked),
+                     AgentTask(title: "c", status: .done)]
+        let columns = TaskBoardColumn.columns(tasks)
+        #expect(columns.map(\.status) == [.blocked, .done])
+        #expect(columns.map(\.total) == [1, 2])
+        #expect(columns[1].tasks.map(\.title) == ["a", "c"])
+    }
+
+    @Test func limitKeepsTheFirstTasksAndCountsTheRest() {
+        let tasks = (0..<5).map { AgentTask(title: "done \($0)", status: .done) }
+            + [AgentTask(title: "working", status: .inProgress)]
+        let columns = TaskBoardColumn.columns(tasks, limit: 2)
+        #expect(columns.map(\.status) == [.inProgress, .done])
+        #expect(columns[1].tasks.map(\.title) == ["done 0", "done 1"])
+        #expect(columns[1].total == 5)
+        #expect(columns[0].tasks.count == 1)
+        #expect(columns[0].total == 1)
+    }
+
+    @Test func noTasksNoColumns() {
+        #expect(TaskBoardColumn.columns([]).isEmpty)
+    }
+}

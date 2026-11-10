@@ -341,8 +341,18 @@ run, so a quiet Mac may read a little differently:
 | Island and desktop pet, nothing happening | 0.2% | 0.5% | 0.1 | 23 MB |
 | Everything on, agents working | 1.9% | 2.4% | 1.8 | 53 MB |
 
-The task board adds to that as it grows. With 1,626 tasks and an event every two seconds, Ambient used 1.6% of a core
-and 90 MB with the board closed, and 4.2% and 96 MB with it open.
+The task board adds to that as it grows. `scripts/measure-perf.sh --board 4193` measures a made-up board the size and
+shape of a real one of 4,193 tasks, with an event every two seconds, on the same Mac with macOS 27.0.1:
+
+| Case | CPU, average | CPU, peak | Energy impact | Memory |
+| --- | --- | --- | --- | --- |
+| No window open | 2.3% | 2.5% | 2.2 | 36 MB |
+| Settings › Board open | 2.7% | 3.3% | 2.5 | 55 MB |
+| Settings closed after showing Board | 2.0% | 2.4% | 1.8 | 53 MB |
+| Task Board window open | 2.9% | 3.4% | 2.8 | 48 MB |
+
+Settings › Board shows each column's latest eight cards; the Task Board window shows them all, drawing only the
+ones on screen.
 
 What these numbers leave out: the living wallpaper pauses where windows cover it, so the figure above is for a
 mostly covered desktop, as while you work; a bare desktop costs more. Memory with everything on moves with what the

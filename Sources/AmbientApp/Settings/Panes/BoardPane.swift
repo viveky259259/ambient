@@ -28,13 +28,13 @@ struct BoardPane: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: Theme.Space.sm) {
-                        ForEach(TaskStatus.boardOrder.filter { status in
-                            model.tasks.contains { $0.status == status }
-                        }, id: \.self) { status in
-                            BoardColumn(status: status,
-                                        tasks: model.tasks.filter { $0.status == status },
+                        // Each column's latest few only. Inside a sideways ScrollView a column can't be lazy, so a
+                        // long-lived board would draw thousands of cards on every agent event.
+                        ForEach(TaskBoardColumn.columns(model.tasks, limit: Self.cardsPerColumn)) { column in
+                            BoardColumn(column: column,
                                         sessions: model.sessions,
-                                        open: { model.openTask($0) })
+                                        open: { model.openTask($0) },
+                                        more: onOpenBoard)
                         }
                     }
                     .padding(.bottom, Theme.Space.xs)
@@ -44,8 +44,11 @@ struct BoardPane: View {
         .onAppear { model.refreshTaskLLMStatus() }
     }
 
+    /// The most cards a column shows here; the Task Board window shows them all.
+    static let cardsPerColumn = 8
+
     private var boardChrome: some View {
-        SettingsSection(footer: "The full Board is a wider window for scanning columns. Settings keeps this compact view.") {
+        SettingsSection(footer: "The full Board is a wider window for scanning every task. Settings shows each column's latest few.") {
             SettingsRow(title: "Full Board window") {
                 Button("Open Board") { onOpenBoard?() }
                     .buttonStyle(.pillProminent)
@@ -247,11 +250,8 @@ struct BoardWindowView: View {
             } else {
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     HStack(alignment: .top, spacing: Theme.Space.md) {
-                        ForEach(TaskStatus.boardOrder.filter { status in
-                            model.tasks.contains { $0.status == status }
-                        }, id: \.self) { status in
-                            BoardColumn(status: status,
-                                        tasks: model.tasks.filter { $0.status == status },
+                        ForEach(TaskBoardColumn.columns(model.tasks)) { column in
+                            BoardColumn(column: column,
                                         sessions: model.sessions,
                                         open: { model.openTask($0) },
                                         wide: true)
@@ -268,19 +268,21 @@ struct BoardWindowView: View {
 }
 
 private struct BoardColumn: View {
-    let status: TaskStatus
-    let tasks: [AgentTask]
+    let column: TaskBoardColumn
     let sessions: [Session]
     let open: (String) -> Void
+    /// Opens the Task Board window, for a column that shows only its latest cards.
+    var more: (() -> Void)? = nil
     var wide: Bool = false
 
     var body: some View {
+        let now = Date()
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
             HStack {
-                Text(status.displayName)
+                Text(column.status.displayName)
                     .font(Theme.Fonts.sectionHeader)
                 Spacer(minLength: 0)
-                Text("\(tasks.count)")
+                Text(column.total.formatted())
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
             }
@@ -288,12 +290,33 @@ private struct BoardColumn: View {
 
             // Lazy: a long-lived board holds thousands of tasks, and only the ones on screen should cost anything.
             LazyVStack(spacing: Theme.Space.xs) {
-                ForEach(tasks) { task in
-                    BoardCard(task: task, session: linkedSession(task), open: { open(task.id) })
+                ForEach(column.tasks) { task in
+                    let session = linkedSession(task)
+                    // Equatable, so an agent event redraws only the cards it changed.
+                    BoardCard(task: task, session: session, clock: session.flatMap { Describe.clock($0, now: now) },
+                              open: { open(task.id) })
+                        .equatable()
                 }
+            }
+            if column.total > column.tasks.count {
+                moreLink(column.total - column.tasks.count)
             }
         }
         .frame(width: wide ? 260 : 220, alignment: .topLeading)
+    }
+
+    @ViewBuilder private func moreLink(_ hidden: Int) -> some View {
+        let label = Text("\(hidden.formatted()) more in the Task Board")
+            .font(Theme.Fonts.caption)
+            .foregroundStyle(.secondary)
+        if let more {
+            Button(action: more) { label }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Theme.Space.xxs)
+                .help("Open the Task Board window")
+        } else {
+            label.padding(.horizontal, Theme.Space.xxs)
+        }
     }
 
     private func linkedSession(_ task: AgentTask) -> Session? {
@@ -302,10 +325,18 @@ private struct BoardColumn: View {
     }
 }
 
-private struct BoardCard: View {
+/// Equal when what it shows is: SwiftUI can't compare `open`, so without this every card on screen redraws on every
+/// agent event.
+private struct BoardCard: View, Equatable {
     let task: AgentTask
     let session: Session?
+    /// How long the session has been at it, as of the column's last update.
+    let clock: String?
     let open: () -> Void
+
+    static func == (a: BoardCard, b: BoardCard) -> Bool {
+        a.task == b.task && a.session == b.session && a.clock == b.clock
+    }
 
     var body: some View {
         Button(action: open) {
@@ -353,7 +384,7 @@ private struct BoardCard: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    if let session, let clock = Describe.clock(session, now: Date()) {
+                    if let clock {
                         Text(clock)
                             .font(Theme.Fonts.caption)
                             .foregroundStyle(.tertiary)

@@ -22,7 +22,7 @@ struct SettingsView: View {
     @AppStorage("settingsPane") private var pane: SettingsPane = .welcome
     @FocusState private var sidebarFocused: Bool
 
-    /// Live, not captured: the window outlives first run and is reused when Settings opens again.
+    /// Live, not captured: first run can end while the window is open.
     private var firstRun: Bool { !prefs.setupCompleted }
 
     var body: some View {
