@@ -8,7 +8,6 @@ struct GeneralPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .general)
             SettingsSection {
                 SettingsToggleRow(title: "Open Ambient at login",
                                   subtitle: setup.loginItemNeedsApproval

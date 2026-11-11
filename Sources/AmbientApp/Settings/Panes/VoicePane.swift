@@ -16,24 +16,20 @@ struct VoicePane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .voice)
             SettingsSection(footer: "In apps that support it, also under the app's menu › Services › Speak with Ambient.") {
                 SettingsRow(title: "Shortcut", subtitle: "Select text and press it. Press it again to stop.") {
                     ShortcutRecorder(center: shortcuts)
                 }
                 SettingsDivider()
                 SettingsRow(title: "Accessibility",
-                            subtitle: "Lets Ambient read the selection when you press the shortcut, and nothing else.") {
-                    if accessGranted {
-                        StatusBadge("Allowed", .success)
-                    } else {
-                        Button("Allow…") { SelectionReader.askForAccess() }.buttonStyle(.pill)
-                    }
+                            subtitle: "Lets Ambient read the selected text when you press the shortcut.") {
+                    PermissionControl(allowed: accessGranted ? true : nil, ask: { SelectionReader.askForAccess() },
+                                      openSettings: { SelectionReader.askForAccess() })
                 }
             }
             SettingsSection(footer: nil) {
-                SettingsRow(title: "Voice") {
-                    Picker("Voice", selection: Binding(get: { kind }, set: { prefs.speechEngine = $0.rawValue })) {
+                SettingsRow(title: "Read with", subtitle: EngineSection.summary(kind)) {
+                    Picker("Read with", selection: Binding(get: { kind }, set: { prefs.speechEngine = $0.rawValue })) {
                         ForEach(SpeechEngineKind.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
                     .pickerStyle(.segmented)
@@ -41,9 +37,8 @@ struct VoicePane: View {
                     .fixedSize()
                 }
                 SettingsDivider()
-                EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey, loadedKey: $loadedKey)
-                    .padding(.vertical, Theme.Space.xs)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                EngineSection(kind: kind, prefs: prefs, voicePack: voicePack, apiKey: $apiKey, loadedKey: $loadedKey,
+                              asRows: true)
                 if kind == .kokoro, voicePack.status == .installed {
                     SettingsDivider()
                     SettingsRow(title: "Offline model", subtitle: voicePack.downloadSize + " on this Mac.") {
@@ -53,7 +48,14 @@ struct VoicePane: View {
             }
             SettingsSection(footer: nil) {
                 SettingsRow(title: "Speed") {
-                    Slider(value: $prefs.speechRate, in: 0.5...2, step: 0.1).frame(width: 180)
+                    HStack(spacing: Theme.Space.xs) {
+                        Image(systemName: "tortoise").foregroundStyle(.secondary)
+                        Slider(value: $prefs.speechRate, in: 0.5...2, step: 0.1) { Text("Speed") }
+                            .labelsHidden()
+                            .controlSize(.small)
+                            .frame(width: 180)
+                        Image(systemName: "hare").foregroundStyle(.secondary)
+                    }
                 }
                 SettingsDivider()
                 SettingsToggleRow(title: "Read code blocks",

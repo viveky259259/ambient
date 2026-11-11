@@ -98,6 +98,16 @@ final class Preferences: ObservableObject {
     /// Seconds a received voice's Copy card stays under the notch.
     @Published var voiceSyncCopySeconds: Int { didSet { defaults.set(voiceSyncCopySeconds, forKey: "voiceSyncCopySeconds") } }
 
+    // MARK: - Speaker
+
+    /// The paired machine the Ambient speaker plays on.
+    @Published var speakerDestination: String? { didSet { defaults.set(speakerDestination, forKey: "speakerDestination") } }
+    /// Whether it plays there, which it does again after a restart.
+    @Published var speakerOn: Bool { didSet { defaults.set(speakerOn, forKey: "speakerOn") } }
+    /// Lets other Macs play their Ambient speaker here. Their player, which runs here as this user, reads this key from
+    /// the app's defaults (scripts/speaker-pipe.swift, `receiveSetting`).
+    @Published var speakerReceive: Bool { didSet { defaults.set(speakerReceive, forKey: "speakerReceive") } }
+
     init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
         self.paths = paths
@@ -191,6 +201,9 @@ final class Preferences: ObservableObject {
         voiceSyncShortcut = defaults.string(forKey: "voiceSyncShortcut")
         voiceSyncDestination = defaults.string(forKey: "voiceSyncDestination")
         voiceSyncCopySeconds = defaults.integer(forKey: "voiceSyncCopySeconds")
+        speakerDestination = defaults.string(forKey: "speakerDestination")
+        speakerOn = defaults.bool(forKey: "speakerOn")
+        speakerReceive = defaults.bool(forKey: "speakerReceive")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 

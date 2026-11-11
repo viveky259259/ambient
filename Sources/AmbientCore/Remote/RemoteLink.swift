@@ -367,11 +367,27 @@ public struct RemoteLinkStatus: Equatable, Sendable {
         self.updateAvailable = updateAvailable
     }
 
-    /// One line for the menu bar and Settings.
+    /// One line for the menu bar and Settings: how the link is, and what the machine shares.
     public var summary: String {
         var parts = [health.label]
-        if let level { parts.append(level.rawValue) }
+        if let level { parts.append(level.shares) }
         if updateAvailable { parts.append("update available") }
         return parts.joined(separator: " · ")
+    }
+
+    /// How to update the machine's side, when this app carries a newer one.
+    public var updateHint: String? {
+        updateAvailable ? "This version of Ambient has a newer link. Run `ambient remote add \(machine.id)` to update it." : nil
+    }
+}
+
+extension RemoteRedaction {
+    /// What a machine at this level shares, in words.
+    public var shares: String {
+        switch self {
+        case .metadata: "shares states only"
+        case .standard: "shares tool names and titles"
+        case .full: "shares short messages"
+        }
     }
 }

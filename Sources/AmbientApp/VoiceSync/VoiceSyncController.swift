@@ -163,7 +163,7 @@ final class VoiceSyncController: ObservableObject {
             // Paired, but by a Mac whose Ambient doesn't ask for voices yet.
             let paired = FileManager.default.fileExists(atPath: paths.userHome.appendingPathComponent(".ambient/bin/ambient-remote").path)
             show(paired ? "The Mac that follows this one doesn't take voices yet. Update Ambient there, then pair this Mac again."
-                        : "No Mac receives voices from this one yet. Pair it from the other Mac's Settings › Remote.")
+                        : "No Mac receives voices from this one yet. Pair it from the other Mac's Settings › Agents › Other Machines.")
             return
         }
         Self.askForMicrophone { [weak self] allowed in

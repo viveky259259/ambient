@@ -12,14 +12,15 @@ struct VoiceSyncPane: View {
     /// Looked up on refresh, not in `body`, which runs many times a second while a voice is recorded.
     @State private var canTranscribe = VoiceRecorder.recognizer() != nil
     @State private var confirmingDeleteAll = false
+    @AppStorage("settingsPane") private var paneName = SettingsPane.welcome.rawValue
+    @AppStorage("settingsTab.agents") private var agentsTab = AgentsTab.thisMac
 
     private static let copyChoices = [(30, "30 seconds"), (60, "1 minute"), (120, "2 minutes"), (300, "5 minutes")]
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .voiceSync)
             SettingsSection(header: "Send",
-                            footer: "Voices stream to the chosen Mac as you speak, over the same ssh link Remote uses. The transcript is made on this Mac; nothing goes to Apple or anyone else.") {
+                            footer: "Over the ssh link your other machines use. The transcript is made on this Mac; nothing goes to Apple or anyone else.") {
                 SettingsRow(title: "Shortcut", subtitle: "Press to start recording, and again to send.") {
                     ShortcutRecorder(center: shortcuts, name: "Voice shortcut")
                 }
@@ -41,11 +42,8 @@ struct VoiceSyncPane: View {
                 }
                 SettingsDivider()
                 SettingsRow(title: "Microphone", subtitle: "Only while you're recording a voice.") {
-                    permission(microphone) {
-                        VoiceSyncController.askForMicrophone { microphone = $0 }
-                    } settings: {
-                        Self.openPrivacy("Privacy_Microphone")
-                    }
+                    PermissionControl(allowed: microphone, ask: { VoiceSyncController.askForMicrophone { microphone = $0 } },
+                                      openSettings: { PermissionControl.openPrivacy("Privacy_Microphone") })
                 }
                 SettingsDivider()
                 SettingsRow(title: "Transcription",
@@ -55,22 +53,26 @@ struct VoiceSyncPane: View {
                     if !canTranscribe {
                         StatusBadge("Unavailable", .neutral)
                     } else {
-                        permission(speech) {
-                            VoiceSyncController.askForSpeech { speech = $0 }
-                        } settings: {
-                            Self.openPrivacy("Privacy_SpeechRecognition")
-                        }
+                        PermissionControl(allowed: speech, ask: { VoiceSyncController.askForSpeech { speech = $0 } },
+                                          openSettings: { PermissionControl.openPrivacy("Privacy_SpeechRecognition") })
                     }
                 }
             }
-            SettingsSection(header: "Receive",
-                            footer: "To get voices from another Mac, pair it in Remote with `ambient remote add`. That Mac needs Remote Login on, in System Settings › General › Sharing. Pairing goes one way: to send back, pair this Mac from that one.") {
+            SettingsSection(header: "Receive", footer: "The Mac you pair needs Remote Login on, in System Settings › General › Sharing.") {
+                SettingsRow(title: "Get voices from a Mac", subtitle: "Pair it from this Mac.") {
+                    Button("Show Other Machines") {
+                        agentsTab = .otherMachines
+                        paneName = SettingsPane.agents.rawValue
+                    }
+                    .buttonStyle(.pill)
+                }
+                SettingsDivider()
                 SettingsRow(title: "This Mac's name", subtitle: "How your other Macs list it.") {
                     Text(verbatim: voice.hub.label).font(Theme.Fonts.row).foregroundStyle(.secondary)
                 }
                 SettingsDivider()
-                SettingsRow(title: "Show Copy for", subtitle: "How long a voice that arrives stays under the notch.") {
-                    Picker("Show Copy for", selection: $prefs.voiceSyncCopySeconds) {
+                SettingsRow(title: "Keep new voices at the notch", subtitle: "With a Copy button, for this long.") {
+                    Picker("Keep new voices at the notch", selection: $prefs.voiceSyncCopySeconds) {
                         ForEach(Self.copyChoices, id: \.0) { Text($0.1).tag($0.0) }
                     }
                     .labelsHidden()
@@ -108,7 +110,7 @@ struct VoiceSyncPane: View {
     }
 
     private var destinationNote: String {
-        guard let d = voice.destination else { return "Macs that follow this one show up here." }
+        guard let d = voice.destination else { return "To send to a Mac, pair this Mac from that one." }
         return d.isOnline() ? "Connected now." : "Away. A voice waits for it, for up to a day."
     }
 
@@ -119,20 +121,6 @@ struct VoiceSyncPane: View {
         voice.refreshDestinations()
     }
 
-    @ViewBuilder
-    private func permission(_ allowed: Bool?, ask: @escaping () -> Void, settings: @escaping () -> Void) -> some View {
-        switch allowed {
-        case true?: StatusBadge("Allowed", .success)
-        case nil: Button("Allow…", action: ask).buttonStyle(.pill)
-        case false?: Button("Open Settings…", action: settings).buttonStyle(.pill)
-        }
-    }
-
-    private static func openPrivacy(_ anchor: String) {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {
-            NSWorkspace.shared.open(url)
-        }
-    }
 }
 
 /// Not observing `voice`: its level changes many times a second while recording, and every row would follow it.

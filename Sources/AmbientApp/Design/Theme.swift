@@ -74,14 +74,19 @@ enum Theme {
             }
         }
 
-        /// Text: system colors keep their contrast in light and dark.
+        /// Text. The system's green and orange are too light to read at caption size on the light card (about 2:1), so
+        /// light mode uses darker ones, at 5:1 or more; dark mode keeps the system's.
         var textColor: Color {
             switch self {
-            case .success: .green
-            case .warning: .orange
-            case .error: .red
+            case .success: Self.text(light: NSColor(srgbRed: 0.11, green: 0.50, blue: 0.20, alpha: 1), dark: .systemGreen)
+            case .warning: Self.text(light: NSColor(srgbRed: 0.66, green: 0.36, blue: 0, alpha: 1), dark: .systemOrange)
+            case .error: Self.text(light: NSColor(srgbRed: 0.75, green: 0.14, blue: 0.12, alpha: 1), dark: .systemRed)
             case .neutral: .secondary
             }
+        }
+
+        private static func text(light: NSColor, dark: NSColor) -> Color {
+            Color(nsColor: NSColor(name: nil) { $0.isDark ? dark : light })
         }
     }
 }

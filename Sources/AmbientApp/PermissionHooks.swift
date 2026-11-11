@@ -1,7 +1,7 @@
 import AmbientCore
 import Foundation
 
-/// Keeps the permission hook of connected agents in step with Settings › Island: in the foreground while the
+/// Keeps the permission hook of connected agents in step with Settings › Alerts › Permission prompts: in the foreground while the
 /// island answers prompts, in the background otherwise. Agents that aren't connected are left alone.
 enum PermissionHooks {
     /// Returns what went wrong, if anything, for the settings pane to show.

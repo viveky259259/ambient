@@ -78,7 +78,7 @@ private struct VoiceChooserView: View {
                 }
                 .disabled(!ready)
                 Spacer()
-                Text("You can change this in Settings › Voice.").font(.caption).foregroundStyle(.secondary)
+                Text("You can change this in Settings › Voice & Sound.").font(.caption).foregroundStyle(.secondary)
                 Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
                 Button("Play") {
                     EngineSection.saveKey(apiKey, loaded: $loadedKey, prefs: prefs)

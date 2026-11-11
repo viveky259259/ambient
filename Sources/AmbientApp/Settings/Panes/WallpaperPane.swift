@@ -8,7 +8,6 @@ struct WallpaperPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .wallpaper)
             WallpaperPreview(enabled: prefs.wallpaperEnabled, choice: prefs.sceneChoice, look: prefs.sceneLook)
             if wallpaper.restorePending {
                 SettingsSection(footer: "Ambient showed the scene as your wallpaper while the Mac was locked and hasn't put yours back yet.") {
@@ -21,9 +20,11 @@ struct WallpaperPane: View {
                 SettingsToggleRow(title: "Living wallpaper", isOn: $prefs.wallpaperEnabled)
             }
             Group {
-                SettingsSection(header: "Light and dark",
-                                footer: "The scene is light by day and dark at night unless you choose otherwise. The clock always shows the real time.") {
-                    SettingsRow(title: "Look") {
+                SettingsSection(header: "Scene",
+                                footer: "When you open the notch, the Solar System's planets orbit; the other scenes can form a black hole at the notch.") {
+                    ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
+                    SettingsDivider()
+                    SettingsRow(title: "Look", subtitle: "Automatic is light by day and dark at night.") {
                         Picker("Look", selection: $prefs.wallpaperLook) {
                             ForEach(SceneLook.allCases, id: \.self) { look in
                                 Text(look.displayName).tag(look.rawValue)
@@ -32,12 +33,8 @@ struct WallpaperPane: View {
                         .labelsHidden()
                         .fixedSize()
                     }
-                }
-                SettingsSection(header: "Scene",
-                                footer: "When you open the island, the Solar System's sun lights and its planets orbit. The other scenes can form a black hole at the notch.") {
-                    ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
                     SettingsDivider()
-                    SettingsToggleRow(title: "Black hole when the island opens", isOn: $prefs.wallpaperIslandEffect)
+                    SettingsToggleRow(title: "Black hole when the notch opens", isOn: $prefs.wallpaperIslandEffect)
                         .disabled(prefs.sceneChoice == .fixed(.solar))
                 }
                 SettingsSection(header: "Lock screen") {
@@ -49,24 +46,21 @@ struct WallpaperPane: View {
                                       isOn: $prefs.wallpaperLockMessages)
                         .disabled(!prefs.wallpaperOnLockScreen)
                 }
-                SettingsSection(header: "Your day", footer: "Ambient reads only your next timed event today, on your Mac.") {
-                    SettingsToggleRow(title: "Next calendar event", isOn: $prefs.wallpaperCalendar)
+                SettingsSection(header: "On the scene") {
+                    SettingsToggleRow(title: "Next calendar event", subtitle: "Only your next timed event today, read on this Mac.",
+                                      isOn: $prefs.wallpaperCalendar)
                     if prefs.wallpaperCalendar && !calendar.hasAccess {
                         SettingsDivider()
                         SettingsRow(title: "Calendar access",
-                                    subtitle: calendar.canAsk ? nil : "Allow Ambient in System Settings › Privacy & Security › Calendars.",
+                                    subtitle: calendar.canAsk ? nil : "Turned off for Ambient in Privacy & Security.",
                                     subtitleStatus: .warning) {
-                            if calendar.canAsk {
-                                Button("Grant access…") { calendar.requestAccess() }.buttonStyle(.pill)
-                            } else {
-                                StatusBadge("Not allowed", .warning)
-                            }
+                            PermissionControl(allowed: calendar.canAsk ? nil : false, ask: { calendar.requestAccess() },
+                                              openSettings: { PermissionControl.openPrivacy("Privacy_Calendars") })
                         }
                     }
-                }
-                SettingsSection(header: "Task board",
-                                footer: "Soft title and status cues on the desk scene — calm, glanceable, not Kanban columns. Off by default. Hidden when nothing is blocked or in progress.") {
-                    SettingsToggleRow(title: "Show task board on wallpaper", isOn: $prefs.wallpaperShowBoard)
+                    SettingsDivider()
+                    SettingsToggleRow(title: "Task board", subtitle: "What's in progress or blocked, as soft cues on the desk scene.",
+                                      isOn: $prefs.wallpaperShowBoard)
                 }
             }
             .disabled(!prefs.wallpaperEnabled)

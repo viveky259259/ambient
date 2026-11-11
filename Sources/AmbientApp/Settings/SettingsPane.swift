@@ -1,28 +1,19 @@
 import SwiftUI
 
-/// The panes of the settings window, in sidebar order.
+/// The panes of the settings window, in sidebar order. Panes that hold several parts show them as tabs.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case welcome, agents, remote, board, island, pet, voice, voiceSync, alerts, dock, wallpaper, performance, general
+    case welcome, agents, board, alerts, appearance, voice, general
 
     var id: String { rawValue }
-
-    /// The panes in the sidebar. Performance is a developer tool, only in dev builds.
-    static var shown: [SettingsPane] { allCases.filter { $0 != .performance || PerfMonitor.isAvailable } }
 
     var title: String {
         switch self {
         case .welcome: "Welcome"
         case .agents: "Agents"
-        case .remote: "Remote"
         case .board: "Board"
-        case .island: "Notch Island"
-        case .pet: "Desktop Pet"
-        case .voice: "Voice"
-        case .voiceSync: "Voice Sync"
         case .alerts: "Alerts"
-        case .dock: "Dock Glow"
-        case .wallpaper: "Wallpaper"
-        case .performance: "Performance"
+        case .appearance: "Appearance"
+        case .voice: "Voice & Sound"
         case .general: "General"
         }
     }
@@ -31,51 +22,188 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .welcome: "sparkles"
         case .agents: "terminal"
-        case .remote: "network"
         case .board: "rectangle.split.3x1"
-        case .island: "laptopcomputer"
-        case .pet: "pawprint"
-        case .voice: "speaker.wave.2"
-        case .voiceSync: "waveform.and.mic"
         case .alerts: "bell.badge"
-        case .dock: "dock.rectangle"
-        case .wallpaper: "photo.artframe"
-        case .performance: "gauge.with.dots.needle.33percent"
+        case .appearance: "paintpalette"
+        case .voice: "speaker.wave.2"
         case .general: "gearshape"
         }
     }
 
+    /// For panes without tabs; a tabbed pane says what its selected tab is for instead.
     var subtitle: String? {
         switch self {
-        case .welcome: nil
-        case .agents: "Ambient listens to your agents through lightweight hooks."
-        case .remote: "Agents on your other machines, over your own ssh. No accounts, no relay, no open ports."
-        case .board: "A local board of agent work. Optional on-device LLM summaries via local-agent MCP."
-        case .island: "A quiet status light that grows out of the notch."
-        case .pet: "A little companion on your desktop that acts out what your agents are doing."
-        case .voice: "Select text in Claude, Codex or a terminal, press the shortcut, and Ambient reads it aloud."
-        case .voiceSync: "Talk on one Mac and paste on another. The voice streams there as you speak, with its transcript."
+        case .board: "A local board of agent work, with optional on-device summaries."
         case .alerts: "Banners and chimes for the moments that need you."
+        default: nil
+        }
+    }
+
+    /// Where a pane from before the panes were grouped went, so the window opens where it was left.
+    static func moved(from old: String) -> (pane: SettingsPane, tab: String)? {
+        switch old {
+        case "remote": (.agents, AgentsTab.otherMachines.rawValue)
+        case "island": (.appearance, AppearanceTab.notch.rawValue)
+        case "pet": (.appearance, AppearanceTab.pet.rawValue)
+        case "dock": (.appearance, AppearanceTab.dock.rawValue)
+        case "wallpaper": (.appearance, AppearanceTab.wallpaper.rawValue)
+        case "voiceSync": (.voice, VoiceTab.voiceSync.rawValue)
+        case "performance": (.general, GeneralTab.performance.rawValue)
+        default: nil
+        }
+    }
+}
+
+/// One part of a tabbed pane.
+protocol SettingsTab: RawRepresentable, CaseIterable, Hashable, Identifiable where RawValue == String {
+    var title: String { get }
+    /// What it's for, in a line.
+    var subtitle: String { get }
+}
+
+extension SettingsTab {
+    var id: String { rawValue }
+}
+
+enum AgentsTab: String, SettingsTab {
+    case thisMac, otherMachines
+
+    var title: String {
+        switch self {
+        case .thisMac: "This Mac"
+        case .otherMachines: "Other Machines"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .thisMac: "Ambient listens to your agents through lightweight hooks."
+        case .otherMachines: "Agents on your other machines, over your own ssh. No accounts, relays or open ports."
+        }
+    }
+}
+
+enum AppearanceTab: String, SettingsTab {
+    case notch, pet, dock, wallpaper
+
+    var title: String {
+        switch self {
+        case .notch: "Notch"
+        case .pet: "Pet"
+        case .dock: "Dock"
+        case .wallpaper: "Wallpaper"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .notch: "A quiet status light at the top of the screen, around the notch if there is one."
+        case .pet: "A companion on your desktop that acts out what your agents are doing."
         case .dock: "Light along the Dock in the color of what your agents are doing."
         case .wallpaper: "A living world on your desktop and lock screen, where your agents live."
-        case .performance: "What Ambient costs your Mac, measured on your Mac. Nothing is sent anywhere."
+        }
+    }
+}
+
+enum VoiceTab: String, SettingsTab {
+    case readAloud, voiceSync, speaker
+
+    var title: String {
+        switch self {
+        case .readAloud: "Read Aloud"
+        case .voiceSync: "Voice Sync"
+        case .speaker: "Ambient Speaker"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .readAloud: "Select text, press the shortcut, and Ambient reads it aloud."
+        case .voiceSync: "Talk on one Mac and paste on another. The voice streams there as you speak."
+        case .speaker: "Hear this Mac's sound on another Mac, in step with video here."
+        }
+    }
+}
+
+/// Performance is a developer tool, so the tabs show only in dev builds.
+enum GeneralTab: String, SettingsTab {
+    case general, performance
+
+    static var shown: [GeneralTab] { PerfMonitor.isAvailable ? allCases : [.general] }
+
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .performance: "Performance"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
         case .general: "Startup, the command-line tool, and version."
+        case .performance: "What Ambient costs your Mac, measured on your Mac. Nothing is sent anywhere."
         }
     }
 }
 
 /// A pane's large title and one-line description.
 struct PaneHeader: View {
-    let pane: SettingsPane
+    let title: String
+    let subtitle: String?
+
+    init(title: String, subtitle: String?) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    init(pane: SettingsPane) {
+        self.init(title: pane.title, subtitle: pane.subtitle)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(pane.title).font(Theme.Fonts.paneTitle)
-            if let subtitle = pane.subtitle {
+            Text(title).font(Theme.Fonts.paneTitle)
+            if let subtitle {
                 Text(subtitle).font(Theme.Fonts.paneSubtitle).foregroundStyle(.secondary)
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// A pane of several parts: its title, the tabs, what the selected one is for, and the selected one.
+struct TabbedPane<Tab: SettingsTab, Content: View>: View {
+    let pane: SettingsPane
+    var tabs: [Tab] = Array(Tab.allCases)
+    @Binding var selection: Tab
+    @ViewBuilder var content: (Tab) -> Content
+
+    /// The selection, unless this build doesn't show it: Performance, saved by a dev build.
+    private var shown: Tab { tabs.contains(selection) ? selection : tabs[0] }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.lg) {
+            if tabs.count > 1 {
+                VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                    Text(pane.title)
+                        .font(Theme.Fonts.paneTitle)
+                        .accessibilityAddTraits(.isHeader)
+                    Picker(pane.title, selection: $selection) {
+                        ForEach(tabs) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    Text(shown.subtitle)
+                        .font(Theme.Fonts.paneSubtitle)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                PaneHeader(title: pane.title, subtitle: shown.subtitle)
+            }
+            content(shown)
+                .id(shown)
+        }
     }
 }
