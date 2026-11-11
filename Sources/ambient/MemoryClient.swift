@@ -35,10 +35,17 @@ struct MemoryClient {
     }
 
     func send(_ message: MemoryRequest) -> MemoryReply {
-        guard case let .memoryReply(reply)? = request(.memory(message)) else {
+        if case let .memoryReply(reply)? = request(.memory(message)) { return reply }
+        guard UnixSocketServer.isListening(paths.socket.path) else {
             return .failed("Ambient isn't running. Open Ambient.app, then try again.")
         }
-        return reply
+        switch message {
+        case .write, .forget:
+            // The app may have taken it and only been slow to say so: trying again blind could undo or repeat it.
+            return .failed("Ambient didn't answer in time, so this may still go through. Read it back before trying again.")
+        case .read, .list:
+            return .failed("Ambient didn't answer in time. Try again in a moment.")
+        }
     }
 
     /// Shares text, or a file copied into the blob store first.

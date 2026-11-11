@@ -61,7 +61,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let agent = s.agentLabel
         switch s.activity {
         case let .waiting(reason, message):
-            content.title = reason == "permission" ? "\(title) needs your permission" : "\(title) has a question"
+            // "api-server needs you to approve a command", then the command itself.
+            let headline = Need(reason: reason).headline
+            content.title = "\(title) needs you to \(headline.prefix(1).lowercased() + headline.dropFirst())"
             content.body = message ?? "\(agent) is waiting for you."
         case let .done(summary):
             content.title = "\(title) is done"

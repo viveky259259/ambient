@@ -10,7 +10,7 @@ public enum Describe {
         case let .tool(name, detail):
             return join(ToolNames.display(name), detail)
         case let .waiting(reason, message):
-            return join(reason == "permission" ? "Needs permission" : "Has a question", message)
+            return join(Need(reason: reason).headline, message)
         case let .done(summary):
             return join("Done", summary)
         case let .error(message):
@@ -18,14 +18,14 @@ public enum Describe {
         }
     }
 
-    /// One or two words, for the collapsed island and the menu bar.
+    /// A word or three, for the collapsed island, the menu bar and the wallpaper.
     public static func shortActivity(_ a: Activity) -> String {
         switch a {
         case .idle: "Idle"
         case .thinking: "Thinking"
         case .compacting: "Compacting"
         case let .tool(name, _): ToolNames.display(name)
-        case .waiting: "Needs you"
+        case let .waiting(reason, _): Need(reason: reason).short
         case .done: "Done"
         case .error: "Failed"
         }

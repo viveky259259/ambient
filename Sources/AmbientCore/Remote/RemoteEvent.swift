@@ -29,7 +29,7 @@ public struct RemoteEvent: Equatable, Sendable {
     public let project: String?
     public let tool: String?
     public let title: String?
-    /// `permission` or `question`, for `needsInput`.
+    /// `permission` or `question`, for `needsInput`. The hub works out the finer `Need` itself (`eventKind`).
     public let reason: String?
     public let message: String?
 
@@ -58,7 +58,7 @@ public struct RemoteEvent: Equatable, Sendable {
         case .toolStarted: .toolStarted(name: tool ?? "tool", detail: nil)
         case .toolFinished: .toolFinished(name: tool ?? "tool", failed: false)
         case .toolFailed: .toolFinished(name: tool ?? "tool", failed: true)
-        case .needsInput: .needsInput(reason: reason ?? "question", message: message)
+        case .needsInput: Self.needsInput(reason: reason, message: message)
         case .compactStarted: .compactStarted
         case .compactFinished: .compactFinished
         case .subagentStarted: .subagentStarted
@@ -69,6 +69,16 @@ public struct RemoteEvent: Equatable, Sendable {
         case .notice: message.map { .notice(message: $0) }
         case .titleChanged: nil
         }
+    }
+
+    /// Remote machines say only `permission` or `question`, so older hubs can read them. A permission's message, sent
+    /// at the full level, is the tool's name or the agent's own words for the prompt, and those give the need.
+    private static func needsInput(reason: String?, message: String?) -> EventKind {
+        guard reason == Need.permission.rawValue else {
+            return .needsInput(reason: reason ?? Need.question.rawValue, message: message)
+        }
+        let (need, detail) = Need.fromText(message)
+        return .needsInput(reason: need.rawValue, message: detail)
     }
 
     /// This event without what `level` keeps on the machine. The hub's half of redaction: the shim applies a level to

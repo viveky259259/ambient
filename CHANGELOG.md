@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- **Alerts say what the agent needs**: a waiting session leads with what you're asked to do, in one line, on the
+  island, in the menu, on the wallpaper and in the notification: *Approve a command · rm -rf build*, *Review a
+  change · Session.swift*, *Allow web access · docs.swift.org*, *Review a plan*, *Answer a question · Ship it
+  today?*, *Approve a tool · github · create_pr*. It comes from the tool each agent asks about and what it would do,
+  for Claude Code, Codex, Gemini CLI (from its confirmation details), Copilot CLI and OpenCode. Claude's
+  notification of a prompt its permission hook already described no longer replaces the command with its own
+  sentence. A remote machine sends only *permission* or *question*, so its prompts read *Approve a tool* unless its
+  level is Full. `ambient emit waiting --reason` takes `command`, `edit`, `web`, `access`, `plan`, `permission` or
+  `question`. The island no longer offers Allow and Deny for Claude's AskUserQuestion, which only Claude can answer.
+- **OpenCode is no longer beta, and works with OpenCode 2**, whose new plugin API couldn't load Ambient's plugin, so
+  Ambient saw nothing of it. Update the plugin in Settings › Agents or with `ambient install opencode`. One file now
+  serves OpenCode 1.4 and later. Tested live with OpenCode 2.2.6: events reach Ambient within 20 ms. OpenCode 2 runs
+  plugins in a background service that every project shares, so each project's copy passes on only its own sessions,
+  and a session keeps no return address: the service's surroundings are those of whatever first started it, not
+  the terminal you're in. On both versions:
+  - a failed turn shows as failed: OpenCode goes idle after an error, which used to turn it into *done*;
+  - a permission request says what it's for (OpenCode stopped sending the title the old plugin showed);
+  - its question tool needs you, and an answered prompt or question goes back to working at once;
+  - a subagent's prompts show on the session that started it, and a shell command typed in the TUI starts a run;
+  - each event carries OpenCode's time, so a tool and its prompt can't swap places on their way to the app;
+  - edits show their file;
+  - and the plugin hands Ambient only the command, file, URL or query, never a file's contents or a diff.
+- **Fix**: Settings › Board drew every card on a long-lived board and redrew them all on every agent event, and kept
+  doing so after Settings closed, so a board of thousands of tasks held the main thread at 100% and requests to the
+  app (`ambient mcp`, `ambient memory`) timed out. Settings now shows each column's latest eight cards, with a link to
+  the rest in the Task Board window, and lets its views go when it closes. In both boards a card redraws only when its
+  task or session changes. `scripts/measure-perf.sh --board TASKS` measures the board with each window open.
 - **Voice sync** (Settings › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
   other Mac as you talk, over the same ssh link as remote agents, with a transcript made on the sending Mac only. Where
   that Mac can't transcribe your language on the device, or you don't allow speech recognition, the voice goes as audio
@@ -24,6 +51,11 @@
   30-second status check; `ambient task model --python` accepted a folder; a model path of only spaces showed as set
   in Settings while the board used the model id; `ambient mcp` answered JSON-RPC batches with a parse error; and a
   llama.cpp prompt file could outlive a crash.
+- **Fix**: working memory no longer waits on the main thread, so it answers while the UI is busy. With the main thread
+  held for 8 seconds, `ambient memory set` took 0.03 s, where it used to fail after 2 s with "didn't answer in time"
+  though the write still landed. A write or forget that does time out now says it may still go through.
+- **Fix**: a client that gave up before Ambient got to it, while the app was stopped or busy, no longer ends the app:
+  replying to it raised SIGPIPE.
 
 ## 0.8.0 — 2026-11-03
 

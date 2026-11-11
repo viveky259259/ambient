@@ -25,8 +25,8 @@ public enum AgentKind: String, Codable, CaseIterable, Sendable {
     /// Connected from the agent's documented hooks, but not yet run against the agent itself.
     public var isBeta: Bool {
         switch self {
-        case .copilot, .opencode: true
-        case .claude, .codex, .gemini, .antigravity, .cursor, .custom: false
+        case .copilot: true
+        case .claude, .codex, .gemini, .antigravity, .cursor, .opencode, .custom: false
         }
     }
 }
@@ -37,8 +37,12 @@ public enum EventKind: Codable, Equatable, Sendable {
     case promptSubmitted
     case toolStarted(name: String, detail: String?)
     case toolFinished(name: String, failed: Bool)
-    /// The agent is blocked on the user: a permission prompt, a question, an elicitation.
+    /// The agent is blocked on the user: a permission prompt, a question, an elicitation. `reason` names a `Need`, and
+    /// `message` is the detail: the command, the file, the question.
     case needsInput(reason: String, message: String?)
+    /// The user answered the prompt in the agent, which carries on. Only agents that say so send it (OpenCode);
+    /// for the rest, the next tool or turn event ends the wait.
+    case answered
     case compactStarted
     case compactFinished
     case subagentStarted

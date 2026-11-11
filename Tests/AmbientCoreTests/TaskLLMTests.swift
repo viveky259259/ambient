@@ -69,7 +69,7 @@ import Testing
         let ctx = SessionContextBuilder.make(session: s)
         #expect(ctx.contains("agent: Codex"))
         #expect(ctx.contains("project: ambient"))
-        #expect(ctx.contains("Needs permission"))
+        #expect(ctx.contains("Approve a tool · Approve?"))
     }
 }
 

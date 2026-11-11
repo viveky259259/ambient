@@ -30,9 +30,11 @@ private func setTimeout(_ fd: Int32, _ option: Int32, _ seconds: TimeInterval) {
     setsockopt(fd, SOL_SOCKET, option, &tv, socklen_t(MemoryLayout<timeval>.size))
 }
 
-private func noSigPipe(_ fd: Int32) {
+/// Fails on a socket whose peer has already closed it.
+@discardableResult
+private func noSigPipe(_ fd: Int32) -> Bool {
     var on: Int32 = 1
-    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
+    return setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size)) == 0
 }
 
 private func writeAll(_ fd: Int32, _ data: Data) -> Bool {
@@ -158,12 +160,14 @@ public final class UnixSocketServer: @unchecked Sendable {
         }
     }
 
-    private static func serve(_ fd: Int32, maxMessageSize: Int, handler: Handler) {
+    static func serve(_ fd: Int32, maxMessageSize: Int, handler: Handler) {
         defer { close(fd) }
         // Accepted sockets inherit the listener's O_NONBLOCK on macOS; block, bounded by the timeouts,
         // so a reply larger than the send buffer isn't cut off and a slow client isn't dropped.
         _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK)
-        noSigPipe(fd)
+        // A client that gave up before it was accepted, e.g. while the app was stopped or busy, can't be shielded
+        // from: writing to it would raise SIGPIPE and end the app. What it sent still counts.
+        let canReply = noSigPipe(fd)
         setTimeout(fd, SO_RCVTIMEO, 1)
         setTimeout(fd, SO_SNDTIMEO, 1)
 
@@ -181,6 +185,6 @@ public final class UnixSocketServer: @unchecked Sendable {
             if message.count > maxMessageSize { return }
         }
         guard !message.isEmpty, message.count <= maxMessageSize else { return }
-        if let reply = handler(message) { _ = writeAll(fd, reply) }
+        if let reply = handler(message), canReply { _ = writeAll(fd, reply) }
     }
 }
