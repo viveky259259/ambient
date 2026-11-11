@@ -12,7 +12,7 @@
 # Spec: docs/superpowers/specs/2026-10-28-remote-agents-design.md
 #       docs/superpowers/specs/2026-11-03-voice-sync-design.md (voices)
 
-AR_VERSION=1.0.6
+AR_VERSION=1.0.7
 AR_PROTO=1
 AR_CAPS=exit,title,heartbeat,voice
 
@@ -348,7 +348,9 @@ END {
     body = "\"id\":\"" id "\",\"ts\":" now ",\"agent\":\"" agent "\",\"session\":\"" sid "\",\"kind\":\"" kind "\""
     project = cut(project, 64)
     if (project != "") body = body ",\"project\":\"" project "\""
-    if (level != "metadata" && kind ~ /^tool/ && F["tool_name"] != "") body = body ",\"tool\":\"" cut(F["tool_name"], 64) "\""
+    # A permission request names its tool too, so the hub can say what it needs ("Approve a command") at the default
+    # level. Its reason stays permission: older hubs refuse any other.
+    if (level != "metadata" && (kind ~ /^tool/ || event == "PermissionRequest") && F["tool_name"] != "") body = body ",\"tool\":\"" cut(F["tool_name"], 64) "\""
     if (reason != "") body = body ",\"reason\":\"" reason "\""
     if (level == "full" && message != "") body = body ",\"message\":\"" cut(message, 160) "\""
 
