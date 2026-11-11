@@ -1,7 +1,7 @@
-// Plays what goes to the Ambient speaker on another Mac, through one ssh pipe: a test of streaming before the app does
-// it. scripts/speaker-pipe.sh builds it, copies it to the other Mac and runs it.
+// Plays what goes to the Ambient speaker on another Mac. scripts/speaker-pipe.sh builds it, copies it to the other Mac
+// and runs it; the app carries it as Contents/Helpers/ambient-speaker, and runs it with --app.
 //
-//   speaker-pipe send HOST [--udp] [--seconds N] [PLAY OPTIONS]   here: the loopback, over ssh (or UDP) to HOST
+//   speaker-pipe send HOST [--udp] [--seconds N] [--app] [PLAY OPTIONS]   here: the loopback, over ssh (or UDP) to HOST
 //   speaker-pipe play [--buffer MS] [--window S] [--fixed] [--quiet] [--check HZ]   there: standard input, out loud
 //   speaker-pipe tone [--seconds N] [--hz HZ]               a test tone to the Ambient speaker
 //
@@ -27,6 +27,10 @@
 //
 // The player is the other Mac's Now Playing, so its ⏯ (the keyboard's key, headphones, Control Center) comes back up
 // the pipe, and the sender hands it to whatever is playing here. With --quiet it leaves Now Playing alone.
+//
+// --app is for the app that runs the sender. It also writes what happens as JSON lines on standard output (every line
+// that starts with "{"), stops once its standard input closes, so it never outlives the app, and plays only on a Mac
+// whose own Ambient settings let other Macs play sound there.
 import AVFoundation
 import AudioToolbox
 import CoreAudio
@@ -45,10 +49,28 @@ let magic: UInt32 = 0x414D_4231 // "AMB1"
 let headerSize = 32 // magic, frames: UInt32; sample time: Int64; when it played, when it was sent: UInt64 ns
 let maxFrames = 16384
 
+/// Whether an app runs the sender: see --app.
+var forApp = false
+
+/// One JSON line for the app that runs the sender, when one does.
+func tell(_ event: String, _ fields: [String: Any] = [:]) {
+    guard forApp else { return }
+    var all = fields
+    all["event"] = event
+    guard let data = try? JSONSerialization.data(withJSONObject: all, options: [.sortedKeys]),
+          let line = String(data: data, encoding: .utf8) else { return }
+    print(line)
+    fflush(stdout)
+}
+
 func fail(_ message: String) -> Never {
+    tell("error", ["message": message])
     FileHandle.standardError.write(Data("speaker-pipe: \(message)\n".utf8))
     exit(1)
 }
+
+/// The receiving Mac's Ambient setting that lets other Macs play sound on it.
+let receiveSetting = (domain: "com.viveky259259.Ambient", key: "speakerReceive")
 
 let timebase: mach_timebase_info_data_t = {
     var timebase = mach_timebase_info_data_t()
@@ -253,6 +275,9 @@ func resolve(_ host: String) -> String? {
 
 func send(to host: String) -> Never {
     let seconds = option("--seconds")
+    // Where the player is on the other Mac. The app names its copy by its contents, so it never overwrites a player
+    // that's running.
+    let playerPath = text("--remote-path") ?? remotePath
     let here = SCDynamicStoreCopyComputerName(nil, nil).map { $0 as String } ?? "the other Mac"
     var forwarded = ["--from", quoted(here)]
     if let buffer = option("--buffer") { forwarded += ["--buffer", String(buffer)] }
@@ -263,6 +288,8 @@ func send(to host: String) -> Never {
     let udp = flag("--udp")
     if flag("--debug") { forwarded.append("--debug") }
     if flag("--no-resend") { forwarded.append("--no-resend") }
+    forApp = flag("--app")
+    if forApp { forwarded.append("--only-if-allowed") }
     noMoreArguments()
     if udp, let extra = forwarded.first(where: { $0 == "--window" }) {
         fail("\(extra) works only over ssh")
@@ -299,7 +326,7 @@ func send(to host: String) -> Never {
     let ssh = Process()
     ssh.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
     ssh.arguments = ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ForwardAgent=no",
-                     "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", host, remotePath, "play"] + forwarded
+                     "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", host, playerPath, "play"] + forwarded
     let toPlayer = Pipe(), fromPlayer = Pipe()
     ssh.standardInput = toPlayer
     ssh.standardOutput = fromPlayer
@@ -536,6 +563,7 @@ func send(to host: String) -> Never {
                 player.name = "\(host)'s \(words[3])"
             }
             print("Playing on \(host)'s \(words[3]), at \(words[1]) Hz")
+            tell("playing", ["device": words[3], "rate": Int(words[1]) ?? 0])
             playerReady.signal()
         case "echo" where words.count == 7: // echo SENT-NS HELD-MS GAPS TRIMS GOAL-MS SHRUNK-S
             let sent = UInt64(words[1]) ?? 0
@@ -548,6 +576,9 @@ func send(to host: String) -> Never {
                 player.shrunk = Double(words[6]) ?? 0
                 measure()
             }
+        case "refused" where words.count == 1: // the other Mac's settings don't let other Macs play sound on it
+            fail("\(host) doesn't let other Macs play sound on it. On \(host), turn on Settings › Voice & Sound › Speaker › "
+                 + "Play sound from other Macs")
         case "key" where words.count == 2: // key play|pause|toggle: someone pressed ⏯ there
             if let command = mediaCommands[words[1]], let mediaCommand, mediaCommand(command, nil) {
                 print("⏯ \(words[1]) on \(host), passed to what's playing here")
@@ -636,10 +667,20 @@ func send(to host: String) -> Never {
     print("Sending what plays to Ambient to \(host)\(udp ? " over UDP" : ""). Pick \"Ambient\" in Sound settings and "
           + "play something; ⌃C stops.")
     fflush(stdout)
+    // Run by the app, it stops when the app does: its standard input closes then, even if the app crashed.
+    var appGone = false
+    if forApp {
+        Thread {
+            var byte: UInt8 = 0
+            while read(0, &byte, 1) > 0 {}
+            locked(stats) { appGone = true }
+        }.start()
+    }
     let started = Date()
     var lastReport = Date(), lastBytes = 0, lastDelay = Date()
     while ssh.isRunning {
         if let seconds, Date().timeIntervalSince(started) >= seconds { break }
+        if locked(stats, { appGone }) { break }
         Thread.sleep(forTimeInterval: 0.1)
         if let speaker, Date().timeIntervalSince(lastDelay) >= 1 {
             reportDelay(to: speaker)
@@ -648,8 +689,20 @@ func send(to host: String) -> Never {
         let elapsed = Date().timeIntervalSince(lastReport)
         if elapsed >= 2 {
             let bytes = locked(stats) { sentBytes }
-            print(report(Double(bytes - lastBytes) * 8 / elapsed / 1e6))
+            let mbit = Double(bytes - lastBytes) * 8 / elapsed / 1e6
+            print(report(mbit))
             fflush(stdout)
+            if forApp {
+                var fields: [String: Any] = locked(stats) {
+                    let network = player.roundTripMs / 2
+                    return ["lateMs": (hereMs + network + player.heldMs + player.outputMs).rounded(),
+                            "networkMs": network.rounded(), "heldMs": player.heldMs.rounded(),
+                            "outputMs": player.outputMs.rounded(), "missingMs": overUDP.missingMs.rounded(),
+                            "mbit": (mbit * 10).rounded() / 10]
+                }
+                if speaker != nil { fields["videoWaitsMs"] = reportedMs.rounded() }
+                tell("status", fields)
+            }
             lastBytes = bytes
             lastReport = Date()
         }
@@ -1175,7 +1228,13 @@ func play() -> Never {
     let listen = text("--listen"), token = text("--token").flatMap { UInt64($0) } ?? 0
     debugging = flag("--debug")
     let resending = !flag("--no-resend")
+    let onlyIfAllowed = flag("--only-if-allowed")
     noMoreArguments()
+    // Sound from another Mac plays here only if this Mac's Ambient settings say it may.
+    if onlyIfAllowed, UserDefaults(suiteName: receiveSetting.domain)?.bool(forKey: receiveSetting.key) != true {
+        say("refused")
+        exit(0)
+    }
     held.floor = Int(bufferMs / 1000 * rate)
     held.goal = held.floor
     held.slack = max(Int(0.04 * rate), held.floor / 2)

@@ -26,7 +26,9 @@ xcrun clang "${CFLAGS[@]}" -O1 -g -fsanitize=address,undefined -o build/speaker-
 build/speaker-tests
 
 VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
-BUILD_NUMBER=${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}
+# The driver's own number: the commits up to its last change. Each app carries the driver, and offers to install it
+# when it's newer than the one installed, so a new app with the same driver mustn't look newer.
+BUILD_NUMBER=$(git rev-list --count "$(git log -1 --format=%H -- "$SRC")" 2>/dev/null || echo 1)
 rm -rf "$DRIVER"
 mkdir -p "$DRIVER/Contents/MacOS"
 xcrun clang "${CFLAGS[@]}" -O2 -arch arm64 -arch x86_64 -bundle -o "$DRIVER/Contents/MacOS/AmbientSpeaker" \

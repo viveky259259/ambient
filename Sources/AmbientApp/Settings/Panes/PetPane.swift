@@ -6,7 +6,6 @@ struct PetPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .pet)
             PetPreview(enabled: prefs.petEnabled, species: prefs.pet)
             SettingsSection(footer: "Hover the pet for your sessions and actions, click it for a quick look at all of them, and click a session to jump to it. Drag it anywhere.") {
                 SettingsToggleRow(title: "Show the pet on your desktop",

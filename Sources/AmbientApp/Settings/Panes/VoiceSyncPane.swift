@@ -17,9 +17,8 @@ struct VoiceSyncPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .voiceSync)
             SettingsSection(header: "Send",
-                            footer: "Voices stream to the chosen Mac as you speak, over the same ssh link Remote uses. The transcript is made on this Mac; nothing goes to Apple or anyone else.") {
+                            footer: "Over the ssh link your other machines use. The transcript is made on this Mac; nothing goes to Apple or anyone else.") {
                 SettingsRow(title: "Shortcut", subtitle: "Press to start recording, and again to send.") {
                     ShortcutRecorder(center: shortcuts, name: "Voice shortcut")
                 }
@@ -64,7 +63,7 @@ struct VoiceSyncPane: View {
                 }
             }
             SettingsSection(header: "Receive",
-                            footer: "To get voices from another Mac, pair it in Remote with `ambient remote add`. That Mac needs Remote Login on, in System Settings › General › Sharing. Pairing goes one way: to send back, pair this Mac from that one.") {
+                            footer: "To get voices from a Mac, pair it in Agents › Other Machines; it needs Remote Login on. Pairing goes one way: to send back, pair this Mac from that one.") {
                 SettingsRow(title: "This Mac's name", subtitle: "How your other Macs list it.") {
                     Text(verbatim: voice.hub.label).font(Theme.Fonts.row).foregroundStyle(.secondary)
                 }

@@ -2,7 +2,7 @@ import AmbientCore
 import AppKit
 import Combine
 
-/// Permission prompts the island can answer, when the user has turned that on in Settings › Island. Each
+/// Permission prompts the island can answer, when the user has turned that on in Settings › Appearance › Notch. Each
 /// asking hook holds a socket thread until the user answers, its time is up, or the agent moves on; only a
 /// click answers, and everything else hands the prompt back to the agent with `ask`.
 final class PermissionDesk: ObservableObject {

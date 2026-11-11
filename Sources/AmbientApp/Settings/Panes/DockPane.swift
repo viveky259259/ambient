@@ -6,7 +6,6 @@ struct DockPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .dock)
             DockGlowPreview(enabled: prefs.dockGlowEnabled, intensity: prefs.dockGlowIntensity)
             SettingsSection {
                 SettingsToggleRow(title: "Glow along the Dock", isOn: $prefs.dockGlowEnabled)

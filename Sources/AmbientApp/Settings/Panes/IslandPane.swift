@@ -6,7 +6,6 @@ struct IslandPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .island)
             IslandPreview(enabled: prefs.islandEnabled, showsWorking: prefs.islandShowsWorking)
             SettingsSection {
                 SettingsToggleRow(title: "Show agent status at the notch",
@@ -18,7 +17,7 @@ struct IslandPane: View {
                                   isOn: $prefs.islandShowsWorking)
                     .disabled(!prefs.islandEnabled)
             }
-            SettingsSection(footer: "Ambient never answers for you. If you don't answer in time, or you're already in the agent's app, the agent asks you as usual; until then its own prompt waits too. Turning this on or off changes one Codex hook: type /hooks in Codex once to approve it.") {
+            SettingsSection(footer: "Ambient never answers for you: if you don't, the agent asks as usual. Turning this on or off changes a Codex hook, so type /hooks in Codex once to approve it.") {
                 SettingsToggleRow(title: "Answer permission prompts from the island",
                                   subtitle: "Allow once or Deny Claude Code and Codex tool requests right at the notch.",
                                   isOn: $prefs.answerPermissions)

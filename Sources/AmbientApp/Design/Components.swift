@@ -132,6 +132,24 @@ struct SettingsToggleRow: View {
     }
 }
 
+/// What most people never need to read, folded away: commands, paths, fingerprints.
+struct DetailsDisclosure<Content: View>: View {
+    var title = "Details"
+    @ViewBuilder var content: Content
+    @State private var open = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $open) {
+            VStack(alignment: .leading, spacing: 2) { content }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
+        } label: {
+            Text(title).font(Theme.Fonts.caption).foregroundStyle(.secondary)
+        }
+        .controlSize(.small)
+    }
+}
+
 // MARK: - Status
 
 /// A dot and a word: Connected, Needs update, Allowed.

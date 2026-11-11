@@ -1,4 +1,5 @@
 import AmbientCore
+import AppKit
 import SwiftUI
 
 /// Connect, update or remove Ambient's hooks for each agent.
@@ -7,7 +8,6 @@ struct AgentsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .agents)
             SettingsSection(footer: "Ambient adds background hooks that never slow your agent down, keeps a backup of every file it edits, and removes only its own entries.") {
                 ForEach(Array(AgentKind.hooked.enumerated()), id: \.element) { index, agent in
                     if index > 0 { SettingsDivider() }
@@ -40,8 +40,8 @@ private struct AgentRow: View {
             }
             .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(Theme.Fonts.rowEmphasis)
-                Text(path).font(Theme.Fonts.mono).foregroundStyle(.secondary).textSelection(.enabled)
+                // The config file it edits is in the tooltip and the context menu, not in the way.
+                Text(title).font(Theme.Fonts.rowEmphasis).help(path)
                 if let note {
                     Text(note)
                         .font(Theme.Fonts.caption)
@@ -66,6 +66,17 @@ private struct AgentRow: View {
             action
         }
         .settingsRowPadding()
+        .contextMenu {
+            if !path.isEmpty {
+                Button("Copy Config File Path") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(path, forType: .string)
+                }
+                Button("Show Config File in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: (path as NSString).expandingTildeInPath)])
+                }
+            }
+        }
     }
 
     private var title: String {

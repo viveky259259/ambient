@@ -17,12 +17,12 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   waves when it needs you, cheers when it's done and sleeps when nothing needs you, with a speech bubble saying what's
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
   click a session to jump to it. Works with or without the notch island; turn it
-  on in Settings › Desktop Pet.
+  on in Settings › Appearance › Pet.
 - **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌥⎋ (or Read Selection Aloud in the menu bar, or, in apps that support it, the app's menu ›
   Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
   worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
   your own server with your key. The island shows it speaking, with pause, continue and stop; the keyboard's ⏯ key
-  and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice.
+  and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice & Sound.
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.
@@ -37,12 +37,12 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   session lives as a star, a boat, a plant or a planet glowing in the color of what it's doing. Around them: today's story (agent
   time, tools, turns, how often they needed you), the latest moments, the clock and your next event. On the
   desktop of every display, and on the lock screen while you're away. Light by day and dark at night, or set it to match macOS
-  or stay light or dark. Off until you turn it on in Settings › Wallpaper.
+  or stay light or dark. Off until you turn it on in Settings › Appearance › Wallpaper.
 - **When you open the island, the wallpaper answers** — in Sky, Harbor and Garden the notch collapses into a
   black hole: your agents lift off as light and swing into orbits while loose dust falls in, then drift home
   when it closes. In Solar System the notch lights up as the sun and the six most urgent planets orbit it; the
   rest fall into the sun until it closes. Real gravity drives both. They follow Reduce Motion, stay off in Low
-  Power Mode, and the black hole can be turned off in Settings › Wallpaper.
+  Power Mode, and the black hole can be turned off in Settings › Appearance › Wallpaper.
 
 Everything stays on your Mac and on the machines you connect yourself, over your own ssh. No accounts and no telemetry. Ambient goes online only when you ask it to: the one-time
 offline voice download, and the text you select when you choose an online voice.
@@ -181,7 +181,7 @@ process exits disappear on their own.
 
 ### Answer permission prompts from the island
 
-Off unless you turn it on in **Settings › Island**. For Claude Code and Codex, a tool request then opens a
+Off unless you turn it on in **Settings › Appearance › Notch**. For Claude Code and Codex, a tool request then opens a
 card at the notch with the agent, the project and what it wants to run (the command, file or host), and two
 buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds a rule.
 
@@ -385,7 +385,7 @@ ambient remote add build --label "Build box" -- ssh -J bastion build.internal
 runs `ambient-remote follow`, which streams the spool back as JSON lines. Nothing is sent the other way, and your Mac
 opens no port. If it sleeps or loses the network, events wait in the spool and arrive on reconnect, and a prompt that
 waited longer than 10 minutes shows as *missed*, without a chime. While a machine can't be reached its sessions show
-as *unknown* rather than working forever. Links reconnect by themselves, and the menu bar and Settings › Remote show
+as *unknown* rather than working forever. Links reconnect by themselves, and the menu bar and Settings › Agents › Other Machines show
 how each one is doing. The `ssh` command Ambient builds forwards nothing, so nothing on the machine can use your ssh
 agent or ports through the link, whatever your config says for that host. A command you give after `--` runs as you
 wrote it.
@@ -428,7 +428,7 @@ pairing, unpairing, fingerprint changes, link changes and rejected lines, and ne
 
 **Where it goes.** Text from a remote machine stays on your Mac. It's never sent to an online voice, to `ambient task
 skill-bootstrap` or to any address but your Mac's own, and the local LLM summarizes remote sessions only if you turn
-that on in Settings › Remote. Your transport is the only thing that touches the network.
+that on in Settings › Agents › Other Machines. Your transport is the only thing that touches the network.
 
 ```bash
 ambient remote list                       # Paired machines
@@ -456,7 +456,7 @@ Voices ride the remote-agents link, so it's set up the same way: on the Mac that
 ambient remote add laptop                 # on the desktop; the laptop needs Remote Login on
 ```
 
-The laptop then lists the desktop under Settings › Voice Sync, and its shortcut records for it. Pairing goes one way;
+The laptop then lists the desktop under Settings › Voice & Sound › Voice Sync, and its shortcut records for it. Pairing goes one way;
 to send back, pair the desktop from the laptop too.
 
 **How it works.** The sending Mac transcribes on the Mac itself (Apple's on-device recognizer, never a server) and
@@ -470,7 +470,7 @@ instead of skipping the first ones, and keeps none twice. There's no server, rel
 either Mac.
 
 **Where it's kept.** Both Macs keep every voice, sent and received, in `~/.ambient/voice-sync` (`library.json` and
-`audio/`, `0600`) until you delete it in Settings › Voice Sync. `ambient remote purge` also deletes the voices a
+`audio/`, `0600`) until you delete it in Settings › Voice & Sound › Voice Sync. `ambient remote purge` also deletes the voices a
 machine sent. A received transcript goes to the clipboard only when you click Copy, and is never read aloud, sent
 online or summarized. The design is in [the spec](docs/superpowers/specs/2026-11-03-voice-sync-design.md).
 
@@ -513,7 +513,7 @@ log every hook to `~/.ambient/logs/hook.log`.
   the threshold in settings (20 seconds by default).
 - **The Dock glow is only a line along the edge** — that's the no-permission mode (and what an
   auto-hiding Dock looks like). Enable *Light up behind the Dock's glass* to grant Accessibility access.
-- **The living wallpaper isn't on the lock screen** — Settings › Wallpaper says whether it's shown as your
+- **The living wallpaper isn't on the lock screen** — Settings › Appearance › Wallpaper says whether it's shown as your
   wallpaper while locked, or not available on this Mac. If Ambient ever quits while the Mac is locked, it
   puts your wallpaper back the next time it opens; *Restore my wallpaper* shows in Settings until it has.
 - **Uninstall** — `ambient uninstall`, quit Ambient from the menu bar, delete the app and `~/.ambient`.
@@ -529,7 +529,7 @@ scripts/release.sh              # universal, Developer ID signed, notarized DMG 
 `build-app.sh` signs ad-hoc by default, and macOS ties Accessibility access to the signature, so after a
 rebuild you may need `tccutil reset Accessibility com.viveky259259.Ambient`.
 
-Ad-hoc builds are dev builds: they add **Settings › Performance**, which shows what Ambient costs the Mac over the
+Ad-hoc builds are dev builds: they add **Settings › General › Performance**, which shows what Ambient costs the Mac over the
 last hour or day (CPU, memory, wallpaper and notch-effect frame rate, hook event delays) and copies or saves a
 report. It's measured locally and kept in memory. Developer ID–signed release builds leave it out, and measure
 nothing.

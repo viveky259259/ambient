@@ -64,7 +64,7 @@ struct BoardPane: View {
         ) {
             SettingsToggleRow(
                 title: "Show task board on wallpaper",
-                subtitle: prefs.wallpaperEnabled ? nil : "Turn on Living wallpaper in Settings › Wallpaper first.",
+                subtitle: prefs.wallpaperEnabled ? nil : "Turn on Living wallpaper in Settings › Appearance › Wallpaper first.",
                 isOn: $prefs.wallpaperShowBoard
             )
             .disabled(!prefs.wallpaperEnabled)

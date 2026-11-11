@@ -5,7 +5,7 @@ import QuartzCore
 
 /// Measures what Ambient costs this Mac and keeps it in memory: CPU and memory every five seconds, how steadily the
 /// wallpaper and the notch effect keep their frame rate, and how long hook events take to arrive. Nothing leaves the Mac;
-/// Settings › Performance shows it, and its report can be copied or saved by hand.
+/// Settings › General › Performance shows it, and its report can be copied or saved by hand.
 ///
 /// A developer tool: it's built only into debug builds and local ad-hoc builds (`AMBIENT_DEV`, set by
 /// `scripts/build-app.sh` when it signs ad hoc). Released, Developer ID–signed builds never measure anything.

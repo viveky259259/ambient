@@ -2,7 +2,7 @@ import AmbientCore
 import AVFoundation
 import SwiftUI
 
-/// The settings for one engine, shared by the first-run chooser and Settings › Voice.
+/// The settings for one engine, shared by the first-run chooser and Settings › Voice & Sound.
 struct EngineSection: View {
     let kind: SpeechEngineKind
     @ObservedObject var prefs: Preferences

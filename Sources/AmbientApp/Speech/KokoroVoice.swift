@@ -111,7 +111,7 @@ final class KokoroVoice: SpeechEngine, @unchecked Sendable {
     private func startIfNeeded() throws {
         if let process, process.isRunning { return }
         guard FileManager.default.isExecutableFile(atPath: helper.path) else {
-            throw SpeechFailure(message: "The offline voice isn't installed. Download it in Settings › Voice.",
+            throw SpeechFailure(message: "The offline voice isn't installed. Download it in Settings › Voice & Sound.",
                                 offerMacVoice: true)
         }
         let p = Process()

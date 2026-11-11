@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Settings › Performance: what Ambient costs this Mac, over the last hour or day, and a report to share by hand.
+/// Settings › General › Performance: what Ambient costs this Mac, over the last hour or day, and a report to share by hand.
 struct PerformancePane: View {
     @ObservedObject var monitor: PerfMonitor
     @State private var window: Window = .hour
@@ -19,7 +19,6 @@ struct PerformancePane: View {
         let _ = monitor.revision
         let s = monitor.summary(over: window.seconds)
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .performance)
             Picker("Period", selection: $window) {
                 ForEach(Window.allCases) { Text($0.rawValue).tag($0) }
             }

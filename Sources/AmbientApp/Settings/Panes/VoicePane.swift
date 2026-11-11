@@ -16,7 +16,6 @@ struct VoicePane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .voice)
             SettingsSection(footer: "In apps that support it, also under the app's menu › Services › Speak with Ambient.") {
                 SettingsRow(title: "Shortcut", subtitle: "Select text and press it. Press it again to stop.") {
                     ShortcutRecorder(center: shortcuts)

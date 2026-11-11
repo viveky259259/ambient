@@ -30,11 +30,11 @@ final class OnlineVoice: SpeechEngine {
         let key = self.key ?? KeychainStore.queue.sync { KeychainStore.key(for: provider) } ?? ""
         self.key = key
         if provider.needsKey, key.isEmpty {
-            throw SpeechFailure(message: "Add your \(provider.displayName) API key in Settings › Voice.", offerMacVoice: true)
+            throw SpeechFailure(message: "Add your \(provider.displayName) API key in Settings › Voice & Sound.", offerMacVoice: true)
         }
         guard let request = OnlineSpeech.request(provider: provider, baseURL: baseURL, key: key, model: model,
                                                  voice: voice, text: text, speed: speed) else {
-            throw SpeechFailure(message: "Check the online voice's settings in Settings › Voice.", offerMacVoice: true)
+            throw SpeechFailure(message: "Check the online voice's settings in Settings › Voice & Sound.", offerMacVoice: true)
         }
         let name = provider.displayName
         // "Your server" opens a sentence; mid-sentence it's "your server".

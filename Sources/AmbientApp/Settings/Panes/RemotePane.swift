@@ -15,9 +15,8 @@ struct RemotePane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .remote)
             SettingsSection(header: "Machines",
-                            footer: model.remoteLinks.isEmpty ? nil : "A session shows as Unknown while its machine can't be reached, and a prompt that waited while this Mac slept shows as Missed.") {
+                            footer: model.remoteLinks.isEmpty ? nil : "*Unknown*: its machine can't be reached. *Missed*: a prompt waited while this Mac slept.") {
                 if model.remoteLinks.isEmpty {
                     Text("No machines paired yet.")
                         .font(Theme.Fonts.row)
@@ -29,12 +28,19 @@ struct RemotePane: View {
                     MachineRow(link: link, remove: { remote.remove(link.machine.id) }, purge: { confirmingPurge = link.machine })
                 }
             }
-            SettingsSection(header: "Add a machine",
-                            footer: "This runs your own ssh, with your own config, keys and bastions. It copies a small shell script from this app to the machine, checks its checksum, adds hooks for Claude Code and Codex, and pins the machine's identity. Use `-- COMMAND` for any other transport, and `ambient doctor --remote NAME` to check a link.") {
-                HStack(spacing: Theme.Space.sm) {
-                    Text(Self.addCommand).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                    Spacer(minLength: Theme.Space.sm)
-                    Button(copied ? "Copied" : "Copy", action: copy).buttonStyle(.pill)
+            SettingsSection(header: "Add a machine", footer: "Run it in Terminal. It uses your own ssh, with your config and keys.") {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    HStack(spacing: Theme.Space.sm) {
+                        Text(Self.addCommand).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+                        Spacer(minLength: Theme.Space.sm)
+                        Button(copied ? "Copied" : "Copy", action: copy).buttonStyle(.pill)
+                    }
+                    DetailsDisclosure(title: "What it does") {
+                        Text("It copies a small shell script from this app to the machine, checks its checksum, adds hooks for Claude Code and Codex, and pins the machine's identity. Use `-- COMMAND` for any other transport, and `ambient doctor --remote NAME` to check a link.")
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .settingsRowPadding()
             }
@@ -81,22 +87,25 @@ private struct MachineRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: link.machine.label).font(Theme.Fonts.rowEmphasis)
                 Text(link.summary).font(Theme.Fonts.caption).foregroundStyle(.secondary)
-                Text(verbatim: link.machine.transport.joined(separator: " "))
-                    .font(Theme.Fonts.mono)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Text(verbatim: link.machine.fingerprint)
-                    .font(Theme.Fonts.mono)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
                 if let detail = link.health.detail {
                     Text(verbatim: detail)
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(Theme.Status.warning.textColor)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                DetailsDisclosure {
+                    Text(verbatim: link.machine.transport.joined(separator: " "))
+                        .font(Theme.Fonts.mono)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                    Text(verbatim: link.machine.fingerprint)
+                        .font(Theme.Fonts.mono)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
                 }
             }
             Spacer(minLength: Theme.Space.sm)
