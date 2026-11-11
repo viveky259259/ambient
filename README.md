@@ -10,8 +10,9 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
 
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
   an amber pulse means *it needs you*, green means *done*, red means *it hit an error*. When something
-  happens it blooms open for a few seconds; hover to see your latest sessions, or *View all* for every one;
-  click to jump back to it.
+  happens it blooms open for a few seconds, and when an agent needs you it says what for, in one line:
+  *Approve a command · rm -rf build*, *Review a change · Session.swift*, *Answer a question*. Hover to see your
+  latest sessions, or *View all* for every one; click to jump back to it.
 - **Desktop pet** — an optional pixel-art blob, crab or cat that you drag anywhere. It types while your agent works,
   waves when it needs you, cheers when it's done and sleeps when nothing needs you, with a speech bubble saying what's
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
@@ -73,7 +74,7 @@ Or from a terminal, once the app has run once:
 | Antigravity | A hook set in `~/.gemini/config/hooks.json` | Prompts, tools, finished or failed turns. Never *needs you*: Antigravity has no permission hook. Tested with the `agy` CLI |
 | Cursor, the editor's agent | Hooks in `~/.cursor/hooks.json` | Prompts, tools as they finish (including shell/file/MCP after-hooks), finished turns, compaction. Never *needs you*, see below |
 | GitHub Copilot CLI (beta) | Its own hook file, `~/.copilot/hooks/ambient.json` | Prompts, tools, *needs you* for permission prompts and questions, subagents, errors, compaction |
-| OpenCode (beta) | A plugin, `~/.config/opencode/plugins/ambient.js` | Prompts, tools, *needs you* for permission requests, finished or failed turns, compaction |
+| OpenCode 1.4 or later, including 2 | A plugin, `~/.config/opencode/plugins/ambient.js` | Everything, including *needs you* for permission requests and questions, and its subagents' prompts on the parent session. OpenCode 2 runs plugins in its background service, so clicking one of its sessions can't bring back its terminal |
 | Anything else | [`ambient emit` or `ambient hook custom`](#any-other-agent) | Whatever it reports |
 
 *Beta* connections follow each agent's documented hooks but haven't yet been run against the agent itself.
@@ -277,7 +278,7 @@ echo '{"session_id":"nightly","event":"done","agent":"Build","message":"Release 
 | `cwd` (`--cwd`) | The project folder; the island shows its name. `emit` uses the current folder |
 | `tool`, `detail` (`--tool`, `--detail`) | With `working`: what it's running, e.g. `make` and `make release` |
 | `message` (`--message`) | With `waiting`, `done` or `error`: up to 160 characters for the island and the banner |
-| `reason` (`--reason`) | With `waiting`: `permission`, or anything else for a question |
+| `reason` (`--reason`) | With `waiting`, what you're asked to do: `command`, `edit`, `web`, `access`, `plan`, `permission` (any other tool) or `question` (the default). The island leads with it: *Approve a command*, *Review a change* |
 
 The return address is wherever the command runs: clicking the session brings back that terminal tab, tmux
 pane or app, and the session disappears once the process that ran the command exits (the nearest one that

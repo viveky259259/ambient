@@ -54,6 +54,8 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     public var agentName: String?
     /// What compaction interrupted, to return to afterwards.
     var beforeCompaction: Activity?
+    /// What a prompt interrupted, to return to once the agent says it was answered.
+    var beforeWaiting: Activity?
 
     public init(agent: AgentKind, sessionId: String, at date: Date, origin: RemoteOrigin? = nil) {
         self.id = origin.map { Self.remoteID(machine: $0.machine.id, agent: agent, sessionId: sessionId) }

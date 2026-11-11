@@ -68,12 +68,13 @@ private func antigravity(_ event: String, _ json: String) -> EventKind? {
 
     @Test func permissionRequestNeedsInput() {
         let kind = claude(#"{"session_id":"a","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf build"}}"#)
-        #expect(kind == .needsInput(reason: "permission", message: "Bash: rm -rf build"))
+        #expect(kind == .needsInput(reason: "command", message: "rm -rf build"))
     }
 
     @Test func permissionNotificationNeedsInput() {
         let kind = claude(#"{"session_id":"a","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"}"#)
-        #expect(kind == .needsInput(reason: "permission", message: "Claude needs your permission to use Bash"))
+        // The tool says what it needs; the rest of Claude's sentence adds nothing.
+        #expect(kind == .needsInput(reason: "command", message: nil))
     }
 
     @Test func elicitationNeedsInput() {
@@ -395,10 +396,135 @@ private func event(_ agent: AgentKind, _ json: String, hint: String? = nil) -> A
 }
 
 @Suite struct OpenCodeAdapterTests {
+    private func kind(_ json: String) -> EventKind? { event(.opencode, json)?.kind }
+
     @Test func itsPluginSpeaksClaudesFormat() {
         let e = event(.opencode, #"{"session_id":"ses_1","hook_event_name":"PreToolUse","cwd":"/src/app","tool_name":"bash","tool_input":{"command":"bun test"}}"#)
         #expect(e?.agent == .opencode)
         #expect(e?.kind == .toolStarted(name: "bash", detail: "bun test"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"StopFailure","error_message":"Invalid API key"}"#) == .turnFailed(message: "Invalid API key"))
+    }
+
+    @Test func itsToolsNameFilesInCamelCase() {
+        #expect(kind(#"{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"edit","tool_input":{"filePath":"/src/app/Sources/Need.swift"}}"#)
+                == .toolStarted(name: "edit", detail: "Need.swift"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"apply_patch","tool_input":{"patchText":"*** Update File: a.ts\n*** Add File: b.ts"}}"#)
+                == .toolStarted(name: "apply_patch", detail: "a.ts +1 more"))
+    }
+
+    /// OpenCode asks by permission, and each one says what it needs.
+    @Test func permissionsSayWhatTheyNeed() {
+        func ask(_ fields: String) -> EventKind? { kind(#"{"session_id":"s","hook_event_name":"Permission","#.appending(fields).appending("}")) }
+        #expect(ask(#""permission":"bash","patterns":["bun test *"],"metadata":{"command":"bun test"}"#)
+                == .needsInput(reason: "command", message: "bun test"))
+        #expect(ask(#""permission":"edit","patterns":["src/a.ts","src/b.ts"],"metadata":{"filepath":"src/a.ts, src/b.ts"}"#)
+                == .needsInput(reason: "edit", message: "a.ts +1 more"))
+        #expect(ask(#""permission":"edit","patterns":[],"metadata":{"filepath":"/src/app/README.md"}"#)
+                == .needsInput(reason: "edit", message: "README.md"))
+        #expect(ask(#""permission":"webfetch","patterns":["https://docs.example.com/a"],"metadata":{"url":"https://docs.example.com/a"}"#)
+                == .needsInput(reason: "web", message: "docs.example.com"))
+        #expect(ask(#""permission":"websearch","patterns":["swift testing"],"metadata":{"query":"swift testing"}"#)
+                == .needsInput(reason: "web", message: "swift testing"))
+        #expect(ask(#""permission":"external_directory","patterns":["/etc/*"],"metadata":{"filepath":"/etc/hosts","parentDir":"/etc"}"#)
+                == .needsInput(reason: "access", message: "/etc"))
+        // The same call three times over is asked about as the call.
+        #expect(ask(#""permission":"doom_loop","patterns":["bash"],"metadata":{"tool":"bash","input":{"command":"ls"}}"#)
+                == .needsInput(reason: "command", message: "ls"))
+        // Read says nothing in metadata: its pattern is the file.
+        #expect(ask(#""permission":"read","patterns":["secrets/.env"],"metadata":{}"#)
+                == .needsInput(reason: "permission", message: "Read: .env"))
+        // OpenCode 2 sends the command, or the page, as the only pattern.
+        #expect(ask(#""permission":"shell","patterns":["rm -rf build"]"#) == .needsInput(reason: "command", message: "rm -rf build"))
+        #expect(ask(#""permission":"webfetch","patterns":["https://docs.example.com/a/b"],"metadata":{}"#)
+                == .needsInput(reason: "web", message: "docs.example.com"))
+        #expect(ask(#""permission":"github_create_pr","patterns":["*"],"metadata":{}"#)
+                == .needsInput(reason: "permission", message: "github_create_pr"))
+        #expect(ask(#""permission":"task","patterns":["general"],"metadata":{"description":"Find the flaky test","subagent_type":"general"}"#)
+                == .needsInput(reason: "permission", message: "Task: Find the flaky test"))
+    }
+
+    /// OpenCode 2's background service kept the environment of whatever started it, which says nothing of the session.
+    @Test func eventsFromTheBackgroundServiceKeepNoReturnAddress() {
+        let captured = HostInfo(bundleId: "com.anthropic.claudefordesktop", termProgram: "iTerm.app", pids: [87479],
+                                agentPid: 87479, tty: "/dev/ttys004", hostSessionId: "local_1", tmuxPane: "%3")
+        func host(_ json: String) -> HostInfo? {
+            AdapterRegistry.event(agent: .opencode, payload: payload(json), eventHint: nil, host: captured)?.host
+        }
+        #expect(host(#"{"session_id":"s","hook_event_name":"Stop","service":true}"#) == HostInfo(pids: [87479], agentPid: 87479))
+        #expect(host(#"{"session_id":"s","hook_event_name":"Stop"}"#) == captured)
+    }
+
+    @Test func questionsAndAnswers() {
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[{"question":"Which database?","header":"DB"}]}"#)
+                == .needsInput(reason: "question", message: "Which database?"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[{"question":"","header":"DB"},{"question":"Two?"}]}"#)
+                == .needsInput(reason: "question", message: "DB (+1 more)"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[]}"#) == .needsInput(reason: "question", message: nil))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Answered"}"#) == .answered)
+    }
+
+    /// Each event goes to its own process, so the plugin's clock orders them, unless it's far from the hook's.
+    @Test func eventsCarryOpenCodesTime() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func at(_ ts: Double) -> Date? {
+            AdapterRegistry.event(agent: .opencode, payload: HookPayload(json: Data(#"{"session_id":"s","hook_event_name":"Stop","ts":\#(ts)}"#.utf8))!,
+                                  eventHint: nil, now: now)?.timestamp
+        }
+        #expect(at(1_799_999_999_500) == Date(timeIntervalSince1970: 1_799_999_999.5))
+        #expect(at(1_700_000_000_000) == now)
+        #expect(event(.claude, #"{"session_id":"s","hook_event_name":"Stop","ts":1}"#)?.timestamp.timeIntervalSince1970 ?? 0 > 1_000)
+    }
+}
+
+/// Every agent's prompts say what they need.
+@Suite struct WaitingReasonTests {
+    @Test func claudesPermissionRequests() {
+        func ask(_ tool: String, _ input: String) -> EventKind? {
+            claude(#"{"session_id":"a","hook_event_name":"PermissionRequest","tool_name":"\#(tool)","tool_input":\#(input)}"#)
+        }
+        #expect(ask("Edit", #"{"file_path":"/src/app/Sources/Session.swift","old_string":"a","new_string":"b"}"#)
+                == .needsInput(reason: "edit", message: "Session.swift"))
+        #expect(ask("Write", #"{"file_path":"/src/app/notes.md","content":"secret"}"#) == .needsInput(reason: "edit", message: "notes.md"))
+        #expect(ask("WebFetch", #"{"url":"https://docs.swift.org/x","prompt":"summarize"}"#) == .needsInput(reason: "web", message: "docs.swift.org"))
+        #expect(ask("AskUserQuestion", #"{"questions":[{"question":"Ship it today?","header":"Ship","options":[]}]}"#)
+                == .needsInput(reason: "question", message: "Ship it today?"))
+        #expect(ask("ExitPlanMode", ###"{"plan":"## Add OpenCode support\n\n1. Plugin"}"###) == .needsInput(reason: "plan", message: "Add OpenCode support"))
+        #expect(ask("mcp__github__create_pr", #"{"title":"x"}"#) == .needsInput(reason: "permission", message: "github · create_pr"))
+        #expect(ask("Read", #"{"file_path":"/Users/me/.ssh/config"}"#) == .needsInput(reason: "permission", message: "Read: config"))
+    }
+
+    @Test func notificationsNamingATool() {
+        func notice(_ message: String) -> EventKind? {
+            claude(#"{"session_id":"a","hook_event_name":"Notification","notification_type":"permission_prompt","message":"\#(message)"}"#)
+        }
+        #expect(notice("Claude needs your permission to use Write") == .needsInput(reason: "edit", message: nil))
+        #expect(notice("Claude needs your permission to use Fetch") == .needsInput(reason: "web", message: nil))
+        #expect(notice("Claude needs your permission to use linear - get_issue (MCP)")
+                == .needsInput(reason: "permission", message: "linear - get_issue (MCP)"))
+        #expect(notice("Something new is waiting") == .needsInput(reason: "permission", message: "Something new is waiting"))
+    }
+
+    @Test func codexPatches() {
+        let kind = event(.codex, #"{"session_id":"c","hook_event_name":"PermissionRequest","tool_name":"apply_patch","tool_input":{"input":"*** Begin Patch\n*** Update File: src/main.rs\n*** End Patch"}}"#)?.kind
+        #expect(kind == .needsInput(reason: "edit", message: "main.rs"))
+    }
+
+    @Test func geminiDescribesItsConfirmation() {
+        func ask(_ details: String) -> EventKind? {
+            gemini(#"{"session_id":"g","hook_event_name":"Notification","notification_type":"ToolPermission","message":"Tool requires confirmation","details":\#(details)}"#)
+        }
+        #expect(ask(#"{"type":"exec","title":"Shell","command":"npm   install","rootCommand":"npm"}"#) == .needsInput(reason: "command", message: "npm install"))
+        #expect(ask(#"{"type":"edit","title":"Edit","fileName":"app.ts","filePath":"/src/app.ts","fileDiff":"..."}"#) == .needsInput(reason: "edit", message: "app.ts"))
+        #expect(ask(#"{"type":"mcp","title":"MCP","serverName":"github","toolName":"create_pr"}"#) == .needsInput(reason: "permission", message: "github · create_pr"))
+        #expect(ask(#"{"type":"info","title":"Fetch","prompt":"read it","urls":["https://example.com/a"]}"#) == .needsInput(reason: "web", message: "example.com"))
+        #expect(ask(#"{"type":"something_new","title":"Do the thing"}"#) == .needsInput(reason: "permission", message: "Do the thing"))
+    }
+
+    @Test func customAgentsNameTheirNeed() {
+        func kind(_ json: String) -> EventKind? { event(.custom, json)?.kind }
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"command","message":"make deploy"}"#) == .needsInput(reason: "command", message: "make deploy"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"Edit"}"#) == .needsInput(reason: "edit", message: nil))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"dance"}"#) == .needsInput(reason: "question", message: nil))
     }
 }
 

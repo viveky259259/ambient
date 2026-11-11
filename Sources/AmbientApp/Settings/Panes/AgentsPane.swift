@@ -86,11 +86,13 @@ private struct AgentRow: View {
         if agent == .antigravity {
             return "Prompts, tools and finished or failed turns; never needs you, as Antigravity has no permission hook."
         }
+        if agent == .opencode {
+            return "OpenCode 1.4 or later. OpenCode 2 runs plugins in its background service, so a click can't bring back its terminal."
+        }
         guard agent.isBeta else { return nil }
         return switch agent {
         case .cursor: "Prompts, tools (as they finish), subagents and finished turns. Never *needs you*: Ambient uses no hook that could block Cursor."
         case .copilot: "Beta. Prompts, tools, permission prompts, questions, subagents and errors."
-        case .opencode: "Beta. Prompts, tools, permission requests and finished or failed turns."
         default: nil
         }
     }

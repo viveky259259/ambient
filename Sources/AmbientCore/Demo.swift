@@ -16,7 +16,7 @@ public enum Demo {
         case .working:
             return [e(.promptSubmitted, -1), e(.toolStarted(name: "Bash", detail: message ?? "npm test"), 0)]
         case .waiting:
-            return [e(.promptSubmitted, -12), e(.needsInput(reason: "permission", message: message ?? "Bash: rm -rf build"), 0)]
+            return [e(.promptSubmitted, -12), e(.needsInput(reason: Need.command.rawValue, message: message ?? "rm -rf build"), 0)]
         case .done:
             // Long enough to clear the notification threshold.
             return [e(.promptSubmitted, -95), e(.turnCompleted(summary: message ?? "All 42 tests pass. Ready for review."), 0)]

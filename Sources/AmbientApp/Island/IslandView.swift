@@ -116,7 +116,8 @@ private struct WingLabel: View {
         } else {
             Group {
                 switch primary.mood {
-                case .waiting: Image(systemName: "hand.raised.fill")
+                case .waiting:
+                    Image(systemName: "hand.raised.fill").accessibilityLabel(Describe.status(primary))
                 case .error: Image(systemName: "exclamationmark.triangle.fill")
                 case .working, .idle, .done:
                     TimelineView(.periodic(from: .now, by: 1)) { ctx in

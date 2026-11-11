@@ -90,7 +90,7 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         let s = session("a", .waiting(reason: "permission", message: "Bash: swift test"),
                         cwd: "/x/ambient-notification", title: "Wallpaper that follows agents")
         let inhabitant = make([s]).inhabitants[0]
-        #expect(inhabitant.headline == "Claude · Needs you · 2m")
+        #expect(inhabitant.headline == "Claude · Approve tool · 2m")
         #expect(inhabitant.place == "Wallpaper that follows agents · ambient-notification")
         #expect(inhabitant.detail == "Bash: swift test")
     }

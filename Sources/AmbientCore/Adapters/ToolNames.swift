@@ -21,6 +21,7 @@ public enum ToolNames {
         "exec_command": "Shell",
         "local_shell": "Shell",
         "update_plan": "Plan",
+        "web_search": "Search",
         // Copilot CLI
         "bash": "Shell",
         "view": "Read",
@@ -31,8 +32,14 @@ public enum ToolNames {
         "write": "Write",
         "grep": "Grep",
         "webfetch": "Fetch",
+        "websearch": "Search",
+        "codesearch": "Search",
+        "list": "List",
         "todowrite": "Plan",
         "task": "Task",
+        // OpenCode 2
+        "subagent": "Task",
+        "question": "Question",
         // Antigravity
         "run_command": "Shell",
         "view_file": "Read",
@@ -58,14 +65,16 @@ public enum ToolNames {
     /// A short hint of what the tool is doing: the command, the file, the pattern, the host.
     static func detail(name: String, input: HookPayload?) -> String? {
         guard let input, !name.hasPrefix("mcp__") else { return nil }
-        if name == "apply_patch", let patch = input.firstString(["input", "patch"]) {
+        if name == "apply_patch", let patch = input.firstString(["input", "patch", "patchText"]) {
             let files = patchedFiles(patch).map(basename)
             return files.first.map { files.count > 1 ? "\($0) +\(files.count - 1) more" : $0 }
         }
         if let command = input.firstString(["command", "cmd", "CommandLine"]) {
             return Trim.clean(command, max: 80)
         }
-        if let path = input.firstString(["file_path", "absolute_path", "notebook_path", "path", "AbsolutePath", "TargetFile"]) {
+        // OpenCode's tools say filePath, and its permission requests filepath.
+        if let path = input.firstString(["file_path", "filePath", "filepath", "absolute_path", "notebook_path", "path",
+                                         "AbsolutePath", "TargetFile"]) {
             return Trim.clean(basename(path), max: 80)
         }
         if let url = input.firstString(["url", "Url"]) {
