@@ -175,6 +175,17 @@ import Testing
             == .needsInput(reason: "permission", message: "github · create_pr"))
         // At full the message is the same name, which adds nothing to the headline.
         #expect(try line(#","tool":"Bash","message":"Bash""#).redacted(to: .full).eventKind == .needsInput(reason: "command", message: nil))
+        #expect(try line(#","tool":"mcp__github__create_pr","message":"mcp__github__create_pr""#).redacted(to: .full).eventKind
+            == .needsInput(reason: "permission", message: "github · create_pr"))
+        // The agent's own words for the prompt are kept when they say more, and the tool still gives the need.
+        #expect(try line(#","tool":"Bash","message":"Run the migration on prod?""#).redacted(to: .full).eventKind
+            == .needsInput(reason: "command", message: "Run the migration on prod?"))
+        #expect(try line(#","tool":"Bash","message":"Claude needs your permission to use Bash""#).redacted(to: .full).eventKind
+            == .needsInput(reason: "command", message: nil))
+        // Without a tool, as from a shim before 1.0.7, the message gives both.
+        #expect(try line(#","message":"Claude needs your permission to use Edit""#).redacted(to: .full).eventKind
+            == .needsInput(reason: "edit", message: nil))
+        #expect(try line("").redacted(to: .full).eventKind == .needsInput(reason: "permission", message: nil))
         // At metadata the name stays on the machine, and the hub drops one spooled before the level was tightened.
         #expect(bash.redacted(to: .metadata).tool == nil)
         #expect(bash.redacted(to: .metadata).eventKind == .needsInput(reason: "permission", message: nil))

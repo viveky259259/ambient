@@ -72,19 +72,15 @@ public struct RemoteEvent: Equatable, Sendable {
     }
 
     /// Remote machines say only `permission` or `question`, so older hubs can read them. From `ambient-remote` 1.0.7 a
-    /// permission request names its tool from the standard level on, and the tool gives the need. Otherwise only the
-    /// full level says more: a message that is the tool's name or the agent's own words for the prompt.
+    /// permission request names its tool from the standard level on, and the tool gives the need. Without one, the
+    /// full level's message does: the tool's name, or the agent's own words for the prompt.
     private static func needsInput(reason: String?, tool: String?, message: String?) -> EventKind {
         guard reason == Need.permission.rawValue else {
             return .needsInput(reason: reason ?? Need.question.rawValue, message: message)
         }
-        if let tool {
-            // The message, if any, is this same name: nothing the headline doesn't say, unless no need fits the tool.
-            let need = Need.forTool(tool)
-            return .needsInput(reason: need.rawValue, message: need == .permission ? ToolNames.display(tool) : nil)
-        }
-        let (need, detail) = Need.fromText(message)
-        return .needsInput(reason: need.rawValue, message: detail)
+        let (need, name) = Need.fromText(tool ?? message)
+        // The message is kept only when it says more than the headline. Today's shim sends the tool's name again.
+        return .needsInput(reason: need.rawValue, message: Need.fromText(message).detail ?? name)
     }
 
     /// This event without what `level` keeps on the machine. The hub's half of redaction: the shim applies a level to
