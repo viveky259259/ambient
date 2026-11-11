@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Ambient speaker**: hear one Mac on another. Settings › Voice & Sound › Ambient Speaker installs a speaker called
+  *Ambient*; choose a paired Mac and what plays to Ambient plays there, over UDP, about 380 ms behind on a laptop's
+  Bluetooth headphones across the internet. Video on this Mac waits for the sound, and ⏯ on the other Mac plays and
+  pauses here. A Mac plays another's sound only when its own Settings allow it.
+- **Settings has seven panes instead of thirteen**: Welcome, Agents (This Mac, Other Machines), Board, Alerts,
+  Appearance (Notch, Pet, Dock, Wallpaper), Voice & Sound (Read Aloud, Voice Sync, Ambient Speaker) and General.
+  Settings opens where you left it, on the tab a pane became. Explanations are shorter, and ssh commands,
+  fingerprints and config paths fold away under Details. Answering permission prompts moved from the notch's pane to
+  Alerts, which calls its sounds Chimes. Permission buttons read the same everywhere, status text is easier to read in
+  light mode, and VoiceOver reads each switch's explanation.
 - **Alerts say what the agent needs**: a waiting session leads with what you're asked to do, in one line, on the
   island, in the menu, on the wallpaper and in the notification: *Approve a command · rm -rf build*, *Review a
   change · Session.swift*, *Allow web access · docs.swift.org*, *Review a plan*, *Answer a question · Ship it

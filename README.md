@@ -23,6 +23,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
   your own server with your key. The island shows it speaking, with pause, continue and stop; the keyboard's ⏯ key
   and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice & Sound.
+- **Ambient speaker** — hear one Mac on another: pick *Ambient* as the output, and what plays there plays on the Mac
+  you chose, while video waits for the sound. See [Ambient speaker](#ambient-speaker).
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.
@@ -473,6 +475,30 @@ either Mac.
 `audio/`, `0600`) until you delete it in Settings › Voice & Sound › Voice Sync. `ambient remote purge` also deletes the voices a
 machine sent. A received transcript goes to the clipboard only when you click Copy, and is never read aloud, sent
 online or summarized. The design is in [the spec](docs/superpowers/specs/2026-11-03-voice-sync-design.md).
+
+## Ambient speaker
+
+Hear your desktop on your laptop. Settings › Voice & Sound › Ambient Speaker installs a speaker called *Ambient* (macOS
+asks for your password, and the sound stops for a moment). Choose a Mac, turn on **Play this Mac's sound there**, and
+pick Ambient as the output, in Sound settings or in the app that plays. ⏯ on the other Mac, from its keyboard,
+headphones or Control Center, plays and pauses here. The other Mac plays only if its own Settings say so: **Play sound
+from other Macs**, which is off at first.
+
+It plays on a Mac this one has paired, reached by plain ssh, so pair the Mac you want to play on from the one that
+plays. That Mac needs Remote Login on, and its firewall has to let UDP in.
+
+```bash
+ambient remote add laptop                 # on the desktop, to play its sound on the laptop
+```
+
+**How it works.** The speaker is a Core Audio driver (`/Library/Audio/Plug-Ins/HAL/AmbientSpeaker.driver`) whose
+hidden input, *Ambient Loopback*, gives back exactly what plays to it. The app records that input and sends it as it
+is, 48 kHz stereo, about 3 Mbit/s, over UDP to the address ssh reaches the other Mac at; ssh only starts and stops the
+player there and carries ⏯ back. The player places each packet by its sample time, asks again for any that don't come,
+and holds as much as the network needs, from 30 ms to a second, so a stall costs a gap rather than a growing delay. The
+speaker reports how late the other Mac plays as its latency, so a video here waits for its sound; when that changes by
+30 ms or more, the speaker restarts for a moment (about 90 ms of silence) so a player that's already playing follows
+it. Nothing is saved, and there's no server, relay or account.
 
 ## Command line
 
