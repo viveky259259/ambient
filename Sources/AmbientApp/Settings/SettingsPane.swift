@@ -179,6 +179,9 @@ struct TabbedPane<Tab: SettingsTab, Content: View>: View {
     @Binding var selection: Tab
     @ViewBuilder var content: (Tab) -> Content
 
+    /// The selection, unless this build doesn't show it: Performance, saved by a dev build.
+    private var shown: Tab { tabs.contains(selection) ? selection : tabs[0] }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             if tabs.count > 1 {
@@ -192,15 +195,15 @@ struct TabbedPane<Tab: SettingsTab, Content: View>: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .fixedSize()
-                    Text(selection.subtitle)
+                    Text(shown.subtitle)
                         .font(Theme.Fonts.paneSubtitle)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                PaneHeader(title: pane.title, subtitle: selection.subtitle)
+                PaneHeader(title: pane.title, subtitle: shown.subtitle)
             }
-            content(tabs.contains(selection) ? selection : tabs[0])
-                .id(selection)
+            content(shown)
+                .id(shown)
         }
     }
 }

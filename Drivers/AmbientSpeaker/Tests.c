@@ -305,7 +305,7 @@ static void TestSettings(void) {
     CHECK(Set(mute, kAudioBooleanControlPropertyValue, sizeof off, &off) == noErr);
 }
 
-enum { kStreamDelay = 0x61446C79, kRestartForDelay = 0x61446C52 };
+enum { kStreamDelay = 0x61446C79 };
 
 static OSStatus SetDelay(CFPropertyListRef value) { return Set(speaker, kStreamDelay, sizeof value, &value); }
 
@@ -327,39 +327,25 @@ static SInt64 Delay(void) {
     return frames;
 }
 
-static bool Restarts(void) {
-    CFPropertyListRef value = NULL;
-    CHECK(Get(speaker, kRestartForDelay, kGlobal, 0, NULL, sizeof value, &value, NULL) == noErr);
-    bool on = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue(value);
-    if (value) CFRelease(value);
-    return on;
-}
-
-static OSStatus SetRestarts(CFPropertyListRef value) { return Set(speaker, kRestartForDelay, sizeof value, &value); }
-
 static void TestStreamDelay(void) {
-    // The speaker says it has the properties, and what they hold.
-    AudioServerPlugInCustomPropertyInfo info[3];
+    // The speaker says it has the property, and what it holds.
+    AudioServerPlugInCustomPropertyInfo info[2];
     UInt32 size = 0;
     CHECK(Get(speaker, kAudioObjectPropertyCustomPropertyInfoList, kGlobal, 0, NULL, sizeof info, info, &size) == noErr);
-    CHECK(size == 2 * sizeof info[0] && info[0].mSelector == kStreamDelay && info[1].mSelector == kRestartForDelay);
-    for (int i = 0; i < 2; i++) {
-        CHECK(info[i].mPropertyDataType == kAudioServerPlugInCustomPropertyDataTypeCFPropertyList
-              && info[i].mQualifierDataType == kAudioServerPlugInCustomPropertyDataTypeNone);
-    }
+    CHECK(size == sizeof info[0] && info[0].mSelector == kStreamDelay
+          && info[0].mPropertyDataType == kAudioServerPlugInCustomPropertyDataTypeCFPropertyList
+          && info[0].mQualifierDataType == kAudioServerPlugInCustomPropertyDataTypeNone);
     CHECK(Get(loopback, kAudioObjectPropertyCustomPropertyInfoList, kGlobal, 0, NULL, sizeof info, info, &size) == noErr);
     CHECK(size == 0);
-    CHECK(!Has(loopback, kStreamDelay, kGlobal) && !Has(loopback, kRestartForDelay, kGlobal));
+    CHECK(!Has(loopback, kStreamDelay, kGlobal));
+    CHECK(!Has(speaker, 0x61446C52, kGlobal)); // 'aDlR', a switch for the restart, is gone
     Boolean settable = false;
-    AudioObjectPropertyAddress delay = Address(kStreamDelay, kGlobal), restart = Address(kRestartForDelay, kGlobal);
+    AudioObjectPropertyAddress delay = Address(kStreamDelay, kGlobal);
     CHECK(D->IsPropertySettable(driver, speaker, 0, &delay, &settable) == noErr && settable);
-    settable = false;
-    CHECK(D->IsPropertySettable(driver, speaker, 0, &restart, &settable) == noErr && settable);
 
     // At first the speaker plays at once, and takes up a delay by restarting.
     CHECK(Delay() == 0);
     CHECK(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 0);
-    CHECK(Restarts());
 
     // Told the other Mac plays 170 ms late, the speaker restarts, once, and then its latency is that, and it says so.
     int before = changes, restartsBefore = restarts;
@@ -378,18 +364,10 @@ static void TestStreamDelay(void) {
     usleep(50000);
     CHECK(changes == before && restarts == restartsBefore + 1);
 
-    // Without restarting, it takes up a delay at once.
-    CHECK(SetRestarts(kCFBooleanFalse) == noErr);
-    CHECK(!Restarts());
-    before = changes;
+    // Another delay restarts it again.
     CHECK(SetDelayFrames(4800) == noErr);
-    CHECK(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 4800);
-    CHECK(changes > before && restarts == restartsBefore + 1);
-    CHECK(SetRestarts(kCFBooleanTrue) == noErr);
-    CHECK(Restarts());
-    CHECK(SetRestarts(CFSTR("yes")) == kAudioHardwareIllegalOperationError);
-    UInt32 one = 1;
-    CHECK(Set(speaker, kRestartForDelay, sizeof one, &one) == kAudioHardwareBadPropertySizeError);
+    EVENTUALLY(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 4800);
+    CHECK(restarts == restartsBefore + 2);
     CHECK(SetDelayFrames(8160) == noErr);
     EVENTUALLY(U32(speaker, kAudioDevicePropertyLatency, kOutput) == 8160);
 

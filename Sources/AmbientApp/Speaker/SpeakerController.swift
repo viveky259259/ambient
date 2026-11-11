@@ -189,11 +189,19 @@ final class SpeakerController: ObservableObject {
 
     // MARK: - The stream
 
-    /// The ssh host a paired machine is reached at, when it's reached by plain ssh.
-    static func host(of machine: Machine) -> String? {
+    /// How a paired machine is reached, when it's by ssh: the pairing's own command and options, so its port, key and
+    /// jump hosts apply, and its host.
+    struct Route: Equatable {
+        let ssh: [String]
+        let host: String
+    }
+
+    static func route(to machine: Machine) -> Route? {
         guard let command = machine.transport.first, URL(fileURLWithPath: command).lastPathComponent == "ssh",
               machine.transport.count > 1, let host = machine.transport.last, !host.hasPrefix("-") else { return nil }
-        return host
+        var ssh = Array(machine.transport.dropLast())
+        if !ssh[0].hasPrefix("/") { ssh[0] = "/usr/bin/ssh" }
+        return Route(ssh: ssh, host: host)
     }
 
     /// Plays on the machine chosen, starting again at login, until stopped.
@@ -238,7 +246,7 @@ final class SpeakerController: ObservableObject {
             stream = .stopped("The Mac it played on isn't paired any more. Choose another.")
             return
         }
-        guard let host = Self.host(of: machine) else {
+        guard let route = Self.route(to: machine) else {
             stream = .stopped("\(machine.label) is paired with a custom command, so the speaker can't play there.")
             return
         }
@@ -258,8 +266,8 @@ final class SpeakerController: ObservableObject {
         stream = .connecting(machine.label)
         DispatchQueue.global(qos: .userInitiated).async {
             let reason: String
-            if let remote = Self.copy(helper, to: host) {
-                if self.run(helper, host: host, remote: remote, label: machine.label, generation: current) { return }
+            if let remote = Self.copy(helper, via: route) {
+                if self.run(helper, route: route, remote: remote, label: machine.label, generation: current) { return }
                 reason = "The speaker's stream couldn't start."
             } else {
                 reason = "Couldn't reach \(machine.label)."
@@ -268,23 +276,34 @@ final class SpeakerController: ObservableObject {
         }
     }
 
-    /// Copies the helper to the other Mac, named by its contents, unless it's there already. Never over a running copy:
-    /// replacing a program while it runs can stop it. Returns where it is.
-    private static func copy(_ helper: URL, to host: String) -> String? {
+    /// Copies the helper to the other Mac, into a folder only this user can write to, named by its contents. It's
+    /// copied only when the copy there isn't this exact helper, by its hash, and written beside it and renamed over it,
+    /// so a copy that's running keeps going and a half-written one is never run. Returns where it is.
+    private static func copy(_ helper: URL, via route: Route) -> String? {
         guard let data = try? Data(contentsOf: helper) else { return nil }
-        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined().prefix(12)
-        let remote = "/tmp/ambient-speaker-\(digest)"
-        let options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
-        if run("/usr/bin/ssh", options + [host, "test", "-x", remote]) == 0 { return remote }
-        return run("/usr/bin/scp", ["-q"] + options + [helper.path, "\(host):\(remote)"]) == 0 ? remote : nil
+        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let folder = "~/.ambient/speaker", name = "ambient-speaker-\(digest.prefix(12))"
+        let path = "\(folder)/\(name)"
+        let check = "mkdir -p \(folder) && chmod 700 \(folder) && [ \"$(shasum -a 256 < \(path) 2>/dev/null)\" = \"\(digest)  -\" ]"
+        if run(route, check) == 0 { return path }
+        // Older helpers go once they've had a week to stop.
+        let install = "cat > \(path).part && chmod 755 \(path).part && mv -f \(path).part \(path)"
+            + " && find \(folder) -name 'ambient-speaker-*' ! -name '\(name)' -mtime +7 -delete"
+        guard run(route, install, input: helper) == 0, run(route, check) == 0 else { return nil }
+        return path
     }
 
+    /// Runs a command on the other Mac over its route; `input` is its standard input.
     @discardableResult
-    private static func run(_ tool: String, _ arguments: [String]) -> Int32 {
+    private static func run(_ route: Route, _ command: String, input: URL? = nil) -> Int32 {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: tool)
-        process.arguments = arguments
-        process.standardInput = FileHandle.nullDevice
+        process.executableURL = URL(fileURLWithPath: route.ssh[0])
+        process.arguments = Array(route.ssh.dropFirst()) + ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", route.host, command]
+        if let input, let file = try? FileHandle(forReadingFrom: input) {
+            process.standardInput = file
+        } else {
+            process.standardInput = FileHandle.nullDevice
+        }
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         do { try process.run() } catch { return -1 }
@@ -293,10 +312,10 @@ final class SpeakerController: ObservableObject {
     }
 
     /// Starts the helper, on a background queue. False if it couldn't start; true if it did, or was stopped meanwhile.
-    private func run(_ helper: URL, host: String, remote: String, label: String, generation current: Int) -> Bool {
+    private func run(_ helper: URL, route: Route, remote: String, label: String, generation current: Int) -> Bool {
         let process = Process()
         process.executableURL = helper
-        process.arguments = ["send", host, "--udp", "--app", "--remote-path", remote]
+        process.arguments = ["send", route.host, "--udp", "--app", "--remote-path", remote, "--"] + route.ssh + [route.host]
         let input = Pipe(), output = Pipe(), errors = Pipe()
         process.standardInput = input
         process.standardOutput = output

@@ -34,13 +34,16 @@ swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --product ambient
 BIN=$(swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --show-bin-path)
 
 # The Ambient speaker: its driver (tested, built and signed by its own script), which Settings installs, and the
-# stream that plays it on another Mac, which runs as a helper and copies itself there.
-scripts/build-speaker.sh --sign "$SIGN_ID"
+# stream that plays it on another Mac, which runs as a helper and copies itself there. Each is built again only when
+# what it's built from changed.
+scripts/build-speaker.sh --sign "$SIGN_ID" --if-needed
 SPEAKER_ARCHS=(arm64)
 (( UNIVERSAL )) && SPEAKER_ARCHS=(arm64 x86_64)
 SPEAKER_SLICES=()
 for arch in $SPEAKER_ARCHS; do
-  xcrun swiftc -O -swift-version 5 -target "$arch-apple-macos14" -o "build/ambient-speaker-$arch" scripts/speaker-pipe.swift
+  if [[ ! "build/ambient-speaker-$arch" -nt scripts/speaker-pipe.swift ]]; then
+    xcrun swiftc -O -swift-version 5 -target "$arch-apple-macos14" -o "build/ambient-speaker-$arch" scripts/speaker-pipe.swift
+  fi
   SPEAKER_SLICES+=("build/ambient-speaker-$arch")
 done
 lipo -create "${SPEAKER_SLICES[@]}" -output build/ambient-speaker

@@ -11,9 +11,9 @@ struct SpeakerPane: View {
     @AppStorage("settingsPane") private var paneName = SettingsPane.welcome.rawValue
     @AppStorage("settingsTab.agents") private var agentsTab = AgentsTab.thisMac
 
-    /// Paired machines it can play on: the ones reached by plain ssh.
+    /// Paired machines it can play on: the ones reached by ssh.
     private var machines: [RemoteLinkStatus] {
-        model.remoteLinks.filter { SpeakerController.host(of: $0.machine) != nil }
+        model.remoteLinks.filter { SpeakerController.route(to: $0.machine) != nil }
     }
 
     private var destination: String? {

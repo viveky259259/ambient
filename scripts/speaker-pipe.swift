@@ -1,7 +1,7 @@
 // Plays what goes to the Ambient speaker on another Mac. scripts/speaker-pipe.sh builds it, copies it to the other Mac
 // and runs it; the app carries it as Contents/Helpers/ambient-speaker, and runs it with --app.
 //
-//   speaker-pipe send HOST [--udp] [--seconds N] [--app] [PLAY OPTIONS]   here: the loopback, over ssh (or UDP) to HOST
+//   speaker-pipe send HOST [--udp] [--seconds N] [--app] [PLAY OPTIONS] [-- SSH COMMAND]   here: the loopback, to HOST
 //   speaker-pipe play [--buffer MS] [--window S] [--fixed] [--quiet] [--check HZ]   there: standard input, out loud
 //   speaker-pipe tone [--seconds N] [--hz HZ]               a test tone to the Ambient speaker
 //
@@ -28,9 +28,12 @@
 // The player is the other Mac's Now Playing, so its ⏯ (the keyboard's key, headphones, Control Center) comes back up
 // the pipe, and the sender hands it to whatever is playing here. With --quiet it leaves Now Playing alone.
 //
+// The player plays only on a Mac whose own Ambient settings let other Macs play sound there (Settings › Voice & Sound ›
+// Ambient Speaker › Play sound from other Macs). After `--`, an ssh command ending with HOST, the way a pairing reaches
+// it, is used instead of plain ssh, so its port, key and jump hosts apply.
+//
 // --app is for the app that runs the sender. It also writes what happens as JSON lines on standard output (every line
-// that starts with "{"), stops once its standard input closes, so it never outlives the app, and plays only on a Mac
-// whose own Ambient settings let other Macs play sound there.
+// that starts with "{"), and stops once its standard input closes, so it never outlives the app.
 import AVFoundation
 import AudioToolbox
 import CoreAudio
@@ -41,7 +44,7 @@ import os
 
 let speakerUID = "com.viveky259259.Ambient.speaker"
 let loopbackUID = "com.viveky259259.Ambient.speaker.loopback"
-let remotePath = "/tmp/ambient-speaker-pipe"
+let remotePath = "~/.ambient/speaker/speaker-pipe" // where scripts/speaker-pipe.sh copies it; the remote shell expands ~
 let rate = 48_000.0
 let channels = 2
 let bytesPerFrame = channels * MemoryLayout<Float>.size
@@ -248,11 +251,12 @@ func withSockaddr<T>(_ address: inout sockaddr_in, _ body: (UnsafePointer<sockad
     }
 }
 
-/// The IPv4 address ssh reaches `host` at, so the UDP goes the same way: over Tailscale, its 100.x address.
-func resolve(_ host: String) -> String? {
+/// The IPv4 address ssh reaches `host` at, with the transport's options, so the UDP goes the same way: over Tailscale,
+/// its 100.x address.
+func resolve(_ host: String, via transport: [String]) -> String? {
     let ssh = Process()
-    ssh.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-    ssh.arguments = ["-G", host]
+    ssh.executableURL = URL(fileURLWithPath: transport[0])
+    ssh.arguments = Array(transport.dropFirst()) + ["-G", host]
     let out = Pipe()
     ssh.standardOutput = out
     ssh.standardError = FileHandle.nullDevice
@@ -274,6 +278,17 @@ func resolve(_ host: String) -> String? {
 }
 
 func send(to host: String) -> Never {
+    // The pairing's ssh command, after `--`, without its host: its options come first, ours after them.
+    var transport = ["/usr/bin/ssh"]
+    if let dash = args.firstIndex(of: "--") {
+        let given = Array(args[(dash + 1)...])
+        args.removeSubrange(dash...)
+        guard given.count >= 2, URL(fileURLWithPath: given[0]).lastPathComponent == "ssh", given.last == host else {
+            fail("-- takes an ssh command that ends with \(host)")
+        }
+        transport = Array(given.dropLast())
+        if !transport[0].hasPrefix("/") { transport[0] = "/usr/bin/ssh" }
+    }
     let seconds = option("--seconds")
     // Where the player is on the other Mac. The app names its copy by its contents, so it never overwrites a player
     // that's running.
@@ -289,7 +304,6 @@ func send(to host: String) -> Never {
     if flag("--debug") { forwarded.append("--debug") }
     if flag("--no-resend") { forwarded.append("--no-resend") }
     forApp = flag("--app")
-    if forApp { forwarded.append("--only-if-allowed") }
     noMoreArguments()
     if udp, let extra = forwarded.first(where: { $0 == "--window" }) {
         fail("\(extra) works only over ssh")
@@ -312,7 +326,7 @@ func send(to host: String) -> Never {
     // Over UDP, the player listens on the address we send to, and keeps only datagrams that carry this run's token.
     var udpSocket: Int32 = -1, udpAddress = sockaddr_in(), token: UInt64 = 0
     if udp {
-        guard let address = resolve(host), let destination = inet(address, 0) else {
+        guard let address = resolve(host, via: transport), let destination = inet(address, 0) else {
             fail("couldn't find the address ssh reaches \(host) at")
         }
         udpAddress = destination
@@ -324,9 +338,10 @@ func send(to host: String) -> Never {
     }
 
     let ssh = Process()
-    ssh.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-    ssh.arguments = ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ForwardAgent=no",
-                     "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", host, playerPath, "play"] + forwarded
+    ssh.executableURL = URL(fileURLWithPath: transport[0])
+    ssh.arguments = Array(transport.dropFirst())
+        + ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ForwardAgent=no",
+           "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", host, playerPath, "play"] + forwarded
     let toPlayer = Pipe(), fromPlayer = Pipe()
     ssh.standardInput = toPlayer
     ssh.standardOutput = fromPlayer
@@ -1228,10 +1243,11 @@ func play() -> Never {
     let listen = text("--listen"), token = text("--token").flatMap { UInt64($0) } ?? 0
     debugging = flag("--debug")
     let resending = !flag("--no-resend")
-    let onlyIfAllowed = flag("--only-if-allowed")
+    // Older senders asked for the check below; it's made always now.
+    _ = flag("--only-if-allowed")
     noMoreArguments()
-    // Sound from another Mac plays here only if this Mac's Ambient settings say it may.
-    if onlyIfAllowed, UserDefaults(suiteName: receiveSetting.domain)?.bool(forKey: receiveSetting.key) != true {
+    // Sound from another Mac plays here only if this Mac's Ambient settings say it may, whatever the sender asks.
+    if UserDefaults(suiteName: receiveSetting.domain)?.bool(forKey: receiveSetting.key) != true {
         say("refused")
         exit(0)
     }

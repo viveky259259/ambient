@@ -10,7 +10,8 @@
 #   scripts/speaker-pipe.sh vivekyadav@daily --udp           the sound over UDP: a stall costs a gap, not a delay
 #   build/speaker-pipe tone --seconds 5                       meanwhile, a test tone to the Ambient speaker
 #
-# It copies itself to /tmp/ambient-speaker-pipe on the other Mac, which needs nothing installed.
+# It copies itself to ~/.ambient/speaker/speaker-pipe on the other Mac, a folder only you can write to. That Mac plays
+# only with Settings › Voice & Sound › Ambient Speaker › Play sound from other Macs turned on.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 (( $# )) || { echo "usage: scripts/speaker-pipe.sh HOST [--udp] [--buffer MS] [--seconds N] [--quiet] [--check HZ]" >&2; exit 64 }
@@ -21,6 +22,7 @@ mkdir -p build
 if [[ ! build/speaker-pipe -nt scripts/speaker-pipe.swift ]]; then
   xcrun swiftc -O -swift-version 5 -target arm64-apple-macos14 -o build/speaker-pipe scripts/speaker-pipe.swift
 fi
-scp -q -o BatchMode=yes -o ConnectTimeout=10 build/speaker-pipe "$HOST:/tmp/ambient-speaker-pipe" \
+ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" 'mkdir -p ~/.ambient/speaker && chmod 700 ~/.ambient/speaker' \
+  && scp -q -o BatchMode=yes -o ConnectTimeout=10 build/speaker-pipe "$HOST:.ambient/speaker/speaker-pipe" \
   || { echo "Couldn't copy it to $HOST" >&2; exit 1 }
 exec build/speaker-pipe send "$HOST" "$@"
