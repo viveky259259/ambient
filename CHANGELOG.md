@@ -19,11 +19,11 @@
   for Claude Code, Codex, Gemini CLI (from its confirmation details), Copilot CLI and OpenCode. Claude's
   notification of a prompt its permission hook already described no longer replaces the command with its own
   sentence. A remote machine still sends only *permission* or *question*, which any hub reads, but `ambient-remote`
-  1.0.7 adds the tool's name at the default Standard level, so its prompts read *Approve a command* or *Review a
-  change* as local ones do; only Metadata leaves them at *Approve a tool*. A machine shows *update available* until
-  you pair it again with `ambient remote add`. `ambient emit waiting --reason` takes `command`, `edit`, `web`,
-  `access`, `plan`, `permission` or `question`. The island no longer offers Allow and Deny for Claude's
-  AskUserQuestion, which only Claude can answer.
+  1.0.7 adds the tool's name at the default Standard level, so its prompts lead with the same line as local ones,
+  *Approve a command* or *Review a change*, but never with the command or file; only Metadata leaves them at
+  *Approve a tool*. A machine shows *update available* until you pair it again with `ambient remote add`.
+  `ambient emit waiting --reason` takes `command`, `edit`, `web`, `access`, `plan`, `permission` or `question`. The
+  island no longer offers Allow and Deny for Claude's AskUserQuestion, which only Claude can answer.
 - **OpenCode is no longer beta, and works with OpenCode 2**, whose new plugin API couldn't load Ambient's plugin, so
   Ambient saw nothing of it. Update the plugin in Settings › Agents or with `ambient install opencode`. One file now
   serves OpenCode 1.4 and later. Tested live with OpenCode 2.2.6: events reach Ambient within 20 ms. OpenCode 2 runs
