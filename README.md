@@ -181,7 +181,7 @@ process exits disappear on their own.
 
 ### Answer permission prompts from the island
 
-Off unless you turn it on in **Settings › Appearance › Notch**. For Claude Code and Codex, a tool request then opens a
+Off unless you turn it on in **Settings › Alerts › Permission prompts**. For Claude Code and Codex, a tool request then opens a
 card at the notch with the agent, the project and what it wants to run (the command, file or host), and two
 buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds a rule.
 

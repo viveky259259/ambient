@@ -97,7 +97,7 @@ enum AppearanceTab: String, SettingsTab {
 
     var subtitle: String {
         switch self {
-        case .notch: "A quiet status light that grows out of the notch."
+        case .notch: "A quiet status light at the top of the screen, around the notch if there is one."
         case .pet: "A companion on your desktop that acts out what your agents are doing."
         case .dock: "Light along the Dock in the color of what your agents are doing."
         case .wallpaper: "A living world on your desktop and lock screen, where your agents live."
@@ -112,7 +112,7 @@ enum VoiceTab: String, SettingsTab {
         switch self {
         case .readAloud: "Read Aloud"
         case .voiceSync: "Voice Sync"
-        case .speaker: "Speaker"
+        case .speaker: "Ambient Speaker"
         }
     }
 
@@ -120,7 +120,7 @@ enum VoiceTab: String, SettingsTab {
         switch self {
         case .readAloud: "Select text, press the shortcut, and Ambient reads it aloud."
         case .voiceSync: "Talk on one Mac and paste on another. The voice streams there as you speak."
-        case .speaker: "Hear this Mac on another one. Video here waits for the sound."
+        case .speaker: "Hear this Mac's sound on another Mac, in step with video here."
         }
     }
 }

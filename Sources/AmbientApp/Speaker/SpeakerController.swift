@@ -1,5 +1,6 @@
 import AmbientCore
 import AppKit
+import AVFoundation
 import CoreAudio
 import CryptoKit
 import Foundation
@@ -16,22 +17,34 @@ final class SpeakerController: ObservableObject {
         case installed
         /// An older one than this build carries.
         case outdated
-        case working
-        case failed(String)
+        case installing
+        case removing
+        /// What went wrong, and whether it was installing (or removing), to try that again.
+        case failed(String, installing: Bool)
+
+        var isBusy: Bool { self == .installing || self == .removing }
+        var isInstalled: Bool { self == .installed || self == .outdated }
     }
 
     enum Stream: Equatable {
         case off
         case connecting(String)
-        case playing(device: String, lateMs: Int?, videoWaitsMs: Int?)
-        /// It stopped, and starts again shortly.
-        case waiting(String)
-        /// It can't play until something changes: the driver is installed, say.
+        /// The other Mac's player is ready. Sound reaches it once this Mac's output is Ambient.
+        case connected(label: String, device: String, lateMs: Int?, videoWaitsMs: Int?)
+        /// It stopped, and starts again in `retryIn` seconds.
+        case waiting(String, retryIn: Int)
+        /// It can't play until something here changes: the driver is installed, say, or the microphone allowed. It
+        /// starts again by itself once it has.
         case stopped(String)
     }
 
     @Published private(set) var driver: Driver = .missing
     @Published private(set) var stream: Stream = .off
+    /// The helper's own words for the last problem, for Details.
+    @Published private(set) var detail: String?
+    /// Whether this Mac's sound goes to the Ambient speaker, and if not, where.
+    @Published private(set) var outputIsAmbient = false
+    @Published private(set) var outputName = ""
 
     private let prefs: Preferences
     private let paths: AmbientPaths
@@ -40,7 +53,7 @@ final class SpeakerController: ObservableObject {
     /// Bumped by every start and stop, so a stopped stream's late callbacks change nothing.
     private var generation = 0
     private var retries = 0
-    private var lastError: String?
+    private var problem: (text: String, retries: Bool)?
 
     static let speakerUID = "com.viveky259259.Ambient.speaker"
     private static let installed = URL(fileURLWithPath: "/Library/Audio/Plug-Ins/HAL/AmbientSpeaker.driver")
@@ -54,17 +67,38 @@ final class SpeakerController: ObservableObject {
         return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
     }
 
+    static var microphoneAllowed: Bool { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }
+
     init(prefs: Preferences, paths: AmbientPaths = .current()) {
         self.prefs = prefs
         self.paths = paths
         refresh()
     }
 
-    // MARK: - The driver
-
+    /// Looks again at the driver and the output, and starts a stream that was waiting for something here to change.
     func refresh() {
-        if driver != .working { driver = Self.driverState() }
+        if !driver.isBusy { driver = Self.driverState() }
+        refreshOutput()
+        if case .stopped = stream, prefs.speakerOn { launch() }
     }
+
+    // MARK: - The output
+
+    private func refreshOutput() {
+        let output = CoreAudioDevices.defaultOutput()
+        let isAmbient = output?.uid == Self.speakerUID
+        if outputIsAmbient != isAmbient { outputIsAmbient = isAmbient }
+        let name = output?.name ?? "another output"
+        if outputName != name { outputName = name }
+    }
+
+    /// Makes the Ambient speaker this Mac's output.
+    func useAmbient() {
+        CoreAudioDevices.setDefaultOutput(uid: Self.speakerUID)
+        refreshOutput()
+    }
+
+    // MARK: - The driver
 
     private static func driverState() -> Driver {
         guard let bundled = bundledDriver else { return CoreAudioDevices.device(uid: speakerUID) != nil ? .installed : .unavailable }
@@ -87,11 +121,16 @@ final class SpeakerController: ObservableObject {
         changeDriver(install: false)
     }
 
+    /// After a failure: whatever failed, again.
+    func tryAgain() {
+        if case .failed(_, let installing) = driver { changeDriver(install: installing) }
+    }
+
     private func changeDriver(install: Bool) {
-        guard driver != .working else { return }
+        guard !driver.isBusy else { return }
         let bundled = Self.bundledDriver
         if install, bundled == nil { return }
-        driver = .working
+        driver = install ? .installing : .removing
         // Core Audio's restart would cut the stream off anyway: it stops first, and starts again after.
         let resumes = install && prefs.speakerOn
         halt()
@@ -104,8 +143,8 @@ final class SpeakerController: ObservableObject {
             }
             CoreAudioDevices.restore(outputs)
             DispatchQueue.main.async {
-                self.driver = Self.driverState()
-                if let result { self.driver = .failed(result) }
+                self.driver = result.map { .failed($0, installing: install) } ?? Self.driverState()
+                self.refreshOutput()
                 if resumes { self.launch() }
             }
         }
@@ -123,7 +162,7 @@ final class SpeakerController: ObservableObject {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 try FileManager.default.copyItem(at: bundled, to: folder.appendingPathComponent("AmbientSpeaker.driver"))
             } catch {
-                return "Couldn't prepare the speaker: \(error.localizedDescription)"
+                return "Couldn't get the Ambient speaker ready to install: \(error.localizedDescription)"
             }
             stage = folder
             steps += " && cp -R '\(folder.path)/AmbientSpeaker.driver' '\(installed.deletingLastPathComponent().path)/'"
@@ -132,9 +171,12 @@ final class SpeakerController: ObservableObject {
         // Core Audio looks for drivers only when it starts, and launchd starts it again at once.
         steps += " && (killall coreaudiod || true)"
         defer { if let stage { try? FileManager.default.removeItem(at: stage) } }
+        let why = install
+            ? "Ambient needs your password to add the Ambient speaker to this Mac's sound outputs."
+            : "Ambient needs your password to remove the Ambient speaker from this Mac's sound outputs."
         let osascript = Process()
         osascript.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        osascript.arguments = ["-e", "do shell script \"\(steps)\" with administrator privileges"]
+        osascript.arguments = ["-e", "do shell script \"\(steps)\" with prompt \"\(why)\" with administrator privileges"]
         let errors = Pipe()
         osascript.standardError = errors
         osascript.standardOutput = FileHandle.nullDevice
@@ -166,6 +208,7 @@ final class SpeakerController: ObservableObject {
         prefs.speakerOn = false
         halt()
         stream = .off
+        detail = nil
     }
 
     /// At launch: plays where it played when the app quit.
@@ -189,22 +232,27 @@ final class SpeakerController: ObservableObject {
     private func launch() {
         halt()
         let current = generation
+        problem = nil
         guard let id = prefs.speakerDestination,
               let machine = MachineFile.load(from: paths.machinesFile).first(where: { $0.id == id }) else {
-            stream = .stopped("The Mac it played on isn't paired any more.")
+            stream = .stopped("The Mac it played on isn't paired any more. Choose another.")
             return
         }
         guard let host = Self.host(of: machine) else {
-            stream = .stopped("\(machine.label) isn't reached by ssh, so the speaker can't play there.")
+            stream = .stopped("\(machine.label) is paired with a custom command, so the speaker can't play there.")
             return
         }
         guard let helper = Self.helper else {
-            stream = .stopped("This build of Ambient doesn't carry the speaker's stream.")
+            stream = .stopped("This copy of Ambient doesn't come with the speaker.")
             return
         }
-        // Without the speaker there's nothing to play; installing it starts this again.
+        // Problems only something here can fix: refresh() starts it again once they're fixed.
         guard CoreAudioDevices.device(uid: Self.speakerUID) != nil else {
             stream = .stopped("Install the Ambient speaker on this Mac first.")
+            return
+        }
+        guard Self.microphoneAllowed else {
+            stream = .stopped("Allow the microphone first. Ambient hears only the Ambient speaker.")
             return
         }
         stream = .connecting(machine.label)
@@ -253,9 +301,6 @@ final class SpeakerController: ObservableObject {
         process.standardInput = input
         process.standardOutput = output
         process.standardError = errors
-        process.terminationHandler = { [weak self] _ in
-            DispatchQueue.main.async { self?.stopped(generation: current, reason: nil) }
-        }
         var started = false, superseded = false
         DispatchQueue.main.sync {
             guard current == generation else { superseded = true; return }
@@ -265,6 +310,7 @@ final class SpeakerController: ObservableObject {
             started = true
         }
         guard started else { return superseded }
+        // Everything it says is heard before it's known to have stopped: it has stopped once its output ends.
         Thread {
             let reader = output.fileHandleForReading
             var buffer = Data()
@@ -280,6 +326,8 @@ final class SpeakerController: ObservableObject {
                     DispatchQueue.main.async { self.heard(event, label: label, generation: current) }
                 }
             }
+            process.waitUntilExit()
+            DispatchQueue.main.async { self.stopped(generation: current, reason: nil) }
         }.start()
         // Standard error isn't read for anything but has to be drained, or a chatty helper would block on it.
         Thread { _ = errors.fileHandleForReading.readDataToEndOfFile() }.start()
@@ -292,34 +340,54 @@ final class SpeakerController: ObservableObject {
         switch event["event"] as? String {
         case "playing":
             retries = 0
-            lastError = nil
-            stream = .playing(device: "\(label)'s \(event["device"] as? String ?? "speakers")", lateMs: nil, videoWaitsMs: nil)
+            problem = nil
+            detail = nil
+            refreshOutput()
+            stream = .connected(label: label, device: "\(label)'s \(event["device"] as? String ?? "speakers")",
+                                lateMs: nil, videoWaitsMs: nil)
         case "status":
-            if case .playing(let device, _, _) = stream {
-                stream = .playing(device: device, lateMs: number("lateMs"), videoWaitsMs: number("videoWaitsMs"))
+            refreshOutput()
+            if case .connected(let label, let device, _, _) = stream {
+                stream = .connected(label: label, device: device, lateMs: number("lateMs"),
+                                    videoWaitsMs: number("videoWaitsMs"))
             }
         case "error":
-            lastError = (event["message"] as? String).map { message in
-                // The helper names the ssh host; people know the Mac by its label.
-                message.contains("doesn't let other Macs play sound")
-                    ? "\(label) doesn't let other Macs play sound on it. Turn on Play sound from other Macs there."
-                    : message.prefix(1).uppercased() + message.dropFirst() + "."
-            }
-            // Its output can be read after it has exited: say why it stopped, then.
-            if case .waiting = stream, let lastError { stream = .waiting(lastError) }
+            let message = event["message"] as? String ?? ""
+            detail = message.prefix(1).uppercased() + message.dropFirst()
+            problem = Self.explain(message, label: label)
         default:
             break
         }
     }
 
-    /// The helper stopped: it starts again after a pause that grows, up to a minute, while it keeps failing.
+    /// The helper's words, in a person's: what went wrong, and whether trying again can help.
+    private static func explain(_ message: String, label: String) -> (text: String, retries: Bool) {
+        if message.contains("has no Ambient speaker") { return ("Install the Ambient speaker on this Mac first.", false) }
+        if message.contains("can't record the loopback") {
+            return ("Allow the microphone first. Ambient hears only the Ambient speaker.", false)
+        }
+        if message.contains("doesn't let other Macs play sound") {
+            return ("\(label) doesn't take sound from other Macs yet. On \(label), turn on Voice & Sound › Ambient Speaker › "
+                    + "Play sound from other Macs.", true)
+        }
+        if message.contains("loopback") { return ("The Ambient speaker stopped.", true) }
+        return ("Lost the connection to \(label).", true)
+    }
+
+    /// The helper stopped: it starts again after a pause that grows, up to a minute, while it keeps failing; unless
+    /// only something here can fix it, which refresh() notices.
     private func stopped(generation current: Int, reason: String?) {
         guard current == generation, prefs.speakerOn else { return }
         process = nil
         input = nil
+        let (text, retrying) = problem ?? (reason ?? "The stream stopped.", true)
+        guard retrying else {
+            stream = .stopped(text)
+            return
+        }
         retries += 1
         let wait = min(60, 5 << min(retries - 1, 4))
-        stream = .waiting(reason ?? lastError ?? "The stream stopped.")
+        stream = .waiting(text, retryIn: wait)
         DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(wait)) { [weak self] in
             guard let self, current == self.generation, self.prefs.speakerOn else { return }
             self.launch()
@@ -346,12 +414,40 @@ enum CoreAudioDevices {
         return status == noErr && id != kAudioObjectUnknown ? id : nil
     }
 
-    private static func uid(of id: AudioObjectID) -> String? {
-        var place = address(kAudioDevicePropertyDeviceUID)
+    private static func string(_ id: AudioObjectID, _ selector: AudioObjectPropertySelector) -> String? {
+        var place = address(selector)
         var value: Unmanaged<CFString>?
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         guard AudioObjectGetPropertyData(id, &place, 0, nil, &size, &value) == noErr, let value else { return nil }
         return value.takeRetainedValue() as String
+    }
+
+    private static func defaultDevice(_ selector: AudioObjectPropertySelector) -> AudioObjectID? {
+        var place = address(selector)
+        var id = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil, &size, &id) == noErr,
+              id != kAudioObjectUnknown else { return nil }
+        return id
+    }
+
+    private static func setDefault(_ selector: AudioObjectPropertySelector, to id: AudioObjectID) {
+        var id = id
+        var place = address(selector)
+        AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil,
+                                   UInt32(MemoryLayout<AudioObjectID>.size), &id)
+    }
+
+    /// Where this Mac's sound goes.
+    static func defaultOutput() -> (uid: String, name: String)? {
+        guard let id = defaultDevice(kAudioHardwarePropertyDefaultOutputDevice),
+              let uid = string(id, kAudioDevicePropertyDeviceUID) else { return nil }
+        return (uid, string(id, kAudioObjectPropertyName) ?? uid)
+    }
+
+    static func setDefaultOutput(uid: String) {
+        guard let id = device(uid: uid) else { return }
+        setDefault(kAudioHardwarePropertyDefaultOutputDevice, to: id)
     }
 
     private static let outputSelectors = [kAudioHardwarePropertyDefaultOutputDevice,
@@ -361,11 +457,7 @@ enum CoreAudioDevices {
     static func defaultOutputs() -> [AudioObjectPropertySelector: String] {
         var found: [AudioObjectPropertySelector: String] = [:]
         for selector in outputSelectors {
-            var place = address(selector)
-            var id = AudioObjectID(kAudioObjectUnknown)
-            var size = UInt32(MemoryLayout<AudioObjectID>.size)
-            if AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil, &size, &id) == noErr,
-               let uid = uid(of: id) { found[selector] = uid }
+            if let id = defaultDevice(selector), let uid = string(id, kAudioDevicePropertyDeviceUID) { found[selector] = uid }
         }
         return found
     }
@@ -374,10 +466,7 @@ enum CoreAudioDevices {
     static func restore(_ outputs: [AudioObjectPropertySelector: String]) {
         let now = defaultOutputs()
         for (selector, uid) in outputs where now[selector] != uid {
-            guard var id = device(uid: uid) else { continue }
-            var place = address(selector)
-            AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil,
-                                       UInt32(MemoryLayout<AudioObjectID>.size), &id)
+            if let id = device(uid: uid) { setDefault(selector, to: id) }
         }
     }
 }

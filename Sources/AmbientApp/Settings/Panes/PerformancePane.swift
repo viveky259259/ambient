@@ -43,8 +43,8 @@ struct PerformancePane: View {
             SettingsSection(footer: "Measured on this Mac and kept in memory while Ambient runs; it starts over when Ambient quits. Nothing is sent anywhere. To share it, copy or save a report yourself.") {
                 SettingsRow(title: "Report") {
                     HStack(spacing: Theme.Space.sm) {
-                        Button(copied ? "Copied" : "Copy report", action: copy).buttonStyle(.pill)
-                        Button("Save report…", action: save).buttonStyle(.pill)
+                        Button(copied ? "Copied" : "Copy Report", action: copy).buttonStyle(.pill)
+                        Button("Save Report…", action: save).buttonStyle(.pill)
                     }
                 }
             }

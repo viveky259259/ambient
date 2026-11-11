@@ -7,9 +7,9 @@ struct PetPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             PetPreview(enabled: prefs.petEnabled, species: prefs.pet)
-            SettingsSection(footer: "Hover the pet for your sessions and actions, click it for a quick look at all of them, and click a session to jump to it. Drag it anywhere.") {
+            SettingsSection(footer: "Hover the pet for your sessions and actions, click it for a quick look at all of them, and click a session to jump to it.") {
                 SettingsToggleRow(title: "Show the pet on your desktop",
-                                  subtitle: "Works with or without the notch island.",
+                                  subtitle: "Works whether or not the notch light is on.",
                                   isOn: $prefs.petEnabled)
                 SettingsDivider()
                 Group {
@@ -22,7 +22,7 @@ struct PetPane: View {
                         .fixedSize()
                     }
                     SettingsDivider()
-                    SettingsRow(title: "Position", subtitle: "The bottom-right corner of the screen with the menu bar.") {
+                    SettingsRow(title: "Position", subtitle: "Drag the pet anywhere. Reset puts it back in the bottom-right corner.") {
                         Button("Reset") { prefs.petOrigin = nil }
                             .buttonStyle(.pill)
                             .disabled(prefs.petOrigin == nil)

@@ -577,7 +577,7 @@ func send(to host: String) -> Never {
                 measure()
             }
         case "refused" where words.count == 1: // the other Mac's settings don't let other Macs play sound on it
-            fail("\(host) doesn't let other Macs play sound on it. On \(host), turn on Settings › Voice & Sound › Speaker › "
+            fail("\(host) doesn't let other Macs play sound on it. On \(host), turn on Settings › Voice & Sound › Ambient Speaker › "
                  + "Play sound from other Macs")
         case "key" where words.count == 2: // key play|pause|toggle: someone pressed ⏯ there
             if let command = mediaCommands[words[1]], let mediaCommand, mediaCommand(command, nil) {

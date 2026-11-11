@@ -8,7 +8,6 @@ struct BoardPane: View {
     @ObservedObject var prefs: Preferences
     /// Opens the dedicated full Board window (Settings keeps a compact pane).
     var onOpenBoard: (() -> Void)? = nil
-    @State private var llmExpanded = false
     /// What was last found at the model path.
     @State private var inspected: (path: String, model: LocalModelPath?)?
 
@@ -17,7 +16,6 @@ struct BoardPane: View {
             PaneHeader(pane: .board)
             boardChrome
             llmSection
-            wallpaperBoardToggle
             if model.tasks.isEmpty {
                 SettingsSection(footer: "Tasks appear as your agents work, grouped by project and title. Or add one with `ambient task upsert --title \"…\"`.") {
                     Text("No tasks yet")
@@ -48,8 +46,8 @@ struct BoardPane: View {
     static let cardsPerColumn = 8
 
     private var boardChrome: some View {
-        SettingsSection(footer: "The full Board is a wider window for scanning every task. Settings shows each column's latest few.") {
-            SettingsRow(title: "Full Board window") {
+        SettingsSection {
+            SettingsRow(title: "Task board", subtitle: "Every task your agents are on, by status.") {
                 Button("Open Board") { onOpenBoard?() }
                     .buttonStyle(.pillProminent)
                     .disabled(onOpenBoard == nil)
@@ -57,42 +55,23 @@ struct BoardPane: View {
         }
     }
 
-    private var wallpaperBoardToggle: some View {
-        SettingsSection(
-            header: "Living wallpaper",
-            footer: "Soft title + status cues on the desk scene — not a Kanban dump. Off by default, like calendar and lock-message overlays. Hidden when there are no blocked or in-progress tasks."
-        ) {
-            SettingsToggleRow(
-                title: "Show task board on wallpaper",
-                subtitle: prefs.wallpaperEnabled ? nil : "Turn on Living wallpaper in Settings › Appearance › Wallpaper first.",
-                isOn: $prefs.wallpaperShowBoard
-            )
-            .disabled(!prefs.wallpaperEnabled)
-        }
-    }
-
     private var llmSection: some View {
-        SettingsSection(
-            header: "Local LLM",
-            footer: llmExpanded
-                ? "Uses the local-agent MCP gateway on this Mac (`http://127.0.0.1:5051/mcp`). Session text stays on-device — non-loopback URLs are refused. Cloud-tagged models are blocked. A model path runs through local-agent when it knows that path, otherwise directly with mlx-lm, mlx-vlm or llama.cpp, offline, one model at a time; agents can set it with `ambient mcp`. Optional one-shot skill pack (`ambient task skill-bootstrap`) teaches better titles via Keychain Anthropic, then runtime stays local. If `/Volumes/Models` is missing, run `models-on`. Metadata heuristics still run when the LLM is off or unavailable."
-                : "On-device titles via local-agent MCP. Expand for model, transcripts, and gateway options."
-        ) {
+        SettingsSection(header: "Summaries") {
             SettingsToggleRow(
-                title: "Summarize tasks with local LLM",
+                title: "Summarize tasks on this Mac",
                 subtitle: model.taskLLMStatus.label,
                 subtitleStatus: subtitleStatus(model.taskLLMStatus),
                 isOn: $prefs.taskLLMEnabled
             )
             .onChange(of: prefs.taskLLMEnabled) { _, _ in model.refreshTaskLLMStatus() }
             SettingsDivider()
-            DisclosureGroup(isExpanded: $llmExpanded) {
-                SettingsToggleRow(
-                    title: "Read local transcripts",
-                    subtitle: "Opt-in. When on, Ambient may read Claude project JSONL (and Codex thread names) for richer summaries. Still local only — may include secrets from those chats.",
-                    isOn: $prefs.taskLLMReadTranscripts
-                )
-                SettingsDivider()
+            SettingsToggleRow(
+                title: "Read your agent chats",
+                subtitle: "Better titles from your Claude Code and Codex chats on this Mac. They can hold secrets; nothing leaves this Mac.",
+                isOn: $prefs.taskLLMReadTranscripts
+            )
+            .disabled(!prefs.taskLLMEnabled)
+            DetailsDisclosure(title: "Model and gateway") {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Model path").font(Theme.Fonts.caption).foregroundStyle(.secondary)
                     HStack(spacing: Theme.Space.xs) {
@@ -132,19 +111,18 @@ struct BoardPane: View {
                     Text(skillPackCaption)
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
+                    Text("Runs through local-agent on this Mac, or directly with MLX or llama.cpp. Only local models and loopback addresses are allowed; agents can set the model with `ambient mcp`.")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     HStack {
-                        Button("Check status") { model.refreshTaskLLMStatus() }
+                        Button("Check Status") { model.refreshTaskLLMStatus() }
                             .buttonStyle(.pill)
                         Spacer()
                     }
                 }
-                .settingsRowPadding()
-            } label: {
-                Text(llmExpanded ? "Hide advanced options" : "Model & gateway options")
-                    .font(Theme.Fonts.row)
-                    .foregroundStyle(.secondary)
-                    .settingsRowPadding()
             }
+            .settingsRowPadding()
         }
     }
 
@@ -217,7 +195,7 @@ struct BoardPane: View {
             let pack = TaskSkillStore.load()
             return "Skill pack: \(pack.source) · \(pack.examples.count) examples (~/.ambient/task-skill.json)"
         }
-        return "Skill pack: bundled seed. Optional: ambient task skill-bootstrap (Keychain Anthropic once)."
+        return "Skill pack: the one that comes with Ambient. `ambient task skill-bootstrap` can teach it better titles once, with your Anthropic key from the Keychain."
     }
 }
 

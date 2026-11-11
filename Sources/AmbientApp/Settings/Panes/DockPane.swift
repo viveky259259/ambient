@@ -24,11 +24,8 @@ struct DockPane: View {
                     SettingsDivider()
                     SettingsRow(title: "Light up behind the Dock's glass",
                                 subtitle: "Needs Accessibility access to find the Dock. Without it, Ambient draws a light along the screen edge.") {
-                        if setup.accessibilityTrusted {
-                            StatusBadge("Enabled", .success)
-                        } else {
-                            Button("Enable…") { setup.requestAccessibility() }.buttonStyle(.pill)
-                        }
+                        PermissionControl(allowed: setup.accessibilityTrusted ? true : nil, ask: { setup.requestAccessibility() },
+                                          openSettings: { setup.requestAccessibility() })
                     }
                 }
                 .disabled(!prefs.dockGlowEnabled)

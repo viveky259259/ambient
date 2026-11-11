@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - Glass
@@ -128,6 +129,32 @@ struct SettingsToggleRow: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
                 .controlSize(.small)
+                // The subtitle is often why it's off, or what it's doing: VoiceOver reads it too.
+                .accessibilityHint(subtitle ?? "")
+        }
+    }
+}
+
+/// Asking for a permission, the same way everywhere: Allow… before it's asked for, Open Privacy Settings… once it's
+/// been turned down, and Allowed once it's given.
+struct PermissionControl: View {
+    /// Nil until it's asked for.
+    let allowed: Bool?
+    let ask: () -> Void
+    let openSettings: () -> Void
+
+    var body: some View {
+        switch allowed {
+        case true?: StatusBadge("Allowed", .success)
+        case false?: Button("Open Privacy Settings…", action: openSettings).buttonStyle(.pill)
+        case nil: Button("Allow…", action: ask).buttonStyle(.pill)
+        }
+    }
+
+    /// System Settings › Privacy & Security, at one of its panes: `Privacy_Microphone`, say.
+    static func openPrivacy(_ anchor: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {
+            NSWorkspace.shared.open(url)
         }
     }
 }
@@ -223,6 +250,8 @@ struct SidebarItem: View {
     let title: String
     let symbol: String
     let selected: Bool
+    /// The sidebar has the keyboard: the selection shows a focus ring, so ↑ and ↓ are seen to move it.
+    var focused = false
     let action: () -> Void
     @State private var hovered = false
 
@@ -241,6 +270,8 @@ struct SidebarItem: View {
             .padding(.horizontal, 10)
             .frame(height: 30)
             .background(Capsule().fill(selected ? Theme.Colors.selection : hovered ? Theme.Colors.hover : Color.clear))
+            .overlay(Capsule().strokeBorder(Color(nsColor: .keyboardFocusIndicatorColor), lineWidth: 2)
+                .opacity(selected && focused ? 1 : 0))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

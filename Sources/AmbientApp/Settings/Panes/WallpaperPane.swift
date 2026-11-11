@@ -21,7 +21,7 @@ struct WallpaperPane: View {
             }
             Group {
                 SettingsSection(header: "Scene",
-                                footer: "When you open the island, the Solar System's planets orbit; the other scenes can form a black hole at the notch.") {
+                                footer: "When you open the notch, the Solar System's planets orbit; the other scenes can form a black hole at the notch.") {
                     ScenePicker(selection: $prefs.wallpaperScene).settingsRowPadding()
                     SettingsDivider()
                     SettingsRow(title: "Look", subtitle: "Automatic is light by day and dark at night.") {
@@ -34,7 +34,7 @@ struct WallpaperPane: View {
                         .fixedSize()
                     }
                     SettingsDivider()
-                    SettingsToggleRow(title: "Black hole when the island opens", isOn: $prefs.wallpaperIslandEffect)
+                    SettingsToggleRow(title: "Black hole when the notch opens", isOn: $prefs.wallpaperIslandEffect)
                         .disabled(prefs.sceneChoice == .fixed(.solar))
                 }
                 SettingsSection(header: "Lock screen") {
@@ -52,13 +52,10 @@ struct WallpaperPane: View {
                     if prefs.wallpaperCalendar && !calendar.hasAccess {
                         SettingsDivider()
                         SettingsRow(title: "Calendar access",
-                                    subtitle: calendar.canAsk ? nil : "Allow Ambient in System Settings › Privacy & Security › Calendars.",
+                                    subtitle: calendar.canAsk ? nil : "Turned off for Ambient in Privacy & Security.",
                                     subtitleStatus: .warning) {
-                            if calendar.canAsk {
-                                Button("Grant access…") { calendar.requestAccess() }.buttonStyle(.pill)
-                            } else {
-                                StatusBadge("Not allowed", .warning)
-                            }
+                            PermissionControl(allowed: calendar.canAsk ? nil : false, ask: { calendar.requestAccess() },
+                                              openSettings: { PermissionControl.openPrivacy("Privacy_Calendars") })
                         }
                     }
                     SettingsDivider()

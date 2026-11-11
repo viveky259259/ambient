@@ -27,7 +27,7 @@ struct IslandPreview: View {
             .allowsHitTesting(false)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Preview of the notch island")
+        .accessibilityLabel("Preview of the notch light")
         .onAppear(perform: apply)
         .onChange(of: enabled) { apply() }
         .onChange(of: showsWorking) { apply() }

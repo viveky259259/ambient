@@ -15,8 +15,7 @@ struct RemotePane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            SettingsSection(header: "Machines",
-                            footer: model.remoteLinks.isEmpty ? nil : "*Unknown*: its machine can't be reached. *Missed*: a prompt waited while this Mac slept.") {
+            SettingsSection(header: "Machines") {
                 if model.remoteLinks.isEmpty {
                     Text("No machines paired yet.")
                         .font(Theme.Fonts.row)
@@ -70,6 +69,7 @@ struct RemotePane: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(Self.addCommand, forType: .string)
         copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
     }
 }
 
@@ -93,6 +93,13 @@ private struct MachineRow: View {
                         .foregroundStyle(Theme.Status.warning.textColor)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if let hint = link.updateHint {
+                    Text(LocalizedStringKey(hint))
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(Theme.Status.warning.textColor)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 DetailsDisclosure {
                     Text(verbatim: link.machine.transport.joined(separator: " "))
                         .font(Theme.Fonts.mono)
@@ -110,8 +117,8 @@ private struct MachineRow: View {
             }
             Spacer(minLength: Theme.Space.sm)
             Menu {
-                Button("Remove", action: remove)
-                Button("Delete Everything from This Machine…", role: .destructive, action: purge)
+                Button("Unpair", action: remove)
+                Button("Unpair and Delete Everything…", role: .destructive, action: purge)
             } label: {
                 Image(systemName: "ellipsis.circle")
             }

@@ -54,7 +54,7 @@ struct SettingsView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(SettingsPane.allCases) { p in
-                SidebarItem(title: p.title, symbol: p.symbol, selected: p == current) { select(p) }
+                SidebarItem(title: p.title, symbol: p.symbol, selected: p == current, focused: sidebarFocused) { select(p) }
             }
             Spacer(minLength: 0)
         }
