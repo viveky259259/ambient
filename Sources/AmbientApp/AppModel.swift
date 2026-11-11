@@ -19,20 +19,17 @@ final class AppModel: ObservableObject {
 
     let prefs: Preferences
     let snapshot = Snapshot()
+    /// Answered on the socket's threads, never on the main thread: see `SharedMemory`.
+    let memory: SharedMemory
     private let focuser = Focuser()
     private let store = SessionStore()
     private let taskStore = TaskStore()
-    private let memoryStore = MemoryStore()
     private let stateURL: URL?
     private let dayURL: URL?
     private let tasksURL: URL?
-    private let memoryURL: URL?
-    private let memoryBlobs: MemoryBlobStore?
     private var daySaveWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var taskSaveWork: DispatchWorkItem?
-    private var memorySaveWork: DispatchWorkItem?
-    private var nextMemoryCollect = Date.distantPast
     private var sweepTimer: Timer?
     private var llmProbeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -54,8 +51,7 @@ final class AppModel: ObservableObject {
         self.stateURL = stateURL
         self.dayURL = dayURL
         self.tasksURL = tasksURL
-        self.memoryURL = memoryURL
-        self.memoryBlobs = memoryBlobs
+        self.memory = SharedMemory(url: memoryURL, blobs: memoryBlobs)
         self.titles = titles
     }
 
@@ -76,16 +72,7 @@ final class AppModel: ObservableObject {
             }
             publishTasks(save: false)
         }
-        if let memoryURL {
-            if let saved = MemoryFile.load(from: memoryURL) {
-                memoryStore.load(saved)
-            } else {
-                // A file this version can't read: its shared files aren't abandoned, and MemoryFile.save leaves it
-                // alone, so what's shared until then lasts until Ambient quits.
-                nextMemoryCollect = .distantFuture
-            }
-            if !memoryStore.sweep().isEmpty { scheduleMemorySave() }
-        }
+        memory.load()
         refreshTitles()
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer?.tolerance = 1
@@ -282,19 +269,10 @@ final class AppModel: ObservableObject {
         return saved
     }
 
-    /// Answers `ambient memory` and the memory tools of `ambient mcp`.
-    func memory(_ request: MemoryRequest) -> MemoryReply {
-        let revision = memoryStore.revision
-        let reply = memoryStore.answer(request, sessions: store.sessions, blobs: memoryBlobs)
-        if memoryStore.revision != revision { scheduleMemorySave() }
-        return reply
-    }
-
     /// Drops what a session kept only for itself when it says it ended. One the island drops for going quiet isn't
     /// over, so this isn't called for those: `MemoryStore.sweep` watches for its agent exiting.
     private func endSessionMemory(_ change: SessionChange) {
-        guard change.removed, !memoryStore.sessionEnded(change.session.id).isEmpty else { return }
-        scheduleMemorySave()
+        if change.removed { memory.sessionEnded(change.session.id) }
     }
 
     func setQuiet(for duration: TimeInterval?) {
@@ -416,8 +394,7 @@ final class AppModel: ObservableObject {
     private func sweep() {
         refreshTitles()
         rollOverDay()
-        if !memoryStore.sweep().isEmpty { scheduleMemorySave() }
-        collectMemoryBlobs()
+        memory.sweep()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
@@ -519,28 +496,6 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
     }
 
-    /// Saves shared memory shortly after it settles.
-    private func scheduleMemorySave() {
-        guard let memoryURL else { return }
-        memorySaveWork?.cancel()
-        let entries = memoryStore.entries
-        let work = DispatchWorkItem { try? MemoryFile.save(entries, to: memoryURL) }
-        memorySaveWork = work
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
-    }
-
-    /// Every few minutes, deletes shared files nothing refers to any more. On a timer, not after saves: a copy
-    /// forgotten while it's still within the grace period would otherwise wait for the next change.
-    private func collectMemoryBlobs() {
-        let now = Date(), grace: TimeInterval = 300
-        guard let memoryBlobs, now >= nextMemoryCollect else { return }
-        nextMemoryCollect = now.addingTimeInterval(grace)
-        let keep = memoryStore.blobs
-        DispatchQueue.global(qos: .utility).async {
-            memoryBlobs.collect(keeping: keep, changedBefore: now.addingTimeInterval(-grace))
-        }
-    }
-
     /// Saves immediately, e.g. when quitting.
     func saveNow() {
         daySaveWork?.cancel()
@@ -551,8 +506,7 @@ final class AppModel: ObservableObject {
         }
         taskSaveWork?.cancel()
         if let tasksURL { try? TaskFile.save(tasks, to: tasksURL) }
-        memorySaveWork?.cancel()
-        if let memoryURL { try? MemoryFile.save(memoryStore.entries, to: memoryURL) }
+        memory.saveNow()
     }
 
     /// Thread-safe copy of the state, for answering `ambient status` / `ambient tasks` off the main thread.

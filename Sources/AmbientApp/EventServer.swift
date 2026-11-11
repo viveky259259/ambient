@@ -18,6 +18,7 @@ final class EventServer {
 
     func start() throws {
         let snapshot = model.snapshot
+        let memory = model.memory
         let model = MainThreadBox(model)
         let permissions = MainThreadBox(permissions)
         let log = self.log
@@ -92,16 +93,8 @@ final class EventServer {
                 }
                 return try? Wire.encode(.taskModelReport(report))
             case let .memory(request):
-                let box = ReplyBox<MemoryReply>()
-                let done = DispatchSemaphore(value: 0)
-                DispatchQueue.main.async {
-                    box.value = model.value.memory(request)
-                    done.signal()
-                }
-                guard done.wait(timeout: .now() + 2) == .success, let reply = box.value else {
-                    return try? Wire.encode(.memoryReply(.failed("Ambient didn't answer in time. Try again in a moment.")))
-                }
-                return try? Wire.encode(.memoryReply(reply))
+                // Right here, not on the main thread, which can be busy drawing for longer than an agent waits.
+                return try? Wire.encode(.memoryReply(memory.answer(request, sessions: snapshot.get().0)))
             case .ping:
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
             case let .permissionRequest(ask):

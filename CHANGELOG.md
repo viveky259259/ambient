@@ -29,6 +29,11 @@
   30-second status check; `ambient task model --python` accepted a folder; a model path of only spaces showed as set
   in Settings while the board used the model id; `ambient mcp` answered JSON-RPC batches with a parse error; and a
   llama.cpp prompt file could outlive a crash.
+- **Fix**: working memory no longer waits on the main thread, so it answers while the UI is busy. With the main thread
+  held for 8 seconds, `ambient memory set` took 0.03 s, where it used to fail after 2 s with "didn't answer in time"
+  though the write still landed. A write or forget that does time out now says it may still go through.
+- **Fix**: a client that gave up before Ambient got to it, while the app was stopped or busy, no longer ends the app:
+  replying to it raised SIGPIPE.
 
 ## 0.8.0 — 2026-11-03
 
