@@ -80,7 +80,7 @@ Ambient collects nothing. It has no accounts and sends no telemetry, and it goes
 
 ## Install
 
-1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag Ambient to Applications.
+1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag Ambient to Applications. Or install it with Homebrew: `brew install --cask viveky259259/tap/ambient`.
 2. Open Ambient and click **Connect All**.
 3. For Codex, type `/hooks` in Codex once and approve Ambient's hooks. Restart agent sessions that were already open.
 
