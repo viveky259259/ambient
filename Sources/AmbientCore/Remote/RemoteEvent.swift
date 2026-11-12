@@ -78,9 +78,10 @@ public struct RemoteEvent: Equatable, Sendable {
         guard reason == Need.permission.rawValue else {
             return .needsInput(reason: reason ?? Need.question.rawValue, message: message)
         }
-        let (need, name) = Need.fromText(tool ?? message)
+        let said = Need.fromText(message)
+        let (need, name) = tool.map(Need.named) ?? said
         // The message is kept only when it says more than the headline. Today's shim sends the tool's name again.
-        return .needsInput(reason: need.rawValue, message: Need.fromText(message).detail ?? name)
+        return .needsInput(reason: need.rawValue, message: said.detail ?? name)
     }
 
     /// This event without what `level` keeps on the machine. The hub's half of redaction: the shim applies a level to

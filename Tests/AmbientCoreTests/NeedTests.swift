@@ -177,6 +177,8 @@ import Testing
         #expect(try line(#","tool":"Bash","message":"Bash""#).redacted(to: .full).eventKind == .needsInput(reason: "command", message: nil))
         #expect(try line(#","tool":"mcp__github__create_pr","message":"mcp__github__create_pr""#).redacted(to: .full).eventKind
             == .needsInput(reason: "permission", message: "github · create_pr"))
+        // A tool is a name even with a space in it, which words in a message are not.
+        #expect(try line(#","tool":"Web Search""#).redacted(to: .standard).eventKind == .needsInput(reason: "web", message: nil))
         // The agent's own words for the prompt are kept when they say more, and the tool still gives the need.
         #expect(try line(#","tool":"Bash","message":"Run the migration on prod?""#).redacted(to: .full).eventKind
             == .needsInput(reason: "command", message: "Run the migration on prod?"))
