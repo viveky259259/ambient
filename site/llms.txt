@@ -20,6 +20,7 @@ Key facts:
 - Living wallpaper (off by default, Settings › Wallpaper): a Sky, Harbor, Garden or Solar System scene, or a new one each day, that follows the time of day. Each session lives as a star, a boat, a plant or a planet in the color of its state, with the clock, the next calendar event (read locally) and the day's story. When the island opens, a black hole forms at the notch (Sky, Harbor, Garden) or the Solar System's sun lights up, and the agents orbit it under simulated gravity. The look follows the time of day, matches macOS light or dark mode, or stays light or dark. It shows on every display and on the lock screen; it's drawn above the user's own wallpaper, which is untouched (on the lock screen the scene is set as the wallpaper while locked, under macOS's own login controls, and the user's wallpaper is restored on unlock).
 - Uninstall: `ambient uninstall` removes only Ambient's hook entries; then quit the app, delete it and `~/.ambient`.
 - Download: https://yaml.cafe/ (free, no sign-up; the download starts on the first click).
+- Homebrew: `brew install --cask viveky259259/tap/ambient`.
 
 ## When to use Ambient
 
