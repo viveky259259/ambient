@@ -94,7 +94,9 @@ under `/Volumes/Models` (run `models-on` after plugging in the SSD). Transcript 
 opt-in; cloud-tagged models are refused. Optional one-shot `ambient task skill-bootstrap` learns a few-shot
 pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, then the live path stays
 local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
-`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board.
+`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board. Click a card to open its chat, even
+after its session ends, and search the board by title, summary, project, folder, agent or machine. A task the agents
+made leaves the board three days after its last session ends; tasks you add yourself stay.
 
 **Model path** — instead of a gateway model id, point the board at a model on disk: Settings › Board › *Model &
 gateway options* › **Choose…**, `ambient task model PATH`, or an agent through `ambient mcp`. Ambient looks at
@@ -354,7 +356,7 @@ shape of a real one of 4,193 tasks, with an event every two seconds, on the same
 | Task Board window open | 2.9% | 3.4% | 2.8 | 48 MB |
 
 Settings › Board shows each column's latest eight cards; the Task Board window shows them all, drawing only the
-ones on screen.
+ones on screen. Finished tasks leave after three days, so a board holds about that many days of work.
 
 What these numbers leave out: the living wallpaper pauses where windows cover it, so the figure above is for a
 mostly covered desktop, as while you work; a bare desktop costs more. Memory with everything on moves with what the
@@ -393,8 +395,14 @@ agent or ports through the link, whatever your config says for that host. A comm
 wrote it.
 
 **What it can do.** A remote machine can only send display data. It can't reach the app's socket, run anything, or
-touch a window, tab, tmux pane or process on your Mac. Remote sessions don't jump to a terminal when you click them,
-since there's nothing local to open: clicking marks them as seen. Remote events go through their own strict decoder,
+touch a window, tab, tmux pane or process on your Mac. Clicking a remote session in the island or menu marks it as seen,
+since there's nothing local to open. Clicking its card on the board opens its chat *on that machine*: your Mac runs
+`ambient open <session> --from=<this Mac's name>` there over the same transport (the name percent-encoded, so it can't
+end a quote), and that machine's Ambient brings
+the chat forward and shows a notification saying which Mac asked. That needs the Ambient app on the machine, not just
+the shim, and it's the only command your Mac sends one. It adds no power, since the transport can run anything there
+already; the session id came from that machine, so it's checked before it's put in the command, and nothing the
+machine prints is shown. Remote events go through their own strict decoder,
 and if a machine's identity changes the link stops until you pair it again. Ambient can't answer or approve anything
 on the remote machine.
 
@@ -424,7 +432,8 @@ is different: you send it on purpose, with any transcript, at any level (see [Vo
 **Where it's kept.** On the machine, in `~/.ambient/spool` (folder `0700`, files `0600`), capped at 5 MB and 24 hours;
 set `spool_max_bytes` and `spool_max_age` in `~/.ambient/remote.conf` to change that. The limits are enforced whenever
 the shim runs, since it has no daemon. On your Mac, remote sessions live with local ones in `~/.ambient/state.json`, on
-the board in `~/.ambient/tasks.json`, where a machine's tasks stay until you purge it or its oldest make way past 5,000,
+the board in `~/.ambient/tasks.json`, where a machine's tasks stay until three days after their last session ends, until you purge it, or until its
+oldest make way past 5,000,
 and in the day log with no titles or projects. `~/.ambient/remote/audit.jsonl` records
 pairing, unpairing, fingerprint changes, link changes and rejected lines, and never any event content.
 

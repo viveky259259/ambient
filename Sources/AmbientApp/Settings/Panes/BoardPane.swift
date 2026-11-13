@@ -10,6 +10,7 @@ struct BoardPane: View {
     var onOpenBoard: (() -> Void)? = nil
     /// What was last found at the model path.
     @State private var inspected: (path: String, model: LocalModelPath?)?
+    @State private var query = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -24,18 +25,25 @@ struct BoardPane: View {
                         .settingsRowPadding()
                 }
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: Theme.Space.sm) {
-                        // Each column's latest few only. Inside a sideways ScrollView a column can't be lazy, so a
-                        // long-lived board would draw thousands of cards on every agent event.
-                        ForEach(TaskBoardColumn.columns(model.tasks, limit: Self.cardsPerColumn)) { column in
-                            BoardColumn(column: column,
-                                        sessions: model.sessions,
-                                        open: { model.openTask($0) },
-                                        more: onOpenBoard)
+                BoardSearchField(query: $query)
+                let found = TaskSearch.filter(model.tasks, query: query)
+                if found.isEmpty {
+                    BoardNoMatches(query: query)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: Theme.Space.sm) {
+                            // Each column's latest few only. Inside a sideways ScrollView a column can't be lazy, so a
+                            // long-lived board would draw thousands of cards on every agent event.
+                            ForEach(TaskBoardColumn.columns(found, limit: Self.cardsPerColumn)) { column in
+                                BoardColumn(column: column,
+                                            sessions: model.sessions,
+                                            notes: model.taskNotes,
+                                            open: { model.openTask($0) },
+                                            more: onOpenBoard)
+                            }
                         }
+                        .padding(.bottom, Theme.Space.xs)
                     }
-                    .padding(.bottom, Theme.Space.xs)
                 }
             }
         }
@@ -203,6 +211,7 @@ struct BoardPane: View {
 struct BoardWindowView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var prefs: Preferences
+    @State private var query = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -215,22 +224,29 @@ struct BoardWindowView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
+                BoardSearchField(query: $query)
+                    .frame(width: 260)
                 Toggle("Wallpaper cues", isOn: $prefs.wallpaperShowBoard)
                     .toggleStyle(.switch)
                     .disabled(!prefs.wallpaperEnabled)
                     .help("Soft task titles on the living wallpaper. Off by default.")
             }
+            let found = TaskSearch.filter(model.tasks, query: query)
             if model.tasks.isEmpty {
                 Text("No tasks yet — they appear as your agents work.")
                     .font(Theme.Fonts.row)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            } else if found.isEmpty {
+                BoardNoMatches(query: query)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     HStack(alignment: .top, spacing: Theme.Space.md) {
-                        ForEach(TaskBoardColumn.columns(model.tasks)) { column in
+                        ForEach(TaskBoardColumn.columns(found)) { column in
                             BoardColumn(column: column,
                                         sessions: model.sessions,
+                                        notes: model.taskNotes,
                                         open: { model.openTask($0) },
                                         wide: true)
                         }
@@ -245,9 +261,53 @@ struct BoardWindowView: View {
     }
 }
 
+/// Filters the board by title, summary, project, folder, agent or machine.
+private struct BoardSearchField: View {
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search tasks", text: $query)
+                .textFieldStyle(.plain)
+                .font(Theme.Fonts.row)
+                .onExitCommand { query = "" }
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear search")
+            }
+        }
+        .padding(.horizontal, Theme.Space.sm)
+        .padding(.vertical, 6)
+        .background(Theme.Colors.card, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+                .strokeBorder(Theme.Colors.hairline.opacity(0.6), lineWidth: 0.5)
+        )
+    }
+}
+
+private struct BoardNoMatches: View {
+    let query: String
+
+    var body: some View {
+        Text("No tasks match “\(query.trimmingCharacters(in: .whitespaces))”")
+            .font(Theme.Fonts.row)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, Theme.Space.sm)
+    }
+}
+
 private struct BoardColumn: View {
     let column: TaskBoardColumn
     let sessions: [Session]
+    /// What a card says for a moment after it's clicked, by task id.
+    var notes: [String: String] = [:]
     let open: (String) -> Void
     /// Opens the Task Board window, for a column that shows only its latest cards.
     var more: (() -> Void)? = nil
@@ -272,7 +332,7 @@ private struct BoardColumn: View {
                     let session = linkedSession(task)
                     // Equatable, so an agent event redraws only the cards it changed.
                     BoardCard(task: task, session: session, clock: session.flatMap { Describe.clock($0, now: now) },
-                              open: { open(task.id) })
+                              note: notes[task.id], open: { open(task.id) })
                         .equatable()
                 }
             }
@@ -310,10 +370,23 @@ private struct BoardCard: View, Equatable {
     let session: Session?
     /// How long the session has been at it, as of the column's last update.
     let clock: String?
+    /// Where its chat is opening, or why it couldn't, for a moment after a click.
+    let note: String?
     let open: () -> Void
 
     static func == (a: BoardCard, b: BoardCard) -> Bool {
-        a.task == b.task && a.session == b.session && a.clock == b.clock
+        a.task == b.task && a.session == b.session && a.clock == b.clock && a.note == b.note
+    }
+
+    /// A task whose session ended can still open its chat. Another machine's opens there.
+    private var canOpen: Bool {
+        session != nil || !task.sessionIds.isEmpty || task.lastChat != nil
+    }
+
+    private var helpText: String {
+        if let machine = task.machine { return canOpen ? "Opens on \(machine.label)" : "No chat to open on \(machine.label)" }
+        if let session { return "Open \(session.agentLabel)" }
+        return canOpen ? "Open the chat" : "No chat to open"
     }
 
     var body: some View {
@@ -335,6 +408,13 @@ private struct BoardCard: View, Equatable {
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+                if let note {
+                    Text(note)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .transition(.opacity)
                 }
                 HStack(spacing: 4) {
                     ForEach(task.agents, id: \.self) { agent in
@@ -390,7 +470,7 @@ private struct BoardCard: View, Equatable {
             )
         }
         .buttonStyle(.plain)
-        .disabled(session == nil && task.sessionIds.isEmpty)
-        .help(session == nil ? "No live session to open" : "Open \(session!.agentLabel)")
+        .disabled(!canOpen)
+        .help(helpText)
     }
 }

@@ -29,6 +29,24 @@ public enum TaskSummarySource: String, Codable, Sendable {
     case manual
 }
 
+/// Where a task's most recent local chat lives, kept after its session ends so the board can still open it.
+/// Only what stays true once the agent has exited: a terminal, pane or process id could belong to something else by then.
+public struct TaskChat: Codable, Equatable, Sendable {
+    public var agent: AgentKind
+    public var sessionId: String
+    public var host: HostInfo?
+
+    public init(agent: AgentKind, sessionId: String, host: HostInfo?) {
+        self.agent = agent
+        self.sessionId = sessionId
+        self.host = host.map { HostInfo(bundleId: $0.bundleId, termProgram: $0.termProgram, hostSessionId: $0.hostSessionId) }
+    }
+
+    public init(_ session: Session) {
+        self.init(agent: session.agent, sessionId: session.sessionId, host: session.host)
+    }
+}
+
 /// A unit of intended work, linked to one or more live agent sessions.
 /// Named `AgentTask` so it never collides with Swift concurrency's `Task`.
 public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
@@ -54,6 +72,8 @@ public struct AgentTask: Identifiable, Codable, Equatable, Sendable {
     public var lastSessionId: String?
     /// The remote machine this task's sessions run on; nil for local work. Tasks never mix machines.
     public var machine: MachineRef?
+    /// The chat to open once no session is linked. For another machine's task, it's opened there.
+    public var lastChat: TaskChat?
 
     public init(id: String = AgentTask.makeID(), title: String, status: TaskStatus = .backlog,
                 summary: String? = nil, summarySource: TaskSummarySource = .heuristic,
@@ -109,5 +129,29 @@ public struct TaskBoardColumn: Identifiable, Equatable, Sendable {
             if columns[i].tasks.count < limit { columns[i].tasks.append(task) }
         }
         return columns.filter { $0.total > 0 }
+    }
+}
+
+/// Finds board tasks by what's written on them. Every word must appear somewhere, in any order, ignoring case and accents:
+/// "api fix" finds *Fix the login* in project *api*.
+public enum TaskSearch {
+    public static func filter(_ tasks: [AgentTask], query: String) -> [AgentTask] {
+        let words = terms(query)
+        guard !words.isEmpty else { return tasks }
+        return tasks.filter { matches($0, words: words) }
+    }
+
+    private static func matches(_ task: AgentTask, words: [String]) -> Bool {
+        let text = fold([task.title, task.summary, task.project, task.cwd, task.agentLabel, task.machine?.label,
+                         task.status.displayName].compactMap { $0 }.joined(separator: "\n"))
+        return words.allSatisfy { text.contains($0) }
+    }
+
+    private static func terms(_ query: String) -> [String] {
+        fold(query).split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
+    private static func fold(_ s: String) -> String {
+        s.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
     }
 }
