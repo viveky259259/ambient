@@ -4,26 +4,65 @@ import Foundation
 /// optional local-LLM semantics overwrite title/summary/status when applied.
 /// Not thread-safe: own it from one queue.
 public final class TaskStore {
-    /// The most tasks the board keeps from one machine. Tasks don't expire by themselves, so this is what holds one
-    /// back. The largest board measured so far had 1,626 tasks, from every source; past this, its oldest go first.
+    /// The most tasks the board keeps from one machine, this Mac included. `prune` is what keeps a board small; this
+    /// holds back a machine that makes tasks faster than they expire. Past it, the machine's oldest go first.
     public var machineTaskLimit = 5_000
-    private var byId: [String: AgentTask] = [:]
+    /// How long a task the agents made stays once no session is linked to it. Tasks the user wrote don't expire.
+    public var retention: TimeInterval = 3 * 86_400
+    private var byId: [String: AgentTask] = [:] {
+        didSet { sorted = nil }
+    }
     /// Session id → task id for quick lookup.
     private var sessionIndex: [String: String] = [:]
+    /// `tasks`, kept until the board changes: it's read on every session event.
+    private var sorted: [AgentTask]?
 
     public init() {}
 
     public var tasks: [AgentTask] {
-        byId.values.sorted {
+        if let sorted { return sorted }
+        let next = byId.values.sorted {
             if $0.status != $1.status {
                 return rank($0.status) < rank($1.status)
             }
             if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
             return $0.id < $1.id
         }
+        sorted = next
+        return next
     }
 
     public func task(id: String) -> AgentTask? { byId[id] }
+
+    /// What to open for a task with no live session: its last chat, rebuilt as a session that's no longer running.
+    /// Nil for another machine's task, since nothing on this Mac is its.
+    public func endedChat(forTaskID id: String) -> Session? {
+        guard let t = byId[id], t.machine == nil, let chat = t.lastChat else { return nil }
+        return session(chat, of: t)
+    }
+
+    /// The same, found by the chat's `agent:session` id: for another machine asking this one to open a chat it ran.
+    public func endedChat(forSessionID id: String) -> Session? {
+        byId.values
+            .filter { $0.machine == nil && $0.lastChat.map { "\($0.agent.rawValue):\($0.sessionId)" } == id }
+            .max { $0.updatedAt < $1.updatedAt }
+            .flatMap { t in t.lastChat.map { session($0, of: t) } }
+    }
+
+    /// Where another machine's task opens: that machine, and the id it knows the chat by. Nil for this Mac's tasks.
+    public func remoteChat(forTaskID id: String) -> (machine: MachineRef, sessionID: String)? {
+        guard let t = byId[id], let machine = t.machine, let chat = t.lastChat,
+              let sid = RemoteOpen.sessionID(agent: chat.agent, sessionId: chat.sessionId) else { return nil }
+        return (machine, sid)
+    }
+
+    private func session(_ chat: TaskChat, of t: AgentTask) -> Session {
+        var s = Session(agent: chat.agent, sessionId: chat.sessionId, at: t.updatedAt)
+        s.cwd = t.cwd
+        s.host = chat.host
+        s.title = t.title
+        return s
+    }
 
     public func task(forSessionID id: String) -> AgentTask? {
         sessionIndex[id].flatMap { byId[$0] }
@@ -68,7 +107,8 @@ public final class TaskStore {
         if let summary = plain(semantics.summary), !summary.isEmpty {
             t.summary = summary
         }
-        if let status = semantics.status, !t.manual {
+        // A summary can finish after its session ended: it describes work that's over, so it doesn't reopen the task.
+        if let status = semantics.status, !t.manual, !t.sessionIds.isEmpty {
             // Never let a stale LLM reply clear needs-you / blocked.
             if !(t.status == .blocked && status != .blocked) {
                 t.status = status
@@ -82,6 +122,32 @@ public final class TaskStore {
         t.updatedAt = date
         byId[id] = t
         return t
+    }
+
+    /// Keeps the board to current work. Unlinks sessions that are gone, when given the ones that are left (sessions a
+    /// sweep dropped while Ambient wasn't running never said they ended). A task with no session left isn't in progress
+    /// or blocked any more, and once it's been that way for `retention` it goes. Returns whether anything changed.
+    @discardableResult
+    public func prune(liveSessionIDs live: Set<String>? = nil, now: Date = Date()) -> Bool {
+        var changed = false
+        if let live {
+            for sid in sessionIndex.keys where !live.contains(sid) {
+                _ = unlink(sessionID: sid, at: now)
+                changed = true
+            }
+        }
+        let cutoff = now.addingTimeInterval(-retention)
+        for (id, t) in byId where !t.manual && t.sessionIds.isEmpty {
+            if t.updatedAt < cutoff {
+                byId[id] = nil
+                changed = true
+            } else if t.status == .inProgress || t.status == .blocked {
+                // Left behind by a summary that came back after its session ended. Its time stays, so it still expires.
+                byId[id]?.status = .done
+                changed = true
+            }
+        }
+        return changed
     }
 
     /// Deletes every task from a machine. Returns whether anything went.
@@ -117,7 +183,7 @@ public final class TaskStore {
             return t
         }
 
-        if let machine = s.origin?.machine.id, !makeRoom(on: machine) { return nil }
+        if !makeRoom(on: s.origin?.machine.id) { return nil }
         var t = AgentTask(
             title: heuristicTitle(s),
             status: status(from: s.mood),
@@ -131,6 +197,7 @@ public final class TaskStore {
             lastSessionId: s.id,
             machine: s.origin?.machine
         )
+        t.lastChat = TaskChat(s)
         if s.mood == .idle { t.status = .backlog }
         byId[t.id] = t
         sessionIndex[s.id] = t.id
@@ -139,7 +206,7 @@ public final class TaskStore {
 
     /// Makes room for one more of a machine's tasks by dropping its oldest. A session that's still running has updated
     /// its task, so these are finished work. Tasks the user wrote stay, and when they're all that's left there's no room.
-    private func makeRoom(on machine: String) -> Bool {
+    private func makeRoom(on machine: String?) -> Bool {
         let own = byId.values.lazy.filter { $0.machine?.id == machine }
         var excess = own.count + 1 - machineTaskLimit
         while excess > 0 {
@@ -165,6 +232,8 @@ public final class TaskStore {
 
     private func applyLive(_ t: inout AgentTask, from s: Session, at date: Date) {
         t.lastSessionId = s.id
+        // A remote session has no host here; its id is what its own machine opens it by.
+        t.lastChat = TaskChat(s)
         t.updatedAt = date
         if let cwd = s.cwd, !cwd.isEmpty { t.cwd = cwd }
         if let project = s.project { t.project = project }

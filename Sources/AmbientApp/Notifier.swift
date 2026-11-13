@@ -22,6 +22,22 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         model.transitions
             .sink { [weak self] t in self?.handle(t) }
             .store(in: &cancellables)
+        model.openedFromElsewhere
+            .sink { [weak self] opened in self?.postOpened(opened.session, from: opened.from) }
+            .store(in: &cancellables)
+    }
+
+    /// Says why a chat just came forward: another Mac's board opened it. No sound; nothing needs answering.
+    private func postOpened(_ s: Session, from: String) {
+        guard let center, prefs.notificationsEnabled else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Opened from \(from)"
+        content.body = Describe.title(s)
+        content.subtitle = [s.agentLabel, HostActivator.appName(for: s.host)].compactMap { $0 }.joined(separator: " · ")
+        content.threadIdentifier = "opened"
+        content.userInfo = ["session": s.id]
+        content.interruptionLevel = .active
+        center.add(UNNotificationRequest(identifier: "opened:\(s.id)", content: content, trigger: nil))
     }
 
     func requestAuthorization(completion: @escaping (Bool) -> Void = { _ in }) {
@@ -94,8 +110,13 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let id = response.notification.request.content.userInfo["session"] as? String
         DispatchQueue.main.async { [weak self] in
-            if let self, let id, let session = self.model.sessions.first(where: { $0.id == id }) {
-                self.model.open(session)
+            if let self, let id {
+                // A chat whose session has ended still opens, from the task that remembers it.
+                if let session = self.model.sessions.first(where: { $0.id == id }) {
+                    self.model.open(session)
+                } else {
+                    _ = self.model.openEndedChat(sessionID: id)
+                }
             }
             completionHandler()
         }

@@ -1,6 +1,7 @@
 import AmbientCore
 import AppKit
 import Combine
+import SystemConfiguration
 
 /// The app's source of truth: sessions folded from agent events, published on the main thread.
 final class AppModel: ObservableObject {
@@ -16,6 +17,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var remoteLinks: [RemoteLinkStatus] = []
     /// Every applied event and sweep result, for surfaces that react to changes.
     let transitions = PassthroughSubject<SessionChange, Never>()
+    /// A chat brought forward here because another Mac's board asked, with that Mac's name.
+    let openedFromElsewhere = PassthroughSubject<(session: Session, from: String), Never>()
+    /// What a board card says for a moment after it's clicked, by task id: where its chat is opening, or why it couldn't.
+    @Published private(set) var taskNotes: [String: String] = [:]
 
     let prefs: Preferences
     let snapshot = Snapshot()
@@ -30,6 +35,7 @@ final class AppModel: ObservableObject {
     private var daySaveWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var taskSaveWork: DispatchWorkItem?
+    private var nextTaskPrune = Date.distantPast
     private var sweepTimer: Timer?
     private var llmProbeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -44,6 +50,12 @@ final class AppModel: ObservableObject {
     /// How far each machine has been applied. Saved with the sessions, in the same file.
     private var remoteCursors: [String: RemoteCursor] = [:]
     private var unreachableWork: [String: DispatchWorkItem] = [:]
+    /// The app each local session runs in, by session id, for agents that don't say (Codex's app). Found from the
+    /// process chain, which is gone once the agent exits, so it's looked up while the session is live.
+    private var hostApps: [String: String] = [:]
+    /// Paired machines, for opening their tasks' chats there.
+    private var pairedMachines: [Machine] = []
+    private let remoteOpenQueue = DispatchQueue(label: "com.viveky259259.Ambient.remote-open", qos: .userInitiated)
 
     init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, memoryURL: URL? = nil,
          memoryBlobs: MemoryBlobStore? = nil, titles: SessionTitles? = nil) {
@@ -71,6 +83,12 @@ final class AppModel: ObservableObject {
                 _ = taskStore.observe(SessionChange(session: s, previous: nil, event: .sessionStarted, removed: false))
             }
             publishTasks(save: false)
+        }
+        if tasksURL != nil {
+            // Sessions that went while Ambient was closed never unlinked, so they're checked against what's left.
+            let live = stateURL == nil ? nil : Set(store.sessions.map(\.id))
+            if taskStore.prune(liveSessionIDs: live) { publishTasks() }
+            nextTaskPrune = Date().addingTimeInterval(Self.taskPruneInterval)
         }
         memory.load()
         refreshTitles()
@@ -193,6 +211,7 @@ final class AppModel: ObservableObject {
 
     /// `machines` is the allowlist: anything from a machine that's no longer on it goes.
     func keepMachines(_ machines: [Machine]) {
+        pairedMachines = machines
         let paired = Set(machines.map(\.id))
         let known = Set(store.sessions.compactMap(\.origin?.machine.id)).union(remoteCursors.keys).union(remoteLinks.map(\.machine.id))
         for id in known where !paired.contains(id) {
@@ -231,24 +250,85 @@ final class AppModel: ObservableObject {
         publish()
     }
 
-    /// Takes the user to the session — its chat, tab or window — and marks its result as seen.
-    func open(_ session: Session) {
+    /// Takes the user to the session — its chat, tab or window — and marks its result as seen. `from` is the Mac whose
+    /// board asked, so whoever is in front of this one knows why the chat came forward.
+    func open(_ session: Session, from: String? = nil) {
         // There's nothing local to bring forward for a remote session; opening it marks it seen.
-        if session.origin == nil { focuser.focus(session) }
+        if session.origin == nil {
+            focuser.focus(session)
+            if let from { openedFromElsewhere.send((session, from)) }
+        }
         acknowledge(session.id)
     }
 
-    /// Opens the most urgent linked session for a board task.
+    /// Opens the chat of a session that's no longer running, by its `agent:session` id, from the task that remembers it.
+    func openEndedChat(sessionID: String, from: String? = nil) -> Session? {
+        guard let session = taskStore.endedChat(forSessionID: sessionID) else { return nil }
+        focuser.focus(session)
+        if let from { openedFromElsewhere.send((session, from)) }
+        return session
+    }
+
+    /// Opens the most urgent linked session for a board task. Returns the session's id.
     @discardableResult
-    func openTask(_ id: String) -> Session? {
+    func openTask(_ id: String) -> String? {
         guard let task = taskStore.task(id: id) else { return nil }
+        if task.machine != nil { return openOnMachine(task) }
         let linked = task.sessionIds.compactMap { store.session(id: $0) }
         let match = SessionMatcher.find(nil, in: linked.isEmpty ? store.sessions.filter { task.sessionIds.contains($0.id) } : linked)
             ?? linked.first
             ?? task.lastSessionId.flatMap { store.session(id: $0) }
-        guard let match else { return nil }
-        open(match)
-        return match
+        if let match {
+            open(match)
+            return match.id
+        }
+        // The session ended, but its chat usually hasn't: Claude's and Codex's apps keep it, and its window may be open.
+        guard let ended = taskStore.endedChat(forTaskID: id) else { return nil }
+        focuser.focus(ended)
+        return ended.id
+    }
+
+    /// Another machine's task opens on that machine: its own Ambient knows the chat's app and window, so it's asked to
+    /// bring it forward there, and it says which Mac asked. The card says how that went.
+    private func openOnMachine(_ task: AgentTask) -> String? {
+        let live = task.sessionIds.compactMap { store.session(id: $0) }.first { $0.origin != nil }
+        let target = live.flatMap { s in
+            s.origin.flatMap { o in RemoteOpen.sessionID(agent: s.agent, sessionId: s.sessionId).map { (o.machine, $0) } }
+        } ?? taskStore.remoteChat(forTaskID: task.id)
+        let named = task.machine?.label ?? "that machine"
+        guard let (ref, sessionID) = target else {
+            note(task.id, "No chat to open on \(named)", for: 5)
+            return nil
+        }
+        guard let machine = pairedMachines.first(where: { $0.id == ref.id }),
+              let command = RemoteOpen.command(sessionID: sessionID, from: Self.computerName) else {
+            note(task.id, "\(named) isn't paired with this Mac", for: 5)
+            return nil
+        }
+        if let live { acknowledge(live.id) }
+        let taskID = task.id, label = machine.label
+        note(taskID, "Opening on \(label)…", for: nil)
+        let transport = RemoteTransport(argv: machine.transport)
+        remoteOpenQueue.async { [weak self] in
+            let outcome = RemoteOpen.outcome(transport.run(command, timeout: 20))
+            DispatchQueue.main.async { self?.note(taskID, RemoteOpen.note(outcome, machine: label), for: 5) }
+        }
+        return "remote/\(ref.id)/\(sessionID)"
+    }
+
+    /// Shows a card's note, and clears it after `seconds` unless another has replaced it.
+    private func note(_ taskID: String, _ text: String, for seconds: TimeInterval?) {
+        taskNotes[taskID] = text
+        guard let seconds else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            if self?.taskNotes[taskID] == text { self?.taskNotes[taskID] = nil }
+        }
+    }
+
+    /// This Mac's name as the user set it, for the notification on the machine that opens the chat. Read each time, so
+    /// a rename shows.
+    private static var computerName: String {
+        (SCDynamicStoreCopyComputerName(nil, nil) as String?) ?? Host.current().localizedName ?? "another Mac"
     }
 
     func acknowledge(_ id: String) {
@@ -281,6 +361,18 @@ final class AppModel: ObservableObject {
     }
 
     private func observeTask(_ change: SessionChange, publish: Bool = true) {
+        var change = change
+        var s = change.session
+        if change.removed {
+            hostApps[s.id] = nil
+        } else if s.origin == nil, let host = s.host, host.bundleId == nil {
+            // Looked up once: "" means none was found, so later events don't walk the processes again.
+            if hostApps[s.id] == nil { hostApps[s.id] = HostActivator.app(for: host)?.bundleIdentifier ?? "" }
+            if let id = hostApps[s.id], !id.isEmpty {
+                s.host?.bundleId = id
+                change = SessionChange(session: s, previous: change.previous, event: change.event, removed: change.removed)
+            }
+        }
         let task = taskStore.observe(change)
         if publish { publishTasks() }
         if let task { scheduleSummary(for: task, session: change.session) }
@@ -395,6 +487,7 @@ final class AppModel: ObservableObject {
         refreshTitles()
         rollOverDay()
         memory.sweep()
+        pruneTasks()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
@@ -403,6 +496,16 @@ final class AppModel: ObservableObject {
             transitions.send(change)
             observeTask(change)
         }
+    }
+
+    private static let taskPruneInterval: TimeInterval = 600
+
+    /// Every few minutes, lets finished tasks age off the board.
+    private func pruneTasks() {
+        let now = Date()
+        guard now >= nextTaskPrune else { return }
+        nextTaskPrune = now.addingTimeInterval(Self.taskPruneInterval)
+        if taskStore.prune(now: now) { publishTasks() }
     }
 
     /// Looks up the chat or thread title of each session in the background: when it first appears, then at
@@ -462,7 +565,7 @@ final class AppModel: ObservableObject {
     private func publish(save: Bool = true) {
         sessions = store.sessions
         mood = store.mood
-        snapshot.set(sessions: sessions, mood: mood, tasks: taskStore.tasks)
+        snapshot.set(sessions: sessions, mood: mood, tasks: tasks)
         if save { scheduleSave() }
     }
 

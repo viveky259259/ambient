@@ -6,8 +6,9 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case statusRequest
     case status(sessions: [Session], mood: Mood)
     case acknowledgeAll
-    /// Take the user to a session: by project, id or id prefix; nil for the most urgent one.
-    case open(query: String?)
+    /// Take the user to a session: by project, id or id prefix; nil for the most urgent one. `from` names the Mac that
+    /// asked, when it's another one: the app says so in a notification.
+    case open(query: String?, from: String? = nil)
     /// Reply to `open`: the session that was opened, or nil if nothing matched.
     case opened(sessionID: String?)
     case listTasks
