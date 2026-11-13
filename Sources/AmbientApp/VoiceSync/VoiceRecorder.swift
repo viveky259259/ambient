@@ -39,6 +39,8 @@ final class VoiceRecorder: @unchecked Sendable {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var transcript: String?
+    /// The recognizer starts over after a pause; this keeps what it heard before.
+    private var joiner = TranscriptJoiner()
     private var transcribed: (() -> Void)?
     private var configuration: NSObjectProtocol?
 
@@ -158,7 +160,10 @@ final class VoiceRecorder: @unchecked Sendable {
 
     private func recognized(_ result: SFSpeechRecognitionResult?, error: Error?) {
         if let result {
-            let text = result.bestTranscription.formattedString
+            // A stretch the recognizer has finished carries its metadata, or is the final result.
+            let ended = result.isFinal || result.speechRecognitionMetadata != nil
+            joiner.add(result.bestTranscription.formattedString, ended: ended)
+            let text = joiner.text
             transcript = text
             onText(text)
         }
