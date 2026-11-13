@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Claude Code notifications on Mac: 3 ways to set them up</title>
-  <meta name="description" content="Get a Mac notification when Claude Code finishes or asks for permission. Built-in terminal alerts, a Notification hook and a notch status app, compared.">
+  <title>Claude Code notifications on Mac: hooks, sounds, notch app</title>
+  <meta name="description" content="Get Claude Code notifications on Mac when it&#x27;s done or needs input: the built-in alerts, a Stop or Notification hook to copy, a sound, and a free notch app.">
   <link rel="canonical" href="https://yaml.cafe/guides/claude-code-notifications-mac/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Ambient">
   <meta property="og:url" content="https://yaml.cafe/guides/claude-code-notifications-mac/">
   <meta property="og:title" content="How to get notified when Claude Code finishes or needs you on Mac">
-  <meta property="og:description" content="Built-in terminal alerts, a Notification hook, or a notch status app. Setup for each, compared.">
+  <meta property="og:description" content="The built-in alerts, a Stop or Notification hook to copy, a sound, and a free notch app.">
   <meta property="og:image" content="https://yaml.cafe/assets/og.png">
-  <meta property="article:modified_time" content="2026-09-27">
+  <meta property="article:modified_time" content="2026-11-12">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="/assets/favicon-64.png">
@@ -34,7 +34,7 @@
         "mainEntityOfPage": "https://yaml.cafe/guides/claude-code-notifications-mac/",
         "image": "https://yaml.cafe/assets/og.png",
         "datePublished": "2026-09-27T00:00:00+00:00",
-        "dateModified": "2026-11-03T00:00:00+00:00",
+        "dateModified": "2026-11-12T00:00:00+00:00",
         "inLanguage": "en",
         "proficiencyLevel": "Beginner",
         "about": { "@type": "Thing", "name": "Claude Code" },
@@ -78,9 +78,25 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to get notified when Claude Code finishes or needs you on Mac</h1>
-    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 6 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-12">November 12, 2026</time> · 6 min read</p>
 
     <p class="answer">Claude Code already sends a desktop notification in Ghostty, Kitty and iTerm2 when it finishes or waits for permission. In any other terminal, set <code>preferredNotifChannel</code> to <code>"terminal_bell"</code>, or add a <code>Notification</code> hook to <code>~/.claude/settings.json</code>. To watch several sessions at once and click straight back to the right tab, use a notch status app such as Ambient.</p>
+
+    <p>The quickest setup works in any terminal. Add this to <code>~/.claude/settings.json</code> (merge it into an existing <code>"hooks"</code> block if you have one), then restart Claude Code. Each time Claude finishes a turn, you get a notification and a ding:</p>
+    <pre><code>{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude is done\" with title \"Claude Code\"'; afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
 
     <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-notifications-mac-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
 
@@ -176,6 +192,7 @@
       <h2>Stop babysitting terminals.</h2>
       <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
       <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-claude-code-body">Get Ambient</a>
+      <p class="try-alt">Or <code>brew install --cask viveky259259/tap/ambient</code> · <a href="https://github.com/viveky259259/ambient" data-umami-event="Star on GitHub" data-umami-event-from="guide-claude-code-notifications-mac-try">Star on GitHub</a></p>
     </div>
 
     <h2>Common questions</h2>

@@ -79,6 +79,12 @@ public enum Need: String, CaseIterable, Sendable {
             nil
         }
         guard let tool, !tool.isEmpty else { return (.permission, text) }
+        return named(tool)
+    }
+
+    /// A prompt about a tool known by its name: the need, and the name as the detail when no need fits the tool, as in
+    /// *Approve a tool · github · create_pr*.
+    static func named(_ tool: String) -> (need: Need, detail: String?) {
         let need = forTool(tool)
         return (need, need == .permission ? ToolNames.display(tool) : nil)
     }
