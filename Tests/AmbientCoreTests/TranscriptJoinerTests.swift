@@ -51,8 +51,13 @@ import Testing
         #expect(text == "So the build passed. So now we ship.")
     }
 
-    @Test func aShortStretchWithAnotherFirstWordIsANewOne() {
-        #expect(joined(["Yes", "No"]) == "Yes No")
+    @Test func aShorterStretchWithAnotherFirstWordIsANewOne() {
+        #expect(joined(["Yes it works", "Then so"]) == "Yes it works Then so")
+    }
+
+    @Test func aRevisedFirstWordStaysOneStretch() {
+        #expect(joined(["Hey", "Hi"]) == "Hi")
+        #expect(joined(["Okay so", "Ok so", "Ok so we ship."]) == "Ok so we ship.")
     }
 
     @Test func blankResultsChangeNothing() {

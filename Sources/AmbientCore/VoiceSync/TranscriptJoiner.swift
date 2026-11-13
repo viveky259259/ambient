@@ -8,7 +8,7 @@ import Foundation
 /// This keeps each finished stretch and adds the next one after it.
 ///
 /// A stretch is finished when the recognizer says so (`ended`), or when a result starts over: it's less than half as
-/// long as the one before, or no longer and with another first word. A revision grows, or changes a word or some
+/// long as the one before, or no longer, with fewer words and another first word. A revision grows, or changes a word or some
 /// punctuation; it doesn't do either. A new stretch that begins with the same word, and isn't short, can still pass for
 /// a revision, so `ended` is the better signal where there is one. A recognizer that marks every result ended can't
 /// repeat itself here, because a stretch that only carries on the last one replaces it.
@@ -51,11 +51,10 @@ public struct TranscriptJoiner: Equatable, Sendable {
     /// A new stretch, not a revision of this one.
     private static func startsOver(_ heard: String, after previous: String) -> Bool {
         guard heard.count <= previous.count else { return false }
-        return heard.count * 2 < previous.count || firstWord(heard) != firstWord(previous)
-    }
-
-    private static func firstWord(_ text: String) -> Substring? {
-        key(text).split(separator: " ").first
+        if heard.count * 2 < previous.count { return true }
+        // Revising its first word, the recognizer keeps the number of words: "Hey" becomes "Hi", "Okay so" "Ok so".
+        let new = key(heard).split(separator: " "), old = key(previous).split(separator: " ")
+        return new.first != old.first && new.count < old.count
     }
 
     /// Ends a stretch. One that carries on the last finished stretch replaces it, and one that's the same words adds

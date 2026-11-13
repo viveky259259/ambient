@@ -38,8 +38,7 @@ final class VoiceRecorder: @unchecked Sendable {
     // Only on the main thread.
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
-    private var transcript: String?
-    /// The recognizer starts over after a pause; this keeps what it heard before.
+    /// The transcript so far. The recognizer starts over after a pause; this keeps what it heard before.
     private var joiner = TranscriptJoiner()
     private var transcribed: (() -> Void)?
     private var configuration: NSObjectProtocol?
@@ -118,7 +117,7 @@ final class VoiceRecorder: @unchecked Sendable {
                     guard !delivered else { return }
                     delivered = true
                     transcribed = nil
-                    done(transcript.flatMap { $0.isEmpty ? nil : $0 }, seconds)
+                    done(joiner.text.isEmpty ? nil : joiner.text, seconds)
                 }
                 guard task != nil else { return deliver() }
                 transcribed = deliver
@@ -164,7 +163,6 @@ final class VoiceRecorder: @unchecked Sendable {
             let ended = result.isFinal || result.speechRecognitionMetadata != nil
             joiner.add(result.bestTranscription.formattedString, ended: ended)
             let text = joiner.text
-            transcript = text
             onText(text)
         }
         guard result?.isFinal == true || error != nil else { return }
