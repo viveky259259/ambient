@@ -24,7 +24,8 @@ sed -i '' "s/current = \"$OLD\"/current = \"$NEW\"/" Sources/AmbientBase/Version
 for f in site/index.html site/thanks.html site/llms.txt; do
   sed -i '' -e "s/Ambient-$OLD\.dmg/Ambient-$NEW.dmg/g" -e "s/Ambient $OLD/Ambient $NEW/g" \
     -e "s/\"softwareVersion\": \"$OLD\"/\"softwareVersion\": \"$NEW\"/" -e "s/Version $OLD/Version $NEW/" \
-    -e "s/Current version: $OLD/Current version: $NEW/" "$f"
+    -e "s/Current version: $OLD/Current version: $NEW/" \
+    -e "s/\"dateModified\": \"[^\"]*\"/\"dateModified\": \"$(date +%F)T00:00:00+00:00\"/" "$f"
 done
 scripts/check-site.sh "$NEW"
 
