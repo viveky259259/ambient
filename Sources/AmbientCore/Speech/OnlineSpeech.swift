@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// The three ways Ambient can read aloud.
 public enum SpeechEngineKind: String, CaseIterable, Sendable {

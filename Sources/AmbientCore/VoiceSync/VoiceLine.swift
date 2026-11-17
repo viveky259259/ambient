@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// One line of a voice in the sender's outbox, which `follow` streams to the hub it's addressed to. Like a `RemoteEvent`,
 /// it can't ask the hub to do anything: the most it can become is a recording in the voice library.
@@ -113,9 +115,9 @@ enum VoiceLineDecoder {
             part = .audio(n: Int(n), data: data)
         case "text":
             guard let text = try RemoteEventDecoder.string(fields, "text") else { throw .missingField("text") }
-            part = .text(RemoteEventDecoder.plainText(text, max: VoiceLine.maxText) ?? "")
+            part = .text(Trim.plainText(text, max: VoiceLine.maxText) ?? "")
         case "end":
-            part = .end(text: try RemoteEventDecoder.string(fields, "text").map { RemoteEventDecoder.plainText($0, max: VoiceLine.maxText) ?? "" })
+            part = .end(text: try RemoteEventDecoder.string(fields, "text").map { Trim.plainText($0, max: VoiceLine.maxText) ?? "" })
         default:
             part = .cancel
         }

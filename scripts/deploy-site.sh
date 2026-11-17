@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)
 DMG=dist/Ambient-$VERSION.dmg
 [[ -f $DMG ]] || { echo "Missing $DMG. Run scripts/release.sh first." >&2; exit 1; }
 scripts/check-site.sh "$VERSION"

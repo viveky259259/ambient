@@ -1,0 +1,48 @@
+{
+  "log" : {
+    "day" : 784857600,
+    "finishedSeconds" : 390,
+    "longestRun" : 300,
+    "marks" : [
+      {
+        "agent" : "claude",
+        "at" : 784900000,
+        "outcome" : "done"
+      },
+      {
+        "agent" : "gemini",
+        "at" : 784900000,
+        "outcome" : "failed"
+      }
+    ],
+    "moments" : [
+      {
+        "agent" : "codex",
+        "at" : 784900000,
+        "kind" : "neededYou",
+        "machine" : "a1b2c3d4",
+        "place" : "Codex on Studio"
+      },
+      {
+        "agent" : "gemini",
+        "at" : 784900000,
+        "kind" : "failed",
+        "place" : "Gemini"
+      },
+      {
+        "agent" : "claude",
+        "at" : 784900000,
+        "kind" : "done",
+        "place" : "Write fixtures"
+      }
+    ],
+    "neededYou" : 1,
+    "projects" : [
+
+    ],
+    "tools" : 0,
+    "turnsDone" : 1,
+    "turnsFailed" : 1
+  },
+  "version" : 1
+}

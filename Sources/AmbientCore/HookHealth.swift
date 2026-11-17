@@ -1,5 +1,7 @@
 import Darwin
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// The agents the user connected through Ambient, in ~/.ambient/agents.json, shared by the app and the CLI, so
 /// hooks an agent update removed show up as a problem rather than as "not connected".

@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Folds agent events into per-session state. Not thread-safe: own it from one queue.
 public final class SessionStore {
@@ -24,7 +26,7 @@ public final class SessionStore {
     /// Events turned away at `machineSessionLimit` during the current batch.
     private var refused = 0
 
-    public init(timeouts: Timeouts = Timeouts(), isAlive: @escaping (Int32) -> Bool = SessionStore.processExists) {
+    public init(timeouts: Timeouts = Timeouts(), isAlive: @escaping (Int32) -> Bool = ProcessProbe.isAlive) {
         self.timeouts = timeouts
         self.isAlive = isAlive
     }
@@ -116,7 +118,7 @@ public final class SessionStore {
         for delivery in batch {
             guard let change = apply(delivery.event, from: machine, at: delivery.at, missed: delivery.missed) else { continue }
             changes.append(change)
-            if !change.removed, change.session.origin?.missed != true, AlertPolicy.attentionMoods.contains(change.session.mood),
+            if !change.removed, change.session.origin?.missed != true, change.session.mood.wantsAttention,
                change.session.mood != change.previousMood {
                 saveFirst = true
             }
@@ -303,10 +305,5 @@ public final class SessionStore {
             return s
         }
         byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
-    }
-
-    public static func processExists(_ pid: Int32) -> Bool {
-        guard pid > 0 else { return true }
-        return kill(pid, 0) == 0 || errno == EPERM
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// Synthetic events for `ambient emit` and `ambient demo`.
 public enum Demo {

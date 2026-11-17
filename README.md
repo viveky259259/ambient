@@ -571,7 +571,9 @@ nothing.
 
 | Path | Purpose |
 | --- | --- |
-| `Sources/AmbientCore` | Everything testable: event model, agent adapters, session reducer, policies, wire format, socket, order-preserving JSON, hook installer |
+| `Sources/AmbientBase` | Utilities with no Ambient vocabulary: order-preserving JSON, the Unix socket, paths, text trimming, the Keychain |
+| `Sources/AmbientContracts` | The vocabulary every module shares: events, sessions, tasks, needs, remote events and cursors, the day's log |
+| `Sources/AmbientCore` | Everything else that's testable: agent adapters, session reducer, policies, wire format, hook installer, remote machines, voice |
 | `Sources/ambient` | The CLI, including the hot `hook` path |
 | `Sources/AmbientApp` | The app: socket server, island, notifications and chimes, menu bar, Dock glow, living wallpaper, setup |
 | `scripts/` | App bundle, icon rendering, release |

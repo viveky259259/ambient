@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// How a machine's link is doing, for every surface that shows it (ER-20).
 public enum RemoteHealth: Equatable, Sendable {
@@ -326,7 +328,7 @@ public final class RemoteLink: @unchecked Sendable {
                       "certificate has expired", "sso session", "not logged in", "login required"]
         guard signIn.contains(where: text.contains) || text.contains("host key verification failed") else { return nil }
         let lines = stderr.split(whereSeparator: \.isNewline).map(String.init)
-        return RemoteEventDecoder.plainText(lines.last(where: { !$0.isEmpty }) ?? stderr, max: 160)
+        return Trim.plainText(lines.last(where: { !$0.isEmpty }) ?? stderr, max: 160)
     }
 
     /// Keeps the end of what the transport printed.

@@ -1,0 +1,24 @@
+[
+  {
+    "agentPid" : 900,
+    "appServer" : false,
+    "bundleId" : "com.apple.Terminal",
+    "cmuxSocket" : "/tmp/cmux.sock",
+    "cmuxSurface" : "sf-1",
+    "cmuxWorkspace" : "ws-1",
+    "hostSessionId" : "host-1",
+    "pids" : [
+      501,
+      77
+    ],
+    "termProgram" : "Apple_Terminal",
+    "tmuxPane" : "%3",
+    "tmuxSocket" : "/tmp/tmux-501/default",
+    "tty" : "/dev/ttys004"
+  },
+  {
+    "pids" : [
+
+    ]
+  }
+]

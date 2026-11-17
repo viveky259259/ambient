@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// Runs commands on a machine through its transport: the user's own command, e.g. `ssh devbox`. Ambient has no
 /// client, listener, crypto or credentials of its own. The remote command is one last argument, a shell string.
@@ -15,7 +16,7 @@ public struct RemoteTransport: Sendable {
         public var lastLine: Data { Data(stdout.split(separator: UInt8(ascii: "\n")).last ?? []) }
         /// The first word of that line, as plain text. It came from the machine, so it's safe to print only like this.
         public var lastLineWord: String {
-            RemoteEventDecoder.plainText(String(decoding: lastLine, as: UTF8.self), max: 128)?
+            Trim.plainText(String(decoding: lastLine, as: UTF8.self), max: 128)?
                 .split(separator: " ").first.map(String.init) ?? ""
         }
     }

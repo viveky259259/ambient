@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// The public feature-request board on yaml.cafe. The app opens it in the browser and sends nothing itself.
 public enum FeatureRequests {

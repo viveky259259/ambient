@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// The four looks a scene takes through the day.
 public enum DayPhase: String, CaseIterable, Sendable {

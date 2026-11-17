@@ -177,7 +177,7 @@ final class IslandController {
                 self?.bloomID = nil
                 self?.refresh()
             }
-        } else if t.session.id == bloomID, !AlertPolicy.attentionMoods.contains(t.session.mood) || t.removed {
+        } else if t.session.id == bloomID, !t.session.mood.wantsAttention || t.removed {
             // What we were announcing is resolved (permission granted, result seen).
             bloomID = nil
             bloomTimer?.invalidate()

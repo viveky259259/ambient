@@ -27,6 +27,9 @@ public enum Mood: Int, Codable, Comparable, CaseIterable, Sendable {
     case waiting = 5
 
     public static func < (a: Mood, b: Mood) -> Bool { a.rawValue < b.rawValue }
+
+    /// Waiting, done or error: what notifications, sounds and the island bloom are for.
+    public var wantsAttention: Bool { self == .waiting || self == .done || self == .error }
 }
 
 public struct Session: Identifiable, Codable, Equatable, Sendable {
@@ -53,9 +56,9 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
     /// A custom agent's own name, e.g. "Aider".
     public var agentName: String?
     /// What compaction interrupted, to return to afterwards.
-    var beforeCompaction: Activity?
+    package var beforeCompaction: Activity?
     /// What a prompt interrupted, to return to once the agent says it was answered.
-    var beforeWaiting: Activity?
+    package var beforeWaiting: Activity?
 
     public init(agent: AgentKind, sessionId: String, at date: Date, origin: RemoteOrigin? = nil) {
         self.id = origin.map { Self.remoteID(machine: $0.machine.id, agent: agent, sessionId: sessionId) }

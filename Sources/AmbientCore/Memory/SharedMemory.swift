@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Working memory as the app runs it: the store, its file and the shared files, on a queue of their own. Agents
 /// wait on their requests, so a main thread busy drawing the UI mustn't be what answers them.
@@ -25,7 +27,7 @@ public final class SharedMemory: @unchecked Sendable {
     }
 
     /// Loads what was saved, without what expired meanwhile.
-    public func load(now: Date = Date(), isAlive: @escaping @Sendable (Int32) -> Bool = SessionStore.processExists) {
+    public func load(now: Date = Date(), isAlive: @escaping @Sendable (Int32) -> Bool = ProcessProbe.isAlive) {
         queue.sync {
             guard let url else { return }
             if let saved = MemoryFile.load(from: url) {
@@ -59,7 +61,7 @@ public final class SharedMemory: @unchecked Sendable {
 
     /// Call every few seconds: drops expired entries and those of agents that exited, and now and then deletes
     /// shared files nothing refers to.
-    public func sweep(now: Date = Date(), isAlive: @escaping @Sendable (Int32) -> Bool = SessionStore.processExists) {
+    public func sweep(now: Date = Date(), isAlive: @escaping @Sendable (Int32) -> Bool = ProcessProbe.isAlive) {
         queue.async { [self] in
             if !store.sweep(now: now, isAlive: isAlive).isEmpty { scheduleSave() }
             guard let blobs, now >= nextCollect else { return }

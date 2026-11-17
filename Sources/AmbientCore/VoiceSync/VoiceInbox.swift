@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// A finished voice from another Mac, ready for the library.
 public struct VoiceArrival: Equatable, Sendable {

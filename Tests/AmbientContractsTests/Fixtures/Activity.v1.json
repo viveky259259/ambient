@@ -1,0 +1,59 @@
+[
+  {
+    "idle" : {
+
+    }
+  },
+  {
+    "thinking" : {
+
+    }
+  },
+  {
+    "tool" : {
+      "detail" : "swift test",
+      "name" : "Bash"
+    }
+  },
+  {
+    "tool" : {
+      "name" : "Read"
+    }
+  },
+  {
+    "compacting" : {
+
+    }
+  },
+  {
+    "waiting" : {
+      "message" : "rm -rf build",
+      "reason" : "command"
+    }
+  },
+  {
+    "waiting" : {
+      "reason" : "question"
+    }
+  },
+  {
+    "done" : {
+      "summary" : "Added fixtures"
+    }
+  },
+  {
+    "done" : {
+
+    }
+  },
+  {
+    "error" : {
+      "message" : "Rate limited"
+    }
+  },
+  {
+    "error" : {
+
+    }
+  }
+]

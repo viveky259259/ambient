@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// The name a session has in its agent's own UI: the chat title in Claude's desktop app or the latest
 /// custom title in a Claude Code transcript, or the thread name in Codex. Reads only; ids from hooks are

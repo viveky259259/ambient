@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Preferences for Ambient's board summarizer (local-agent MCP only).
 public struct TaskLLMConfig: Codable, Equatable, Sendable {
@@ -52,15 +54,7 @@ public struct TaskLLMConfig: Codable, Equatable, Sendable {
     /// True when the configured MCP URL is not a loopback http(s) endpoint.
     public var refusesNonLoopback: Bool {
         guard let url = mcpEndpoint else { return true }
-        return !Self.isLoopback(url)
-    }
-
-    /// Session text may only go to 127.0.0.1 / localhost / ::1.
-    public static func isLoopback(_ url: URL) -> Bool {
-        let scheme = url.scheme?.lowercased() ?? ""
-        guard scheme == "http" || scheme == "https" else { return false }
-        let host = (url.host ?? "").lowercased()
-        return host == "127.0.0.1" || host == "localhost" || host == "::1"
+        return !url.isLoopback
     }
 }
 
@@ -180,19 +174,6 @@ public enum TaskModelResolution: Codable, Equatable, Sendable {
     }
 }
 
-/// Structured semantics produced by the local LLM (or parsed from its reply).
-public struct TaskSemantics: Equatable, Sendable {
-    public var title: String?
-    public var summary: String?
-    public var status: TaskStatus?
-
-    public init(title: String? = nil, summary: String? = nil, status: TaskStatus? = nil) {
-        self.title = title
-        self.summary = summary
-        self.status = status
-    }
-}
-
 /// Builds prompts and calls local-agent `submit_inference` / `get_job`.
 public struct TaskSummarizer: Sendable {
     public var config: TaskLLMConfig
@@ -223,7 +204,7 @@ public struct TaskSummarizer: Sendable {
         guard let endpoint = config.mcpEndpoint else {
             return .unavailable(.gatewayDown("Local-agent MCP URL is invalid."))
         }
-        if !TaskLLMConfig.isLoopback(endpoint) {
+        if !endpoint.isLoopback {
             return .unavailable(.nonLoopbackBlocked("MCP URL must be loopback (127.0.0.1 / localhost). Session text stays on this Mac."))
         }
         do {
@@ -266,7 +247,7 @@ public struct TaskSummarizer: Sendable {
 
         // The gateway first when it already knows this model: its queue, adapters and runtimes.
         var gatewayPythons: [String] = []
-        if let endpoint = config.mcpEndpoint, TaskLLMConfig.isLoopback(endpoint),
+        if let endpoint = config.mcpEndpoint, endpoint.isLoopback,
            let inventory = try? await inventory() {
             if let entry = Self.entry(for: model, in: inventory), let id = entry["id"] as? String,
                Self.writesText(entry), entry["runtime_available"] as? Bool != false {
@@ -324,7 +305,7 @@ public struct TaskSummarizer: Sendable {
         if TaskLLMConfig.isCloudModel(modelID) {
             throw LocalAgentMCP.MCPError.rpc("Cloud models are blocked for board summaries.")
         }
-        guard let endpoint = config.mcpEndpoint, TaskLLMConfig.isLoopback(endpoint) else {
+        guard let endpoint = config.mcpEndpoint, endpoint.isLoopback else {
             throw LocalAgentMCP.MCPError.nonLoopback
         }
         let submitted = try await mcp.callTool(name: "submit_inference", arguments: [
