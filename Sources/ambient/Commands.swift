@@ -221,7 +221,9 @@ struct Commands {
 
     private func open(_ args: [String]) -> Int32 {
         let query = args.first { !$0.hasPrefix("--") }
-        guard case let .opened(id)? = request(.open(query: query)) else {
+        // Another Mac's board, opening a chat that runs here.
+        let from = args.first { $0.hasPrefix("--from=") }.flatMap { RemoteOpen.decodedName(String($0.dropFirst(7))) }
+        guard case let .opened(id)? = request(.open(query: query, from: from)) else {
             out.error("Ambient isn't running. Open Ambient.app, then try again.")
             return 1
         }
@@ -286,7 +288,7 @@ struct Commands {
                 return 1
             }
             guard session != nil else {
-                out.error("No live session linked to task '\(id)'.")
+                out.error("No chat to open for task '\(id)'.")
                 return 1
             }
             return 0

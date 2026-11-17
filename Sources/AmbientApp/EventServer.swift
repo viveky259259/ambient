@@ -41,11 +41,22 @@ final class EventServer {
             case .acknowledgeAll:
                 DispatchQueue.main.async { model.value.acknowledgeAll() }
                 return try? Wire.encode(.pong(version: AmbientVersion.current))
-            case let .open(query):
+            case let .open(query, from):
                 let (sessions, _) = snapshot.get()
-                let match = SessionMatcher.find(query, in: sessions)
-                if let match { DispatchQueue.main.async { model.value.open(match) } }
-                return try? Wire.encode(.opened(sessionID: match?.id))
+                if let match = SessionMatcher.find(query, in: sessions) {
+                    DispatchQueue.main.async { model.value.open(match, from: from) }
+                    return try? Wire.encode(.opened(sessionID: match.id))
+                }
+                // Not running any more: its chat usually still is, in its app. Another Mac's board asks for these.
+                guard let query else { return try? Wire.encode(.opened(sessionID: nil)) }
+                let box = ReplyBox<String?>()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    box.value = model.value.openEndedChat(sessionID: query, from: from)?.id
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 2)
+                return try? Wire.encode(.opened(sessionID: box.value ?? nil))
             case .listTasks:
                 return try? Wire.encode(.tasks(snapshot.getTasks()))
             case let .upsertTask(draft):
@@ -61,7 +72,7 @@ final class EventServer {
                 let box = ReplyBox<String?>()
                 let done = DispatchSemaphore(value: 0)
                 DispatchQueue.main.async {
-                    box.value = model.value.openTask(id)?.id
+                    box.value = model.value.openTask(id)
                     done.signal()
                 }
                 _ = done.wait(timeout: .now() + 2)

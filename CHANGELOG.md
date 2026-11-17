@@ -12,6 +12,27 @@
   fingerprints and config paths fold away under Details. Answering permission prompts moved from the notch's pane to
   Alerts, which calls its sounds Chimes. Permission buttons read the same everywhere, status text is easier to read in
   light mode, and VoiceOver reads each switch's explanation.
+- **The task board no longer piles up.** It kept every task forever, and one board reached 4,193 tasks, which every
+  agent event re-sorted and re-saved. A task the agents made now leaves the board three days after
+  its last session ends, and tasks you add yourself stay. The 5,000-task limit per machine now covers this Mac too.
+  A summary that came back after its session ended used to put the task back in *In progress*, where it stayed: 1,030
+  of that board's tasks were stuck like that, and they all counted in the menu's *Task Board (n)*. They're settled when
+  Ambient starts, and so are tasks whose sessions ended while Ambient was closed.
+- **Search the task board**, in the Board window and in Settings › Board. Every word you type has to appear in a
+  task's title, summary, project, folder, agent, machine or column, in any order, ignoring case and accents. A search
+  reaches past the cards a column shows, and Escape clears it.
+- **A card from another Mac opens its chat on that Mac.** Clicking one used to only mark it as seen. Now your Mac
+  asks the other one's Ambient, over the transport you paired it with, to bring the chat forward, by session id: the
+  exact Claude chat or Codex thread, or the project's window. That Mac shows a notification, *Opened from Mac
+  Studio*, so whoever is in front of it knows why. The card says *Opening on Daily…*, then *Opened on Daily*, or why
+  it couldn't: that Mac is unreachable, has no Ambient app (a devbox with only the shim), isn't running Ambient, or no
+  longer has the chat. It works for sessions that have ended too, once both Macs have this version; one from before
+  it still opens running sessions and ignores who asked.
+- **A board card opens its chat after the session ends.** Clicking one used to do nothing once Ambient had let go of
+  its session, which is most of the board. A task now remembers where its last chat was: Claude's desktop app reopens
+  that chat, Codex's app its thread, and a terminal or editor raises the project's window. Only what's still true
+  after the agent exits is kept, never a terminal, pane or process that could be someone else's by then. Tasks from
+  another machine stay as they were, and tasks from before this version can't open until a session touches them again.
 - **Alerts say what the agent needs**: a waiting session leads with what you're asked to do, in one line, on the
   island, in the menu, on the wallpaper and in the notification: *Approve a command · rm -rf build*, *Review a
   change · Session.swift*, *Allow web access · docs.swift.org*, *Review a plan*, *Answer a question · Ship it
