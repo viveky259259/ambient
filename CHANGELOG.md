@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 2026-11-17
 
 - **Ambient speaker**: hear one Mac on another. Settings › Voice & Sound › Ambient Speaker installs a speaker called
   *Ambient*; choose a paired Mac and what plays to Ambient plays there, over UDP, about 380 ms behind on a laptop's
@@ -63,7 +63,7 @@
   app (`ambient mcp`, `ambient memory`) timed out. Settings now shows each column's latest eight cards, with a link to
   the rest in the Task Board window, and lets its views go when it closes. In both boards a card redraws only when its
   task or session changes. `scripts/measure-perf.sh --board TASKS` measures the board with each window open.
-- **Voice sync** (Settings › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
+- **Voice sync** (Settings › Voice & Sound › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
   other Mac as you talk, over the same ssh link as remote agents, with a transcript made on the sending Mac only. Where
   that Mac can't transcribe your language on the device, or you don't allow speech recognition, the voice goes as audio
   only. While you speak, the other Mac's notch shows a waveform; when you stop, it offers Copy Text, Copy Audio and Play
@@ -73,6 +73,9 @@
   new. It reads only what the outbox has gained since the last line it sent, and each outbox has a random epoch, so a
   Mac that comes back to an outbox made anew starts it over instead of skipping its first voices. The menu bar's
   *Record Voice for…* does the same as the shortcut.
+- **Fix**: a voice's transcript kept only what came after the last pause, so Copy Text on the other Mac copied the
+  last few words: a 64-second voice arrived as 7 characters. The speech recognizer starts its transcript over after
+  each pause, and now every stretch is kept, one after the other.
 - **Task board model**: an MLX model you point the board at stays loaded for two minutes between summaries, instead
   of being read from disk for every one (Qwen3.5-9B: 21 seconds for the first summary, half a second for the next).
   Changing the model cancels summaries still waiting for the old one, and quitting Ambient stops the model. GGUF chat
