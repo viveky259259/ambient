@@ -245,6 +245,11 @@ func quoted(_ word: String) -> String { "'" + word.replacingOccurrences(of: "'",
 let udpMagic: UInt32 = 0x414D_5531 // "AMU1"
 // magic, frames: UInt32; sample time: Int64; when it played, when it was sent, the token, its number: UInt64
 let udpHeaderSize = 48
+/// "AMU0": a datagram that only says the sender is still there, with its token at offset 8. It's sent every second,
+/// even while there's no sound, so a player whose ssh connection was lost without closing knows to stop.
+let udpAliveMagic: UInt32 = 0x414D_5530
+/// A player that hears nothing from its sender for this long stops.
+let senderGoneSeconds: UInt64 = 30
 let udpFrames = 128 // 1 KB of sound, so each datagram fits whole in Tailscale's 1,280-byte packets
 
 func inet(_ host: String, _ port: UInt16) -> sockaddr_in? {
@@ -559,6 +564,13 @@ func send(to host: String) -> Never {
                 return
             }
             Thread { hearOverUDP() }.start()
+            Thread { // so the player knows it's still here while there's no sound to send
+                var alive = (udpAliveMagic, UInt32(0), token)
+                while true {
+                    _ = withUnsafeBytes(of: &alive) { Foundation.send(udpSocket, $0.baseAddress, 16, 0) }
+                    Thread.sleep(forTimeInterval: 1)
+                }
+            }.start()
         case "nack" where words.count > 1: // nack FIRST-LAST NUMBER ...: datagrams the player is missing
             resend(words.dropFirst())
             return
@@ -692,8 +704,48 @@ func send(to host: String) -> Never {
             fail("couldn't start the player on \(host) (\(ssh.terminationStatus))")
         }
     }
-    guard AudioDeviceStart(loopback, recording) == noErr else { ssh.terminate(); fail("couldn't start the loopback") }
-    locked(stats) { since = now() }
+    // Recording the loopback lights macOS's microphone indicator, so it records only while something plays to Ambient,
+    // and for 5 seconds after, so the pauses between sounds don't stop it. What plays first is lost while it starts.
+    // While it doesn't record, it keeps telling the speaker how late the other Mac plays, so the next sound doesn't
+    // restart the speaker.
+    let output = device(uid: speakerUID)
+    let control = DispatchQueue(label: "loopback")
+    var recordingLoopback = false, quietSince: Date?, ended = false
+    func playsToAmbient() -> Bool {
+        guard let output else { return true }
+        var place = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(output, &place, 0, nil, &size, &running) != noErr || running != 0
+    }
+    @discardableResult func startRecording() -> Bool { // on `control`
+        quietSince = nil
+        guard !recordingLoopback else { return true }
+        guard AudioDeviceStart(loopback, recording) == noErr else { return false }
+        recordingLoopback = true
+        locked(stats) { since = now() } // it settles again
+        return true
+    }
+    /// Starts or stops recording, as what plays to Ambient starts and stops. On `control`.
+    func follow() {
+        guard !ended else { return }
+        if playsToAmbient() {
+            startRecording()
+        } else if recordingLoopback {
+            if quietSince == nil { quietSince = Date() }
+            if Date().timeIntervalSince(quietSince!) >= 5 {
+                AudioDeviceStop(loopback, recording)
+                recordingLoopback = false
+            }
+        }
+    }
+    if playsToAmbient() {
+        guard control.sync(execute: startRecording) else { ssh.terminate(); fail("couldn't start the loopback") }
+    }
+    if let output { // it starts as soon as something plays, not at the next check
+        var running = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
+        AudioObjectAddPropertyListenerBlock(output, &running, control) { _, _ in follow() }
+    }
     print("Sending what plays to Ambient to \(host)\(udp ? " over UDP" : ""). Pick \"Ambient\" in Sound settings and "
           + "play something; ⌃C stops.")
     fflush(stdout)
@@ -712,6 +764,7 @@ func send(to host: String) -> Never {
         if let seconds, Date().timeIntervalSince(started) >= seconds { break }
         if locked(stats, { appGone }) { break }
         Thread.sleep(forTimeInterval: 0.1)
+        control.sync(execute: follow)
         if let speaker, Date().timeIntervalSince(lastDelay) >= 1 {
             reportDelay(to: speaker)
             lastDelay = Date()
@@ -739,7 +792,11 @@ func send(to host: String) -> Never {
     }
     let closedByUs = ssh.isRunning
     let streamed = Date().timeIntervalSince(started)
-    AudioDeviceStop(loopback, recording)
+    control.sync {
+        ended = true
+        if recordingLoopback { AudioDeviceStop(loopback, recording) }
+        recordingLoopback = false
+    }
     if let speaker { _ = setStreamDelay(speaker, frames: 0) } // it plays here again
     locked(lock) { stopping = true }
     ready.signal()
@@ -910,6 +967,17 @@ final class Placed {
         return (ahead, true)
     }
 
+    /// After a pause in the sound, starts again from the next datagram, as at the start: during the pause, this Mac's
+    /// clock and the sender's drift apart, by up to a few hundred ms an hour.
+    func restart() {
+        locked(lock) {
+            playhead = nil
+            hold = 0
+            nudge = 0
+            lower = 0
+        }
+    }
+
     /// Holds `frames` more from now on, by playing that much silence first.
     func raise(by frames: Int) {
         locked(lock) {
@@ -1077,6 +1145,8 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         _ = line.withCString { send(fd, $0, strlen($0), 0) }
     }
     let began = now()
+    var heard = began // when the sender was last heard from
+    var lastSound: UInt64 = 0 // when the last sound came, not sent again
     var lastEcho: UInt64 = 0, second: UInt64 = 0, quickest = Int64.min, off = 0
     // Datagrams come 128 frames apart, and the speakers take 512 or more at a time, so how far ahead the quickest come
     // moves in steps of 2.7 ms or more: within 3 ms is as close as it gets, or the playhead would be nudged to and fro.
@@ -1092,10 +1162,18 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         if n < 0 {
             if errno == EINTR { continue }
             if errno == EAGAIN || errno == EWOULDBLOCK {
+                // Its ssh connection can be lost without closing, when the other Mac sleeps or its network changes,
+                // and then nothing else would stop this.
+                if now() &- heard > senderGoneSeconds * 1_000_000_000 { return }
                 ask()
                 continue
             }
             return
+        }
+        if n == 16, datagram.load(as: UInt32.self) == udpAliveMagic,
+           datagram.load(fromByteOffset: 8, as: UInt64.self) == token {
+            heard = now()
+            continue
         }
         guard n >= udpHeaderSize, datagram.load(as: UInt32.self) == udpMagic,
               datagram.load(fromByteOffset: 32, as: UInt64.self) == token else { continue }
@@ -1103,6 +1181,10 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         let resent = count & 0x8000_0000 != 0, frames = Int(count & 0x7FFF_FFFF)
         guard frames <= udpFrames, n == udpHeaderSize + frames * bytesPerFrame else { continue }
         if !connected { connected = withSockaddr(&from) { connect(fd, $0, $1) } == 0 } // from now on, only the sender
+        // The sender sends sound only while something plays there, and keeps its clock's time across the pause.
+        if !resent, now() &- lastSound > 1_000_000_000, lastSound != 0 { placed.restart() }
+        if !resent { lastSound = now() }
+        heard = now()
         let sampleTime = datagram.load(fromByteOffset: 8, as: Int64.self)
         let sent = datagram.load(fromByteOffset: 24, as: UInt64.self)
         let (ahead, inTime) = placed.put(datagram + udpHeaderSize, at: sampleTime, frames: frames)
@@ -1338,8 +1420,11 @@ func play() -> Never {
     // Over UDP, the sound comes on a thread of its own, and the end comes as ssh's input closing.
     if let placed {
         let arrivals = Arrivals()
-        Thread { hearUDP(udpSocket, token: token, placed: placed, arrivals: arrivals, resending: resending,
-                            adapting: !held.fixed) }.start()
+        Thread { // it returns once the sender has gone quiet, or the socket fails
+            hearUDP(udpSocket, token: token, placed: placed, arrivals: arrivals, resending: resending,
+                    adapting: !held.fixed)
+            exit(0)
+        }.start()
         Thread {
             let sink = UnsafeMutableRawPointer.allocate(byteCount: 4096, alignment: 16)
             while true {
@@ -1625,6 +1710,10 @@ func micServe() -> Never {
 
 /// Records this Mac's microphone and sends it to `client`, until it goes.
 func lend(to client: Int32, who: String) {
+    // A connection lost without closing stops being read: then a write fails after 5 s, and the microphone goes off,
+    // instead of staying on and lent to a Mac that's gone.
+    var sendTimeout = timeval(tv_sec: 5, tv_usec: 0)
+    setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &sendTimeout, socklen_t(MemoryLayout<timeval>.size))
     guard let input = lentInput() else {
         writeLine(client, "none")
         return
@@ -1673,12 +1762,9 @@ func lend(to client: Int32, who: String) {
     let converted = AVAudioPCMBuffer(pcmFormat: out, frameCapacity: AVAudioFrameCount(maxFrames))!
     var sampleTime: Int64 = 0
     while true {
-        if ready.wait(timeout: .now() + 1) == .timedOut {
-            // Nothing recorded for a second: see whether the other Mac is still there.
-            var byte: UInt8 = 0
-            if recv(client, &byte, 1, MSG_PEEK | MSG_DONTWAIT) == 0 { return }
-            continue
-        }
+        // A microphone that's recording calls back every few milliseconds, silent or not. Nothing for a second means
+        // it's gone, like headphones disconnecting: this ends, and the other Mac connects again to the input there is now.
+        if ready.wait(timeout: .now() + 1) == .timedOut { return }
         let played = now()
         let frames: Int = locked(lock) {
             let frames = count
@@ -1740,12 +1826,25 @@ func micRelay() -> Never {
         while read(0, &byte, 1) > 0 {}
         exit(0)
     }.start()
+    // A write that doesn't finish in 10 s means the ssh connection was lost without closing: it stops, which closes
+    // the socket, so the microphone goes off.
+    let watch = newLock()
+    var writingSince: UInt64 = 0
+    Thread {
+        while true {
+            Thread.sleep(forTimeInterval: 1)
+            let since = locked(watch) { writingSince }
+            if since != 0, now() &- since > 10_000_000_000 { exit(0) }
+        }
+    }.start()
     let buffer = UnsafeMutableRawPointer.allocate(byteCount: 1 << 16, alignment: 16)
     while true {
         let n = read(fd, buffer, 1 << 16)
         if n < 0, errno == EINTR { continue }
         if n <= 0 { break }
+        locked(watch) { writingSince = now() }
         guard writeAll(1, buffer, n) else { break }
+        locked(watch) { writingSince = 0 }
     }
     exit(0)
 }

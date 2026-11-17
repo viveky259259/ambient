@@ -46,6 +46,9 @@ final class MicController: ObservableObject {
     /// Bumped by every start and stop, so a stopped run's late callbacks change nothing.
     private var generation = 0, lendGeneration = 0
     private var retries = 0
+    /// Where the helper was copied on the other Mac, by machine, so starting to record costs one ssh connection, not two.
+    /// Forgotten after any problem, in case it went.
+    private var copied: [String: String] = [:]
     private var problem: (text: String, retries: Bool)?
     /// Ambient Microphone, and the listener that hears an app start or stop recording from it.
     private var watched: (device: AudioObjectID, listener: AudioObjectPropertyListenerBlock)?
@@ -103,6 +106,7 @@ final class MicController: ObservableObject {
         halt()
         use = .off
         detail = nil
+        devicesChanged()
     }
 
     /// Makes Ambient Microphone this Mac's input, which apps that use the input record from.
@@ -112,7 +116,13 @@ final class MicController: ObservableObject {
     }
 
     private func devicesChanged() {
-        let isAmbient = CoreAudioDevices.defaultInput()?.uid == Self.micUID
+        var isAmbient = CoreAudioDevices.defaultInput()?.uid == Self.micUID
+        // Not in use, Ambient Microphone is silent. macOS can still make it the input, as when the input before it goes
+        // away, and then apps would record silence: another input takes its place, if there is one.
+        if isAmbient, !prefs.micUse, let other = CoreAudioDevices.otherInput(than: Self.micUID) {
+            CoreAudioDevices.setDefaultInput(other)
+            isAmbient = false
+        }
         if inputIsAmbient != isAmbient { inputIsAmbient = isAmbient }
         let device = CoreAudioDevices.device(uid: Self.micUID)
         if available != (device != nil) { available = device != nil }
@@ -185,8 +195,9 @@ final class MicController: ObservableObject {
             return
         }
         use = .connecting(machine.label)
+        let known = copied[machine.id]
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let remote = SpeakerController.copy(helper, via: route) else {
+            guard let remote = known ?? SpeakerController.copy(helper, via: route) else {
                 DispatchQueue.main.async { self.stopped(generation: current, reason: "Couldn't reach \(machine.label).") }
                 return
             }
@@ -194,6 +205,7 @@ final class MicController: ObservableObject {
                                     + route.ssh + [route.host])
             DispatchQueue.main.async {
                 guard current == self.generation else { return }
+                self.copied[machine.id] = remote
                 guard run.start(onEvent: { self.heard($0, label: machine.label, generation: current) },
                                 onExit: { self.stopped(generation: current, reason: nil) }) else {
                     self.stopped(generation: current, reason: "Ambient Microphone couldn't start.")
@@ -239,6 +251,7 @@ final class MicController: ObservableObject {
     private func stopped(generation current: Int, reason: String?) {
         guard current == generation, prefs.micUse else { return }
         receiver = nil
+        if reason != nil || problem != nil { copied = [:] }
         let (text, retrying) = problem ?? (reason ?? "The microphone's stream stopped.", true)
         guard retrying else {
             use = .stopped(text)

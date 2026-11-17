@@ -283,7 +283,9 @@ final class SpeakerController: ObservableObject {
         let check = "mkdir -p \(folder) && chmod 700 \(folder) && [ \"$(shasum -a 256 < \(path) 2>/dev/null)\" = \"\(digest)  -\" ]"
         if run(route, check) == 0 { return path }
         // Older helpers go once they've had a week to stop.
-        let install = "cat > \(path).part && chmod 755 \(path).part && mv -f \(path).part \(path)"
+        // Each upload has a file of its own, so the speaker's and the microphone's, at once, don't mix.
+        let part = "\(path).$$.part"
+        let install = "cat > \(part) && chmod 755 \(part) && mv -f \(part) \(path)"
             + " && find \(folder) -name 'ambient-speaker-*' ! -name '\(name)' -mtime +7 -delete"
         guard run(route, install, input: helper) == 0, run(route, check) == 0 else { return nil }
         return path
@@ -448,6 +450,32 @@ enum CoreAudioDevices {
         guard let id = device(uid: uid) else { return }
         setDefault(kAudioHardwarePropertyDefaultInputDevice, to: id)
     }
+
+    /// Another input to record from than `uid`: the built-in one if there is one. Hidden devices aren't counted.
+    static func otherInput(than uid: String) -> AudioObjectID? {
+        var place = address(kAudioHardwarePropertyDevices)
+        var size: UInt32 = 0
+        let system = AudioObjectID(kAudioObjectSystemObject)
+        guard AudioObjectGetPropertyDataSize(system, &place, 0, nil, &size) == noErr else { return nil }
+        var all = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(system, &place, 0, nil, &size, &all) == noErr else { return nil }
+        func number(_ id: AudioObjectID, _ selector: AudioObjectPropertySelector) -> UInt32 {
+            var place = address(selector), value: UInt32 = 0, size = UInt32(MemoryLayout<UInt32>.size)
+            return AudioObjectGetPropertyData(id, &place, 0, nil, &size, &value) == noErr ? value : 0
+        }
+        let inputs = all.filter { id in
+            var streams = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyStreams,
+                                                     mScope: kAudioObjectPropertyScopeInput,
+                                                     mElement: kAudioObjectPropertyElementMain)
+            var bytes: UInt32 = 0
+            return AudioObjectGetPropertyDataSize(id, &streams, 0, nil, &bytes) == noErr && bytes > 0
+                && number(id, kAudioDevicePropertyIsHidden) == 0 && string(id, kAudioDevicePropertyDeviceUID) != uid
+        }
+        return inputs.first { number($0, kAudioDevicePropertyTransportType) == kAudioDeviceTransportTypeBuiltIn }
+            ?? inputs.first
+    }
+
+    static func setDefaultInput(_ id: AudioObjectID) { setDefault(kAudioHardwarePropertyDefaultInputDevice, to: id) }
 
     /// Whether any process records from or plays to the device.
     static func isRunningSomewhere(_ id: AudioObjectID) -> Bool {
