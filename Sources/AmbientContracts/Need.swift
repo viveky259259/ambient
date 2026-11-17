@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// What a session waiting on the user needs from them, as one line: approve a command, review a change, answer a
 /// question. It's the `reason` of `EventKind.needsInput` and `Activity.waiting`. Remote machines, custom agents and
@@ -69,8 +70,8 @@ public enum Need: String, CaseIterable, Sendable {
     /// A permission prompt known only by its text: Claude's "Claude needs your permission to use Bash", or a bare tool
     /// name. The tool decides the need, and the rest of the text says nothing the headline doesn't. Other text is the
     /// detail as it is.
-    static func fromText(_ text: String?) -> (need: Need, detail: String?) {
-        guard let text = Trim.clean(text, max: Limits.message) else { return (.permission, nil) }
+    package static func fromText(_ text: String?) -> (need: Need, detail: String?) {
+        guard let text = Trim.clean(text, max: TextLimits.message) else { return (.permission, nil) }
         let tool: String? = if let r = text.range(of: "permission to use ", options: .caseInsensitive) {
             text[r.upperBound...].trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: ".?!")))
         } else if text.rangeOfCharacter(from: .whitespaces) == nil {
@@ -84,7 +85,7 @@ public enum Need: String, CaseIterable, Sendable {
 
     /// A prompt about a tool known by its name: the need, and the name as the detail when no need fits the tool, as in
     /// *Approve a tool · github · create_pr*.
-    static func named(_ tool: String) -> (need: Need, detail: String?) {
+    package static func named(_ tool: String) -> (need: Need, detail: String?) {
         let need = forTool(tool)
         return (need, need == .permission ? ToolNames.display(tool) : nil)
     }

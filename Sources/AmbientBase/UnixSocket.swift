@@ -160,7 +160,7 @@ public final class UnixSocketServer: @unchecked Sendable {
         }
     }
 
-    static func serve(_ fd: Int32, maxMessageSize: Int, handler: Handler) {
+    package static func serve(_ fd: Int32, maxMessageSize: Int, handler: Handler) {
         defer { close(fd) }
         // Accepted sockets inherit the listener's O_NONBLOCK on macOS; block, bounded by the timeouts,
         // so a reply larger than the send buffer isn't cut off and a slow client isn't dropped.

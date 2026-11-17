@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 public enum TerminalApp: String, Codable, Sendable {
     case terminal, iterm

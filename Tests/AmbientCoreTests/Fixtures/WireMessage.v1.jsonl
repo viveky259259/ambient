@@ -1,0 +1,30 @@
+{"event":{"_0":{"agent":"claude","cwd":"/Users/me/ambient","host":{"agentPid":900,"appServer":false,"bundleId":"com.apple.Terminal","cmuxSocket":"/tmp/cmux.sock","cmuxSurface":"sf-1","cmuxWorkspace":"ws-1","hostSessionId":"host-1","pids":[501,77],"termProgram":"Apple_Terminal","tmuxPane":"%3","tmuxSocket":"/tmp/tmux-501/default","tty":"/dev/ttys004"},"kind":{"toolStarted":{"detail":"swift test","name":"Bash"}},"sessionId":"s-1","timestamp":784900090}}}
+{"event":{"_0":{"agent":"custom","agentName":"Aider","kind":{"promptSubmitted":{}},"sessionId":"aider-7","timestamp":784900000}}}
+{"statusRequest":{}}
+{"status":{"mood":5,"sessions":[{"acknowledged":false,"activity":{"tool":{"detail":"swift test","name":"Bash"}},"activitySince":784900090,"agent":"claude","beforeCompaction":{"thinking":{}},"cwd":"/Users/me/ambient","host":{"agentPid":900,"appServer":false,"bundleId":"com.apple.Terminal","cmuxSocket":"/tmp/cmux.sock","cmuxSurface":"sf-1","cmuxWorkspace":"ws-1","hostSessionId":"host-1","pids":[501,77],"termProgram":"Apple_Terminal","tmuxPane":"%3","tmuxSocket":"/tmp/tmux-501/default","tty":"/dev/ttys004"},"id":"claude:s-1","lastEventAt":784900300,"sessionId":"s-1","subagents":1,"title":"Write fixtures","toolCount":7,"turnStartedAt":784900000},{"acknowledged":true,"activity":{"waiting":{"message":"make test","reason":"command"}},"activitySince":784900000,"agent":"codex","beforeWaiting":{"tool":{"name":"Bash"}},"id":"remote/a1b2c3d4/codex:t-9","lastEventAt":784900000,"origin":{"lastSeq":42,"machine":{"id":"a1b2c3d4","label":"Studio"},"missed":true,"project":"ambient","unreachable":false},"sessionId":"t-9","subagents":0,"toolCount":0,"turnEndedAt":784900300,"turnStartedAt":784900000},{"acknowledged":false,"activity":{"done":{}},"activitySince":784900000,"agent":"custom","agentName":"Aider","id":"custom:aider-7","lastEventAt":784900000,"sessionId":"aider-7","subagents":0,"toolCount":0}]}}
+{"acknowledgeAll":{}}
+{"open":{"query":"ambient"}}
+{"open":{}}
+{"opened":{"sessionID":"claude:s-1"}}
+{"opened":{}}
+{"listTasks":{}}
+{"tasks":{"_0":[{"agents":["claude","codex"],"createdAt":784900000,"cwd":"/Users/me/ambient","id":"task-1","lastSessionId":"claude:s-1","machine":{"id":"a1b2c3d4","label":"Studio"},"manual":false,"project":"ambient","sessionIds":["claude:s-1"],"status":"inProgress","summarizedAt":784900090,"summary":"Golden files","summarySource":"localLLM","title":"Write fixtures","updatedAt":784900300},{"agents":[],"createdAt":784900000,"id":"task-2","manual":false,"sessionIds":[],"status":"backlog","summarySource":"heuristic","title":"Plan phase 2","updatedAt":784900000}]}}
+{"upsertTask":{"_0":{"agents":["claude","codex"],"createdAt":784900000,"cwd":"/Users/me/ambient","id":"task-1","lastSessionId":"claude:s-1","machine":{"id":"a1b2c3d4","label":"Studio"},"manual":false,"project":"ambient","sessionIds":["claude:s-1"],"status":"inProgress","summarizedAt":784900090,"summary":"Golden files","summarySource":"localLLM","title":"Write fixtures","updatedAt":784900300}}}
+{"upsertTaskResult":{"_0":{"agents":[],"createdAt":784900000,"id":"task-2","manual":false,"sessionIds":[],"status":"backlog","summarySource":"heuristic","title":"Plan phase 2","updatedAt":784900000}}}
+{"openTask":{"_0":"task-1"}}
+{"taskModelRequest":{}}
+{"setTaskModel":{"_0":{"enabled":true,"modelPath":"/Volumes/Models/qwen"}}}
+{"taskModel":{"_0":{"enabled":true,"mcpURL":"http://127.0.0.1:5051/mcp","minRefreshSeconds":45,"modelID":"hf:qwen","modelPath":"","modelsVolumePath":"/Volumes/Models","pythonPath":"/usr/bin/python3","readTranscripts":false}}}
+{"taskModelTimedOut":{}}
+{"memory":{"_0":{"write":{"_0":{"description":"Where we are","key":"plan","scope":{"project":{"_0":"/Users/me/ambient"}},"ttlMinutes":60,"untilSessionEnds":true,"value":"phase 1"},"callerPids":[501,77]}}}}
+{"memory":{"_0":{"read":{"key":"plan","project":"/Users/me/ambient"}}}}
+{"memory":{"_0":{"list":{"project":"/Users/me/ambient","scope":{"global":{}}}}}}
+{"memory":{"_0":{"forget":{"key":"plan","project":"/Users/me/ambient","scope":{"project":{"_0":"/Users/me/ambient"}}}}}}
+{"memoryReply":{"_0":{"entries":{"_0":[]}}}}
+{"memoryReply":{"_0":{"failed":{"_0":"No such key"}}}}
+{"ping":{}}
+{"pong":{"version":"0.8.0"}}
+{"permissionRequest":{"_0":{"event":{"agent":"claude","cwd":"/Users/me/ambient","host":{"agentPid":900,"appServer":false,"bundleId":"com.apple.Terminal","cmuxSocket":"/tmp/cmux.sock","cmuxSurface":"sf-1","cmuxWorkspace":"ws-1","hostSessionId":"host-1","pids":[501,77],"termProgram":"Apple_Terminal","tmuxPane":"%3","tmuxSocket":"/tmp/tmux-501/default","tty":"/dev/ttys004"},"kind":{"toolStarted":{"detail":"swift test","name":"Bash"}},"sessionId":"s-1","timestamp":784900090},"hint":"swift test","id":"ask-1","toolName":"Bash"}}}
+{"permissionAnswer":{"_0":"allow"}}
+{"permissionAnswer":{"_0":"deny"}}
+{"permissionAnswer":{"_0":"ask"}}

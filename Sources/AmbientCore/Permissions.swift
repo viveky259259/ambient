@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Answering permission prompts from the island. Off unless the user turns it on, and kept in ~/.ambient so
 /// the app and the CLI, which installs the hooks, agree on it.

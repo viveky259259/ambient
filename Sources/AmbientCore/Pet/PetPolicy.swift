@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// What the pet acts out: the most urgent session's state, or sleep when nothing needs showing.
 public enum PetPose: CaseIterable, Equatable, Sendable {

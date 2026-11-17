@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// When Ambient interrupts: notifications and sounds are for moments that need the user.
 public enum AlertPolicy {
@@ -29,12 +31,10 @@ public enum AlertPolicy {
         }
     }
 
-    public static let attentionMoods: Set<Mood> = [.waiting, .done, .error]
-
     public static func decide(_ t: SessionChange, settings: Settings, hostIsFrontmost: Bool) -> Alert? {
         guard !t.removed, !settings.quiet, !hostIsFrontmost, t.session.origin?.missed != true else { return nil }
         let mood = t.session.mood
-        guard attentionMoods.contains(mood), mood != t.previousMood else { return nil }
+        guard mood.wantsAttention, mood != t.previousMood else { return nil }
         if mood == .done, (t.session.turnDuration ?? 0) < settings.doneThreshold { return nil }
         guard settings.notifications || settings.sounds else { return nil }
         return Alert(mood: mood, notify: settings.notifications, sound: settings.sounds)
@@ -61,22 +61,6 @@ public enum IslandPolicy {
         case .done, .error: return 5
         case .working, .idle: return nil
         }
-    }
-}
-
-public struct RGB: Equatable, Sendable {
-    public let r, g, b: Double
-
-    public init(r: Double, g: Double, b: Double) {
-        self.r = r
-        self.g = g
-        self.b = b
-    }
-
-    public init(hex: String) {
-        let digits = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
-        let v = UInt32(digits, radix: 16) ?? 0
-        self.init(r: Double((v >> 16) & 0xFF) / 255, g: Double((v >> 8) & 0xFF) / 255, b: Double(v & 0xFF) / 255)
     }
 }
 
@@ -135,14 +119,6 @@ public struct GlowStyle: Equatable, Sendable {
         case .done: return GlowStyle(color: color, low: 0.75, high: 0.75, period: nil)
         case .error: return GlowStyle(color: color, low: 0.6, high: 0.6, period: nil)
         }
-    }
-}
-
-extension RGB {
-    /// A straight mix toward `other`; `t` is clamped to 0...1.
-    public func mixed(with other: RGB, _ t: Double) -> RGB {
-        let t = min(1, max(0, t))
-        return RGB(r: r + (other.r - r) * t, g: g + (other.g - g) * t, b: b + (other.b - b) * t)
     }
 }
 

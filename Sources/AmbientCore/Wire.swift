@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// Messages between the `ambient` CLI and the app: one JSON object per line, one message per connection.
 public enum WireMessage: Codable, Equatable, Sendable {

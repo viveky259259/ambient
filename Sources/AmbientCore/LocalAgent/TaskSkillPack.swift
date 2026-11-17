@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 /// On-device few-shot pack that teaches the local board summarizer better titles/summaries.
 ///

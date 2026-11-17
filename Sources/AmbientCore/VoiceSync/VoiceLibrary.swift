@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// One voice, sent or received, as the library keeps it.
 public struct VoiceRecord: Codable, Equatable, Identifiable, Sendable {

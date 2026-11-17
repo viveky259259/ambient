@@ -1,0 +1,12 @@
+[
+  {
+    "agent" : "claude",
+    "at" : 784900090,
+    "outcome" : "done"
+  },
+  {
+    "agent" : "cursor",
+    "at" : 784900300,
+    "outcome" : "failed"
+  }
+]

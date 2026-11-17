@@ -69,6 +69,12 @@
   though the write still landed. A write or forget that does time out now says it may still go through.
 - **Fix**: a client that gave up before Ambient got to it, while the app was stopped or busy, no longer ends the app:
   replying to it raised SIGPIPE.
+- **For developers**: the first two libraries split out of `AmbientCore` are their own products. `AmbientBase` holds
+  utilities (JSON, the Unix socket, paths, text trimming, the Keychain), and `AmbientContracts` the types every
+  module shares (events, sessions, tasks, needs, remote events). `AmbientCore` still re-exports both, so code that
+  imports it builds unchanged. Golden-file tests now pin every format Ambient saves or sends: `state.json`,
+  `tasks.json`, `day.json`, the CLI's socket messages, and the lines `ambient-remote` writes. Nothing changes for
+  people using the app.
 
 ## 0.8.0 — 2026-11-03
 

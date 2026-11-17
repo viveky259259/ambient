@@ -6,7 +6,7 @@
 #   scripts/check-site.sh 0.2.2      a specific version
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION=${1:-$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)}
+VERSION=${1:-$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)}
 fail() { echo "site: $1" >&2; exit 1; }
 
 grep -q "Ambient-$VERSION.dmg" site/index.html || fail "index.html doesn't link Ambient-$VERSION.dmg."

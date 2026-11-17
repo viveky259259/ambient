@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Tasks saved under `~/.ambient/tasks.json`.
 public enum TaskFile {

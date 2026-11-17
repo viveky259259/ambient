@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 SIGN_ID=${SIGN_ID:-$(security find-identity -v -p codesigning | awk '/Developer ID Application/ { print $2; exit }')}
 NOTARY_PROFILE=${NOTARY_PROFILE:-ambient-notary}
-VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)
 [[ -n $SIGN_ID ]] || { echo "No Developer ID Application identity found. Set SIGN_ID." >&2; exit 1; }
 
 swift test

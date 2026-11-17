@@ -1,0 +1,21 @@
+[
+  {
+    "agent" : "codex",
+    "at" : 784900090,
+    "kind" : "neededYou",
+    "machine" : "a1b2c3d4",
+    "place" : "Codex on Studio"
+  },
+  {
+    "agent" : "claude",
+    "at" : 784900300,
+    "kind" : "done",
+    "place" : "Write fixtures"
+  },
+  {
+    "agent" : "gemini",
+    "at" : 784900300,
+    "kind" : "failed",
+    "place" : "ambient"
+  }
+]

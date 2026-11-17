@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Where a scene is drawn. The lock screen has its own clock and is readable by anyone nearby.
 public enum SceneSurface: Sendable {

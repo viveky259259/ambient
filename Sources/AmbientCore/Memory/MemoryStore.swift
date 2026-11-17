@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Why a memory request was turned down, in words an agent can act on.
 public struct MemoryError: Error, Equatable, LocalizedError {
@@ -149,7 +151,7 @@ public final class MemoryStore {
     /// Removes expired entries, and session-bound ones whose agent has exited. By the process, not the session
     /// list: the island drops a session that's idle for two hours, while its agent may still be running.
     @discardableResult
-    public func sweep(now: Date = Date(), isAlive: (Int32) -> Bool = SessionStore.processExists) -> [MemoryEntry] {
+    public func sweep(now: Date = Date(), isAlive: (Int32) -> Bool = ProcessProbe.isAlive) -> [MemoryEntry] {
         remove { entry in
             if entry.isExpired(at: now) { return true }
             guard entry.untilSessionEnds, let pid = entry.author?.agentPid else { return false }

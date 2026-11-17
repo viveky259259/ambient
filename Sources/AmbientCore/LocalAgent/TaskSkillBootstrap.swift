@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// One-shot Anthropic bootstrap that writes `~/.ambient/task-skill.json` for the local summarizer.
 ///
