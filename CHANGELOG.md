@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Ambient Microphone**: use one Mac's microphone on another. Settings › Voice & Sound › Ambient Microphone adds an
+  input called *Ambient Microphone*: choose a paired Mac, and apps here that record from it hear that Mac's
+  microphone. The other Mac's microphone is on only while an app here records, and that Mac lends it only when its
+  own Settings say so (*Lend this Mac's microphone*), while Ambient runs there. It works either way round, and it
+  comes with the Ambient speaker's driver, so a Mac that has the speaker updates the driver once.
+
 ## 0.9.0 — 2026-11-17
 
 - **Ambient speaker**: hear one Mac on another. Settings › Voice & Sound › Ambient Speaker installs a speaker called

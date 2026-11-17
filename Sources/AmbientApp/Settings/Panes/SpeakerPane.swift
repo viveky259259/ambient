@@ -32,9 +32,9 @@ struct SpeakerPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             SettingsSection(header: "Send", footer: "⏯ on the other Mac plays and pauses here.") {
-                SettingsRow(title: "Ambient speaker", subtitle: driverNote?.text, subtitleStatus: driverNote?.kind ?? .neutral) {
-                    driverControl
-                }
+                AmbientDriverRow(speaker: speaker, title: "Ambient speaker",
+                                 adds: "Adds Ambient to this Mac's outputs. macOS asks for your password, and the sound "
+                                     + "stops for a moment.")
                 SettingsDivider()
                 SettingsRow(title: "Microphone", subtitle: "Picks up only what plays to the Ambient speaker.") {
                     PermissionControl(allowed: microphone, ask: {
@@ -147,12 +147,24 @@ struct SpeakerPane: View {
             return (reason, .warning)
         }
     }
+}
 
-    private var driverNote: (text: String, kind: Theme.Status)? {
+/// The driver that adds the Ambient speaker and Ambient Microphone, which both tabs install, update and remove.
+struct AmbientDriverRow: View {
+    @ObservedObject var speaker: SpeakerController
+    let title: String
+    /// What installing it does, said before it's installed.
+    let adds: String
+
+    var body: some View {
+        SettingsRow(title: title, subtitle: note?.text, subtitleStatus: note?.kind ?? .neutral) { control }
+    }
+
+    private var note: (text: String, kind: Theme.Status)? {
         switch speaker.driver {
-        case .unavailable: ("This copy of Ambient doesn't come with the speaker.", .neutral)
-        case .missing: ("Adds Ambient to this Mac's outputs. macOS asks for your password, and the sound stops for a moment.", .neutral)
-        case .outdated: ("A newer Ambient speaker comes with this version of Ambient.", .warning)
+        case .unavailable: ("This copy of Ambient doesn't come with it.", .neutral)
+        case .missing: (adds, .neutral)
+        case .outdated: ("A newer version comes with this version of Ambient.", .warning)
         case .installing: ("Installing… Enter your password in the macOS prompt. The sound stops for a moment.", .neutral)
         case .removing: ("Removing…", .neutral)
         case .failed(let message, _): (message, .error)
@@ -160,7 +172,7 @@ struct SpeakerPane: View {
         }
     }
 
-    @ViewBuilder private var driverControl: some View {
+    @ViewBuilder private var control: some View {
         switch speaker.driver {
         case .unavailable: StatusBadge("Not included", .neutral)
         case .missing: Button("Install…") { speaker.install() }.buttonStyle(.pillProminent)
@@ -171,13 +183,13 @@ struct SpeakerPane: View {
             HStack(spacing: Theme.Space.xs) {
                 StatusBadge("Installed", .success)
                 Menu {
-                    Button("Remove Ambient Speaker…", role: .destructive) { speaker.remove() }
+                    Button("Remove Ambient Speaker and Microphone…", role: .destructive) { speaker.remove() }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .accessibilityLabel("Actions for the Ambient speaker")
+                .accessibilityLabel("Actions for \(title)")
             }
         }
     }

@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var voiceShortcuts = ShortcutCenter(prefs: prefs, key: \.voiceSyncShortcut, fallback: { .controlOptionV })
     private lazy var nowPlaying = NowPlaying(speech: speech)
     private lazy var speaker = SpeakerController(prefs: prefs, paths: paths)
+    private lazy var mic = MicController(prefs: prefs, paths: paths)
     private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
@@ -67,6 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.remote = remote
         // Plays on the Mac it played on when Ambient quit.
         speaker.resume()
+        // Lends this Mac's microphone, and uses another's, as it did when Ambient quit.
+        mic.resume()
 
         let notifier = Notifier(model: model, prefs: prefs)
         notifier.start()
@@ -154,6 +157,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.saveNow()
         voiceSync.quit()
         speaker.quit()
+        mic.quit()
         remote?.stop()
         server?.stop()
         kokoro?.shutDown()
@@ -174,7 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let setup = SetupModel(paths: paths, notifier: notifier)
             let view = SettingsView(setup: setup, prefs: prefs, model: model, remote: remote, wallpaper: wallpaper,
                                     speech: speech, voicePack: voicePack, shortcuts: shortcuts,
-                                    voiceSync: voiceSync, voiceShortcuts: voiceShortcuts, speaker: speaker,
+                                    voiceSync: voiceSync, voiceShortcuts: voiceShortcuts, speaker: speaker, mic: mic,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in

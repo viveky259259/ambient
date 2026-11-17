@@ -126,6 +126,7 @@ static OSStatus Set(AudioObjectID object, AudioObjectPropertySelector selector, 
 #pragma mark - Tests
 
 static AudioObjectID speaker, loopback, speakerStream, loopbackStream, volume, mute;
+static AudioObjectID mic, micStream, feed, feedStream;
 
 static void TestLoading(void) {
     CFUUIDRef other = CFUUIDCreate(NULL);
@@ -145,10 +146,12 @@ static void TestLoading(void) {
 
 static void TestObjects(void) {
     AudioObjectID devices[4];
-    CHECK(List(kAudioObjectPlugInObject, kAudioPlugInPropertyDeviceList, kGlobal, devices, 4) == 2);
+    CHECK(List(kAudioObjectPlugInObject, kAudioPlugInPropertyDeviceList, kGlobal, devices, 4) == 4);
     speaker = DeviceFor(CFSTR("com.viveky259259.Ambient.speaker"));
     loopback = DeviceFor(CFSTR("com.viveky259259.Ambient.speaker.loopback"));
-    CHECK(speaker == devices[0] && loopback == devices[1]);
+    mic = DeviceFor(CFSTR("com.viveky259259.Ambient.microphone"));
+    feed = DeviceFor(CFSTR("com.viveky259259.Ambient.microphone.feed"));
+    CHECK(speaker == devices[0] && loopback == devices[1] && mic == devices[2] && feed == devices[3]);
     CHECK(DeviceFor(CFSTR("BuiltInSpeakerDevice")) == kAudioObjectUnknown);
 
     // The speaker is a speaker anyone can pick. The loopback is hidden, and only records.
@@ -170,9 +173,33 @@ static void TestObjects(void) {
     CHECK(U32(speakerStream, kAudioStreamPropertyDirection, kGlobal) == 0);
     CHECK(U32(loopbackStream, kAudioStreamPropertyDirection, kGlobal) == 1);
 
+    // The microphone is a microphone anyone can pick. Its feed is hidden, and only plays.
+    CHECK(IsString(mic, kAudioObjectPropertyName, CFSTR("Ambient Microphone")));
+    CHECK(U32(mic, kAudioDevicePropertyIsHidden, kGlobal) == 0);
+    CHECK(U32(mic, kAudioDevicePropertyDeviceCanBeDefaultDevice, kInput) == 1);
+    CHECK(U32(mic, kAudioDevicePropertyDeviceCanBeDefaultDevice, kOutput) == 0);
+    CHECK(U32(speaker, kAudioDevicePropertyDeviceCanBeDefaultDevice, kInput) == 0);
+    CHECK(U32(mic, kAudioDevicePropertyDeviceCanBeDefaultSystemDevice, kInput) == 0);
+    CHECK(U32(feed, kAudioDevicePropertyIsHidden, kGlobal) == 1);
+    CHECK(U32(feed, kAudioDevicePropertyDeviceCanBeDefaultDevice, kOutput) == 0);
+    CHECK(List(mic, kAudioDevicePropertyStreams, kOutput, streams, 4) == 0);
+    CHECK(List(mic, kAudioDevicePropertyStreams, kInput, streams, 4) == 1);
+    micStream = streams[0];
+    CHECK(List(feed, kAudioDevicePropertyStreams, kInput, streams, 4) == 0);
+    CHECK(List(feed, kAudioDevicePropertyStreams, kOutput, streams, 4) == 1);
+    feedStream = streams[0];
+    CHECK(U32(micStream, kAudioStreamPropertyDirection, kGlobal) == 1);
+    CHECK(U32(micStream, kAudioStreamPropertyTerminalType, kGlobal) == kAudioStreamTerminalTypeMicrophone);
+    CHECK(U32(feedStream, kAudioStreamPropertyDirection, kGlobal) == 0);
+    CHECK(U32(mic, kAudioDevicePropertyClockDomain, kGlobal) == U32(feed, kAudioDevicePropertyClockDomain, kGlobal));
+    CHECK(U32(mic, kAudioDevicePropertyLatency, kInput) == 0);
+    CHECK(!Has(mic, 0x61446C79, kGlobal)); // the speaker's delay is the speaker's alone
+
     AudioObjectID controls[4];
     CHECK(List(speaker, kAudioObjectPropertyControlList, kGlobal, controls, 4) == 2);
     CHECK(List(loopback, kAudioObjectPropertyControlList, kGlobal, controls + 2, 2) == 0);
+    CHECK(List(mic, kAudioObjectPropertyControlList, kGlobal, controls + 2, 2) == 0);
+    CHECK(List(feed, kAudioObjectPropertyControlList, kGlobal, controls + 2, 2) == 0);
     for (int i = 0; i < 2; i++) {
         UInt32 class = U32(controls[i], kAudioObjectPropertyClass, kGlobal);
         if (class == kAudioVolumeControlClassID) volume = controls[i];
@@ -191,7 +218,8 @@ static void TestObjects(void) {
     CHECK(size == sizeof(AudioObjectID) && owned[0] == volume);
 
     // Everything says who owns it, and its owner lists it.
-    AudioObjectID all[] = { speaker, loopback, speakerStream, loopbackStream, volume, mute };
+    AudioObjectID all[] = { speaker, loopback, speakerStream, loopbackStream, volume, mute, mic, micStream, feed,
+                            feedStream };
     for (size_t i = 0; i < sizeof all / sizeof all[0]; i++) {
         AudioObjectID owner = U32(all[i], kAudioObjectPropertyOwner, kGlobal);
         UInt32 n = List(owner, kAudioObjectPropertyOwnedObjects, kGlobal, owned, 4);
@@ -229,7 +257,7 @@ static void TestEveryProperty(void) {
     static const AudioObjectPropertyScope scopes[] = { kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput,
                                                        kAudioObjectPropertyScopeOutput };
     int answered = 0;
-    for (AudioObjectID object = kAudioObjectPlugInObject; object <= 7; object++) {
+    for (AudioObjectID object = kAudioObjectPlugInObject; object <= 11; object++) {
         for (size_t s = 0; s < sizeof selectors / sizeof selectors[0]; s++) {
             for (size_t c = 0; c < 3; c++) {
                 if (!Has(object, selectors[s], scopes[c])) continue;
@@ -401,19 +429,22 @@ static void TestStreamDelay(void) {
 
 enum { kFrames = 512, kRing = 16384 };
 
-static void Play(Float64 sampleTime, const Float32* frames) {
+static void PlayTo(AudioObjectID device, AudioObjectID stream, Float64 sampleTime, const Float32* frames) {
     AudioServerPlugInIOCycleInfo cycle = { .mNominalIOBufferFrameSize = kFrames };
     cycle.mOutputTime.mSampleTime = sampleTime;
-    CHECK(D->DoIOOperation(driver, speaker, speakerStream, 0, kAudioServerPlugInIOOperationWriteMix, kFrames, &cycle,
+    CHECK(D->DoIOOperation(driver, device, stream, 0, kAudioServerPlugInIOOperationWriteMix, kFrames, &cycle,
                            (void*)frames, NULL) == noErr);
 }
 
-static void Record(Float64 sampleTime, Float32* frames) {
+static void RecordFrom(AudioObjectID device, AudioObjectID stream, Float64 sampleTime, Float32* frames) {
     AudioServerPlugInIOCycleInfo cycle = { .mNominalIOBufferFrameSize = kFrames };
     cycle.mInputTime.mSampleTime = sampleTime;
-    CHECK(D->DoIOOperation(driver, loopback, loopbackStream, 0, kAudioServerPlugInIOOperationReadInput, kFrames, &cycle,
+    CHECK(D->DoIOOperation(driver, device, stream, 0, kAudioServerPlugInIOOperationReadInput, kFrames, &cycle,
                            frames, NULL) == noErr);
 }
+
+static void Play(Float64 sampleTime, const Float32* frames) { PlayTo(speaker, speakerStream, sampleTime, frames); }
+static void Record(Float64 sampleTime, Float32* frames) { RecordFrom(loopback, loopbackStream, sampleTime, frames); }
 
 /// The largest difference between what was recorded and what was played times `gain`.
 static Float32 Error(const Float32* played, const Float32* recorded, Float32 gain) {
@@ -492,6 +523,63 @@ static void TestLoopback(void) {
     CHECK(D->StopIO(driver, loopback, 0) == noErr);
 }
 
+static void TestMicrophone(void) {
+    Boolean will = false, inPlace = false;
+    CHECK(D->WillDoIOOperation(driver, feed, 0, kAudioServerPlugInIOOperationWriteMix, &will, &inPlace) == noErr);
+    CHECK(will);
+    CHECK(D->WillDoIOOperation(driver, mic, 0, kAudioServerPlugInIOOperationReadInput, &will, &inPlace) == noErr);
+    CHECK(will);
+    CHECK(D->WillDoIOOperation(driver, mic, 0, kAudioServerPlugInIOOperationWriteMix, &will, &inPlace) == noErr);
+    CHECK(!will);
+
+    CHECK(D->StartIO(driver, feed, 0) == noErr);
+    CHECK(D->StartIO(driver, mic, 0) == noErr);
+    CHECK(D->StartIO(driver, speaker, 0) == noErr);
+    CHECK(D->StartIO(driver, loopback, 0) == noErr);
+    CHECK(U32(mic, kAudioDevicePropertyDeviceIsRunning, kGlobal) == 1);
+
+    Float32 voice[kFrames * 2], music[kFrames * 2], recorded[kFrames * 2];
+    for (int i = 0; i < kFrames; i++) {
+        voice[i * 2] = voice[i * 2 + 1] = 0.3f * sinf(2 * (float)M_PI * 440 * i / 48000);
+        music[i * 2] = music[i * 2 + 1] = 0.6f * sinf(2 * (float)M_PI * 997 * i / 48000);
+    }
+    // The speaker's volume is the speaker's: the microphone comes through as the feed plays it.
+    Float32 half = 0.5f, full = 1;
+    CHECK(Set(volume, kAudioLevelControlPropertyScalarValue, sizeof half, &half) == noErr);
+
+    // What plays to the feed comes out of the microphone at the same sample time, and the two pairs keep apart.
+    Float64 t = 3.0 * kRing - 50;
+    PlayTo(feed, feedStream, t, voice);
+    Play(t, music);
+    RecordFrom(mic, micStream, t, recorded);
+    CHECK(Error(voice, recorded, 1) == 0);
+    Record(t, recorded);
+    CHECK(Error(music, recorded, 0.25f) < 1e-7f);
+    CHECK(Set(volume, kAudioLevelControlPropertyScalarValue, sizeof full, &full) == noErr);
+
+    // The speaker restarting for a new delay leaves the microphone alone.
+    CHECK(D->PerformDeviceConfigurationChange(driver, speaker, 0, NULL) == noErr);
+    RecordFrom(mic, micStream, t, recorded);
+    CHECK(Error(voice, recorded, 1) == 0);
+
+    // Once the feed stops, the microphone hears silence rather than the last third of a second again.
+    CHECK(D->StopIO(driver, feed, 0) == noErr);
+    RecordFrom(mic, micStream, t, recorded);
+    CHECK(Error(voice, recorded, 0) == 0);
+    // And when it starts again, nothing from before it stopped is left.
+    PlayTo(feed, feedStream, t, voice);
+    CHECK(D->StartIO(driver, feed, 0) == noErr);
+    RecordFrom(mic, micStream, t, recorded);
+    CHECK(Error(voice, recorded, 0) == 0);
+
+    CHECK(D->StopIO(driver, feed, 0) == noErr);
+    CHECK(D->StopIO(driver, mic, 0) == noErr);
+    CHECK(D->StopIO(driver, speaker, 0) == noErr);
+    CHECK(D->StopIO(driver, loopback, 0) == noErr);
+    CHECK(U32(mic, kAudioDevicePropertyDeviceIsRunning, kGlobal) == 0);
+    CHECK(D->StopIO(driver, mic, 0) == kAudioHardwareIllegalOperationError);
+}
+
 int main(void) {
     TestLoading();
     TestObjects();
@@ -499,6 +587,7 @@ int main(void) {
     TestSettings();
     TestStreamDelay();
     TestLoopback();
+    TestMicrophone();
     if (failures) {
         fprintf(stderr, "%d failed\n", failures);
         return 1;

@@ -48,8 +48,7 @@ final class SpeakerController: ObservableObject {
 
     private let prefs: Preferences
     private let paths: AmbientPaths
-    private var process: Process?
-    private var input: Pipe?
+    private var running: HelperRun?
     /// Bumped by every start and stop, so a stopped stream's late callbacks change nothing.
     private var generation = 0
     private var retries = 0
@@ -62,7 +61,7 @@ final class SpeakerController: ObservableObject {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    private static var helper: URL? {
+    static var helper: URL? {
         let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ambient-speaker")
         return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
     }
@@ -172,8 +171,8 @@ final class SpeakerController: ObservableObject {
         steps += " && (killall coreaudiod || true)"
         defer { if let stage { try? FileManager.default.removeItem(at: stage) } }
         let why = install
-            ? "Ambient needs your password to add the Ambient speaker to this Mac's sound outputs."
-            : "Ambient needs your password to remove the Ambient speaker from this Mac's sound outputs."
+            ? "Ambient needs your password to add its speaker and microphone to this Mac's sound devices."
+            : "Ambient needs your password to remove its speaker and microphone from this Mac's sound devices."
         let osascript = Process()
         osascript.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         osascript.arguments = ["-e", "do shell script \"\(steps)\" with prompt \"\(why)\" with administrator privileges"]
@@ -230,11 +229,8 @@ final class SpeakerController: ObservableObject {
     private func halt() {
         generation += 1
         // Its input closing stops it cleanly: the player plays what it holds, and the speaker's delay goes back to none.
-        try? input?.fileHandleForWriting.close()
-        let stopping = process
-        process = nil
-        input = nil
-        DispatchQueue.global().asyncAfter(deadline: .now() + 3) { if stopping?.isRunning == true { stopping?.terminate() } }
+        running?.stop()
+        running = nil
     }
 
     private func launch() {
@@ -279,7 +275,7 @@ final class SpeakerController: ObservableObject {
     /// Copies the helper to the other Mac, into a folder only this user can write to, named by its contents. It's
     /// copied only when the copy there isn't this exact helper, by its hash, and written beside it and renamed over it,
     /// so a copy that's running keeps going and a half-written one is never run. Returns where it is.
-    private static func copy(_ helper: URL, via route: Route) -> String? {
+    static func copy(_ helper: URL, via route: Route) -> String? {
         guard let data = try? Data(contentsOf: helper) else { return nil }
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let folder = "~/.ambient/speaker", name = "ambient-speaker-\(digest.prefix(12))"
@@ -313,44 +309,17 @@ final class SpeakerController: ObservableObject {
 
     /// Starts the helper, on a background queue. False if it couldn't start; true if it did, or was stopped meanwhile.
     private func run(_ helper: URL, route: Route, remote: String, label: String, generation current: Int) -> Bool {
-        let process = Process()
-        process.executableURL = helper
-        process.arguments = ["send", route.host, "--udp", "--app", "--remote-path", remote, "--"] + route.ssh + [route.host]
-        let input = Pipe(), output = Pipe(), errors = Pipe()
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = errors
+        let run = HelperRun(helper, ["send", route.host, "--udp", "--app", "--remote-path", remote, "--"]
+                                + route.ssh + [route.host])
         var started = false, superseded = false
         DispatchQueue.main.sync {
             guard current == generation else { superseded = true; return }
-            do { try process.run() } catch { return }
-            self.process = process
-            self.input = input
+            guard run.start(onEvent: { self.heard($0, label: label, generation: current) },
+                            onExit: { self.stopped(generation: current, reason: nil) }) else { return }
+            running = run
             started = true
         }
-        guard started else { return superseded }
-        // Everything it says is heard before it's known to have stopped: it has stopped once its output ends.
-        Thread {
-            let reader = output.fileHandleForReading
-            var buffer = Data()
-            while true {
-                let chunk = reader.availableData
-                if chunk.isEmpty { break }
-                buffer.append(chunk)
-                while let newline = buffer.firstIndex(of: 0x0A) {
-                    let line = buffer[buffer.startIndex..<newline]
-                    buffer.removeSubrange(buffer.startIndex...newline)
-                    guard line.first == UInt8(ascii: "{"),
-                          let event = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { continue }
-                    DispatchQueue.main.async { self.heard(event, label: label, generation: current) }
-                }
-            }
-            process.waitUntilExit()
-            DispatchQueue.main.async { self.stopped(generation: current, reason: nil) }
-        }.start()
-        // Standard error isn't read for anything but has to be drained, or a chatty helper would block on it.
-        Thread { _ = errors.fileHandleForReading.readDataToEndOfFile() }.start()
-        return true
+        return started || superseded
     }
 
     private func heard(_ event: [String: Any], label: String, generation current: Int) {
@@ -397,8 +366,7 @@ final class SpeakerController: ObservableObject {
     /// only something here can fix it, which refresh() notices.
     private func stopped(generation current: Int, reason: String?) {
         guard current == generation, prefs.speakerOn else { return }
-        process = nil
-        input = nil
+        running = nil
         let (text, retrying) = problem ?? (reason ?? "The stream stopped.", true)
         guard retrying else {
             stream = .stopped(text)
@@ -469,10 +437,31 @@ enum CoreAudioDevices {
         setDefault(kAudioHardwarePropertyDefaultOutputDevice, to: id)
     }
 
-    private static let outputSelectors = [kAudioHardwarePropertyDefaultOutputDevice,
-                                          kAudioHardwarePropertyDefaultSystemOutputDevice]
+    /// Where this Mac records from.
+    static func defaultInput() -> (uid: String, name: String)? {
+        guard let id = defaultDevice(kAudioHardwarePropertyDefaultInputDevice),
+              let uid = string(id, kAudioDevicePropertyDeviceUID) else { return nil }
+        return (uid, string(id, kAudioObjectPropertyName) ?? uid)
+    }
 
-    /// The device sound and alerts go to, by UID.
+    static func setDefaultInput(uid: String) {
+        guard let id = device(uid: uid) else { return }
+        setDefault(kAudioHardwarePropertyDefaultInputDevice, to: id)
+    }
+
+    /// Whether any process records from or plays to the device.
+    static func isRunningSomewhere(_ id: AudioObjectID) -> Bool {
+        var place = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(id, &place, 0, nil, &size, &running) == noErr && running != 0
+    }
+
+    private static let outputSelectors = [kAudioHardwarePropertyDefaultOutputDevice,
+                                          kAudioHardwarePropertyDefaultSystemOutputDevice,
+                                          kAudioHardwarePropertyDefaultInputDevice]
+
+    /// The devices sound and alerts go to and recording comes from, by UID.
     static func defaultOutputs() -> [AudioObjectPropertySelector: String] {
         var found: [AudioObjectPropertySelector: String] = [:]
         for selector in outputSelectors {
@@ -481,7 +470,7 @@ enum CoreAudioDevices {
         return found
     }
 
-    /// Puts back the outputs `defaultOutputs` found, if they changed and are still there.
+    /// Puts back the devices `defaultOutputs` found, if they changed and are still there.
     static func restore(_ outputs: [AudioObjectPropertySelector: String]) {
         let now = defaultOutputs()
         for (selector, uid) in outputs where now[selector] != uid {

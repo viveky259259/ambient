@@ -106,13 +106,14 @@ enum AppearanceTab: String, SettingsTab {
 }
 
 enum VoiceTab: String, SettingsTab {
-    case readAloud, voiceSync, speaker
+    case readAloud, voiceSync, speaker, microphone
 
     var title: String {
         switch self {
         case .readAloud: "Read Aloud"
         case .voiceSync: "Voice Sync"
         case .speaker: "Ambient Speaker"
+        case .microphone: "Ambient Microphone"
         }
     }
 
@@ -121,6 +122,7 @@ enum VoiceTab: String, SettingsTab {
         case .readAloud: "Select text, press the shortcut, and Ambient reads it aloud."
         case .voiceSync: "Talk on one Mac and paste on another. The voice streams there as you speak."
         case .speaker: "Hear this Mac's sound on another Mac, in step with video here."
+        case .microphone: "Use another Mac's microphone here, as if it were plugged in."
         }
     }
 }

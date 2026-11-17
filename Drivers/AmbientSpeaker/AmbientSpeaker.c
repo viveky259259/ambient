@@ -2,6 +2,9 @@
 // out of a hidden input, "Ambient Loopback", where the app can pick it up and send it to another Mac. The driver can't
 // do that itself: coreaudiod runs it in a sandbox, with no network and no way to reach the app.
 //
+// It also adds "Ambient Microphone", the other way round: what the app plays to a hidden output, "Ambient Microphone
+// Feed", comes out of it, so apps here can record another Mac's microphone.
+//
 // A prototype: one format (48 kHz stereo float) and a volume that isn't saved. Whatever streams the loopback tells the
 // speaker how late the other Mac plays, and the speaker reports that as its latency, so video here waits for its sound.
 
@@ -25,17 +28,23 @@ enum {
     kSpeakerMute,
     kLoopback,          // hidden: carries what's played to the speaker back out
     kLoopbackStream,
+    kMic,               // "Ambient Microphone", in Sound settings: another Mac's microphone
+    kMicStream,
+    kMicFeed,           // hidden: what's played to it comes out of the microphone
+    kMicFeedStream,
 };
 
 #define kSpeakerUID  "com.viveky259259.Ambient.speaker"
 #define kLoopbackUID "com.viveky259259.Ambient.speaker.loopback"
+#define kMicUID      "com.viveky259259.Ambient.microphone"
+#define kMicFeedUID  "com.viveky259259.Ambient.microphone.feed"
 #define kModelUID    "com.viveky259259.Ambient.speaker.model"
 
 static const Float64 kSampleRate = 48000;
 enum { kChannels = 2 };
-/// Frames the speaker can be ahead of the loopback, and the zero time stamp period: about a third of a second.
+/// Frames an output can be ahead of its input, and the zero time stamp period: about a third of a second.
 enum { kRingFrames = 16384 };
-/// Both devices run off one clock, which this names so an aggregate device knows not to correct between them.
+/// Every device runs off one clock, which this names so an aggregate device knows not to correct between them.
 static const UInt32 kClockDomain = 0x616D6269;
 static const Float32 kMinDB = -64, kMaxDB = 0;
 /// The speaker's own property: how late the other Mac plays what the speaker plays, in frames, as a CFNumber.
@@ -52,13 +61,16 @@ static pthread_mutex_t gLock = PTHREAD_MUTEX_INITIALIZER;
 static UInt32 gRefCount;
 static AudioServerPlugInHostRef gHost;
 static Float64 gTicksPerFrame;
-/// Where both devices' time lines start, so the frame the speaker plays at sample time t is the one the loopback
-/// records at t.
+/// Where every device's time line starts, so the frame an output plays at sample time t is the one its input records
+/// at t.
 static UInt64 gAnchor;
-static UInt32 gSpeakerIO, gLoopbackIO;
+/// How many clients run each device's IO, by its object ID.
+static UInt32 gIO[kMicFeedStream + 1];
 static Float32 gVolume = 1;
 static bool gMuted;
-static bool gSpeakerStreamActive = true, gLoopbackStreamActive = true;
+static bool gStreamActive[kMicFeedStream + 1] = {
+    [kSpeakerStream] = true, [kLoopbackStream] = true, [kMicStream] = true, [kMicFeedStream] = true,
+};
 /// Frames: the speaker's latency, as what streams it last said, once the speaker has taken it up.
 static UInt32 gStreamDelay;
 /// Frames: what it last said, which the speaker may not have taken up yet.
@@ -67,7 +79,8 @@ static UInt32 gAskedDelay;
 static dispatch_queue_t gQueue;
 /// The volume and mute together, as the factor each sample is played at.
 static _Atomic float gGain = 1;
-static Float32 gRing[kRingFrames * kChannels];
+/// The speaker's, which the loopback records, and the feed's, which the microphone records.
+static Float32 gRing[kRingFrames * kChannels], gMicRing[kRingFrames * kChannels];
 
 static Float32 Clamp(Float32 v, Float32 lo, Float32 hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -148,7 +161,7 @@ static void SetStreamDelay(UInt32 frames) {
 static void ClearStreamDelay(void* context) {
     (void)context;
     pthread_mutex_lock(&gLock);
-    bool idle = gLoopbackIO == 0;
+    bool idle = gIO[kLoopback] == 0;
     pthread_mutex_unlock(&gLock);
     if (idle) SetStreamDelay(0);
 }
@@ -206,8 +219,8 @@ static OSStatus ReplyList(Request* r, const void* items, UInt32 count, UInt32 it
 static AudioClassID ClassOf(AudioObjectID object) {
     switch (object) {
     case kPlugIn: return kAudioPlugInClassID;
-    case kSpeaker: case kLoopback: return kAudioDeviceClassID;
-    case kSpeakerStream: case kLoopbackStream: return kAudioStreamClassID;
+    case kSpeaker: case kLoopback: case kMic: case kMicFeed: return kAudioDeviceClassID;
+    case kSpeakerStream: case kLoopbackStream: case kMicStream: case kMicFeedStream: return kAudioStreamClassID;
     case kSpeakerVolume: return kAudioVolumeControlClassID;
     case kSpeakerMute: return kAudioMuteControlClassID;
     default: return 0;
@@ -237,22 +250,42 @@ static OSStatus ReplyOwned(Request* r, const AudioObjectID* owned, UInt32 count)
     return ReplyList(r, kept, n, sizeof kept[0]);
 }
 
+static bool IsDevice(AudioObjectID object) {
+    return object == kSpeaker || object == kLoopback || object == kMic || object == kMicFeed;
+}
+
+/// The speaker and the feed play; the loopback and the microphone record.
+static bool IsOutput(AudioObjectID device) { return device == kSpeaker || device == kMicFeed; }
+
+/// Each device has one stream, the object after it.
+static AudioObjectID StreamOf(AudioObjectID device) { return device + 1; }
+
+static CFStringRef UIDOf(AudioObjectID device) {
+    switch (device) {
+    case kSpeaker: return CFSTR(kSpeakerUID);
+    case kLoopback: return CFSTR(kLoopbackUID);
+    case kMic: return CFSTR(kMicUID);
+    default: return CFSTR(kMicFeedUID);
+    }
+}
+
 static OSStatus PlugInProperty(Request* r) {
-    static const AudioObjectID devices[] = { kSpeaker, kLoopback };
+    static const AudioObjectID devices[] = { kSpeaker, kLoopback, kMic, kMicFeed };
     switch (r->address->mSelector) {
     case kAudioObjectPropertyBaseClass: return ReplyU32(r, kAudioObjectClassID);
     case kAudioObjectPropertyClass: return ReplyU32(r, kAudioPlugInClassID);
     case kAudioObjectPropertyOwner: return ReplyU32(r, kAudioObjectUnknown);
     case kAudioObjectPropertyManufacturer: return ReplyString(r, CFSTR("Ambient"));
-    case kAudioObjectPropertyOwnedObjects: return ReplyOwned(r, devices, 2);
-    case kAudioPlugInPropertyDeviceList: return ReplyList(r, devices, 2, sizeof devices[0]);
+    case kAudioObjectPropertyOwnedObjects: return ReplyOwned(r, devices, 4);
+    case kAudioPlugInPropertyDeviceList: return ReplyList(r, devices, 4, sizeof devices[0]);
     case kAudioPlugInPropertyTranslateUIDToDevice: {
         AudioObjectID found = kAudioObjectUnknown;
         if (r->data) {
             if (r->qualifierSize != sizeof(CFStringRef) || !r->qualifier) return kAudioHardwareBadPropertySizeError;
             CFStringRef uid = *(const CFStringRef*)r->qualifier;
-            if (uid && CFEqual(uid, CFSTR(kSpeakerUID))) found = kSpeaker;
-            else if (uid && CFEqual(uid, CFSTR(kLoopbackUID))) found = kLoopback;
+            for (UInt32 i = 0; uid && i < 4 && found == kAudioObjectUnknown; i++) {
+                if (CFEqual(uid, UIDOf(devices[i]))) found = devices[i];
+            }
         }
         return ReplyU32(r, found);
     }
@@ -262,32 +295,36 @@ static OSStatus PlugInProperty(Request* r) {
 }
 
 static OSStatus DeviceProperty(AudioObjectID device, Request* r) {
-    bool speaker = device == kSpeaker;
-    // The speaker only plays and the loopback only records, so each has nothing in the other's scope.
+    bool speaker = device == kSpeaker, output = IsOutput(device);
+    // The visible ones: Sound settings lists them, and they can be the Mac's output or input.
+    bool shown = speaker || device == kMic;
+    // Each device only plays or only records, so it has nothing in the other scope.
     AudioObjectPropertyScope scope = r->address->mScope;
     bool inScope = scope == kAudioObjectPropertyScopeGlobal
-        || scope == (speaker ? kAudioObjectPropertyScopeOutput : kAudioObjectPropertyScopeInput);
+        || scope == (output ? kAudioObjectPropertyScopeOutput : kAudioObjectPropertyScopeInput);
     switch (r->address->mSelector) {
     case kAudioObjectPropertyBaseClass: return ReplyU32(r, kAudioObjectClassID);
     case kAudioObjectPropertyClass: return ReplyU32(r, kAudioDeviceClassID);
     case kAudioObjectPropertyOwner: return ReplyU32(r, kPlugIn);
-    case kAudioObjectPropertyName: return ReplyString(r, speaker ? CFSTR("Ambient") : CFSTR("Ambient Loopback"));
+    case kAudioObjectPropertyName:
+        return ReplyString(r, speaker ? CFSTR("Ambient") : device == kLoopback ? CFSTR("Ambient Loopback")
+                              : device == kMic ? CFSTR("Ambient Microphone") : CFSTR("Ambient Microphone Feed"));
     case kAudioObjectPropertyManufacturer: return ReplyString(r, CFSTR("Ambient"));
     case kAudioObjectPropertyOwnedObjects: {
         static const AudioObjectID speakerOwned[] = { kSpeakerStream, kSpeakerVolume, kSpeakerMute };
-        static const AudioObjectID loopbackOwned[] = { kLoopbackStream };
+        AudioObjectID stream = StreamOf(device);
         if (!inScope) return ReplyOwned(r, NULL, 0);
-        return speaker ? ReplyOwned(r, speakerOwned, 3) : ReplyOwned(r, loopbackOwned, 1);
+        return speaker ? ReplyOwned(r, speakerOwned, 3) : ReplyOwned(r, &stream, 1);
     }
     case kAudioDevicePropertyStreams: {
-        AudioObjectID stream = speaker ? kSpeakerStream : kLoopbackStream;
+        AudioObjectID stream = StreamOf(device);
         return ReplyList(r, &stream, inScope ? 1 : 0, sizeof stream);
     }
     case kAudioObjectPropertyControlList: {
         static const AudioObjectID controls[] = { kSpeakerVolume, kSpeakerMute };
         return ReplyList(r, controls, speaker ? 2 : 0, sizeof controls[0]);
     }
-    case kAudioDevicePropertyDeviceUID: return ReplyString(r, speaker ? CFSTR(kSpeakerUID) : CFSTR(kLoopbackUID));
+    case kAudioDevicePropertyDeviceUID: return ReplyString(r, UIDOf(device));
     case kAudioDevicePropertyModelUID: return ReplyString(r, CFSTR(kModelUID));
     case kAudioDevicePropertyTransportType: return ReplyU32(r, kAudioDeviceTransportTypeVirtual);
     case kAudioDevicePropertyRelatedDevices: return ReplyList(r, &device, 1, sizeof device);
@@ -295,14 +332,14 @@ static OSStatus DeviceProperty(AudioObjectID device, Request* r) {
     case kAudioDevicePropertyDeviceIsAlive: return ReplyU32(r, 1);
     case kAudioDevicePropertyDeviceIsRunning: {
         pthread_mutex_lock(&gLock);
-        UInt32 running = (speaker ? gSpeakerIO : gLoopbackIO) > 0;
+        UInt32 running = gIO[device] > 0;
         pthread_mutex_unlock(&gLock);
         return ReplyU32(r, running);
     }
-    case kAudioDevicePropertyDeviceCanBeDefaultDevice:
+    case kAudioDevicePropertyDeviceCanBeDefaultDevice: return ReplyU32(r, shown && inScope);
     case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: return ReplyU32(r, speaker);
     case kAudioDevicePropertyLatency: {
-        // The speaker plays as late as the other Mac does. The loopback records at once.
+        // The speaker plays as late as the other Mac does. The rest play or record at once.
         pthread_mutex_lock(&gLock);
         UInt32 latency = speaker && inScope ? gStreamDelay : 0;
         pthread_mutex_unlock(&gLock);
@@ -332,7 +369,7 @@ static OSStatus DeviceProperty(AudioObjectID device, Request* r) {
         AudioValueRange rate = { kSampleRate, kSampleRate };
         return ReplyList(r, &rate, 1, sizeof rate);
     }
-    case kAudioDevicePropertyIsHidden: return ReplyU32(r, !speaker);
+    case kAudioDevicePropertyIsHidden: return ReplyU32(r, !shown);
     case kAudioDevicePropertyZeroTimeStampPeriod: return ReplyU32(r, kRingFrames);
     case kAudioDevicePropertyPreferredChannelsForStereo: {
         UInt32 pair[2] = { 1, 2 };
@@ -378,21 +415,23 @@ static bool IsOurFormat(const AudioStreamBasicDescription* f) {
 }
 
 static OSStatus StreamProperty(AudioObjectID stream, Request* r) {
-    bool output = stream == kSpeakerStream;
+    AudioObjectID device = stream - 1;
+    bool output = IsOutput(device);
     switch (r->address->mSelector) {
     case kAudioObjectPropertyBaseClass: return ReplyU32(r, kAudioObjectClassID);
     case kAudioObjectPropertyClass: return ReplyU32(r, kAudioStreamClassID);
-    case kAudioObjectPropertyOwner: return ReplyU32(r, output ? kSpeaker : kLoopback);
+    case kAudioObjectPropertyOwner: return ReplyU32(r, device);
     case kAudioObjectPropertyOwnedObjects: return ReplyOwned(r, NULL, 0);
     case kAudioStreamPropertyIsActive: {
         pthread_mutex_lock(&gLock);
-        UInt32 active = output ? gSpeakerStreamActive : gLoopbackStreamActive;
+        UInt32 active = gStreamActive[stream];
         pthread_mutex_unlock(&gLock);
         return ReplyU32(r, active);
     }
     case kAudioStreamPropertyDirection: return ReplyU32(r, output ? 0 : 1);
     case kAudioStreamPropertyTerminalType:
-        return ReplyU32(r, output ? kAudioStreamTerminalTypeSpeaker : kAudioStreamTerminalTypeLine);
+        return ReplyU32(r, stream == kSpeakerStream ? kAudioStreamTerminalTypeSpeaker
+                           : stream == kMicStream ? kAudioStreamTerminalTypeMicrophone : kAudioStreamTerminalTypeLine);
     case kAudioStreamPropertyStartingChannel: return ReplyU32(r, 1);
     case kAudioStreamPropertyLatency: return ReplyU32(r, 0);
     case kAudioStreamPropertyVirtualFormat:
@@ -455,8 +494,8 @@ static OSStatus ControlProperty(AudioObjectID control, Request* r) {
 static OSStatus Property(AudioObjectID object, Request* r) {
     switch (object) {
     case kPlugIn: return PlugInProperty(r);
-    case kSpeaker: case kLoopback: return DeviceProperty(object, r);
-    case kSpeakerStream: case kLoopbackStream: return StreamProperty(object, r);
+    case kSpeaker: case kLoopback: case kMic: case kMicFeed: return DeviceProperty(object, r);
+    case kSpeakerStream: case kLoopbackStream: case kMicStream: case kMicFeedStream: return StreamProperty(object, r);
     case kSpeakerVolume: case kSpeakerMute: return ControlProperty(object, r);
     default: return kAudioHardwareBadObjectError;
     }
@@ -477,7 +516,7 @@ static bool IsSettable(AudioObjectID object, AudioObjectPropertySelector selecto
     case kSpeakerVolume:
         return selector == kAudioLevelControlPropertyScalarValue || selector == kAudioLevelControlPropertyDecibelValue;
     case kSpeakerMute: return selector == kAudioBooleanControlPropertyValue;
-    case kSpeakerStream: case kLoopbackStream:
+    case kSpeakerStream: case kLoopbackStream: case kMicStream: case kMicFeedStream:
         return selector == kAudioStreamPropertyIsActive || selector == kAudioStreamPropertyVirtualFormat
             || selector == kAudioStreamPropertyPhysicalFormat;
     default: return false;
@@ -543,7 +582,7 @@ static OSStatus SetPropertyData(AudioServerPlugInDriverRef driver, AudioObjectID
         if (dataSize != sizeof(UInt32)) return kAudioHardwareBadPropertySizeError;
         bool active = *(const UInt32*)data != 0;
         pthread_mutex_lock(&gLock);
-        bool* flag = object == kSpeakerStream ? &gSpeakerStreamActive : &gLoopbackStreamActive;
+        bool* flag = &gStreamActive[object];
         bool changed = *flag != active;
         *flag = active;
         pthread_mutex_unlock(&gLock);
@@ -575,25 +614,25 @@ static OSStatus SetPropertyData(AudioServerPlugInDriverRef driver, AudioObjectID
 
 #pragma mark - IO
 
-static bool IsDevice(AudioObjectID object) { return object == kSpeaker || object == kLoopback; }
+/// The ring a device plays into or records from: the speaker's and loopback's, or the feed's and microphone's.
+static Float32* RingOf(AudioObjectID device) { return device == kSpeaker || device == kLoopback ? gRing : gMicRing; }
 
-static void ClearRing(void) { memset(gRing, 0, sizeof gRing); }
+static void ClearRing(Float32* ring) { memset(ring, 0, sizeof gRing); }
 
 static UInt64 Frame(Float64 sampleTime) { return sampleTime > 0 ? (UInt64)sampleTime : 0; }
 
-static void WriteRing(Float64 sampleTime, UInt32 frames, const Float32* in) {
-    Float32 gain = atomic_load_explicit(&gGain, memory_order_relaxed);
+static void WriteRing(Float32* ring, Float64 sampleTime, UInt32 frames, const Float32* in, Float32 gain) {
     UInt64 start = Frame(sampleTime);
     for (UInt32 i = 0; i < frames; i++) {
-        Float32* out = &gRing[((start + i) % kRingFrames) * kChannels];
+        Float32* out = &ring[((start + i) % kRingFrames) * kChannels];
         for (int c = 0; c < kChannels; c++) out[c] = in[(size_t)i * kChannels + c] * gain;
     }
 }
 
-static void ReadRing(Float64 sampleTime, UInt32 frames, Float32* out) {
+static void ReadRing(const Float32* ring, Float64 sampleTime, UInt32 frames, Float32* out) {
     UInt64 start = Frame(sampleTime);
     for (UInt32 i = 0; i < frames; i++) {
-        const Float32* in = &gRing[((start + i) % kRingFrames) * kChannels];
+        const Float32* in = &ring[((start + i) % kRingFrames) * kChannels];
         for (int c = 0; c < kChannels; c++) out[(size_t)i * kChannels + c] = in[c];
     }
 }
@@ -602,13 +641,13 @@ static OSStatus StartIO(AudioServerPlugInDriverRef driver, AudioObjectID device,
     (void)client;
     if (driver != Driver() || !IsDevice(device)) return kAudioHardwareBadObjectError;
     pthread_mutex_lock(&gLock);
-    UInt32* count = device == kSpeaker ? &gSpeakerIO : &gLoopbackIO;
+    UInt32* count = &gIO[device];
     if (*count == UINT32_MAX) {
         pthread_mutex_unlock(&gLock);
         return kAudioHardwareIllegalOperationError;
     }
     // What was left from the last time it played isn't playing now.
-    if (device == kSpeaker && *count == 0) ClearRing();
+    if (IsOutput(device) && *count == 0) ClearRing(RingOf(device));
     ++*count;
     pthread_mutex_unlock(&gLock);
     return noErr;
@@ -618,14 +657,14 @@ static OSStatus StopIO(AudioServerPlugInDriverRef driver, AudioObjectID device, 
     (void)client;
     if (driver != Driver() || !IsDevice(device)) return kAudioHardwareBadObjectError;
     pthread_mutex_lock(&gLock);
-    UInt32* count = device == kSpeaker ? &gSpeakerIO : &gLoopbackIO;
+    UInt32* count = &gIO[device];
     if (*count == 0) {
         pthread_mutex_unlock(&gLock);
         return kAudioHardwareIllegalOperationError;
     }
     bool idle = --*count == 0, delayed = gAskedDelay != 0;
-    // Stopped, it's silent: the loopback mustn't keep hearing the last third of a second over and over.
-    if (idle && device == kSpeaker) ClearRing();
+    // Stopped, it's silent: its input mustn't keep hearing the last third of a second over and over.
+    if (idle && IsOutput(device)) ClearRing(RingOf(device));
     pthread_mutex_unlock(&gLock);
     // Not from here, where the host may be busy with the device.
     if (idle && device == kLoopback && delayed) dispatch_async_f(gQueue, NULL, ClearStreamDelay);
@@ -650,8 +689,8 @@ static OSStatus WillDoIOOperation(AudioServerPlugInDriverRef driver, AudioObject
                                   UInt32 operation, Boolean* outWillDo, Boolean* outWillDoInPlace) {
     (void)client;
     if (driver != Driver() || !IsDevice(device)) return kAudioHardwareBadObjectError;
-    bool will = (device == kSpeaker && operation == kAudioServerPlugInIOOperationWriteMix)
-        || (device == kLoopback && operation == kAudioServerPlugInIOOperationReadInput);
+    bool will = operation == (IsOutput(device) ? kAudioServerPlugInIOOperationWriteMix
+                                               : kAudioServerPlugInIOOperationReadInput);
     if (outWillDo) *outWillDo = will;
     if (outWillDoInPlace) *outWillDoInPlace = true;
     return noErr;
@@ -669,11 +708,13 @@ static OSStatus DoIOOperation(AudioServerPlugInDriverRef driver, AudioObjectID d
     (void)client, (void)secondary;
     if (driver != Driver() || !IsDevice(device)) return kAudioHardwareBadObjectError;
     if (!main || !cycle) return noErr;
-    if (device == kSpeaker && stream == kSpeakerStream && operation == kAudioServerPlugInIOOperationWriteMix) {
-        WriteRing(cycle->mOutputTime.mSampleTime, frames, main);
-    } else if (device == kLoopback && stream == kLoopbackStream
-               && operation == kAudioServerPlugInIOOperationReadInput) {
-        ReadRing(cycle->mInputTime.mSampleTime, frames, main);
+    if (stream != StreamOf(device)) return noErr;
+    if (IsOutput(device) && operation == kAudioServerPlugInIOOperationWriteMix) {
+        // Only the speaker has a volume: what plays to the feed is the other Mac's microphone as it is.
+        Float32 gain = device == kSpeaker ? atomic_load_explicit(&gGain, memory_order_relaxed) : 1;
+        WriteRing(RingOf(device), cycle->mOutputTime.mSampleTime, frames, main, gain);
+    } else if (!IsOutput(device) && operation == kAudioServerPlugInIOOperationReadInput) {
+        ReadRing(RingOf(device), cycle->mInputTime.mSampleTime, frames, main);
     }
     return noErr;
 }
@@ -764,7 +805,7 @@ static OSStatus PerformDeviceConfigurationChange(AudioServerPlugInDriverRef driv
     // The speaker's IO has stopped. What it last wrote would come round again in the loopback, so it goes.
     pthread_mutex_lock(&gLock);
     bool changed = TakeUpStreamDelay();
-    ClearRing();
+    ClearRing(gRing);
     pthread_mutex_unlock(&gLock);
     if (changed) dispatch_async_f(gQueue, NULL, NotifyStreamDelay);
     return noErr;
