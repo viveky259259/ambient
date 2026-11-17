@@ -12,17 +12,17 @@ extension ToolNames {
             return files.first.map { files.count > 1 ? "\($0) +\(files.count - 1) more" : $0 }
         }
         if let command = input.firstString(["command", "cmd", "CommandLine"]) {
-            return Trim.clean(command, max: 80)
+            return Trim.clean(command, max: TextLimits.detail)
         }
         // OpenCode's tools say filePath, and its permission requests filepath.
         if let path = input.firstString(["file_path", "filePath", "filepath", "absolute_path", "notebook_path", "path",
                                          "AbsolutePath", "TargetFile"]) {
-            return Trim.clean(basename(path), max: 80)
+            return Trim.clean(basename(path), max: TextLimits.detail)
         }
         if let url = input.firstString(["url", "Url"]) {
-            return Trim.clean(URL(string: url)?.host ?? url, max: 80)
+            return Trim.clean(URL(string: url)?.host ?? url, max: TextLimits.detail)
         }
-        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt", "Query", "Pattern", "toolAction"]), max: 80)
+        return Trim.clean(input.firstString(["pattern", "query", "description", "prompt", "Query", "Pattern", "toolAction"]), max: TextLimits.detail)
     }
 
     private static func basename(_ path: String) -> String {

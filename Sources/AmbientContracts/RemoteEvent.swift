@@ -1,7 +1,8 @@
 import Foundation
 
-/// One line from a remote machine's spool, after `RemoteEventDecoder` has checked it. Deliberately separate from
-/// `WireMessage`: it has no cases that ask the app to do anything, and nothing converts one into the other.
+/// One line from a remote machine's spool, once checked (AmbientCore's `RemoteEventDecoder` does that). Deliberately
+/// separate from the app's own socket messages: it has no cases that ask the app to do anything, and nothing converts
+/// one into the other.
 public struct RemoteEvent: Equatable, Sendable {
     public enum Kind: String, CaseIterable, Sendable {
         case sessionStarted, promptSubmitted, toolStarted, toolFinished, toolFailed, needsInput
