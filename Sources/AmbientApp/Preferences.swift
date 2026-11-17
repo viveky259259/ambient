@@ -108,6 +108,15 @@ final class Preferences: ObservableObject {
     /// the app's defaults (scripts/speaker-pipe.swift, `receiveSetting`).
     @Published var speakerReceive: Bool { didSet { defaults.set(speakerReceive, forKey: "speakerReceive") } }
 
+    // MARK: - Microphone
+
+    /// The paired machine whose microphone Ambient Microphone is.
+    @Published var micSource: String? { didSet { defaults.set(micSource, forKey: "micSource") } }
+    /// Whether Ambient Microphone uses it: it connects while an app here records from Ambient Microphone.
+    @Published var micUse: Bool { didSet { defaults.set(micUse, forKey: "micUse") } }
+    /// Whether other Macs can use this Mac's microphone, while Ambient runs.
+    @Published var micLend: Bool { didSet { defaults.set(micLend, forKey: "micLend") } }
+
     init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
         self.paths = paths
@@ -204,6 +213,9 @@ final class Preferences: ObservableObject {
         speakerDestination = defaults.string(forKey: "speakerDestination")
         speakerOn = defaults.bool(forKey: "speakerOn")
         speakerReceive = defaults.bool(forKey: "speakerReceive")
+        micSource = defaults.string(forKey: "micSource")
+        micUse = defaults.bool(forKey: "micUse")
+        micLend = defaults.bool(forKey: "micLend")
         taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
     }
 

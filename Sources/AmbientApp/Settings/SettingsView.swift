@@ -15,6 +15,7 @@ struct SettingsView: View {
     let voiceSync: VoiceSyncController
     let voiceShortcuts: ShortcutCenter
     let speaker: SpeakerController
+    let mic: MicController
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
@@ -137,6 +138,7 @@ struct SettingsView: View {
                 case .readAloud: VoicePane(prefs: prefs, voicePack: voicePack, speech: speech, shortcuts: shortcuts)
                 case .voiceSync: VoiceSyncPane(voice: voiceSync, prefs: prefs, shortcuts: voiceShortcuts)
                 case .speaker: SpeakerPane(speaker: speaker, prefs: prefs, model: model)
+                case .microphone: MicrophonePane(mic: mic, speaker: speaker, prefs: prefs, model: model)
                 }
             }
         case .general:

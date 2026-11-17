@@ -25,6 +25,8 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice & Sound.
 - **Ambient speaker** — hear one Mac on another: pick *Ambient* as the output, and what plays there plays on the Mac
   you chose, while video waits for the sound. See [Ambient speaker](#ambient-speaker).
+- **Ambient Microphone** — use one Mac's microphone on another: pick *Ambient Microphone* as the input, and apps
+  hear the Mac you chose. See [Ambient Microphone](#ambient-microphone).
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.
@@ -508,6 +510,21 @@ and holds as much as the network needs, from 30 ms to a second, so a stall costs
 speaker reports how late the other Mac plays as its latency, so a video here waits for its sound; when that changes by
 30 ms or more, the speaker restarts for a moment (about 90 ms of silence) so a player that's already playing follows
 it. Nothing is saved, and there's no server, relay or account.
+
+## Ambient Microphone
+
+Talk into your laptop and have your desktop hear it. Settings › Voice & Sound › Ambient Microphone adds an input called
+*Ambient Microphone*, with the same driver as the speaker. Choose a Mac, turn on **Use its microphone here**, and pick
+Ambient Microphone as the input, in Sound settings or in the app that records. The other Mac lends its microphone only
+if its own Settings say so: **Lend this Mac's microphone**, which is off at first, and only while Ambient runs there.
+Either Mac can lend and use, and the Mac you use it from has to have paired the other, reached by plain ssh.
+
+**How it works.** The other Mac's microphone is on only while an app here records from Ambient Microphone: Ambient
+watches for that, connects over the pairing's ssh, and lets go once no app records. macOS doesn't let a process that
+ssh starts record the microphone, so the Mac that lends it records it in its own Ambient, which serves it on a socket
+in `~/.ambient/speaker` that only you can reach, and ssh carries it from there. The sound comes as the speaker's does,
+48 kHz stereo, and plays to the driver's hidden *Ambient Microphone Feed*, which Ambient Microphone gives back. It's
+held 60 ms, more after the network stalls, up to half a second.
 
 ## Command line
 

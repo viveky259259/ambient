@@ -4,6 +4,9 @@
 //   speaker-pipe send HOST [--udp] [--seconds N] [--app] [PLAY OPTIONS] [-- SSH COMMAND]   here: the loopback, to HOST
 //   speaker-pipe play [--buffer MS] [--window S] [--fixed] [--quiet] [--check HZ]   there: standard input, out loud
 //   speaker-pipe tone [--seconds N] [--hz HZ]               a test tone to the Ambient speaker
+//   speaker-pipe mic-serve [--app]                          here: lends this Mac's microphone to other Macs
+//   speaker-pipe mic-receive HOST [--buffer MS] [--app] [-- SSH COMMAND]   here: HOST's microphone, as Ambient Microphone
+//   speaker-pipe mic-relay [--from NAME]                    there: what mic-serve records, on standard output
 //
 // The sound goes as it is, 48 kHz stereo floats, about 3 Mbit/s. Each packet carries its sample time and when it
 // played here, and the player answers with how much it holds, so the sender can say how late the other Mac's speakers
@@ -34,6 +37,13 @@
 //
 // --app is for the app that runs the sender. It also writes what happens as JSON lines on standard output (every line
 // that starts with "{"), and stops once its standard input closes, so it never outlives the app.
+//
+// The microphone goes the other way. macOS doesn't let a process ssh starts record the microphone, so the Mac that
+// lends it records it in its own Ambient: the app runs mic-serve, which listens on a socket only this user can reach,
+// ~/.ambient/speaker/mic.sock, and records only while a Mac is connected to it. mic-receive runs mic-relay there over
+// ssh, which connects to that socket and passes the sound back, and plays it to the hidden Ambient Microphone Feed, so
+// apps here hear it from Ambient Microphone. It's the same stream as the speaker's: 48 kHz stereo floats, held as the
+// player holds them, from --buffer (60 ms) up to half a second when the network stalls.
 import AVFoundation
 import AudioToolbox
 import CoreAudio
@@ -235,6 +245,11 @@ func quoted(_ word: String) -> String { "'" + word.replacingOccurrences(of: "'",
 let udpMagic: UInt32 = 0x414D_5531 // "AMU1"
 // magic, frames: UInt32; sample time: Int64; when it played, when it was sent, the token, its number: UInt64
 let udpHeaderSize = 48
+/// "AMU0": a datagram that only says the sender is still there, with its token at offset 8. It's sent every second,
+/// even while there's no sound, so a player whose ssh connection was lost without closing knows to stop.
+let udpAliveMagic: UInt32 = 0x414D_5530
+/// A player that hears nothing from its sender for this long stops.
+let senderGoneSeconds: UInt64 = 30
 let udpFrames = 128 // 1 KB of sound, so each datagram fits whole in Tailscale's 1,280-byte packets
 
 func inet(_ host: String, _ port: UInt16) -> sockaddr_in? {
@@ -277,24 +292,29 @@ func resolve(_ host: String, via transport: [String]) -> String? {
     return String(cString: text)
 }
 
-func send(to host: String) -> Never {
-    // The pairing's ssh command, after `--`, without its host: its options come first, ours after them.
-    var transport = ["/usr/bin/ssh"]
-    if let dash = args.firstIndex(of: "--") {
-        let given = Array(args[(dash + 1)...])
-        args.removeSubrange(dash...)
-        guard given.count >= 2, URL(fileURLWithPath: given[0]).lastPathComponent == "ssh", given.last == host else {
-            fail("-- takes an ssh command that ends with \(host)")
-        }
-        transport = Array(given.dropLast())
-        if !transport[0].hasPrefix("/") { transport[0] = "/usr/bin/ssh" }
+/// The pairing's ssh command, after `--`, without its host: its options come first, ours after them.
+func sshTransport(to host: String) -> [String] {
+    guard let dash = args.firstIndex(of: "--") else { return ["/usr/bin/ssh"] }
+    let given = Array(args[(dash + 1)...])
+    args.removeSubrange(dash...)
+    guard given.count >= 2, URL(fileURLWithPath: given[0]).lastPathComponent == "ssh", given.last == host else {
+        fail("-- takes an ssh command that ends with \(host)")
     }
+    var transport = Array(given.dropLast())
+    if !transport[0].hasPrefix("/") { transport[0] = "/usr/bin/ssh" }
+    return transport
+}
+
+/// This Mac's name, as the other Mac shows it.
+func computerName() -> String { SCDynamicStoreCopyComputerName(nil, nil).map { $0 as String } ?? "the other Mac" }
+
+func send(to host: String) -> Never {
+    let transport = sshTransport(to: host)
     let seconds = option("--seconds")
     // Where the player is on the other Mac. The app names its copy by its contents, so it never overwrites a player
     // that's running.
     let playerPath = text("--remote-path") ?? remotePath
-    let here = SCDynamicStoreCopyComputerName(nil, nil).map { $0 as String } ?? "the other Mac"
-    var forwarded = ["--from", quoted(here)]
+    var forwarded = ["--from", quoted(computerName())]
     if let buffer = option("--buffer") { forwarded += ["--buffer", String(buffer)] }
     if let window = option("--window") { forwarded += ["--window", String(window)] }
     if flag("--fixed") { forwarded.append("--fixed") }
@@ -544,6 +564,13 @@ func send(to host: String) -> Never {
                 return
             }
             Thread { hearOverUDP() }.start()
+            Thread { // so the player knows it's still here while there's no sound to send
+                var alive = (udpAliveMagic, UInt32(0), token)
+                while true {
+                    _ = withUnsafeBytes(of: &alive) { Foundation.send(udpSocket, $0.baseAddress, 16, 0) }
+                    Thread.sleep(forTimeInterval: 1)
+                }
+            }.start()
         case "nack" where words.count > 1: // nack FIRST-LAST NUMBER ...: datagrams the player is missing
             resend(words.dropFirst())
             return
@@ -677,8 +704,48 @@ func send(to host: String) -> Never {
             fail("couldn't start the player on \(host) (\(ssh.terminationStatus))")
         }
     }
-    guard AudioDeviceStart(loopback, recording) == noErr else { ssh.terminate(); fail("couldn't start the loopback") }
-    locked(stats) { since = now() }
+    // Recording the loopback lights macOS's microphone indicator, so it records only while something plays to Ambient,
+    // and for 5 seconds after, so the pauses between sounds don't stop it. What plays first is lost while it starts.
+    // While it doesn't record, it keeps telling the speaker how late the other Mac plays, so the next sound doesn't
+    // restart the speaker.
+    let output = device(uid: speakerUID)
+    let control = DispatchQueue(label: "loopback")
+    var recordingLoopback = false, quietSince: Date?, ended = false
+    func playsToAmbient() -> Bool {
+        guard let output else { return true }
+        var place = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(output, &place, 0, nil, &size, &running) != noErr || running != 0
+    }
+    @discardableResult func startRecording() -> Bool { // on `control`
+        quietSince = nil
+        guard !recordingLoopback else { return true }
+        guard AudioDeviceStart(loopback, recording) == noErr else { return false }
+        recordingLoopback = true
+        locked(stats) { since = now() } // it settles again
+        return true
+    }
+    /// Starts or stops recording, as what plays to Ambient starts and stops. On `control`.
+    func follow() {
+        guard !ended else { return }
+        if playsToAmbient() {
+            startRecording()
+        } else if recordingLoopback {
+            if quietSince == nil { quietSince = Date() }
+            if Date().timeIntervalSince(quietSince!) >= 5 {
+                AudioDeviceStop(loopback, recording)
+                recordingLoopback = false
+            }
+        }
+    }
+    if playsToAmbient() {
+        guard control.sync(execute: startRecording) else { ssh.terminate(); fail("couldn't start the loopback") }
+    }
+    if let output { // it starts as soon as something plays, not at the next check
+        var running = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
+        AudioObjectAddPropertyListenerBlock(output, &running, control) { _, _ in follow() }
+    }
     print("Sending what plays to Ambient to \(host)\(udp ? " over UDP" : ""). Pick \"Ambient\" in Sound settings and "
           + "play something; ⌃C stops.")
     fflush(stdout)
@@ -697,6 +764,7 @@ func send(to host: String) -> Never {
         if let seconds, Date().timeIntervalSince(started) >= seconds { break }
         if locked(stats, { appGone }) { break }
         Thread.sleep(forTimeInterval: 0.1)
+        control.sync(execute: follow)
         if let speaker, Date().timeIntervalSince(lastDelay) >= 1 {
             reportDelay(to: speaker)
             lastDelay = Date()
@@ -724,7 +792,11 @@ func send(to host: String) -> Never {
     }
     let closedByUs = ssh.isRunning
     let streamed = Date().timeIntervalSince(started)
-    AudioDeviceStop(loopback, recording)
+    control.sync {
+        ended = true
+        if recordingLoopback { AudioDeviceStop(loopback, recording) }
+        recordingLoopback = false
+    }
     if let speaker { _ = setStreamDelay(speaker, frames: 0) } // it plays here again
     locked(lock) { stopping = true }
     ready.signal()
@@ -895,6 +967,17 @@ final class Placed {
         return (ahead, true)
     }
 
+    /// After a pause in the sound, starts again from the next datagram, as at the start: during the pause, this Mac's
+    /// clock and the sender's drift apart, by up to a few hundred ms an hour.
+    func restart() {
+        locked(lock) {
+            playhead = nil
+            hold = 0
+            nudge = 0
+            lower = 0
+        }
+    }
+
     /// Holds `frames` more from now on, by playing that much silence first.
     func raise(by frames: Int) {
         locked(lock) {
@@ -1062,6 +1145,8 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         _ = line.withCString { send(fd, $0, strlen($0), 0) }
     }
     let began = now()
+    var heard = began // when the sender was last heard from
+    var lastSound: UInt64 = 0 // when the last sound came, not sent again
     var lastEcho: UInt64 = 0, second: UInt64 = 0, quickest = Int64.min, off = 0
     // Datagrams come 128 frames apart, and the speakers take 512 or more at a time, so how far ahead the quickest come
     // moves in steps of 2.7 ms or more: within 3 ms is as close as it gets, or the playhead would be nudged to and fro.
@@ -1077,10 +1162,18 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         if n < 0 {
             if errno == EINTR { continue }
             if errno == EAGAIN || errno == EWOULDBLOCK {
+                // Its ssh connection can be lost without closing, when the other Mac sleeps or its network changes,
+                // and then nothing else would stop this.
+                if now() &- heard > senderGoneSeconds * 1_000_000_000 { return }
                 ask()
                 continue
             }
             return
+        }
+        if n == 16, datagram.load(as: UInt32.self) == udpAliveMagic,
+           datagram.load(fromByteOffset: 8, as: UInt64.self) == token {
+            heard = now()
+            continue
         }
         guard n >= udpHeaderSize, datagram.load(as: UInt32.self) == udpMagic,
               datagram.load(fromByteOffset: 32, as: UInt64.self) == token else { continue }
@@ -1088,6 +1181,10 @@ func hearUDP(_ fd: Int32, token: UInt64, placed: Placed, arrivals: Arrivals, res
         let resent = count & 0x8000_0000 != 0, frames = Int(count & 0x7FFF_FFFF)
         guard frames <= udpFrames, n == udpHeaderSize + frames * bytesPerFrame else { continue }
         if !connected { connected = withSockaddr(&from) { connect(fd, $0, $1) } == 0 } // from now on, only the sender
+        // The sender sends sound only while something plays there, and keeps its clock's time across the pause.
+        if !resent, now() &- lastSound > 1_000_000_000, lastSound != 0 { placed.restart() }
+        if !resent { lastSound = now() }
+        heard = now()
         let sampleTime = datagram.load(fromByteOffset: 8, as: Int64.self)
         let sent = datagram.load(fromByteOffset: 24, as: UInt64.self)
         let (ahead, inTime) = placed.put(datagram + udpHeaderSize, at: sampleTime, frames: frames)
@@ -1323,8 +1420,11 @@ func play() -> Never {
     // Over UDP, the sound comes on a thread of its own, and the end comes as ssh's input closing.
     if let placed {
         let arrivals = Arrivals()
-        Thread { hearUDP(udpSocket, token: token, placed: placed, arrivals: arrivals, resending: resending,
-                            adapting: !held.fixed) }.start()
+        Thread { // it returns once the sender has gone quiet, or the socket fails
+            hearUDP(udpSocket, token: token, placed: placed, arrivals: arrivals, resending: resending,
+                    adapting: !held.fixed)
+            exit(0)
+        }.start()
         Thread {
             let sink = UnsafeMutableRawPointer.allocate(byteCount: 4096, alignment: 16)
             while true {
@@ -1359,7 +1459,7 @@ func play() -> Never {
 
     // The stream is read on a thread of its own, and the main queue is left for ⏯.
     Thread {
-        receive(window: window, check: check)
+        receive(from: 0, window: window, most: 1.5, check: check, answer: say)
         // The sender has stopped: play what's held, and let the speakers finish before closing them.
         locked(held.lock) { held.ending = true }
         let deadline = Date().addingTimeInterval(1 + bufferMs / 1000)
@@ -1373,8 +1473,9 @@ func play() -> Never {
     dispatchMain()
 }
 
-/// Reads packets from standard input into `held` until the sender stops, answering with how much is held.
-func receive(window: Int, check: ToneCheck?) {
+/// Reads packets from `fd` into `held` until the sender stops, answering with how much is held. It holds up to `most`
+/// seconds after the network stalls.
+func receive(from fd: Int32, window: Int, most: Double, check: ToneCheck?, answer: (String) -> Void) {
     let capacity = 1 << 20
     let input = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: 16)
     var have = 0, lastEcho: UInt64 = 0
@@ -1384,7 +1485,7 @@ func receive(window: Int, check: ToneCheck?) {
     var delays: [(low: Int64, high: Int64)] = []
     var second: UInt64 = 0
     reading: while true {
-        let n = read(0, input + have, capacity - have)
+        let n = read(fd, input + have, capacity - have)
         if n < 0, errno == EINTR { continue }
         if n <= 0 { break }
         have += n
@@ -1392,7 +1493,7 @@ func receive(window: Int, check: ToneCheck?) {
         while have - at >= headerSize {
             let packet = input + at
             let frames = Int(packet.load(fromByteOffset: 4, as: UInt32.self))
-            guard packet.load(as: UInt32.self) == magic, frames <= maxFrames else { say("the stream is garbled"); break reading }
+            guard packet.load(as: UInt32.self) == magic, frames <= maxFrames else { answer("the stream is garbled"); break reading }
             let size = headerSize + frames * bytesPerFrame
             guard have - at >= size else { break }
             let sampleTime = packet.load(fromByteOffset: 8, as: Int64.self)
@@ -1419,13 +1520,13 @@ func receive(window: Int, check: ToneCheck?) {
                 low = min(low, bucket.low)
                 high = max(high, bucket.high)
             }
-            let goal = min(Int(rate * 1.5), max(held.floor, Int(Double(high - low) / 1e9 * rate)))
+            let goal = min(Int(rate * most), max(held.floor, Int(Double(high - low) / 1e9 * rate)))
             locked(held.lock) { held.goal = goal }
 
             if arrived &- lastEcho > 500_000_000 {
                 lastEcho = arrived
                 let (gaps, trims, goal, shrunk) = locked(held.lock) { (held.gaps, held.trims, held.goal, held.shrunk) }
-                say("echo \(sent) \(String(format: "%.1f", Double(ahead) / rate * 1000)) \(gaps) \(trims) "
+                answer("echo \(sent) \(String(format: "%.1f", Double(ahead) / rate * 1000)) \(gaps) \(trims) "
                     + "\(String(format: "%.1f", Double(goal) / rate * 1000)) \(String(format: "%.2f", Double(shrunk) / rate))")
             }
             at += size
@@ -1433,7 +1534,7 @@ func receive(window: Int, check: ToneCheck?) {
         memmove(input, input + at, have - at)
         have -= at
     }
-    if let check { say(check.summary + ", and \(streamGaps) gaps in the stream") }
+    if let check { answer(check.summary + ", and \(streamGaps) gaps in the stream") }
 }
 
 // MARK: - Tone
@@ -1468,9 +1569,382 @@ func tone() -> Never {
     exit(0)
 }
 
+// MARK: - Microphone
+
+let micUID = "com.viveky259259.Ambient.microphone"
+let micFeedUID = "com.viveky259259.Ambient.microphone.feed"
+let micSocketPath = NSHomeDirectory() + "/.ambient/speaker/mic.sock"
+
+func unixAddress(_ path: String) -> sockaddr_un? {
+    var address = sockaddr_un()
+    let bytes = Array(path.utf8)
+    guard bytes.count < MemoryLayout.size(ofValue: address.sun_path) else { return nil }
+    address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+    address.sun_family = sa_family_t(AF_UNIX)
+    withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: bytes) }
+    return address
+}
+
+func withUnixSockaddr<T>(_ address: inout sockaddr_un, _ body: (UnsafePointer<sockaddr>, socklen_t) -> T) -> T {
+    withUnsafePointer(to: &address) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { body($0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+    }
+}
+
+/// One line from `fd`, read a byte at a time so nothing after it is taken; nil at the end, or past `limit` bytes.
+func readLine(_ fd: Int32, limit: Int = 512) -> String? {
+    var bytes: [UInt8] = []
+    var byte: UInt8 = 0
+    while bytes.count < limit {
+        let n = read(fd, &byte, 1)
+        if n < 0, errno == EINTR { continue }
+        guard n == 1 else { return nil }
+        if byte == 0x0A { return String(decoding: bytes, as: UTF8.self) }
+        bytes.append(byte)
+    }
+    return nil
+}
+
+@discardableResult
+func writeLine(_ fd: Int32, _ line: String) -> Bool {
+    let text = line.replacingOccurrences(of: "\n", with: " ") + "\n"
+    return text.withCString { writeAll(fd, $0, strlen($0)) }
+}
+
+func deviceUID(_ id: AudioObjectID) -> String? {
+    var place = address(kAudioDevicePropertyDeviceUID)
+    var value: Unmanaged<CFString>?
+    var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+    guard AudioObjectGetPropertyData(id, &place, 0, nil, &size, &value) == noErr, let value else { return nil }
+    return value.takeRetainedValue() as String
+}
+
+func nominalRate(_ id: AudioObjectID) -> Double {
+    var place = address(kAudioDevicePropertyNominalSampleRate)
+    var value = 0.0
+    var size = UInt32(MemoryLayout<Double>.size)
+    return AudioObjectGetPropertyData(id, &place, 0, nil, &size, &value) == noErr ? value : 0
+}
+
+/// The microphone to lend: this Mac's input, unless that's Ambient Microphone, which would only lend back what another
+/// Mac lends here. Then the built-in one.
+func lentInput() -> AudioObjectID? {
+    var place = address(kAudioHardwarePropertyDefaultInputDevice)
+    var id = AudioObjectID(kAudioObjectUnknown)
+    var size = UInt32(MemoryLayout<AudioObjectID>.size)
+    if AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil, &size, &id) == noErr,
+       id != kAudioObjectUnknown, deviceUID(id) != micUID {
+        return id
+    }
+    place = address(kAudioHardwarePropertyDevices)
+    size = 0
+    guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil, &size) == noErr
+    else { return nil }
+    var all = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+    guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &place, 0, nil, &size, &all) == noErr
+    else { return nil }
+    return all.first { device in
+        var streams = address(kAudioDevicePropertyStreams, kAudioObjectPropertyScopeInput)
+        var bytes: UInt32 = 0
+        return number(device, kAudioDevicePropertyTransportType) == kAudioDeviceTransportTypeBuiltIn
+            && AudioObjectGetPropertyDataSize(device, &streams, 0, nil, &bytes) == noErr && bytes > 0
+    }
+}
+
+/// Run by the app on the Mac that lends its microphone, for as long as it lends it: serves it on `micSocketPath`, to
+/// one Mac at a time, recording only while one is connected.
+func micServe() -> Never {
+    forApp = flag("--app")
+    noMoreArguments()
+    guard microphoneAllowed() else {
+        fail("this app can't record the microphone: allow it in System Settings › Privacy & Security › Microphone")
+    }
+    signal(SIGPIPE, SIG_IGN)
+    let folder = (micSocketPath as NSString).deletingLastPathComponent
+    try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+    chmod(folder, 0o700)
+    unlink(micSocketPath)
+    let server = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard server >= 0, var place = unixAddress(micSocketPath), withUnixSockaddr(&place, { bind(server, $0, $1) }) == 0,
+          chmod(micSocketPath, 0o600) == 0, listen(server, 4) == 0 else {
+        fail("couldn't lend the microphone: \(String(cString: strerror(errno)))")
+    }
+    atexit { unlink(micSocketPath) }
+    tell("ready")
+    if forApp {
+        Thread {
+            var byte: UInt8 = 0
+            while read(0, &byte, 1) > 0 {}
+            exit(0)
+        }.start()
+    }
+    let lock = newLock()
+    var lentTo: String?
+    while true {
+        let client = accept(server, nil, nil)
+        if client < 0 {
+            if errno == EINTR || errno == ECONNABORTED { continue }
+            fail("couldn't lend the microphone: \(String(cString: strerror(errno)))")
+        }
+        Thread {
+            defer { close(client) }
+            var timeout = timeval(tv_sec: 5, tv_usec: 0)
+            setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+            guard let hello = readLine(client), hello.hasPrefix("from ") else { return }
+            let who = String(hello.dropFirst(5))
+            let taken: String? = locked(lock) {
+                if let lentTo { return lentTo }
+                lentTo = who
+                return nil
+            }
+            if let taken {
+                writeLine(client, "busy \(taken)")
+                return
+            }
+            lend(to: client, who: who)
+            locked(lock) { lentTo = nil }
+            tell("idle")
+        }.start()
+    }
+}
+
+/// Records this Mac's microphone and sends it to `client`, until it goes.
+func lend(to client: Int32, who: String) {
+    // A connection lost without closing stops being read: then a write fails after 5 s, and the microphone goes off,
+    // instead of staying on and lent to a Mac that's gone.
+    var sendTimeout = timeval(tv_sec: 5, tv_usec: 0)
+    setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &sendTimeout, socklen_t(MemoryLayout<timeval>.size))
+    guard let input = lentInput() else {
+        writeLine(client, "none")
+        return
+    }
+    let inputRate = nominalRate(input)
+    guard inputRate > 0 else {
+        writeLine(client, "none")
+        return
+    }
+    // The IO thread keeps the first channel; this one turns it into 48 kHz stereo and sends it.
+    let capacity = Int(inputRate) // a second, far more than it's ever behind
+    let pending = UnsafeMutablePointer<Float>.allocate(capacity: capacity)
+    defer { pending.deallocate() }
+    var count = 0
+    let lock = newLock()
+    let ready = DispatchSemaphore(value: 0)
+    var recording: AudioDeviceIOProcID?
+    let status = AudioDeviceCreateIOProcIDWithBlock(&recording, input, nil) { _, data, _, _, _ in
+        let buffers = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: data))
+        guard let buffer = buffers.first, buffer.mNumberChannels > 0,
+              let samples = buffer.mData?.assumingMemoryBound(to: Float.self) else { return }
+        let stride = Int(buffer.mNumberChannels)
+        let frames = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size / stride
+        os_unfair_lock_lock(lock)
+        let kept = min(frames, capacity - count)
+        for f in 0..<kept { pending[count + f] = samples[f * stride] }
+        count += kept
+        os_unfair_lock_unlock(lock)
+        ready.signal()
+    }
+    guard status == noErr, let recording else {
+        writeLine(client, "none")
+        return
+    }
+    defer { AudioDeviceDestroyIOProcID(input, recording) }
+    let mono = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: inputRate, channels: 1, interleaved: false)!
+    let out = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: rate, channels: 1, interleaved: false)!
+    let converter = inputRate == rate ? nil : AVAudioConverter(from: mono, to: out)
+    guard writeLine(client, "mic \(Int(inputRate)) \(name(input))"), AudioDeviceStart(input, recording) == noErr else { return }
+    defer { AudioDeviceStop(input, recording) }
+    tell("lending", ["to": who, "device": name(input)])
+
+    let packet = UnsafeMutableRawPointer.allocate(byteCount: headerSize + maxFrames * bytesPerFrame, alignment: 16)
+    defer { packet.deallocate() }
+    let taken = AVAudioPCMBuffer(pcmFormat: mono, frameCapacity: AVAudioFrameCount(capacity))!
+    let converted = AVAudioPCMBuffer(pcmFormat: out, frameCapacity: AVAudioFrameCount(maxFrames))!
+    var sampleTime: Int64 = 0
+    while true {
+        // A microphone that's recording calls back every few milliseconds, silent or not. Nothing for a second means
+        // it's gone, like headphones disconnecting: this ends, and the other Mac connects again to the input there is now.
+        if ready.wait(timeout: .now() + 1) == .timedOut { return }
+        let played = now()
+        let frames: Int = locked(lock) {
+            let frames = count
+            taken.floatChannelData![0].update(from: pending, count: frames)
+            count = 0
+            return frames
+        }
+        guard frames > 0 else { continue }
+        taken.frameLength = AVAudioFrameCount(frames)
+        var source = UnsafePointer(taken.floatChannelData![0])
+        var length = frames
+        if let converter {
+            var fed = false
+            var error: NSError?
+            converter.convert(to: converted, error: &error) { _, status in
+                if fed {
+                    status.pointee = .noDataNow
+                    return nil
+                }
+                fed = true
+                status.pointee = .haveData
+                return taken
+            }
+            guard error == nil else { return }
+            source = UnsafePointer(converted.floatChannelData![0])
+            length = Int(converted.frameLength)
+        }
+        length = min(length, maxFrames)
+        guard length > 0 else { continue }
+        let samples = (packet + headerSize).assumingMemoryBound(to: Float.self)
+        for f in 0..<length {
+            samples[f * channels] = source[f]
+            samples[f * channels + 1] = source[f]
+        }
+        packet.storeBytes(of: magic, toByteOffset: 0, as: UInt32.self)
+        packet.storeBytes(of: UInt32(length), toByteOffset: 4, as: UInt32.self)
+        packet.storeBytes(of: sampleTime, toByteOffset: 8, as: Int64.self)
+        packet.storeBytes(of: played, toByteOffset: 16, as: UInt64.self)
+        packet.storeBytes(of: now(), toByteOffset: 24, as: UInt64.self)
+        guard writeAll(client, packet, headerSize + length * bytesPerFrame) else { return }
+        sampleTime += Int64(length)
+    }
+}
+
+/// Run over ssh on the Mac that lends its microphone: passes what mic-serve records to standard output, until standard
+/// input closes. Says `refused` when nothing lends it, because Ambient isn't running there or doesn't lend it.
+func micRelay() -> Never {
+    let from = text("--from") ?? "Another Mac"
+    noMoreArguments()
+    signal(SIGPIPE, SIG_IGN)
+    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard fd >= 0, var place = unixAddress(micSocketPath), withUnixSockaddr(&place, { connect(fd, $0, $1) }) == 0 else {
+        say("refused")
+        exit(0)
+    }
+    writeLine(fd, "from \(from)")
+    Thread {
+        var byte: UInt8 = 0
+        while read(0, &byte, 1) > 0 {}
+        exit(0)
+    }.start()
+    // A write that doesn't finish in 10 s means the ssh connection was lost without closing: it stops, which closes
+    // the socket, so the microphone goes off.
+    let watch = newLock()
+    var writingSince: UInt64 = 0
+    Thread {
+        while true {
+            Thread.sleep(forTimeInterval: 1)
+            let since = locked(watch) { writingSince }
+            if since != 0, now() &- since > 10_000_000_000 { exit(0) }
+        }
+    }.start()
+    let buffer = UnsafeMutableRawPointer.allocate(byteCount: 1 << 16, alignment: 16)
+    while true {
+        let n = read(fd, buffer, 1 << 16)
+        if n < 0, errno == EINTR { continue }
+        if n <= 0 { break }
+        locked(watch) { writingSince = now() }
+        guard writeAll(1, buffer, n) else { break }
+        locked(watch) { writingSince = 0 }
+    }
+    exit(0)
+}
+
+/// Plays HOST's microphone to the Ambient Microphone Feed, so apps here hear it from Ambient Microphone.
+func micReceive(from host: String) -> Never {
+    let transport = sshTransport(to: host)
+    let relayPath = text("--remote-path") ?? remotePath
+    let bufferMs = option("--buffer") ?? 60
+    forApp = flag("--app")
+    noMoreArguments()
+    guard let feed = device(uid: micFeedUID) else {
+        fail("Core Audio has no Ambient microphone. Install it: scripts/install-speaker.sh")
+    }
+    signal(SIGPIPE, SIG_IGN)
+    let ssh = Process()
+    ssh.executableURL = URL(fileURLWithPath: transport[0])
+    ssh.arguments = Array(transport.dropFirst())
+        + ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ForwardAgent=no", "-o", "ForwardX11=no",
+           "-o", "ClearAllForwardings=yes", host, relayPath, "mic-relay", "--from", quoted(computerName())]
+    let toRelay = Pipe(), fromRelay = Pipe()
+    ssh.standardInput = toRelay
+    ssh.standardOutput = fromRelay
+    do { try ssh.run() } catch { fail("couldn't run ssh: \(error.localizedDescription)") }
+    let fd = fromRelay.fileHandleForReading.fileDescriptor
+    guard let first = readLine(fd) else {
+        ssh.waitUntilExit()
+        fail("couldn't reach the microphone on \(host) (\(ssh.terminationStatus))")
+    }
+    let words = first.split(separator: " ", maxSplits: 2).map(String.init)
+    switch words.first {
+    case "mic" where words.count == 3:
+        print("Hearing \(host)'s \(words[2]), at \(words[1]) Hz")
+        tell("receiving", ["device": words[2], "rate": Int(words[1]) ?? 0])
+    case "busy":
+        ssh.terminate()
+        fail("\(host)'s microphone is in use by \(words.dropFirst().joined(separator: " "))")
+    case "refused":
+        fail("\(host) doesn't lend its microphone to other Macs. On \(host), turn on Settings › Voice & Sound › "
+             + "Ambient Microphone › Lend this Mac's microphone, and keep Ambient running")
+    case "none":
+        fail("\(host) has no microphone to lend")
+    default:
+        ssh.terminate()
+        fail("\(host) answered: \(first)")
+    }
+    fflush(stdout)
+
+    held.floor = Int(bufferMs / 1000 * rate)
+    held.goal = held.floor
+    held.slack = max(Int(0.04 * rate), held.floor / 2)
+    var playing: AudioDeviceIOProcID?
+    let status = AudioDeviceCreateIOProcIDWithBlock(&playing, feed, nil) { _, _, _, output, _ in
+        guard let buffer = UnsafeMutableAudioBufferListPointer(output).first, buffer.mNumberChannels == UInt32(channels),
+              let data = buffer.mData?.assumingMemoryBound(to: Float.self) else { return }
+        held.pull(data, frames: Int(buffer.mDataByteSize) / bytesPerFrame)
+    }
+    guard status == noErr, let playing, AudioDeviceStart(feed, playing) == noErr else {
+        ssh.terminate()
+        fail("couldn't play to the Ambient microphone")
+    }
+    let ended = DispatchSemaphore(value: 0)
+    Thread {
+        receive(from: fd, window: 30, most: 0.5, check: nil, answer: { _ in })
+        ended.signal()
+    }.start()
+    var appGone = false
+    let gone = newLock()
+    if forApp {
+        Thread {
+            var byte: UInt8 = 0
+            while read(0, &byte, 1) > 0 {}
+            locked(gone) { appGone = true }
+        }.start()
+    }
+    var lastReport = Date()
+    while ended.wait(timeout: .now() + 0.1) == .timedOut, !locked(gone, { appGone }) {
+        guard Date().timeIntervalSince(lastReport) >= 2 else { continue }
+        lastReport = Date()
+        let (heldMs, gaps) = locked(held.lock) { (Double(held.count) / rate * 1000, held.gaps) }
+        print("Holding \(ms(heldMs)) of \(host)'s microphone · \(gaps) dropouts")
+        fflush(stdout)
+        tell("status", ["heldMs": heldMs.rounded(), "gaps": gaps])
+    }
+    let closedByUs = locked(gone) { appGone }
+    AudioDeviceStop(feed, playing)
+    toRelay.fileHandleForWriting.closeFile()
+    DispatchQueue.global().asyncAfter(deadline: .now() + 2) { ssh.terminate() }
+    ssh.waitUntilExit()
+    guard closedByUs else { fail("the connection to \(host) closed (\(ssh.terminationStatus))") }
+    exit(0)
+}
+
 switch mode {
 case "send" where !args.isEmpty: send(to: args.removeFirst())
 case "play": play()
 case "tone": tone()
-default: fail("usage: speaker-pipe send HOST [--seconds N] [--buffer MS] [--quiet] [--check HZ] | play | tone")
+case "mic-serve": micServe()
+case "mic-relay": micRelay()
+case "mic-receive" where !args.isEmpty: micReceive(from: args.removeFirst())
+default: fail("usage: speaker-pipe send HOST [--seconds N] [--buffer MS] [--quiet] [--check HZ] | play | tone | "
+              + "mic-serve | mic-receive HOST | mic-relay")
 }
