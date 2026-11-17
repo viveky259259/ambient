@@ -1,0 +1,92 @@
+[
+  {
+    "acknowledged" : false,
+    "activity" : {
+      "tool" : {
+        "detail" : "swift test",
+        "name" : "Bash"
+      }
+    },
+    "activitySince" : 784900090,
+    "agent" : "claude",
+    "beforeCompaction" : {
+      "thinking" : {
+
+      }
+    },
+    "cwd" : "/Users/me/ambient",
+    "host" : {
+      "agentPid" : 900,
+      "appServer" : false,
+      "bundleId" : "com.apple.Terminal",
+      "cmuxSocket" : "/tmp/cmux.sock",
+      "cmuxSurface" : "sf-1",
+      "cmuxWorkspace" : "ws-1",
+      "hostSessionId" : "host-1",
+      "pids" : [
+        501,
+        77
+      ],
+      "termProgram" : "Apple_Terminal",
+      "tmuxPane" : "%3",
+      "tmuxSocket" : "/tmp/tmux-501/default",
+      "tty" : "/dev/ttys004"
+    },
+    "id" : "claude:s-1",
+    "lastEventAt" : 784900300,
+    "sessionId" : "s-1",
+    "subagents" : 1,
+    "title" : "Write fixtures",
+    "toolCount" : 7,
+    "turnStartedAt" : 784900000
+  },
+  {
+    "acknowledged" : true,
+    "activity" : {
+      "waiting" : {
+        "message" : "make test",
+        "reason" : "command"
+      }
+    },
+    "activitySince" : 784900000,
+    "agent" : "codex",
+    "beforeWaiting" : {
+      "tool" : {
+        "name" : "Bash"
+      }
+    },
+    "id" : "remote/a1b2c3d4/codex:t-9",
+    "lastEventAt" : 784900000,
+    "origin" : {
+      "lastSeq" : 42,
+      "machine" : {
+        "id" : "a1b2c3d4",
+        "label" : "Studio"
+      },
+      "missed" : true,
+      "project" : "ambient",
+      "unreachable" : false
+    },
+    "sessionId" : "t-9",
+    "subagents" : 0,
+    "toolCount" : 0,
+    "turnEndedAt" : 784900300,
+    "turnStartedAt" : 784900000
+  },
+  {
+    "acknowledged" : false,
+    "activity" : {
+      "done" : {
+
+      }
+    },
+    "activitySince" : 784900000,
+    "agent" : "custom",
+    "agentName" : "Aider",
+    "id" : "custom:aider-7",
+    "lastEventAt" : 784900000,
+    "sessionId" : "aider-7",
+    "subagents" : 0,
+    "toolCount" : 0
+  }
+]

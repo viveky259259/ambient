@@ -1,0 +1,17 @@
+{"v":1,"seq":1,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"sessionStarted","project":"ambient"}
+{"v":1,"seq":2,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"promptSubmitted","project":"ambient","message":"Write the fixtures"}
+{"v":1,"seq":3,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"toolStarted","project":"ambient","tool":"Bash"}
+{"v":1,"seq":4,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"toolFinished","project":"ambient","tool":"Bash"}
+{"v":1,"seq":5,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"toolFailed","project":"ambient","tool":"Bash","message":"exit 1"}
+{"v":1,"seq":6,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"needsInput","project":"ambient","tool":"Bash","reason":"permission","message":"swift test"}
+{"v":1,"seq":7,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"needsInput","project":"ambient","reason":"question","message":"Which branch?"}
+{"v":1,"seq":8,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"compactStarted","project":"ambient"}
+{"v":1,"seq":9,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"compactFinished","project":"ambient"}
+{"v":1,"seq":10,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"subagentStarted","project":"ambient"}
+{"v":1,"seq":11,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"subagentFinished","project":"ambient"}
+{"v":1,"seq":12,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"turnCompleted","project":"ambient","message":"Done"}
+{"v":1,"seq":13,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"turnFailed","project":"ambient","message":"Overloaded"}
+{"v":1,"seq":14,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"sessionEnded","project":"ambient"}
+{"v":1,"seq":15,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"notice","message":"Hello"}
+{"v":1,"seq":16,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"titleChanged","title":"Write fixtures"}
+{"v":1,"seq":17,"id":"0123456789abcdef0123456789abcdef","ts":1763000000,"agent":"claude","session":"s-1","kind":"agentExited","project":"ambient"}

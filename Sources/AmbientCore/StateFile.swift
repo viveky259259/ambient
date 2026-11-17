@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Sessions saved across app restarts, so an update doesn't forget agents mid-turn.
 public enum StateFile {

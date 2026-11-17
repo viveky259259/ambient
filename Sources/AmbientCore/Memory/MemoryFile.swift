@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import AmbientBase
 
 /// Shared working memory saved under `~/.ambient/memory.json`.
 public enum MemoryFile {

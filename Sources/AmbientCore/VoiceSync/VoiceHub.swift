@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 extension AmbientPaths {
     /// Voice sync's own folder: the library, its audio and this Mac's hub id. Not `voice`, which holds the offline voice

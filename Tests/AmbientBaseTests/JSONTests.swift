@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import AmbientCore
+@testable import AmbientBase
 
 @Suite struct JSONTests {
     static let canonical = """

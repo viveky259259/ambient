@@ -1,4 +1,5 @@
 import Foundation
+import AmbientBase
 
 extension AmbientPaths {
     /// The hub's remote-agents data, readable only by the user.

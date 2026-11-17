@@ -49,11 +49,11 @@ import Testing
     }
 
     @Test func acceptsOnlyLoopbackMCPHosts() {
-        #expect(TaskLLMConfig.isLoopback(URL(string: "http://127.0.0.1:5051/mcp")!))
-        #expect(TaskLLMConfig.isLoopback(URL(string: "http://localhost:5051/mcp")!))
-        #expect(TaskLLMConfig.isLoopback(URL(string: "http://[::1]:5051/mcp")!))
-        #expect(!TaskLLMConfig.isLoopback(URL(string: "http://example.com:5051/mcp")!))
-        #expect(!TaskLLMConfig.isLoopback(URL(string: "https://api.openai.com/v1")!))
+        #expect(URL(string: "http://127.0.0.1:5051/mcp")!.isLoopback)
+        #expect(URL(string: "http://localhost:5051/mcp")!.isLoopback)
+        #expect(URL(string: "http://[::1]:5051/mcp")!.isLoopback)
+        #expect(!URL(string: "http://example.com:5051/mcp")!.isLoopback)
+        #expect(!URL(string: "https://api.openai.com/v1")!.isLoopback)
         var config = TaskLLMConfig(enabled: true, mcpURL: "http://10.0.0.5:5051/mcp")
         #expect(config.refusesNonLoopback)
         config.mcpURL = "http://127.0.0.1:5051/mcp"

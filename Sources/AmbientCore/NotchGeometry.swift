@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// A point or vector in screen points, origin at the top-left.
 public struct Vec2: Equatable, Sendable {

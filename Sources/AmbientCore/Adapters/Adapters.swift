@@ -1,12 +1,6 @@
 import Foundation
-
-/// Limits for text that leaves the hook process.
-enum Limits {
-    static let detail = 80
-    static let message = 160
-    static let sessionId = 128
-    static let agentName = 24
-}
+import AmbientBase
+import AmbientContracts
 
 /// Turns one agent's hook payloads into normalized events.
 protocol AgentAdapter {
@@ -57,7 +51,7 @@ public enum AdapterRegistry {
               !adapter.ignores(event: name, payload: payload, host: host),
               let kind = adapter.normalize(event: name, payload: payload) else { return nil }
         let at = adapter.timestamp(payload).flatMap { abs($0.timeIntervalSince(now)) <= clockTolerance ? $0 : nil } ?? now
-        return AgentEvent(agent: agent, sessionId: Trim.truncate(sessionId, max: Limits.sessionId),
+        return AgentEvent(agent: agent, sessionId: Trim.truncate(sessionId, max: TextLimits.sessionId),
                           cwd: adapter.cwd(payload), kind: kind, timestamp: at, host: adapter.host(payload, captured: host),
                           agentName: adapter.agentName(payload))
     }
@@ -90,7 +84,7 @@ public enum AdapterRegistry {
     }
 
     static func needsInput(_ need: Need, _ detail: String?) -> EventKind {
-        .needsInput(reason: need.rawValue, message: Trim.clean(detail, max: Limits.message))
+        .needsInput(reason: need.rawValue, message: Trim.clean(detail, max: TextLimits.message))
     }
 
     /// A permission prompt known only by its text.
@@ -119,7 +113,7 @@ public enum AdapterRegistry {
         let line = text?.split(whereSeparator: \.isNewline).lazy
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "# ").union(.whitespaces)) }
             .first { !$0.isEmpty }
-        return line.flatMap { Trim.clean($0, max: Limits.message) }
+        return line.flatMap { Trim.clean($0, max: TextLimits.message) }
     }
 }
 
@@ -152,10 +146,10 @@ enum ClaudeAdapter: AgentAdapter {
         case "SubagentStop":
             return .subagentFinished
         case "Stop":
-            return .turnCompleted(summary: Trim.clean(p.string("last_assistant_message"), max: Limits.message))
+            return .turnCompleted(summary: Trim.clean(p.string("last_assistant_message"), max: TextLimits.message))
         case "StopFailure":
             let message = p.firstString(["error_message", "error", "error_type"])
-            return .turnFailed(message: Trim.clean(message, max: Limits.message))
+            return .turnFailed(message: Trim.clean(message, max: TextLimits.message))
         case "SessionEnd":
             return .sessionEnded
         default:
@@ -164,7 +158,7 @@ enum ClaudeAdapter: AgentAdapter {
     }
 
     private static func notification(_ p: HookPayload) -> EventKind? {
-        let message = Trim.clean(p.string("message"), max: Limits.message)
+        let message = Trim.clean(p.string("message"), max: TextLimits.message)
         switch p.string("notification_type") {
         case "permission_prompt":
             // Claude's own words for the prompt its PermissionRequest hook already described.
@@ -218,7 +212,7 @@ enum OpenCodeAdapter: AgentAdapter {
         case "bash", "shell":
             // OpenCode 2 names only the command, as the request's one pattern.
             let command = metadata?.string("command") ?? patterns.first
-            return AdapterRegistry.needsInput(.command, Trim.clean(command, max: Limits.detail))
+            return AdapterRegistry.needsInput(.command, Trim.clean(command, max: TextLimits.detail))
         case "doom_loop":
             // The same call three times in a row: OpenCode checks before the agent goes round again.
             return AdapterRegistry.needsInput(tool: metadata?.string("tool") ?? "tool", input: metadata?.object("input"))
@@ -266,7 +260,7 @@ enum GeminiAdapter: AgentAdapter {
             let failed = p.object("tool_response")?.has("error") ?? false
             return .toolFinished(name: p.string("tool_name") ?? "tool", failed: failed)
         case "Notification":
-            let message = Trim.clean(p.string("message"), max: Limits.message)
+            let message = Trim.clean(p.string("message"), max: TextLimits.message)
             if p.string("notification_type") == "ToolPermission" {
                 return toolPermission(p.object("details"), message: message)
             }
@@ -274,7 +268,7 @@ enum GeminiAdapter: AgentAdapter {
         case "PreCompress":
             return .compactStarted
         case "AfterAgent":
-            return .turnCompleted(summary: Trim.clean(p.string("prompt_response"), max: Limits.message))
+            return .turnCompleted(summary: Trim.clean(p.string("prompt_response"), max: TextLimits.message))
         case "SessionEnd":
             return .sessionEnded
         default:
@@ -289,7 +283,7 @@ enum GeminiAdapter: AgentAdapter {
         guard let d else { return AdapterRegistry.permissionNotice(message) }
         switch d.string("type") {
         case "exec":
-            return AdapterRegistry.needsInput(.command, Trim.clean(d.firstString(["command", "rootCommand"]), max: Limits.detail))
+            return AdapterRegistry.needsInput(.command, Trim.clean(d.firstString(["command", "rootCommand"]), max: TextLimits.detail))
         case "edit":
             let file = d.firstString(["fileName"]) ?? d.string("filePath").map { URL(fileURLWithPath: $0).lastPathComponent }
             return AdapterRegistry.needsInput(.edit, file)
@@ -327,7 +321,7 @@ enum AntigravityAdapter: AgentAdapter {
             let failed = p.firstString(["error"]) != nil
             return .toolFinished(name: p.object("toolCall")?.string("name") ?? "tool", failed: failed)
         case "Stop":
-            let error = Trim.clean(p.firstString(["error"]), max: Limits.message)
+            let error = Trim.clean(p.firstString(["error"]), max: TextLimits.message)
             // The docs spell reasons in lowercase; agy 1.4 sends constants such as NO_TOOL_CALL.
             switch p.string("terminationReason")?.lowercased() {
             case "error": return .turnFailed(message: error)
@@ -412,7 +406,7 @@ enum CopilotAdapter: AgentAdapter {
         case "agentstop":
             return .turnCompleted(summary: nil)
         case "erroroccurred":
-            let message = Trim.clean(p.object("error")?.string("message") ?? p.string("error"), max: Limits.message)
+            let message = Trim.clean(p.object("error")?.string("message") ?? p.string("error"), max: TextLimits.message)
             if p.raw["recoverable"] as? Bool == true { return message.map { .notice(message: $0) } }
             return .turnFailed(message: message)
         case "subagentstart":
@@ -422,7 +416,7 @@ enum CopilotAdapter: AgentAdapter {
         case "precompact":
             return .compactStarted
         case "notification":
-            let message = Trim.clean(p.string("message"), max: Limits.message)
+            let message = Trim.clean(p.string("message"), max: TextLimits.message)
             switch p.string("notification_type") {
             case "permission_prompt": return AdapterRegistry.permissionNotice(message)
             case "elicitation_dialog": return AdapterRegistry.needsInput(.question, message)
@@ -444,17 +438,17 @@ enum CopilotAdapter: AgentAdapter {
 public enum CustomAdapter: AgentAdapter {
     public static let events = ["start", "working", "waiting", "done", "error", "end", "idle"]
 
-    static func agentName(_ p: HookPayload) -> String? { Trim.clean(p.string("agent"), max: Limits.agentName) }
+    static func agentName(_ p: HookPayload) -> String? { Trim.clean(p.string("agent"), max: TextLimits.agentName) }
     static func eventName(_ p: HookPayload, hint: String?) -> String? { p.string("event") ?? hint }
 
     static func normalize(event: String, payload p: HookPayload) -> EventKind? {
-        let message = Trim.clean(p.string("message"), max: Limits.message)
+        let message = Trim.clean(p.string("message"), max: TextLimits.message)
         switch event {
         case "start":
             return .sessionStarted
         case "working":
-            guard let tool = Trim.clean(p.string("tool"), max: Limits.detail) else { return .promptSubmitted }
-            return .toolStarted(name: tool, detail: Trim.clean(p.string("detail"), max: Limits.detail))
+            guard let tool = Trim.clean(p.string("tool"), max: TextLimits.detail) else { return .promptSubmitted }
+            return .toolStarted(name: tool, detail: Trim.clean(p.string("detail"), max: TextLimits.detail))
         case "waiting":
             let need = p.string("reason").flatMap { Need(rawValue: $0.lowercased()) } ?? .question
             return .needsInput(reason: need.rawValue, message: message)

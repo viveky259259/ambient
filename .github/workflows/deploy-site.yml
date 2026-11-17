@@ -30,7 +30,7 @@ jobs:
       - name: Find the release
         id: release
         run: |
-          VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+          VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if gh release view "v$VERSION" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "Ambient-$VERSION.dmg"; then
             echo "published=true" >> "$GITHUB_OUTPUT"

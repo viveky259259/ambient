@@ -145,14 +145,14 @@ private struct SplitMix64: RandomNumberGenerator {
             let e = try RemoteEventDecoder.decode(line(base([key: String(repeating: "a" + marks, count: 3)])))
             let text = try #require(key == "title" ? e.title : e.message)
             #expect(text.count <= cap)
-            #expect(text.unicodeScalars.count <= cap * RemoteEventDecoder.Caps.scalarsPerCharacter)
-            #expect(text.unicodeScalars.count == 3 * RemoteEventDecoder.Caps.scalarsPerCharacter)
+            #expect(text.unicodeScalars.count <= cap * Trim.maxScalarsPerCharacter)
+            #expect(text.unicodeScalars.count == 3 * Trim.maxScalarsPerCharacter)
         }
     }
 
     @Test func realTextKeepsAllOfItsMarks() {
         for text in ["Tiếng Việt", "สวัสดีครับ", "नमस्ते कृत्स्न्य", "🇮🇳 🇯🇵 1️⃣ 👍🏽", "e\u{301}a\u{308}", "한글", "ﷺ"] {
-            #expect(RemoteEventDecoder.plainText(text, max: 160) == text)
+            #expect(Trim.plainText(text, max: 160) == text)
         }
     }
 

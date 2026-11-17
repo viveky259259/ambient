@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Which hook events Ambient registers for an agent, and what each registration looks like.
 public struct AgentHookSpec: Sendable {

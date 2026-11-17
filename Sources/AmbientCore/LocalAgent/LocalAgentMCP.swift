@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Minimal MCP Streamable HTTP client for the local-agent gateway (`http://127.0.0.1:5051/mcp`).
 /// Talks only to loopback; never opens cloud endpoints.
@@ -108,7 +110,7 @@ public final class LocalAgentMCP: @unchecked Sendable {
 
     @discardableResult
     private func post(_ body: [String: Any], expectSSE: Bool) async throws -> [String: Any] {
-        guard TaskLLMConfig.isLoopback(config.url) else { throw MCPError.nonLoopback }
+        guard config.url.isLoopback else { throw MCPError.nonLoopback }
         var request = URLRequest(url: config.url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

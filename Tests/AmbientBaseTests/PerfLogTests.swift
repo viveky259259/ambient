@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import AmbientCore
+@testable import AmbientBase
 
 private let start = Date(timeIntervalSince1970: 1_790_700_000)
 

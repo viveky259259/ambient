@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// Who can see a shared entry: the agents working in one project (worktrees included), or every agent on this Mac.
 public enum MemoryScope: Codable, Equatable, Hashable, Sendable {

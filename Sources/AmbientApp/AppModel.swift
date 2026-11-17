@@ -96,7 +96,7 @@ final class AppModel: ObservableObject {
         observeTask(t)
         endSessionMemory(t)
         refreshTitles()
-        if AlertPolicy.attentionMoods.contains(t.session.mood), t.session.mood != t.previousMood,
+        if t.session.mood.wantsAttention, t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
             // The user is already in the app: let the result or prompt register, then consider it seen.
             let id = t.session.id, activity = t.session.activity

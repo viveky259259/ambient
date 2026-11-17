@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Folds session activity into board tasks. Metadata heuristics are the baseline;
 /// optional local-LLM semantics overwrite title/summary/status when applied.
@@ -60,7 +62,7 @@ public final class TaskStore {
         guard var t = byId[id] else { return nil }
         // What a model says about a remote session can be remote text, and `ambient tasks` prints it.
         let plain = { [machine = t.machine] (text: String?) in
-            machine == nil ? text : text.flatMap { RemoteEventDecoder.plainText($0, max: $0.count) }
+            machine == nil ? text : text.flatMap { Trim.plainText($0, max: $0.count) }
         }
         if let title = plain(semantics.title), !title.isEmpty, !t.manual || titleLooksGeneric(t.title) {
             t.title = title

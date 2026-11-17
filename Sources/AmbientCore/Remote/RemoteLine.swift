@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// How much text leaves a remote machine. Applied there, before anything is spooled.
 public enum RemoteRedaction: String, Codable, CaseIterable, Sendable {

@@ -1,0 +1,21 @@
+[
+  {
+    "lastSeq" : 42,
+    "machine" : {
+      "id" : "a1b2c3d4",
+      "label" : "Studio"
+    },
+    "missed" : true,
+    "project" : "ambient",
+    "unreachable" : false
+  },
+  {
+    "lastSeq" : 0,
+    "machine" : {
+      "id" : "a1b2c3d4",
+      "label" : "Studio"
+    },
+    "missed" : false,
+    "unreachable" : false
+  }
+]

@@ -1,5 +1,7 @@
 import CryptoKit
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// The `ambient-remote` shim that ships inside the signed app. It's the only source of the shim: it's copied from
 /// here over the transport and never downloaded.
@@ -116,7 +118,7 @@ public enum RemotePairing {
         let installed = transport.run(RemoteTransport.shim(arguments), timeout: 60)
         guard installed.status == 0 || installed.status == 3 else { throw .installFailed(explain(installed)) }
         let lines = (installed.text + installed.stderr).split(whereSeparator: \.isNewline).compactMap {
-            RemoteEventDecoder.plainText(String($0), max: 240)
+            Trim.plainText(String($0), max: 240)
         }
 
         let reported = transport.run(RemoteTransport.shim("status"))
@@ -184,7 +186,7 @@ public enum RemotePairing {
     static func explain(_ result: RemoteTransport.Result) -> String {
         if result.timedOut { return "timed out" }
         let lines = (result.stderr + "\n" + result.text).split(whereSeparator: \.isNewline)
-        return RemoteEventDecoder.plainText(lines.last.map(String.init) ?? "", max: 200) ?? "exit status \(result.status)"
+        return Trim.plainText(lines.last.map(String.init) ?? "", max: 200) ?? "exit status \(result.status)"
     }
 }
 

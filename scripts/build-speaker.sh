@@ -24,7 +24,7 @@ STAMP=build/AmbientSpeaker.driver.stamp
 CFLAGS=(-std=c17 -Wall -Wextra -Werror -fvisibility=hidden -mmacosx-version-min=14.0)
 mkdir -p build
 
-VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)
 # The driver's own number: the commits up to its last change. Each app carries the driver, and offers to install it
 # when it's newer than the one installed, so a new app with the same driver mustn't look newer.
 BUILD_NUMBER=$(git rev-list --count "$(git log -1 --format=%H -- "$SRC")" 2>/dev/null || echo 1)

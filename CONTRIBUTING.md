@@ -12,6 +12,10 @@ scripts/build-app.sh --run    # build and relaunch build/Ambient.app
 
 - Put logic in `AmbientCore` with tests (Swift Testing). The app target should only render decisions the
   core makes — see `Policy.swift`.
+- Types that several modules share go in `AmbientContracts`, and utilities without Ambient's vocabulary in
+  `AmbientBase`. Both are public libraries: what's `public` there is a promise to other packages, so use `package`
+  for what only Ambient's own modules need. A type that's saved or sent gets a fixture in its module's
+  `Tests/…/Fixtures`; see `docs/superpowers/specs/2026-11-13-modular-packages-design.md`.
 - The `ambient hook` path runs on every agent event. Keep it free of work beyond parsing and one socket
   write, and keep it silent on stdout (Gemini expects `{}` there).
 - Never send prompt text or tool output over the socket; add fields only when a surface needs them, and
