@@ -124,6 +124,8 @@ Step-by-step guides for each agent's own options:
 
 **Which Macs does it run on?** macOS 14 or later, on Apple silicon and Intel.
 
+**Can I use one Mac's speakers or microphone on another?** Yes. Ambient Speaker adds an output called *Ambient*: what plays to it plays on another Mac you've paired, and video here waits for the sound. Ambient Microphone adds an input: apps here that record from it hear the other Mac's microphone, which is on only while they record. Each Mac decides in its own Settings › Voice & Sound whether others may use its speakers or microphone.
+
 **Does it work over SSH?** Yes. Pair a machine with `ambient remote add`, and its agents show up on your Mac beside the local ones, over your own ssh. A remote machine can only send display data, so clicking one of its sessions marks it as seen, and Ambient can't answer or approve anything there.
 
 **How do I remove it?** Run `ambient uninstall` (your other settings stay exactly as they were), quit Ambient, and delete the app and `~/.ambient`.
