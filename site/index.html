@@ -78,6 +78,8 @@
           "A black hole or a sun at the notch when the island opens, driven by real gravity",
           "Wallpaper follows the time of day, matches macOS light or dark mode, or stays light or dark",
           "Wallpaper on every display and on the lock screen",
+          "Read aloud: hear any selected reply, with a Mac voice, Kokoro offline or your own OpenAI or ElevenLabs key",
+          "Voice sync: talk on one Mac and paste the transcript on another",
           "Ambient Speaker: hear one Mac on another, with video waiting for the sound",
           "Ambient Microphone: record from another Mac's microphone, on only while an app records",
           "Works with Claude Code, Codex and Gemini CLI",
@@ -127,6 +129,7 @@
       <a href="#alerts">Alerts</a>
       <a href="#dock">Dock glow</a>
       <a href="#wallpaper">Wallpaper</a>
+      <a href="#voice">Voice</a>
       <a href="#faq">FAQ</a>
       <a href="/guides/">Guides</a>
       <a href="/requests/">Requests</a>
@@ -295,6 +298,69 @@
       <div class="card"><h3>Light and dark</h3><p>Follows the time of day, matches macOS, or stays light or dark. The black hole and the sun follow it too.</p></div>
       <div class="card"><h3>Every display</h3><p>A full scene on each desktop, still while covered, and on the lock screen while you're away. Off until you turn it on.</p></div>
     </div>
+  </div>
+</section>
+
+<section class="alt center" id="voice">
+  <div class="wrap">
+    <h2>Hear it. Say it. On any of your Macs.</h2>
+    <p class="section-lede">Listen to an answer instead of reading it, and let your voice and your sound follow you from one Mac to another. Here's what each feels like.</p>
+    <div class="voice" id="voice-tabs">
+      <div class="voice-tablist" role="tablist" aria-label="Voice and sound features"><button class="voice-tab" role="tab" id="tab-voice-read" aria-controls="voice-read" aria-selected="true">Read aloud</button><button class="voice-tab" role="tab" id="tab-voice-sync" aria-controls="voice-sync" aria-selected="false">Voice sync</button><button class="voice-tab" role="tab" id="tab-voice-speaker" aria-controls="voice-speaker" aria-selected="false">Speaker</button><button class="voice-tab" role="tab" id="tab-voice-mic" aria-controls="voice-mic" aria-selected="false">Microphone</button></div>
+      <div class="voice-panel split" id="voice-read" role="tabpanel" aria-labelledby="tab-voice-read" style="--state: var(--claude)">
+        <div>
+          <h3>Lean back. The answer comes to you.</h3>
+          <p class="body">A long reply stops being a wall of text. You stretch, look out of the window, and still take it all in.</p>
+          <ol class="voice-steps"><li>Select part of a reply in Claude, Codex or your terminal.</li><li>Press <kbd>⌥⎋</kbd>.</li><li>Pause from the island, the <kbd>⏯</kbd> key or your AirPods.</li></ol>
+          <p class="voice-note">Markdown, paths and code blocks are turned into something worth hearing. Use a Mac voice, Kokoro offline on your Mac, or OpenAI or ElevenLabs with your own key.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">A reply you selected</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">You, listening</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-sync" role="tabpanel" aria-labelledby="tab-voice-sync" style="--state: var(--waiting)">
+        <div>
+          <h3>Say it here. Paste it over there.</h3>
+          <p class="body">The thought is on your desktop before you've walked back to it. No typing it twice, and no message to yourself.</p>
+          <ol class="voice-steps"><li>Press <kbd>⌃⌥V</kbd> on your laptop and talk.</li><li>Press it again when you're done.</li><li>On your desktop, a card offers Copy Text, Copy Audio and Play.</li></ol>
+          <p class="voice-note">Your words are transcribed on your Mac, never on a server, and travel over your own ssh.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your laptop</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Your desktop</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-speaker" role="tabpanel" aria-labelledby="tab-voice-speaker" style="--state: var(--done)">
+        <div>
+          <h3>One pair of headphones for both Macs.</h3>
+          <p class="body">Your desktop's sound arrives in the headphones you already have on. Nothing to unplug or pair again, and video waits for its sound, so lips still match.</p>
+          <ol class="voice-steps"><li>On one Mac, choose <strong>Ambient</strong> as the sound output.</li><li>What plays there plays on the other Mac.</li><li><kbd>⏯</kbd> on the other Mac plays and pauses it.</li></ol>
+          <p class="voice-note">A Mac plays another Mac's sound only when its own Settings allow it.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your desktop</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Your laptop's headphones</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-mic" role="tabpanel" aria-labelledby="tab-voice-mic" style="--state: var(--gemini)">
+        <div>
+          <h3>Your best microphone, on every Mac.</h3>
+          <p class="body">You dictate to a desktop that has no microphone, with the laptop beside you. It feels like a microphone that was always there.</p>
+          <ol class="voice-steps"><li>On one Mac, turn on <strong>Lend this Mac's microphone</strong>.</li><li>On the other, choose <strong>Ambient Microphone</strong> as the input.</li><li>Talk.</li></ol>
+          <p class="voice-note">The microphone is on only while an app records, and macOS shows its orange dot the whole time it is.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your laptop's microphone</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Apps on your desktop</span>
+        </div>
+      </div>
+    </div>
+    <p class="voice-where">All four are in Settings › Voice &amp; Sound. Voice sync, the speaker and the microphone work between Macs you've <a href="#faq">paired over your own ssh</a>.</p>
   </div>
 </section>
 

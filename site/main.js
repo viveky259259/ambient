@@ -93,6 +93,40 @@
     }, { threshold: 0.5 }).observe(stage);
   }
 
+  // MARK: - Voice tabs
+  // Without this script every panel shows, one under the other. With it they become tabs: click or tap, the arrow
+  // keys, Home and End. A link to a panel (#voice-sync) opens on that tab.
+
+  const voice = document.getElementById("voice-tabs");
+  if (voice) {
+    const tabs = Array.from(voice.querySelectorAll('[role="tab"]'));
+    const show = (tab, focus) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      });
+      if (focus) tab.focus();
+    };
+    voice.classList.add("tabs-on");
+    const linked = tabs.find((t) => "#" + t.getAttribute("aria-controls") === location.hash);
+    show(linked || tabs[0], false);
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => show(tab, false));
+      tab.addEventListener("keydown", (event) => {
+        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[event.key];
+        if (to === undefined) return;
+        event.preventDefault();
+        show(tabs[(to + tabs.length) % tabs.length], true);
+      });
+    });
+    window.addEventListener("hashchange", () => {
+      const tab = tabs.find((t) => "#" + t.getAttribute("aria-controls") === location.hash);
+      if (tab) show(tab, false);
+    });
+  }
+
   // MARK: - Mobile detection
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
