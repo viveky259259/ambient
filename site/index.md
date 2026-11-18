@@ -54,6 +54,13 @@ Light rises along the Dock in the color of what your agents are doing: visible f
 
 Off until you turn it on in Settings › Wallpaper. Your desktop becomes a scene that follows the time of day (Sky, Harbor, Garden or Solar System, or a new one each day) where every session lives as a star, a boat, a plant or a planet in the color of its state, with the clock, your next calendar event (read on your Mac) and the day's story. Open the island and a black hole forms at the notch, or the Solar System's sun lights up, and the agents orbit it. It follows the time of day, matches macOS light or dark mode, or stays light or dark, and shows on every display and on the lock screen. Your own wallpaper is untouched.
 
+### Voice and sound
+
+- **Read aloud.** Lean back and hear the answer: select part of a reply, press ⌥⎋, and Ambient reads it to you.
+- **Voice sync.** Say it on one Mac and paste it on another: press ⌃⌥V, talk, and the transcript is waiting on your desktop.
+- **Ambient Speaker.** One pair of headphones for both Macs: what plays to *Ambient* on one Mac plays on the other.
+- **Ambient Microphone.** Your best microphone on every Mac: apps on one Mac record from another Mac's microphone, which is on only while they record.
+
 ## Works with the agents you use
 
 | Agent | Where |
