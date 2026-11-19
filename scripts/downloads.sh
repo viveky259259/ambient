@@ -16,7 +16,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-netlify blobs:list downloads --json ${1:+--prefix "$1"} | python3 -c '
+netlify blobs:list downloads --json ${1:+--prefix} ${1:+"$1"} | python3 -c '
 import json, sys
 from collections import Counter
 blobs = json.load(sys.stdin)
