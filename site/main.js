@@ -153,6 +153,16 @@
     track("Copy link", { place, ref: store.get("ambient-ref") || "none" });
   };
 
+  // The Homebrew command: one click copies it.
+  document.querySelectorAll("[data-copy-text]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const label = b.querySelector("span");
+      try { await navigator.clipboard.writeText(b.dataset.copyText); label.textContent = "Copied"; }
+      catch { label.textContent = "Press ⌘C"; getSelection().selectAllChildren(b.querySelector("code")); }
+      track("Copy brew", { place: b.dataset.copyPlace || "page", ref: store.get("ambient-ref") || "none" });
+      setTimeout(() => { label.textContent = "Copy"; }, 2000);
+    });
+  });
   document.querySelectorAll("[data-copy-link]").forEach((b) => {
     b.addEventListener("click", () => copyLink(b, b.dataset.copyLink));
   });

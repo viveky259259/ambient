@@ -90,6 +90,12 @@ code, kbd { font-family: var(--mono); font-size: 0.9em; }
 .hero .lede { font-size: clamp(19px, 2.2vw, 24px); line-height: 1.35; color: #a1a1a6; max-width: 720px; margin: 0 auto 32px; font-weight: 500; }
 .cta-row { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .fineprint { color: #86868b; font-size: 14px; margin-top: 18px; }
+.trust { color: #d2d2d7; font-size: 15px; font-weight: 500; margin: 22px 0 -6px; }
+.copy-code { font: inherit; color: inherit; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; padding: 5px 8px 5px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+.copy-code:hover { background: rgba(255, 255, 255, 0.13); }
+.copy-code:focus-visible { outline: 3px solid rgba(41, 151, 255, 0.6); outline-offset: 2px; }
+.copy-code code { color: #f5f5f7; }
+.copy-code span { font-size: 12px; font-weight: 600; color: #2997ff; min-width: 46px; text-align: left; }
 
 /* The MacBook. Everything inside scales with its width (cqw), so it keeps its shape on a phone. */
 .macbook { container-type: inline-size; position: relative; width: min(820px, 86%); margin: 64px auto 0; }

@@ -2,6 +2,27 @@
 
 **Your Mac, aware of your coding agents.** Website and download: [yaml.cafe](https://yaml.cafe/)
 
+![Three agent sessions at the notch. One stops, and the notch says "Approve a command · rm -rf build".](docs/assets/ambient-loop.gif)
+
+*An illustration of the island, not a screen recording.*
+
+```bash
+brew install --cask viveky259259/tap/ambient
+```
+
+Or [download the disk image](https://yaml.cafe/?ref=github) (11.5 MB, signed and notarized by Apple), open Ambient
+and click **Connect All**. Free, MIT, macOS 14 or later, Apple silicon and Intel.
+
+**What Ambient can and can't do on your Mac**
+
+- It listens to the hooks each agent already offers. It doesn't wrap your agent, read your screen or see your files.
+- A hook sends a few short fields (agent, state, project name, a trimmed message) over a Unix socket on your Mac.
+  Your prompts and tool output are never stored. [Privacy](#privacy)
+- No account and no telemetry. It goes online only when you ask it to, for an optional voice.
+- It never answers a permission prompt for you. Answering from the notch is off until you turn it on, and then only
+  *Allow once* or *Deny*. [How that works](#answer-permission-prompts-from-the-island)
+- `ambient uninstall` removes only Ambient's hooks. [What it changes on your system](#what-ambient-changes-on-your-system)
+
 Ambient is a free, open source (MIT) macOS notch app for AI coding agents. It shows when an agent is working, needs you, has finished or hit an error, and one click takes you back to the exact terminal tab, tmux pane or chat.
 
 Ambient turns what Claude Code, Codex, Gemini CLI, Antigravity, Cursor, Copilot CLI and OpenCode (or any agent or
