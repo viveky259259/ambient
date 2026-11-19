@@ -12,9 +12,10 @@ site/downloads/
 
 # Local Netlify folder
 .netlify
-marketing/node_modules/
-marketing/out/
 /node_modules/
-docs/launch/daily/brief.log
 .superpowers/
 Voice/.build/
+
+# Promotion material stays local, out of the public repo.
+marketing/
+docs/launch/
