@@ -1,0 +1,113 @@
+/* Chladni figures — bench linen, plate black, graphite. A strict grid of hairline rules, big Instrument Serif
+   with an italic grey second voice, mono mode numbers, and small black plates of sand in each state's colour. */
+:root {
+  --bg: #e8e2d6;
+  --bg-alt: #dfd8ca;
+  --surface: #efeae0;
+  --surface-2: #e1dbcf;
+  --ink: #101011;
+  --ink-2: #3a3835;
+  --rule: #101011;
+  --accent: #101011;
+  --on-accent: #e8e2d6;
+  --link: #101011;
+  --band: #101011;
+  --band-ink: #ece6da;
+  --band-ink-2: #b3aea4;
+  --band-surface: #19191b;
+  --band-rule: #3a3835;
+  --claude: #d97757;
+  --codex: #10a37f;
+  --gemini: #4f7df7;
+  --waiting: #e89a16;
+  --done: #2fae68;
+  --error: #e0433e;
+
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Instrument Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.03em;
+  --display-leading: 0.9;
+  --h1-size: clamp(58px, 10vw, 168px);
+  --h2-size: clamp(42px, 6vw, 84px);
+  --h3-size: 34px;
+  --label-size: 11px;
+  --label-tracking: 0.2em;
+  --label-weight: 400;
+  --label-color: #3a3835;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --device-edge: #3a3835;
+  --edge-strength: 0.3;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 1px solid var(--ink); }
+.nav .wrap { height: 70px; }
+.brand { font-family: var(--font-display); font-style: italic; font-size: 32px; text-transform: lowercase; flex: none; margin-right: 8px; }
+.brand img { border-radius: 0; }
+.nav-links { font-family: var(--font-body); font-weight: 500; font-size: 14.5px; letter-spacing: 0; gap: 20px; }
+.nav-links a { color: var(--ink); }
+.nav .btn.small { background: transparent; color: var(--ink); border-bottom: 2px solid var(--ink); padding: 8px 4px; font-family: var(--font-body); font-weight: 600; }
+.nav .btn.small::after { content: none; }
+
+.btn { font-family: var(--font-body); font-weight: 600; font-size: 17px; letter-spacing: 0; padding: 16px 22px; justify-content: space-between; gap: 34px; }
+.btn::after { content: "↓" / ""; font-weight: 400; }
+.scene-controls .btn::after, .sheet .btn::after { content: none; }
+.dark .btn { background: var(--band-ink); color: var(--band); }
+.copy-code { background: var(--surface); }
+
+/* Hero: the statement, then the four plates as one band. */
+.hero { border-bottom: 1px solid var(--ink); }
+.hero .kicker { color: var(--ink-2); }
+.hero h1 { letter-spacing: -0.035em; }
+.hero-copy .lede { color: #24221f; }
+.trust { font-family: var(--font-display); font-style: italic; font-size: 21px; }
+.fineprint { font-family: var(--font-label); font-weight: 300; font-size: 11.5px; color: var(--ink-2); }
+.hero-art { width: 100%; min-height: calc((min(100vw, 1120px) - 44px - 72px) / 4 + 92px); margin-top: 24px; }
+.ch-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; text-align: left; }
+.ch-pl canvas { display: block; width: 100%; aspect-ratio: 1; box-shadow: 0 22px 30px -18px rgba(16, 16, 17, 0.55); transition: transform 0.6s var(--ease), box-shadow 0.6s var(--ease); }
+.ch-pl .m { display: flex; justify-content: space-between; font: 400 10px/1 var(--font-label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); margin: 18px 0 8px; border-top: 1px solid var(--ink); padding-top: 9px; }
+.ch-pl b { display: block; font: 400 32px/1 var(--font-display); color: var(--ink); }
+html[data-mood="working"] .ch-p0 canvas, html[data-mood="waiting"] .ch-p1 canvas, html[data-mood="done"] .ch-p2 canvas, html[data-mood="error"] .ch-p3 canvas { transform: translateY(-10px); box-shadow: 0 34px 36px -18px rgba(16, 16, 17, 0.7); }
+@media (max-width: 760px) {
+  .ch-band { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .hero-art { min-height: calc((100vw - 44px - 20px) + 2 * 88px + 20px); }
+}
+
+/* Sections: hairline rules on a strict grid; mono mode labels. */
+main > section { border-top: 1px solid var(--ink); }
+main { counter-reset: mode; }
+main .kicker { counter-increment: mode; display: flex; gap: 16px; justify-content: space-between; border-top: 1px solid currentColor; padding-top: 10px; max-width: 100%; }
+main .kicker::after { content: "mode " counter(mode); opacity: 0.8; }
+.center .kicker { max-width: 360px; margin-left: auto; margin-right: auto; }
+h2 { font-weight: 400; }
+.section-lede { color: var(--ink-2); }
+
+.card { background: transparent; border: 0; border-top: 1px solid var(--ink); padding: 20px 2px 8px; }
+.dark .card { border-top-color: var(--band-ink-2); }
+.card h3 { font-size: 34px; line-height: 1; }
+.states .card { border-top: 1px solid var(--ink); }
+.states .card::before { content: ""; display: block; width: 72px; height: 72px; margin-bottom: 18px; background: radial-gradient(circle at 50% 50%, #8d8a84 0 3px, #2a2a2c 3px 7px, transparent 7px), repeating-radial-gradient(circle at 50% 50%, transparent 0 7px, var(--state) 7px 8.5px, transparent 8.5px 13px), #101011; box-shadow: 0 12px 16px -10px rgba(16, 16, 17, 0.6); }
+.states .card { position: relative; }
+.states .card .orb { position: absolute; top: 56px; left: 38px; translate: -50% -50%; margin: 0; }
+.states .card h3::after { content: ""; display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin-left: 10px; vertical-align: middle; background: var(--state); }
+.agents .card .orb { margin: 0 auto 16px; }
+.dest { background: transparent; border: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.dest li { border-top: 1px solid color-mix(in srgb, var(--ink) 30%, transparent); padding-left: 2px; padding-right: 2px; }
+.dest .where { font-weight: 300; font-size: 11.5px; }
+.chip { font-family: var(--font-body); font-weight: 500; min-height: 44px; }
+.voice-tab { font-family: var(--font-body); font-weight: 500; min-height: 44px; }
+.voice-panel { background: var(--surface); }
+.step { border-radius: 0; background: #101011; color: var(--bg); font-family: var(--font-label); font-weight: 400; font-size: 13px; }
+.stat { font-family: var(--font-display); font-style: italic; color: var(--ink); }
+.faq summary { font-size: 27px; line-height: 1.1; }
+.guide-list a { background: transparent; border: 0; border-top: 1px solid var(--ink); padding: 18px 2px; }
+.guide-list a:hover { background: var(--surface); }
+.guide-list strong { font-size: 26px; }
+footer { border-top: 1px solid var(--ink); font-family: var(--font-label); font-weight: 300; font-size: 11.5px; }
+dialog { border: 1px solid var(--ink); }

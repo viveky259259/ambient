@@ -1,0 +1,13 @@
+{
+  "name": "Test card",
+  "set": "machines",
+  "inspiration": "A broadcast test pattern: a grey grid, a black circle with a grey step wedge, and four colour bars for the four states",
+  "order": 34,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Unbounded", "axes": "wght@400;700;900" },
+    { "family": "Instrument Sans", "axes": "wght@400;500;700" },
+    { "family": "Martian Mono", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Stop standing by for your agents." }
+}

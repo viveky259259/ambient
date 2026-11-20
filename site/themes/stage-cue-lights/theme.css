@@ -1,0 +1,125 @@
+/* Stage cue lights. A dark theatre: velvet curtains at the edges of the screen, a gilt proscenium line, a row of
+   footlights above each section, a high-contrast serif, and four cue lights whose beams fall in the state colours. */
+:root {
+  --bg: #09080a;
+  --bg-alt: #110e12;
+  --surface: #17131a;
+  --surface-2: #1f1a22;
+  --ink: #f6ecd8;
+  --ink-2: #dacdb2;
+  --rule: rgba(233, 185, 73, 0.4);
+  --accent: #f6ecd8;
+  --on-accent: #09080a;
+  --link: #e9b949;
+  --band: #160c11;
+  --band-ink: #f6ecd8;
+  --band-ink-2: #dacdb2;
+  --band-surface: #221519;
+  --band-rule: rgba(233, 185, 73, 0.4);
+  --hero-bg: #09080a;
+  --waiting: #ffb62e;
+  --done: #3fd476;
+  --error: #ff5a45;
+
+  --font-display: "Playfair Display", "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: "Libre Franklin", "Franklin Gothic Medium", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Anonymous Pro", ui-monospace, Menlo, monospace;
+  --font-mono: "Anonymous Pro", ui-monospace, Menlo, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.01em;
+  --display-leading: 1.02;
+  --h1-size: clamp(50px, 8vw, 116px);
+  --h2-size: clamp(38px, 5vw, 66px);
+  --h3-size: 30px;
+  --body-size: 18px;
+  --label-size: 14px;
+  --label-tracking: 0.24em;
+  --label-weight: 400;
+  --label-color: #e9b949;
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-btn: 2px;
+  --border: 1px solid var(--rule);
+  --texture: radial-gradient(900px 600px at 50% -10%, rgba(233, 185, 73, 0.09), transparent 70%);
+  --band-texture: radial-gradient(700px 420px at 50% 0, rgba(255, 220, 160, 0.08), transparent 70%);
+  --device-edge: #3a383d;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+/* Velvet curtains in the margins, as wide as the screen can spare. */
+body::before, body::after { content: ""; position: fixed; top: 0; bottom: 0; z-index: 21; pointer-events: none; width: clamp(0px, calc((100vw - 1170px) / 2), 128px);
+  background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.6)), repeating-linear-gradient(90deg, #3d0a14 0, #8a1a2a 14px, #5a0f1c 26px, #2a060d 40px); }
+body::before { left: 0; }
+body::after { right: 0; }
+
+.nav { background: color-mix(in srgb, #09080a 92%, transparent); border-bottom: 1px solid rgba(233, 185, 73, 0.5); }
+.brand { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 28px; color: #f6ecd8; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-weight: 500; font-size: 14px; letter-spacing: 0.04em; }
+.nav-links a { color: #dacdb2; }
+.nav-links a:hover { color: #e9b949; }
+.nav .btn.small { background: transparent; color: #e9b949; border-bottom: 2px solid #e9b949; box-shadow: none; }
+
+/* Buttons: a cream card with a gilt ring, like a programme cover. */
+.btn { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 23px; letter-spacing: 0.01em; padding: 13px 36px; box-shadow: 0 0 0 1px var(--bg), 0 0 0 4px #e9b949; }
+.btn.small { font-size: 17px; min-height: 44px; padding: 6px 16px; }
+.dark .btn { box-shadow: 0 0 0 1px var(--band), 0 0 0 4px #e9b949; }
+.sheet .inline .btn { font-size: 17px; padding: 8px 16px; }
+.chip, .voice-tab { min-height: 44px; }
+.copy-code { background: transparent; border: 1px solid rgba(233, 185, 73, 0.6); }
+
+/* Hero */
+.hero .kicker { color: #e9b949; }
+.hero h1 { font-weight: 700; }
+.hero-copy .lede { color: #efe4cd; }
+.hero-art { width: 100%; aspect-ratio: 1100 / 520; margin: 12px auto 0; }
+.stg-rig { width: 100%; }
+.stg-rig .beam, .stg-rig .pool { opacity: 0.4; transition: opacity 0.8s var(--ease); }
+html:not([data-mood]) .stg-rig .m-working, html[data-mood="working"] .stg-rig .m-working, html[data-mood="waiting"] .stg-rig .m-waiting, html[data-mood="done"] .stg-rig .m-done, html[data-mood="error"] .stg-rig .m-error { opacity: 1; }
+.trust { font-family: var(--font-display); font-style: italic; font-size: 20px; }
+.fineprint { font-family: var(--font-label); font-size: 14.5px; letter-spacing: 0.04em; }
+
+/* A row of footlights along the top of every section. */
+main > section { border-top: 1px solid rgba(233, 185, 73, 0.45); }
+main > section::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 14px; pointer-events: none;
+  background: radial-gradient(circle at 50% 0, #ffe7a8 0 3px, rgba(255, 200, 110, 0.35) 4px, transparent 12px) 0 0 / 46px 14px repeat-x; }
+
+.section-lede { color: var(--ink-2); }
+.card { background: var(--surface); border: 1px solid var(--rule); position: relative; overflow: hidden; }
+.dark .card { background: var(--band-surface); }
+.card h3 { font-style: italic; }
+
+/* The four states, each under its own cue light. */
+.states .card { border-top: 1px solid var(--rule); padding-top: 36px; text-align: center; }
+.states .card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 100%; pointer-events: none; opacity: 0.22;
+  background: linear-gradient(var(--state), transparent 85%); clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%); }
+.states .card::after { content: ""; position: absolute; left: 50%; top: 0; width: 46px; height: 8px; translate: -50% 0; border-radius: 0 0 23px 23px; background: var(--state); box-shadow: 0 0 18px var(--state); }
+.states .card .orb { margin: 8px auto 20px; }
+.states .card h3 { font-size: 36px; font-weight: 800; color: color-mix(in srgb, var(--state) 70%, #ffffff); }
+.states .card p { position: relative; }
+.agents .card h3 { color: color-mix(in srgb, var(--state) 60%, #ffffff); }
+
+.dest { background: var(--surface); }
+.dest .where { color: #e9b949; }
+.wallpaper { border: 1px solid var(--rule); }
+.step { background: transparent; color: #e9b949; border: 1px solid #e9b949; font-family: var(--font-display); font-style: italic; font-size: 18px; }
+.stat { color: #e9b949; font-style: italic; font-weight: 800; }
+.faq summary { font-style: italic; font-weight: 600; font-size: 22px; }
+.faq summary::after { color: #e9b949; }
+.guide-list a { background: var(--surface); border: 1px solid var(--rule); }
+.guide-list a:hover { border-color: #e9b949; }
+.guide-list strong { font-style: italic; font-weight: 700; }
+.voice-panel { background: var(--surface); }
+.voice-panel h3 { font-style: italic; }
+.voice-tab[aria-selected="true"] { background: #f6ecd8; color: #09080a; }
+.voice-flow .end { background: var(--bg); }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: #f6ecd8; color: #09080a; }
+footer { background: #09080a; border-top: 1px solid rgba(233, 185, 73, 0.45); font-family: var(--font-label); }
+footer a { color: #f6ecd8; }
+dialog { border: 1px solid #e9b949; box-shadow: 0 0 0 4px #09080a, 0 0 0 5px #e9b949, 0 30px 80px rgba(0, 0, 0, 0.6); }
+dialog .m-error { color: #ff8a7a; }
+.field input { background: #17131a; }

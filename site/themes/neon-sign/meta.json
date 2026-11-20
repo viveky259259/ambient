@@ -1,0 +1,13 @@
+{
+  "name": "Neon sign",
+  "set": "craft",
+  "inspiration": "An indoor neon blade sign on a bracket against a dark brick wall: bent glass tubes, one lit in the state that matters",
+  "order": 52,
+  "hero": "split",
+  "fonts": [
+    { "family": "Tilt Neon", "axes": "wght@400" },
+    { "family": "Sora", "axes": "wght@300;400;500;600" },
+    { "family": "JetBrains Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free native macOS app · for coding agents", "h1": "Visible from across the room." }
+}

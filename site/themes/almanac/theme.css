@@ -1,0 +1,123 @@
+/* Almanac — the default design. A nineteenth-century almanac: warm rag paper, iron-gall ink, a vermilion
+   rubric, engraved rules and small capitals. Sections are numbered like an almanac's chapters. */
+:root {
+  --bg: #efe3c8;
+  --bg-alt: #e8d9b8;
+  --surface: #f4ead3;
+  --surface-2: #e9dcbd;
+  --ink: #1d1812;
+  --ink-2: #4a4034;
+  --rule: #1d1812;
+  --accent: #a8281c;
+  --on-accent: #fbf1da;
+  --link: #8a2016;
+  --band: #1d1812;
+  --band-ink: #efe3c8;
+  --band-ink-2: #c9bb9c;
+  --band-surface: #2a231b;
+  --band-rule: #6b5d48;
+  --waiting: #b9790a;
+  --done: #2f6b3c;
+  --error: #a8281c;
+
+  --font-display: "IM Fell DW Pica", "Iowan Old Style", Georgia, serif;
+  --font-body: "Old Standard TT", "Iowan Old Style", Georgia, serif;
+  --font-label: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --font-mono: "Cutive Mono", "Courier New", monospace;
+  --display-style: italic;
+  --display-tracking: -0.01em;
+  --display-leading: 1.08;
+  --h1-size: clamp(52px, 9vw, 136px);
+  --h2-size: clamp(38px, 5vw, 64px);
+  --h3-size: 30px;
+  --body-size: 18px;
+  --label-size: 19px;
+  --label-tracking: 0.14em;
+  --label-transform: none;
+  --label-weight: 400;
+  --label-color: #a8281c;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--rule);
+  --texture: radial-gradient(1100px 760px at 50% 18%, #f7eed9 0, transparent 70%), radial-gradient(#00000009 1px, transparent 1.2px) 0 0 / 5px 5px;
+  --band-texture: radial-gradient(#ffffff08 1px, transparent 1.2px) 0 0 / 5px 5px;
+  --device-edge: #3b3227;
+  --edge-strength: 0.32;
+}
+
+/* The page sits inside an engraved double frame. */
+body::before { content: ""; position: fixed; inset: 10px; border: 4px solid var(--ink); outline: 1.5px solid var(--ink); outline-offset: -10px; pointer-events: none; z-index: 30; }
+@media (max-width: 760px) { body::before { inset: 5px; border-width: 2.5px; outline-offset: -7px; } }
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 1.5px solid var(--ink); }
+.nav .wrap { height: 70px; padding: 0 40px; }
+.brand { font-family: var(--font-label); font-size: 30px; letter-spacing: 0.08em; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-label); font-size: 18px; letter-spacing: 0.06em; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: var(--accent); }
+
+/* Buttons: a vermilion block with a printer's hairline around it. */
+.btn { font-family: var(--font-label); font-size: 22px; font-weight: 400; letter-spacing: 0.1em; outline: 1.5px solid var(--accent); outline-offset: 4px; padding: 10px 34px 12px; }
+.btn::before { content: "☞"; font-family: var(--font-body); }
+.btn.small { font-size: 16px; padding: 6px 16px 8px; outline-offset: 3px; }
+.btn.small::before, .sheet .btn::before, .scene-controls .btn::before { content: none; }
+.sheet .inline .btn { font-size: 17px; padding: 8px 16px; }
+
+/* Hero */
+.hero { padding-top: 24px; }
+/* Reserve the sun's height so the page doesn't shift when motif.js draws it (480 × 440 at most). */
+.hero-art { max-width: 1120px; width: 100%; margin: 0 auto -20px; min-height: calc(min(480px, 92vw - 40px) * 0.917); }
+.hero .kicker { color: var(--accent); font-size: clamp(15px, 1.7vw, 21px); letter-spacing: 0.18em; }
+.hero h1 { margin-bottom: 22px; }
+.hero-copy .lede { font-size: clamp(19px, 2vw, 25px); color: var(--ink); max-width: 900px; }
+.trust { font-family: var(--font-display); font-style: italic; font-size: 20px; }
+.fineprint { font-family: var(--font-mono); font-size: 14.5px; letter-spacing: 0.02em; }
+.copy-code { background: transparent; border: 1px dashed var(--ink); }
+
+.alm-sun { width: min(480px, 92%); }
+.alm-sun .rays { transform-origin: 0 0; animation: alm-turn 240s linear infinite; }
+@keyframes alm-turn { to { transform: rotate(360deg); } }
+.alm-sun .orb-fill { fill: var(--state, #d9960f); transition: fill 0.8s var(--ease); }
+.alm-sun .orb-ring { stroke: var(--state, #d9960f); transition: stroke 0.8s var(--ease); }
+.alm-note { position: absolute; top: 34%; width: 290px; font-family: var(--font-display); font-style: italic; font-size: 23px; line-height: 1.3; color: var(--ink); }
+.alm-note b { display: block; font-family: var(--font-label); font-style: normal; font-weight: 400; font-size: 17px; letter-spacing: 0.14em; color: var(--accent); margin-bottom: 6px; }
+.alm-note.l { left: 0; text-align: right; }
+.alm-note.r { right: 0; }
+@media (max-width: 1080px) { .alm-note { display: none; } }
+
+/* Chapters: every section's kicker is numbered, with an engraved rule above the section. */
+main { counter-reset: chapter; }
+main .kicker { counter-increment: chapter; }
+main .kicker::before { content: counter(chapter, upper-roman) ". "; }
+main > section { border-top: 5px double var(--ink); }
+main > section.dark { border-top-color: var(--band-rule); }
+main > section::before { content: "✦"; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); padding: 0 14px; font-size: 15px; line-height: 24px; color: var(--accent); background: var(--bg); }
+main > section.alt::before { background: var(--bg-alt); }
+main > section.dark::before { background: var(--band); }
+.dark .kicker { color: #e0a089; }
+
+.card { background: transparent; }
+.dark .card { background: var(--band-surface); }
+.states .card { border-top: 6px double var(--state); text-align: center; }
+.states .card .orb { margin: 0 auto 18px; }
+.states .card h3 { color: var(--ink); font-size: 36px; }
+.states { counter-reset: aspect; }
+.states .card::before { counter-increment: aspect; content: counter(aspect, upper-roman) "."; display: block; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.14em; margin-bottom: 10px; }
+.dest li { font-family: var(--font-body); }
+.dest .where { font-family: var(--font-display); font-style: italic; font-size: 16px; }
+.step { background: var(--accent); color: var(--on-accent); font-family: var(--font-display); font-style: italic; font-size: 19px; }
+.stat { color: var(--accent); font-style: italic; }
+.faq summary { font-style: italic; font-size: 22px; }
+.faq summary::after { font-family: var(--font-body); }
+.guide-list strong { font-style: italic; }
+.voice-tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.voice-tab { font-size: 17px; }
+.chip { font-size: 16px; }
+footer { border-top: 5px double var(--ink); font-family: var(--font-body); }
+.closing h2 { font-size: clamp(38px, 5vw, 66px); }
+dialog { border: 4px double var(--ink); }
+
+@media (prefers-reduced-motion: reduce) { .alm-sun .rays { animation: none; } }

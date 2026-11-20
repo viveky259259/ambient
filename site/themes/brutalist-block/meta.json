@@ -1,0 +1,13 @@
+{
+  "name": "Brutalist block",
+  "set": "culture",
+  "inspiration": "A brutalist housing block at night: board-marked concrete, heavy rules, a tower of dark windows where each session is a lit one, and a directory board by the door",
+  "order": 16,
+  "hero": "split",
+  "fonts": [
+    { "family": "Big Shoulders Display", "axes": "wght@700;900" },
+    { "family": "Public Sans", "axes": "wght@400;600" },
+    { "family": "Martian Mono", "axes": "wght@400;600" }
+  ],
+  "copy": { "kicker": "Free · native macOS · Claude Code, Codex, Gemini CLI", "h1": "Glance, don't babysit." }
+}

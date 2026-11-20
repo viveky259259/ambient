@@ -1,0 +1,106 @@
+/* Night desk: a dark room lit by the notch. A light optical serif, a quiet grotesk, and the open island in the
+   hero casting the current state's glow over the page. */
+:root {
+  --bg: #12110f;
+  --bg-alt: #181714;
+  --surface: #1d1b17;
+  --surface-2: #24221d;
+  --ink: #ece8df;
+  --ink-2: #b3ad9f;
+  --rule: #2e2b25;
+  --accent: #ece8df;
+  --on-accent: #12110f;
+  --link: #f0c878;
+  --band: #0b0a09;
+  --band-ink: #ece8df;
+  --band-ink-2: #b3ad9f;
+  --band-surface: #191814;
+  --band-rule: #2e2b25;
+  --hero-bg: radial-gradient(1100px 640px at 72% -180px, color-mix(in srgb, var(--state, #f5a524) 22%, transparent), transparent 72%), #12110f;
+
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Geist", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Geist Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 300;
+  --display-tracking: -0.04em;
+  --display-leading: 0.94;
+  --h1-size: clamp(60px, 9.6vw, 150px);
+  --h2-size: clamp(38px, 5vw, 66px);
+  --h3-size: 27px;
+  --label-size: 12px;
+  --label-tracking: 0.14em;
+  --label-color: #948d80;
+
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-btn: 999px;
+  --border: 1px solid var(--rule);
+  --band-texture: radial-gradient(900px 260px at 50% 100%, color-mix(in srgb, var(--state, #d97757) 16%, transparent), transparent 75%);
+  --device-edge: #3a3732;
+  --edge-strength: 0.55;
+  color-scheme: dark;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 86%, transparent); }
+.brand { font-family: var(--font-display); font-weight: 400; font-size: 26px; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 15px; letter-spacing: 0; }
+.btn { font-family: var(--font-body); font-size: 17px; font-weight: 500; letter-spacing: 0; padding: 16px 34px; }
+.btn.small { background: transparent; color: var(--ink); border: 1px solid #4a463e; font-size: 14px; min-height: 40px; padding: 9px 20px; }
+.chip, .voice-tab { border-radius: 999px; font-family: var(--font-body); }
+
+/* Hero: words left, the open island right (art first on a phone). Set here as well as by meta.json's "split". */
+html[data-theme] .hero-grid { grid-template-columns: 1.08fr 0.92fr; text-align: left; gap: 56px; }
+html[data-theme] .hero-art { order: 2; min-height: 470px; }
+html[data-theme] .hero-copy .lede { margin-left: 0; font-size: 21px; max-width: 560px; }
+html[data-theme] .hero .cta-row { justify-content: flex-start; }
+.hero h1 { margin: 20px 0 34px; }
+.fineprint { font-family: var(--font-mono); font-size: 13px; }
+@media (max-width: 860px) {
+  html[data-theme] .hero-grid { grid-template-columns: 1fr; text-align: left; }
+  html[data-theme] .hero-art { order: -1; min-height: 440px; }
+}
+
+.nd-art { max-width: 480px; margin: 0 auto; }
+.nd-island { background: #050505; border-radius: 0 0 34px 34px; padding: 40px 16px 16px; box-shadow: 0 30px 80px -20px color-mix(in srgb, var(--state, #f5a524) 45%, transparent), 0 0 0 1px #2a2722; transition: box-shadow 0.8s var(--ease); }
+.nd-row { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-radius: 14px; font-size: 15px; color: #ece8df; }
+.nd-row.on { background: #1d1a14; }
+.nd-row i { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.nd-row.on i { background: var(--state, #f5a524); box-shadow: 0 0 12px 3px color-mix(in srgb, var(--state, #f5a524) 60%, transparent); animation: breathe 3.2s ease-in-out infinite; }
+.nd-row b { font-weight: 500; white-space: nowrap; }
+.nd-row em { font-style: normal; color: #a49d8f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nd-row span { margin-left: auto; color: #a49d8f; font: 12px var(--font-mono); letter-spacing: 0.08em; white-space: nowrap; }
+.nd-row.on span::before { content: "WORKING"; }
+html[data-mood="waiting"] .nd-row.on span::before { content: "NEEDS YOU"; }
+html[data-mood="done"] .nd-row.on span::before { content: "DONE"; }
+html[data-mood="error"] .nd-row.on span::before { content: "ERROR"; }
+.nd-legend { display: grid; grid-template-columns: 1fr 1fr; margin-top: 30px; border-top: 1px solid var(--rule); }
+.nd-legend div { padding: 16px 0 16px; border-bottom: 1px solid var(--rule); }
+.nd-legend div:nth-child(odd) { padding-right: 16px; border-right: 1px solid var(--rule); }
+.nd-legend div:nth-child(even) { padding-left: 18px; }
+.nd-legend small { font: 11px var(--font-mono); letter-spacing: 0.14em; color: #948d80; }
+.nd-legend h4 { font: 400 23px/1.1 var(--font-display); margin: 6px 0 0; display: flex; align-items: center; gap: 10px; color: #ece8df; }
+.nd-legend h4 i { width: 9px; height: 9px; border-radius: 50%; }
+@media (max-width: 420px) { .nd-row em { display: none; } }
+
+/* Sections */
+.alt { background-image: linear-gradient(#ffffff05, transparent 30%); }
+.dark .kicker { color: #e9c98b; }
+.card { background: linear-gradient(#ffffff06, transparent), var(--surface); }
+.states { counter-reset: nd; }
+.states .card { border-top: 1px solid var(--rule); position: relative; overflow: hidden; }
+.states .card::before { counter-increment: nd; content: counter(nd, decimal-leading-zero); display: block; font: 12px var(--font-mono); letter-spacing: 0.14em; color: #948d80; margin-bottom: 18px; }
+.states .card::after { content: ""; position: absolute; inset: -40% -20% auto; height: 120px; background: radial-gradient(closest-side, color-mix(in srgb, var(--state) 22%, transparent), transparent); pointer-events: none; }
+.states .card h3 { font-size: 30px; }
+.dest .where { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+.step { background: transparent; color: var(--ink); border: 1px solid #4a463e; font-family: var(--font-mono); }
+.stat { color: var(--ink); font-weight: 300; }
+.faq summary { font-size: 22px; font-weight: 400; }
+.guide-list a:hover { border-color: #6b665a; }
+footer { font-family: var(--font-mono); font-size: 12px; }
+.copy-code { border-radius: 999px; padding-left: 14px; }
+dialog { border-radius: 22px; }
+.error { color: #ff8f86; }
+
+@media (prefers-reduced-motion: reduce) { .nd-row.on i { animation: none; } }

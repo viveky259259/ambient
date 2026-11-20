@@ -1,0 +1,12 @@
+{
+  "name": "Rose window",
+  "set": "insp",
+  "inspiration": "A cathedral rose window at dusk: rings of leaded stained glass in jewel blues and violets, the state colours set among them and a lit centre",
+  "order": 14,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Marcellus", "axes": "wght@400" },
+    { "family": "EB Garamond", "axes": "ital,wght@0,400;0,500;1,400" }
+  ],
+  "copy": { "kicker": "Ambient · for coding agents on macOS", "h1": "Light, when it matters." }
+}

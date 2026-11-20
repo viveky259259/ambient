@@ -1,0 +1,12 @@
+{
+  "name": "Field manual",
+  "set": "opt",
+  "inspiration": "A technical field manual: condensed capitals, numbered sections, a ruled page and a callout drawing of the notch island",
+  "order": 3,
+  "hero": "under",
+  "fonts": [
+    { "family": "Archivo", "axes": "wdth,wght@62..125,400;62..125,600;62..125,800" },
+    { "family": "IBM Plex Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Field manual for coding agents on macOS", "h1": "Glance. Don't babysit." }
+}

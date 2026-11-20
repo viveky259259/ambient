@@ -1,0 +1,122 @@
+/* Jazz sleeve. A mid-century modern record sleeve: a flat field of saturated blue, enormous condensed
+   capitals, an amber spot, a tracklist on the back cover and liner notes in a plain grotesque. */
+:root {
+  --blue: #1541c9;
+  --amber: #ffb21e;
+  --bg: #efe9db;
+  --bg-alt: #e5ddcb;
+  --surface: #f6f1e6;
+  --surface-2: #e9e2d2;
+  --ink: #101010;
+  --ink-2: #3f3d39;
+  --rule: #101010;
+  --accent: #101010;
+  --on-accent: #efe9db;
+  --link: #101010;
+  --band: #1541c9;
+  --band-ink: #f4efe3;
+  --band-ink-2: #dbe1f6;
+  --band-surface: #1d4dd8;
+  --band-rule: #f4efe355;
+  --hero-bg: var(--blue);
+  --hero-ink: #f4efe3;
+  --hero-ink-2: #dbe1f6;
+  --waiting: #f2a20c;
+  --done: #2f9e44;
+  --error: #e0453d;
+
+  --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --font-body: "Libre Franklin", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Libre Franklin", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --display-transform: uppercase;
+  --display-tracking: 0;
+  --display-leading: 0.9;
+  --h1-size: clamp(76px, 11.5vw, 188px);
+  --h2-size: clamp(42px, 5.4vw, 76px);
+  --h3-size: 30px;
+  --body-size: 17px;
+  --label-size: 12.5px;
+  --label-tracking: 0.2em;
+  --label-weight: 800;
+  --label-color: var(--ink);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid #10101033;
+  --device-edge: #101010;
+  --edge-strength: 0.35;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-transform: none; letter-spacing: normal; line-height: normal; }
+h3 { text-transform: uppercase; letter-spacing: 0.01em; line-height: 1; }
+
+.nav { background: color-mix(in srgb, var(--bg) 95%, transparent); border-bottom: 3px solid var(--ink); }
+.brand { font-size: 30px; text-transform: uppercase; letter-spacing: 0.01em; }
+.brand img { display: none; }
+.nav-links { font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 0.14em; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: 0.03em; text-transform: uppercase; padding: 14px 30px; }
+.btn.small { font-size: 17px; min-height: 40px; }
+.dark .btn, .hero .btn { background: #101010; color: var(--band-ink); }
+.dark .btn { background: var(--amber); color: #101010; }
+.copy-code { background: transparent; border-color: #f4efe366; color: var(--hero-ink); }
+.hero .copy-code { background: #0f34a8; }
+
+/* Front cover */
+.hero { padding-bottom: calc(var(--hero-pad) + 30px); }
+.hero .kicker { color: var(--amber); }
+.hero h1 { color: #f4efe3; }
+.hero-copy .lede::before { content: "Liner notes"; display: block; font: 800 12px/1 var(--font-label); letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); margin-bottom: 12px; }
+.hero-copy .lede { font-size: clamp(18px, 1.7vw, 21px); }
+.trust { font-weight: 600; }
+.hero .link-btn { font-weight: 600; }
+.hero-art { aspect-ratio: 520 / 560; width: 100%; max-width: 500px; margin: 0 auto; }
+.jzs-art { width: 100%; height: auto; }
+.jzs-art .spot { fill: var(--state, var(--amber)); transition: fill 0.6s var(--ease); }
+.jzs-art .bar { transform-box: fill-box; transform-origin: bottom; animation: jzs-level 2.4s ease-in-out infinite; }
+.jzs-art .bar:nth-child(2) { animation-duration: 1.7s; }
+.jzs-art .bar:nth-child(3) { animation-duration: 2.9s; }
+.jzs-art .bar:nth-child(4) { animation-duration: 2.1s; }
+@keyframes jzs-level { 50% { transform: scaleY(0.72); } }
+@media (max-width: 860px) { .hero-art { max-width: 340px; } }
+
+/* Back cover: every section is a track. */
+main { counter-reset: trk; }
+main .kicker { counter-increment: trk; }
+main .kicker::before { content: counter(trk, decimal-leading-zero) " — "; }
+main > section { border-top: 3px solid var(--ink); }
+.closing { --band: #101010; --band-surface: #1c1c1c; }
+.dark .kicker { color: var(--amber); }
+.section-lede { color: var(--ink-2); }
+
+/* Cards read as tracklist entries: a heavy rule on top, no box. */
+.card { background: transparent; border: 0; border-top: 3px solid var(--ink); padding: 22px 4px 8px; }
+.dark .card { border-top-color: var(--band-ink); }
+.states { counter-reset: side; }
+.states .card { counter-increment: side; border-top: 12px solid var(--state); min-height: 0; }
+.states .card::before { content: "A" counter(side); display: block; font: 800 12px/1 var(--font-label); letter-spacing: 0.2em; margin-bottom: 14px; }
+.states .card h3 { font-size: 40px; }
+.agents .card { border-top-width: 3px; }
+.dest { background: transparent; border: 0; border-top: 3px solid var(--ink); }
+.dest li { font-weight: 600; padding-left: 4px; padding-right: 4px; }
+.wallpaper { border: 0; }
+.chip { font-weight: 800; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.12em; min-height: 44px; border: 1.5px solid currentColor; }
+.voice-tablist { border: 2px solid var(--ink); }
+.voice-tab { font-weight: 800; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.12em; min-height: 44px; }
+.voice-panel { border: 0; border-top: 3px solid var(--ink); background: var(--surface); }
+.voice-panel h3 { font-size: clamp(30px, 3.6vw, 46px); }
+.voice-flow .end { font-weight: 600; }
+
+.step { border-radius: 50%; width: 56px; height: 56px; background: #101010; color: var(--amber); font-family: var(--font-display); font-size: 26px; box-shadow: inset 0 0 0 9px #101010, inset 0 0 0 11px #3a3a3a; }
+.stat { font-family: var(--font-display); color: var(--blue); }
+.faq details { border-top: 1px solid #10101040; }
+.faq details:first-child { border-top: 3px solid var(--ink); }
+.faq summary { font-family: var(--font-body); font-weight: 600; font-size: 19px; }
+.faq summary::after { color: var(--ink); }
+.guide-list a { border: 0; border-top: 3px solid var(--ink); background: transparent; padding: 18px 4px; }
+.guide-list strong { font-size: 24px; text-transform: uppercase; line-height: 1; }
+footer { border-top: 3px solid var(--ink); font-weight: 600; }
+dialog { border: 3px solid var(--ink); }
+.sheet h2 { font-size: 40px; }

@@ -1,0 +1,149 @@
+/* Punch cards: a deep teal desk, manila cards with a clipped corner and a printed digit field, and green-bar
+   continuous paper with tractor holes for the long lists. Archivo Narrow for headings, Atkinson Hyperlegible for
+   prose, DM Mono for everything a card punch or line printer would print. */
+:root {
+  --bg: #0e3940;
+  --bg-alt: #0b3036;
+  --surface: #ecdcb0;
+  --surface-2: #e2d09f;
+  --ink: #f4ecd4;
+  --ink-2: #e3dcc6;
+  --rule: rgba(244, 236, 212, 0.35);
+  --accent: #ecdcb0;
+  --on-accent: #10242a;
+  --link: #f0c35a;
+  --band: #071f24;
+  --band-ink: #f4ecd4;
+  --band-ink-2: #d2cbb4;
+  --band-surface: #ecdcb0;
+  --band-rule: rgba(244, 236, 212, 0.3);
+  --hero-bg: transparent;
+  --claude: #e08a68;
+  --waiting: #f0a81c;
+  --done: #27a862;
+  --error: #e0533f;
+
+  --font-display: "Archivo Narrow", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Atkinson Hyperlegible", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "DM Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.015em;
+  --display-leading: 0.98;
+  --h1-size: clamp(48px, 6.6vw, 92px);
+  --h2-size: clamp(36px, 4.8vw, 62px);
+  --h3-size: 26px;
+  --body-size: 17.5px;
+  --label-size: 13.5px;
+  --label-tracking: 0.14em;
+  --label-weight: 500;
+  --label-color: #f0c35a;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --card-shadow: 0 14px 26px rgba(0, 0, 0, 0.35);
+  --texture: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 40%), radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1.2px) 0 0 / 6px 6px;
+  --device-edge: #4d6b70;
+  --edge-strength: 0.3;
+  --pc-corner: polygon(26px 0, 100% 0, 100% 100%, 0 100%, 0 26px);
+  --pc-field: repeating-linear-gradient(90deg, rgba(42, 74, 92, 0.1) 0 1px, transparent 1px 11px);
+  --greenbar: repeating-linear-gradient(180deg, #f7f6ee 0 56px, #dcebd9 56px 112px);
+  --tractor: radial-gradient(circle, #0b3036 5px, transparent 5.5px);
+}
+
+.nav { background: color-mix(in srgb, #0e3940 92%, transparent); border-bottom: 1px solid rgba(244, 236, 212, 0.33); }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: #f4ecd4; }
+.brand img { border-radius: 4px; }
+.nav-links { gap: 18px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+.nav-links a { color: #f4ecd4; }
+.nav-links a:hover { color: #f0c35a; }
+
+/* Buttons: a manila card with its corner cut. */
+.btn { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: 0; padding: 12px 30px 12px 34px; clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%, 0 16px); }
+.btn.small { font-family: var(--font-mono); font-weight: 500; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; min-height: 44px; clip-path: none; }
+.card .btn, dialog .btn, .faq .btn { background: #10242a; color: #ecdcb0; }
+
+/* Hero */
+.hero h1 { margin-bottom: 26px; }
+.hero-copy .lede { color: #e3dcc6; }
+.trust { font-family: var(--font-body); font-weight: 700; color: #f4ecd4; }
+.fineprint { font-family: var(--font-mono); font-size: 13.5px; color: #d2cbb4; }
+.copy-code { background: transparent; border: 1px solid rgba(244, 236, 212, 0.5); color: #f4ecd4; }
+.copy-code span { color: #f0c35a; }
+.hero .link-btn { color: #f0c35a; }
+.hero-art { width: min(600px, 100%); margin: 0 auto; aspect-ratio: 640 / 730; }
+.pc { width: 100%; height: auto; overflow: visible; }
+.pc text { font-family: var(--font-mono); }
+.pc .nm { font-family: var(--font-display); font-weight: 700; font-size: 42px; text-transform: uppercase; }
+.pc .ds { font-family: var(--font-body); font-weight: 700; font-size: 17px; fill: #162a33; }
+.pc .dg { font-size: 7.5px; fill: #3f5560; }
+.pc .crd { transition: transform 0.7s var(--ease); }
+.pc .crd.on { transform: translateX(-26px); }
+.pc .crd.on .face { filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.5)); }
+@media (max-width: 860px) { .hero-art { width: min(440px, 94%); } }
+
+/* Manila cards with a cut corner and a printed digit field. */
+.card, .guide-list a, .voice-panel {
+  --ink: #162a33; --ink-2: #33505e; --link: #10242a; --surface-2: #e2d09f; --rule: rgba(22, 42, 51, 0.3);
+  color: var(--ink); background: var(--pc-field), #ecdcb0; border: 0; clip-path: var(--pc-corner);
+}
+.card { padding: 34px 28px 28px; }
+.card p, .guide-list span { color: #33505e; }
+.card h3, .guide-list strong { font-weight: 700; }
+.guide-list a:hover { background: var(--pc-field), #f4e6be; }
+.states .card { border-top: 14px solid var(--state); }
+.states .card h3 { text-transform: uppercase; font-size: 32px; color: color-mix(in srgb, var(--state) 62%, #10242a); }
+.states .card .orb { width: 18px; height: 26px; border-radius: 0; box-shadow: none; background: #0b3037; animation: none; }
+.states .card .orb::after { content: none; }
+.states .card { --st: color-mix(in srgb, var(--state) 62%, #10242a); }
+.agents .card { border-top: 14px solid var(--state); }
+.agents .card .orb { border-radius: 0; width: 14px; height: 22px; background: #0b3037; box-shadow: none; animation: none; }
+.step { width: 30px; height: 44px; border-radius: 0; background: #0b3037; color: #ecdcb0; font-family: var(--font-mono); font-weight: 500; font-size: 16px; }
+.stat { font-family: var(--font-display); font-weight: 700; color: #f0c35a; }
+
+/* Green-bar printout for the destinations and the questions. */
+.dest, .faq {
+  --ink: #1c2a2a; --ink-2: #35484a; --rule: rgba(13, 92, 58, 0.25); --link: #0d5c3a;
+  color: #1c2a2a; background: var(--tractor) 4px 6px / 26px 28px repeat-y, var(--tractor) right 4px top 6px / 26px 28px repeat-y, var(--greenbar);
+  border: 0; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); padding-left: 44px; padding-right: 44px;
+}
+.dest li { font-family: var(--font-mono); font-size: 15px; text-transform: uppercase; border-top: 0; padding: 16px 0; }
+.dest .where { color: #0d5c3a; font-weight: 500; }
+.faq { padding-top: 14px; padding-bottom: 14px; transform: rotate(-0.4deg); }
+.faq details { border-top: 1px dashed rgba(13, 92, 58, 0.35); }
+.faq details:first-child { border-top: 0; }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { font-family: var(--font-mono); font-weight: 500; font-size: 16.5px; text-transform: uppercase; letter-spacing: 0.02em; }
+.faq summary::after { color: #0d5c3a; }
+.faq p { color: #35484a; }
+
+.voice.tabs-on .voice-tablist { background: #0b3036; border: 1px solid rgba(244, 236, 212, 0.35); }
+.voice-tab { font-family: var(--font-mono); text-transform: uppercase; font-size: 13px; letter-spacing: 0.06em; color: #f4ecd4; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #ecdcb0; color: #10242a; }
+.voice-flow { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--state) 22%, transparent), transparent 70%), #e2d09f; }
+.voice-flow .end { background: #f7f6ee; font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; border: 0; }
+.voice-steps li { border-top: 1px solid rgba(22, 42, 51, 0.25); }
+.voice-panel { clip-path: polygon(34px 0, 100% 0, 100% 100%, 0 100%, 0 34px); }
+.chip { font-family: var(--font-mono); text-transform: uppercase; font-size: 13px; letter-spacing: 0.06em; min-height: 44px; }
+.chip[aria-pressed="true"] { background: #ecdcb0; color: #10242a; }
+.wallpaper { border: 0; clip-path: var(--pc-corner); }
+.scene-demo, .dock-stage { border-radius: 0; }
+
+footer { background: #071f24; color: #d2cbb4; border-top: 1px solid rgba(244, 236, 212, 0.25); font-family: var(--font-mono); font-size: 12.5px; }
+footer a { color: #f4ecd4; }
+
+dialog { --ink: #162a33; --ink-2: #33505e; --link: #10242a; color: #162a33; background: var(--pc-field), #ecdcb0; border: 0; clip-path: var(--pc-corner); }
+.field input { background: #f7f6ee; border: 1px solid #162a33; }
+.close { color: #162a33; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+@media (max-width: 760px) {
+  .dest, .faq { padding-left: 36px; padding-right: 36px; }
+  .dest li { font-size: 13.5px; }
+  .faq summary { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) { .pc .crd { transition: none; } }

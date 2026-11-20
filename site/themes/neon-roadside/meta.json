@@ -1,0 +1,13 @@
+{
+  "name": "Neon roadside",
+  "set": "culture",
+  "inspiration": "A roadside motel sign at night: a brick wall, hot-pink and cyan tubes, a script wordmark and a stack of signs where the one that matters is lit",
+  "order": 24,
+  "hero": "split",
+  "fonts": [
+    { "family": "Yellowtail", "axes": "wght@400" },
+    { "family": "Outfit", "axes": "wght@300;400;600;800" },
+    { "family": "Share Tech Mono", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "Free · native macOS · no account", "h1": "Back in one click." }
+}

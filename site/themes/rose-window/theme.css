@@ -1,0 +1,109 @@
+/* Rose window. A cathedral at dusk: near-black stone, a great wheel of leaded glass glowing in jewel colours,
+   gilt inscriptions in spaced capitals and a book hand for the text. Panels are glass set in lead. */
+:root {
+  --gilt: #e6c27a;
+  --lead: #07060a;
+  --bg: #0e0b14;
+  --bg-alt: #151020;
+  --surface: #1b1528;
+  --surface-2: #231b33;
+  --ink: #f0e8d8;
+  --ink-2: #d2c9b8;
+  --rule: #e6c27a40;
+  --accent: #e6c27a;
+  --on-accent: #15111c;
+  --link: #e6c27a;
+  --band: #16102a;
+  --band-ink: #f0e8d8;
+  --band-ink-2: #d2c9b8;
+  --band-surface: #211a3a;
+  --band-rule: #e6c27a40;
+  --hero-bg: radial-gradient(circle at 50% 34%, #2a2136, #0e0b14 62%);
+
+  --font-display: "Marcellus", "Trajan Pro", Georgia, serif;
+  --font-body: "EB Garamond", "Iowan Old Style", Georgia, serif;
+  --font-label: "Marcellus", "Trajan Pro", Georgia, serif;
+  --display-tracking: -0.01em;
+  --display-leading: 1.02;
+  --h1-size: clamp(46px, 7vw, 100px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 28px;
+  --body-size: 19px;
+  --label-size: 13px;
+  --label-tracking: 0.3em;
+  --label-weight: 400;
+  --label-color: var(--gilt);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --card-shadow: inset 0 0 0 4px var(--lead), inset 0 0 0 5px #e6c27a33;
+  --texture: radial-gradient(1200px 600px at 50% 0, #2a213655, transparent 70%);
+  --band-texture: radial-gradient(900px 500px at 50% 100%, #3b2a6a55, transparent 70%);
+  --device-edge: #3a3048;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: normal; line-height: normal; }
+
+.nav { background: color-mix(in srgb, var(--bg) 88%, transparent); border-bottom: 1px solid var(--rule); }
+.brand { font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 17px; letter-spacing: 0; }
+.nav-links a { color: var(--ink-2); }
+.nav-links a:hover { color: var(--gilt); }
+
+.btn { font-family: var(--font-label); font-weight: 400; font-size: 16px; letter-spacing: 0.14em; text-transform: uppercase; padding: 16px 34px; box-shadow: 0 0 34px #e6c27a33; }
+.btn.small { font-size: 12.5px; min-height: 40px; box-shadow: none; }
+.copy-code { background: var(--surface); }
+.copy-code span { color: var(--gilt); }
+
+/* Hero: the window above the inscription. */
+.hero { padding-top: 32px; }
+.hero-art { aspect-ratio: 1 / 1; width: min(640px, 100%); margin: 0 auto; }
+.ros-art { width: 100%; height: auto; overflow: visible; }
+.ros-art .glow { filter: blur(40px); opacity: 0.7; }
+.ros-art .heart { fill: var(--state, #f5a524); transition: fill 0.8s var(--ease); }
+.ros-art .wheel { transform-origin: 0 0; animation: ros-turn 300s linear infinite; }
+@keyframes ros-turn { to { transform: rotate(360deg); } }
+.hero-copy .lede { font-size: clamp(20px, 2vw, 25px); }
+.trust { font-style: italic; font-size: 17px; }
+.fineprint { color: var(--ink-2); }
+
+main > section { border-top: 1px solid var(--rule); }
+main > section::before { content: ""; position: absolute; top: -6px; left: 50%; width: 11px; height: 11px; transform: translateX(-50%) rotate(45deg); background: var(--gilt); box-shadow: 0 0 14px #e6c27a88; }
+h2 { color: var(--ink); }
+.section-lede { color: var(--ink-2); }
+
+/* Panels of glass in lead. */
+.card { background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1px solid #e6c27a55; }
+.card h3 { font-family: var(--font-display); }
+.states .card { border-top: 1px solid #e6c27a55; box-shadow: var(--card-shadow), inset 0 6px 0 var(--state), 0 0 40px -10px var(--state); }
+.states { counter-reset: lancet; }
+.states .card { counter-increment: lancet; }
+.states .card::before { content: counter(lancet, lower-roman); display: block; font-family: var(--font-label); color: var(--gilt); letter-spacing: 0.3em; font-size: 13px; margin-bottom: 14px; }
+.dest { background: var(--surface); }
+.dest .where { font-family: var(--font-body); font-style: italic; font-size: 16px; }
+.wallpaper { border-color: #e6c27a55; }
+.chip { font-family: var(--font-label); letter-spacing: 0.1em; min-height: 44px; }
+.voice-tab { font-family: var(--font-label); letter-spacing: 0.08em; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: var(--gilt); color: var(--on-accent); }
+.voice-panel { background: var(--surface); }
+.voice-steps kbd { color: var(--ink); }
+
+.step { position: relative; background: transparent; color: var(--gilt); font-family: var(--font-display); font-size: 17px; }
+.step::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--gilt); transform: rotate(45deg); }
+.stat { color: var(--gilt); text-shadow: 0 0 40px #e6c27a55; }
+.faq summary { font-family: var(--font-body); font-size: 21px; }
+.faq summary::after { color: var(--gilt); }
+.guide-list a { background: var(--surface); }
+.guide-list a:hover { border-color: var(--gilt); }
+.guide-list strong { font-size: 21px; }
+footer { border-top: 1px solid var(--rule); }
+footer a { color: var(--ink); }
+dialog { border-color: #e6c27a66; }
+.error { color: #ff9a8f; }
+.field input { background: var(--surface-2); }
+.close { color: var(--ink-2); }

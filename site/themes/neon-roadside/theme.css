@@ -1,0 +1,121 @@
+/* Neon roadside. A motel sign at night: a dark brick wall, glass tubes in hot pink and cyan, a script wordmark,
+   rounded neon frames, and a stack of signs on a pole where the one for the current state is lit. */
+:root {
+  --bg: #130e18;
+  --bg-alt: #18111f;
+  --surface: #0e0a12;
+  --surface-2: #1d1524;
+  --ink: #f4eef7;
+  --ink-2: #d8cde0;
+  --rule: rgba(125, 243, 251, 0.5);
+  --accent: #ff4fa3;
+  --on-accent: #1a0712;
+  --link: #7df3fb;
+  --band: #0a070d;
+  --band-ink: #f4eef7;
+  --band-ink-2: #d8cde0;
+  --band-surface: #140e19;
+  --band-rule: rgba(255, 79, 163, 0.45);
+  --hero-bg: transparent;
+  --waiting: #ffad1f;
+  --done: #35e07a;
+  --error: #ff3b30;
+
+  --font-display: "Outfit", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Outfit", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Share Tech Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Share Tech Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-tracking: -0.025em;
+  --display-leading: 0.98;
+  --h1-size: clamp(50px, 7.6vw, 108px);
+  --h2-size: clamp(38px, 5vw, 66px);
+  --h3-size: 28px;
+  --body-size: 18px;
+  --label-size: 14px;
+  --label-tracking: 0.16em;
+  --label-weight: 400;
+  --label-color: #7df3fb;
+
+  --radius: 26px;
+  --radius-sm: 10px;
+  --radius-btn: 999px;
+  --border: 2px solid var(--rule);
+  --card-shadow: 0 0 14px rgba(47, 217, 230, 0.35), inset 0 0 14px rgba(47, 217, 230, 0.18);
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='68'%3E%3Cpath d='M0 1H96M0 35H96M1 0V34M49 34V68' fill='none' stroke='%23fff' stroke-opacity='.045' stroke-width='2'/%3E%3C/svg%3E");
+  --band-texture: var(--texture);
+  --device-edge: #57505e;
+  --edge-strength: 0.55;
+  color-scheme: dark;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+.alt { background-image: var(--texture); }
+
+.nav { background: color-mix(in srgb, #130e18 90%, transparent); border-bottom: 1px solid rgba(255, 79, 163, 0.4); }
+.brand { font-family: "Yellowtail", "Snell Roundhand", cursive; font-size: 38px; color: #ffd9ec; text-shadow: 0 0 6px #ff4fa3, 0 0 18px #ff4fa3, 0 0 36px #ff2a8f; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 15px; letter-spacing: 0.01em; }
+.nav-links a { color: #e6dced; }
+.nav-links a:hover { color: #7df3fb; }
+.nav .btn.small { background: transparent; color: #d6fcff; border: 2px solid #7df3fb; box-shadow: 0 0 12px #2fd9e6, inset 0 0 10px rgba(47, 217, 230, 0.5); }
+
+/* Buttons: a hot-pink tube. */
+.btn { font-family: var(--font-body); font-weight: 800; font-size: 20px; letter-spacing: 0.01em; padding: 15px 34px; box-shadow: 0 0 26px rgba(255, 79, 163, 0.7), 0 0 70px rgba(255, 79, 163, 0.3); }
+.btn.small { font-size: 15px; min-height: 44px; padding: 6px 18px; }
+.sheet .inline .btn { font-size: 16px; padding: 8px 16px; box-shadow: 0 0 16px rgba(255, 79, 163, 0.6); }
+.chip, .voice-tab { min-height: 44px; border-radius: 999px; }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: #7df3fb; color: #0a070d; box-shadow: 0 0 14px #2fd9e6; }
+.copy-code { background: #0e0a12; border: 1px solid rgba(125, 243, 251, 0.6); border-radius: 10px; }
+
+/* Hero */
+.hero { background: radial-gradient(800px 500px at 75% 30%, rgba(255, 79, 163, 0.12), transparent 70%); }
+.hero .kicker { color: #7df3fb; }
+.hero h1 { text-shadow: 0 0 22px rgba(77, 232, 244, 0.35); }
+.hero-copy .lede { font-weight: 300; color: #efe7f3; }
+.hero-art { width: 100%; max-width: min(460px, 84vw); aspect-ratio: 520 / 640; margin: 0 auto; }
+.neo-signs { width: 100%; }
+.neo-signs .sign { opacity: 0.32; transition: opacity 0.5s var(--ease); }
+html:not([data-mood]) .neo-signs .m-working, html[data-mood="working"] .neo-signs .m-working, html[data-mood="waiting"] .neo-signs .m-waiting, html[data-mood="done"] .neo-signs .m-done, html[data-mood="error"] .neo-signs .m-error { opacity: 1; }
+.trust { font-family: var(--font-label); font-size: 15px; letter-spacing: 0.04em; }
+.fineprint { font-family: var(--font-label); }
+
+/* Each section opens on a neon tube, cyan and pink in turn. */
+main > section { border-top: 2px solid #7df3fb; box-shadow: 0 0 14px rgba(47, 217, 230, 0.55); }
+main > section:nth-of-type(even) { border-top-color: #ff4fa3; box-shadow: 0 0 14px rgba(255, 79, 163, 0.55); }
+.section-lede { font-weight: 300; color: #e6dced; }
+
+.card { background: rgba(10, 7, 13, 0.8); border: 2px solid #7df3fb; }
+.dark .card { background: var(--band-surface); }
+.card p { font-size: 16px; }
+.card h3 { font-weight: 600; }
+
+/* The four states are four signs, each framed in its own colour. */
+.states .card { border: 2px solid var(--state); box-shadow: 0 0 12px var(--state), inset 0 0 14px color-mix(in srgb, var(--state) 35%, transparent); }
+.states .card h3 { text-transform: uppercase; letter-spacing: 0.03em; font-size: 30px; color: #ffffff; text-shadow: 0 0 6px var(--state), 0 0 18px var(--state); }
+.states .card .orb { background: #ffffff; box-shadow: 0 0 0 4px var(--state), 0 0 22px 6px var(--state); }
+.agents .card { border-color: var(--state); box-shadow: 0 0 12px var(--state); }
+
+.dest { background: rgba(10, 7, 13, 0.8); border: 2px solid #7df3fb; }
+.dest li { border-top: 1px dashed rgba(244, 238, 247, 0.25); }
+.dest .where { color: #ffd9ec; font-family: var(--font-body); font-weight: 600; font-size: 15px; }
+.wallpaper { border: 2px solid #ff4fa3; box-shadow: 0 0 14px rgba(255, 79, 163, 0.5); }
+.step { background: transparent; color: #ffd9ec; border: 2px solid #ff4fa3; box-shadow: 0 0 10px #ff4fa3; }
+.stat { font-family: "Yellowtail", "Snell Roundhand", cursive; font-weight: 400; color: #e6fdff; text-shadow: 0 0 6px #4de8f4, 0 0 22px #2fd9e6, 0 0 60px #19b8c6; }
+.faq summary { font-weight: 600; font-size: 20px; }
+.faq details { border-top: 1px dashed rgba(244, 238, 247, 0.3); }
+.faq details:last-child { border-bottom: 1px dashed rgba(244, 238, 247, 0.3); }
+.faq summary::after { color: #ff4fa3; }
+.guide-list a { border: 2px solid rgba(125, 243, 251, 0.6); background: rgba(10, 7, 13, 0.8); border-radius: 20px; }
+.guide-list a:hover { border-color: #7df3fb; box-shadow: 0 0 14px rgba(47, 217, 230, 0.5); }
+.guide-list strong { font-weight: 600; }
+.voice-panel { background: rgba(10, 7, 13, 0.8); border: 2px solid #7df3fb; }
+.voice-tablist { border-radius: 999px; background: #0e0a12; }
+.voice-tab[aria-selected="true"] { background: #7df3fb; color: #0a070d; }
+.voice-flow .end { border-radius: 999px; background: #0e0a12; }
+.closing h2 { text-shadow: 0 0 20px rgba(255, 79, 163, 0.45); }
+footer { background: #0a070d; border-top: 2px solid #ff4fa3; box-shadow: 0 0 14px rgba(255, 79, 163, 0.5); font-family: var(--font-label); }
+footer a { color: #7df3fb; }
+dialog { background-color: #130e18; border: 2px solid #ff4fa3; box-shadow: 0 0 24px rgba(255, 79, 163, 0.6), 0 30px 80px rgba(0, 0, 0, 0.6); }
+dialog .m-error { color: #ff9a8f; }
+.field input { background: #0e0a12; border-radius: 10px; }

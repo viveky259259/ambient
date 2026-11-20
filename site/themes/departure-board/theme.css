@@ -1,0 +1,110 @@
+/* Departure board: a generic split-flap board in black and cream (no real operator's signage). Headings are set
+   on flap strips, the hero is the board itself, and status flaps turn the colour of their state. */
+:root {
+  --bg: #0b0b0c;
+  --bg-alt: #111113;
+  --surface: #18181b;
+  --surface-2: #222225;
+  --ink: #f2efe6;
+  --ink-2: #bdb9ae;
+  --rule: #34343a;
+  --accent: #efe4c8;
+  --on-accent: #0b0b0c;
+  --link: #efe4c8;
+  --band: #050506;
+  --band-ink: #f2efe6;
+  --band-ink-2: #bdb9ae;
+  --band-surface: #141416;
+  --band-rule: #2e2e33;
+  --db-flap: linear-gradient(#27272b 0 49%, #0b0b0c 49% 51%, #1d1d21 51%);
+
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --display-weight: 600;
+  --display-transform: uppercase;
+  --display-tracking: 0.02em;
+  --display-leading: 1.12;
+  --h1-size: clamp(50px, 8vw, 104px);
+  --h2-size: clamp(36px, 4.8vw, 60px);
+  --h3-size: 28px;
+  --label-size: 17px;
+  --label-tracking: 0.14em;
+  --label-weight: 600;
+  --label-color: #efe4c8;
+
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-btn: 3px;
+  --border: 1px solid var(--rule);
+  --device-edge: #3a3a3e;
+  --edge-strength: 0.45;
+  color-scheme: dark;
+}
+h3 { text-transform: uppercase; font-weight: 600; letter-spacing: 0.03em; }
+
+.nav { background: #0b0b0cf0; border-bottom: 2px solid #2a2a2e; }
+.nav .wrap { height: 64px; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 30px; text-transform: uppercase; letter-spacing: 0.04em; background: var(--db-flap); padding: 0 10px; border-radius: 4px; }
+.brand img { display: none; }
+.nav-links { font-size: 19px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.nav-links a { color: #d6d2c6; }
+.btn { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 12px 30px; }
+.btn.small { font-size: 18px; min-height: 40px; padding: 6px 16px; }
+.chip, .voice-tab { font-family: var(--font-display); font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.chip { background: var(--db-flap); border-color: #2a2a2e; }
+
+/* Headings on flap strips: one strip per line, split across the middle. */
+.hero h1, h2 { display: inline; background: var(--db-flap); -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0.02em 0.2em; border-radius: 6px; }
+.hero h1 { color: #f6f3ea; }
+section h2 + p.body, section h2 + p.section-lede, section h2 + div { margin-top: 28px; }
+
+/* Hero: words above the board. Set here as well as by meta.json's "under". */
+.hero { padding-top: 56px; }
+html[data-theme] .hero-grid { text-align: left; gap: 56px; }
+html[data-theme] .hero-art { order: 2; container-type: inline-size; aspect-ratio: 100 / 31; min-height: 0; }
+html[data-theme] .hero-copy .lede { margin: 30px 0 32px; max-width: 760px; }
+html[data-theme] .hero .cta-row { justify-content: flex-start; }
+.hero .kicker { color: #efe4c8; }
+.fineprint { color: #a9a59a; }
+.copy-code { background: #18181b; }
+@media (max-width: 760px) { html[data-theme] .hero-art { aspect-ratio: 100 / 60; } }
+
+.db-board { border-top: 2px solid #3a3a3e; padding-top: 1.6cqw; }
+.db-hd, .db-row { display: grid; grid-template-columns: 5fr 11fr 12fr 12fr 9fr; gap: 1.4cqw; }
+.db-hd { font: 600 1.5cqw/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: #efe4c8; margin-bottom: 1.2cqw; }
+.db-row { margin-bottom: 0.7cqw; }
+.db-col { display: flex; gap: 0.25cqw; }
+.db-col span { flex: 1; aspect-ratio: 11 / 20; background: var(--db-flap); border-radius: 0.3cqw; color: #f6f3ea; font: 600 2.6cqw/1 var(--font-display); display: grid; place-items: center; overflow: hidden; }
+.db-col.st span { color: var(--c, #f6f3ea); }
+@media (max-width: 760px) {
+  .db-board { padding-top: 3cqw; }
+  .db-hd, .db-row { grid-template-columns: 5fr 11fr 9fr; gap: 2.4cqw; }
+  .db-hd > :nth-child(3), .db-hd > :nth-child(4), .db-row > :nth-child(3), .db-row > :nth-child(4) { display: none; }
+  .db-hd { font-size: 3.2cqw; margin-bottom: 2.4cqw; }
+  .db-row { margin-bottom: 1.4cqw; }
+  .db-col span { font-size: 5.2cqw; border-radius: 0.6cqw; }
+}
+
+/* Sections */
+.kicker { font-size: 17px; }
+.card { border-top: 0; background: #141416; }
+.states .card { border-top: 0; border-left: 6px solid var(--state); border-radius: 3px; }
+.states .card h3 { font-size: 34px; }
+.dest li { font-family: var(--font-display); font-size: 21px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.dest .where { font-size: 16px; color: #efe4c8; letter-spacing: 0.1em; }
+.step { background: var(--db-flap); color: #f6f3ea; border-radius: 4px; font: 600 22px/1 var(--font-display); width: 40px; height: 48px; }
+.stat { display: inline-block; background: var(--db-flap); padding: 0 0.15em; border-radius: 8px; color: #f6f3ea; font-weight: 600; }
+.faq summary { font-family: var(--font-body); font-size: 19px; font-weight: 500; }
+.faq summary::after { color: #efe4c8; }
+.guide-list strong { font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; font-size: 22px; }
+.voice-steps li::before { color: #0b0b0c; }
+footer { font-family: var(--font-display); font-size: 16px; text-transform: uppercase; letter-spacing: 0.1em; color: #a9a59a; border-top: 2px solid #2a2a2e; }
+footer .spacer { text-transform: none; letter-spacing: 0.02em; font-family: var(--font-body); font-size: 13px; }
+dialog { border-radius: 6px; }
+.sheet h2 { display: inline; font-size: 30px; }
+.sheet .note { margin-top: 18px; }
+.error { color: #ff8f86; }
+
+/* The MacBook screen is class="display", which picks up the display type role; keep the picture of the app as it is. */
+.macbook .display { text-transform: none; letter-spacing: normal; font-stretch: 100%; font-weight: 400; font-style: normal; line-height: normal; }

@@ -1,0 +1,12 @@
+{
+  "name": "Radar scope",
+  "set": "insp",
+  "inspiration": "An approach-control radar scope in cyan phosphor: every agent session is a tagged blip in its state's colour under a turning sweep",
+  "order": 9,
+  "hero": "split",
+  "fonts": [
+    { "family": "B612", "axes": "wght@400;700" },
+    { "family": "B612 Mono", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "Ambient · approach control for coding agents", "h1": "Every agent on one scope." }
+}

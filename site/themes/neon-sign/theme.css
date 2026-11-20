@@ -1,0 +1,121 @@
+/* Neon sign. An indoor blade sign on a bracket against a dark brick wall, the kind that hangs in a bar window:
+   bent glass tubes in pink and the state colours, a dark backing box, warm amber spill on the bricks. */
+:root {
+  --bg: #130b1c;
+  --bg-alt: #170e22;
+  --surface: #0c0712;
+  --surface-2: #1c1228;
+  --ink: #efe6f7;
+  --ink-2: #cdbfdc;
+  --rule: #3a2e46;
+  --accent: #ffe9c2;
+  --on-accent: #1a0f22;
+  --link: #ffb3e6;
+  --band: #08050c;
+  --band-ink: #efe6f7;
+  --band-ink-2: #c4b6d4;
+  --band-surface: #120a1a;
+  --band-rule: #2c2138;
+  --nn-pink: #ff4fc1;
+  --nn-amber: #ffb02e;
+  --claude: #ff8a65;
+  --codex: #2fe0a8;
+  --gemini: #5aa2ff;
+  --waiting: #ffb02e;
+  --done: #34f595;
+  --error: #ff4658;
+
+  --font-display: "Tilt Neon", "Avenir Next", "Helvetica Neue", sans-serif;
+  --font-body: Sora, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: 0;
+  --display-leading: 1.06;
+  --h1-size: clamp(48px, 6.6vw, 98px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 30px;
+  --body-size: 17px;
+  --label-size: 12.5px;
+  --label-tracking: 0.22em;
+  --label-weight: 500;
+  --label-color: #ffcf8a;
+
+  --radius: 20px;
+  --radius-sm: 8px;
+  --radius-btn: 16px;
+  --border: 2px solid #2c2138;
+  --card-shadow: 18px 22px 40px rgba(0, 0, 0, 0.55);
+  --btn-shadow: 0 0 10px var(--nn-amber), 0 0 34px rgba(255, 176, 46, 0.6), inset 0 0 10px var(--nn-amber);
+  --nn-brick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='104' height='76'%3E%3Crect width='104' height='76' fill='%23150c1f'/%3E%3Crect x='3' y='3' width='98' height='34' fill='%23180e23'/%3E%3Crect x='-50' y='41' width='100' height='34' fill='%23140b1d'/%3E%3Crect x='56' y='41' width='48' height='34' fill='%23190f25'/%3E%3Cpath d='M0 1H104M0 39H104M1 0V38M53 38V76' stroke='%230a0510' stroke-width='3'/%3E%3Cpath d='M0 3.5H104M0 41.5H104' stroke='%232a1b3a' stroke-width='1' opacity='.6'/%3E%3C/svg%3E");
+  --texture: radial-gradient(700px 600px at 22% 30%, rgba(255, 79, 193, 0.13), transparent 70%), radial-gradient(900px 400px at 70% 0, rgba(255, 176, 46, 0.12), transparent 70%), var(--nn-brick);
+  --band-texture: radial-gradient(900px 400px at 50% 100%, rgba(255, 176, 46, 0.14), transparent 70%), var(--nn-brick);
+  --device-edge: #3a2e46;
+  --edge-strength: 0.55;
+  color-scheme: dark;
+}
+
+.macbook .display { letter-spacing: normal; }
+/* Neon type: a white-hot core with the tube's colour bleeding round it. */
+h1 { color: #fff2fb; text-shadow: 0 0 4px #fff, 0 0 14px var(--nn-pink), 0 0 36px var(--nn-pink), 0 0 80px rgba(255, 79, 193, 0.6); }
+h2 { color: #fff6fd; text-shadow: 0 0 3px rgba(255, 255, 255, 0.8), 0 0 14px rgba(255, 79, 193, 0.8), 0 0 40px rgba(255, 79, 193, 0.45); }
+.nav { background: rgba(10, 6, 16, 0.86); border-bottom: 2px solid #2c2138; }
+.brand { color: #fff; text-shadow: 0 0 5px #fff, 0 0 16px var(--nn-pink), 0 0 34px var(--nn-pink); font-size: 26px; }
+.nav-links { font-family: var(--font-body); font-size: 13.5px; font-weight: 500; letter-spacing: 0.03em; gap: 20px; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: #fff; text-shadow: 0 0 8px var(--nn-pink); }
+
+/* Buttons are amber tubes bent round a dark box. */
+.btn { background: rgba(26, 12, 4, 0.6); color: #fff6e4; border: 3px solid #ffe9c2; font-family: var(--font-display); font-size: 24px; font-weight: 400; letter-spacing: 0.01em; padding: 12px 30px; text-shadow: 0 0 6px #fff, 0 0 16px var(--nn-amber); }
+.btn.small { font-size: 15px; padding: 6px 16px; border-width: 2px; border-radius: 10px; }
+.sheet .inline .btn { font-size: 17px; padding: 8px 16px; }
+.btn:hover { filter: brightness(1.15); }
+.link-btn { color: var(--link); }
+.copy-code { background: var(--surface); border-color: var(--rule); }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; }
+.trust { font-weight: 500; }
+
+.hero-copy .lede { color: #f1e9f8; }
+.hero-art { width: 100%; max-width: 470px; margin: 0 auto; aspect-ratio: 480 / 920; }
+.hero-art svg { width: 100%; height: 100%; }
+@media (max-width: 860px) { .hero-art { max-width: 300px; } }
+.nn-tube .lit { opacity: 0; transition: opacity 0.25s ease; }
+html:not([data-mood]) .nn-tube.waiting .lit, html[data-mood="working"] .nn-tube.working .lit, html[data-mood="waiting"] .nn-tube.waiting .lit,
+html[data-mood="done"] .nn-tube.done .lit, html[data-mood="error"] .nn-tube.error .lit { opacity: 1; }
+
+.kicker { color: #ffcf8a; }
+.dark .kicker { color: #ffcf8a; }
+/* Cards are dark sign boxes with a soft pink tube for a rim. */
+.card, .dest, .guide-list a, .voice-panel { background: linear-gradient(180deg, rgba(14, 8, 20, 0.95), rgba(8, 5, 12, 0.95)); border: 2px solid #2c2138; }
+.card h3 { color: #fff; }
+.grid > .card { box-shadow: var(--card-shadow), inset 0 0 0 1px rgba(255, 79, 193, 0.12); }
+/* State cards and agent cards are lit with their own tube. */
+.states .card, .agents .card { border: 3px solid color-mix(in srgb, var(--state) 35%, #fff); box-shadow: 0 0 8px var(--state), 0 0 28px color-mix(in srgb, var(--state) 70%, transparent), inset 0 0 10px var(--state), inset 0 0 30px color-mix(in srgb, var(--state) 30%, transparent); }
+.states .card h3, .agents .card h3 { color: color-mix(in srgb, var(--state) 18%, #fff); font-size: 38px; text-shadow: 0 0 4px #fff, 0 0 12px var(--state), 0 0 30px var(--state); }
+.states .card .orb { width: 30px; height: 30px; background: color-mix(in srgb, var(--state) 25%, #fff); box-shadow: 0 0 0 4px #0c0712, 0 0 0 7px color-mix(in srgb, var(--state) 35%, #fff), 0 0 18px var(--state), 0 0 34px var(--state); }
+.states .card .orb::after { font-size: 16px; line-height: 30px; }
+.states .card p, .agents .card p { color: #f4ecfa; }
+
+.dest li { border-top-color: #2c2138; }
+.dest .where { color: #ffcf8a; }
+.step { background: transparent; color: #fff; border: 2.5px solid #ffd6f1; box-shadow: 0 0 8px var(--nn-pink), inset 0 0 8px var(--nn-pink); text-shadow: 0 0 6px var(--nn-pink); font-family: var(--font-display); font-size: 17px; }
+.stat { color: #fff6e4; text-shadow: 0 0 6px #fff, 0 0 20px var(--nn-amber), 0 0 60px var(--nn-amber); }
+.faq summary { font-size: 22px; color: #fff; }
+.faq summary::after { color: var(--nn-pink); }
+.guide-list a:hover { border-color: var(--nn-pink); box-shadow: 0 0 14px rgba(255, 79, 193, 0.5); }
+.guide-list strong { color: #fff; }
+.voice-tablist { background: var(--surface) !important; }
+.voice-tab[aria-selected="true"] { background: #ffe9c2; color: #1a0f22; }
+.voice-steps kbd { color: var(--ink); }
+.chip { min-height: 44px; border-color: #3a2e46; }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: transparent; color: #fff; border-color: #ffe9c2; box-shadow: 0 0 8px var(--nn-amber), inset 0 0 8px var(--nn-amber); }
+.closing h2 { text-shadow: 0 0 4px #fff, 0 0 14px var(--nn-pink), 0 0 40px var(--nn-pink); }
+footer { background: #0a0610; font-family: var(--font-label); font-size: 12px; border-top: 2px solid #2c2138; }
+footer a { color: var(--link); }
+dialog { background: #0c0712; border: 3px solid #ffd6f1; box-shadow: 0 0 12px var(--nn-pink), 0 0 40px rgba(255, 79, 193, 0.5), 0 30px 80px rgba(0, 0, 0, 0.6); }
+.field input { background: #1c1228; color: var(--ink); border-color: #3a2e46; }
+.error { color: #ff9aa6; }
+.close { color: var(--ink-2); }
+.hero, .alt { background-image: var(--texture); }
+.hero .kicker { color: #ffcf8a; }
+.chip, .voice-tab { min-height: 44px; }

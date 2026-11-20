@@ -1,0 +1,129 @@
+/* Periodic table — a classroom chart: chart-white paper, print-black hairlines, square cells that share their
+   borders, atomic numbers in mono, and the four states as heavy element fills. Zero radius anywhere. */
+:root {
+  --bg: #f6f5ef;
+  --bg-alt: #ecebe2;
+  --surface: #f6f5ef;
+  --surface-2: #e3e1d6;
+  --ink: #111111;
+  --ink-2: #3a3a36;
+  --rule: #111111;
+  --accent: #111111;
+  --on-accent: #f6f5ef;
+  --link: #111111;
+  --band: #111111;
+  --band-ink: #f6f5ef;
+  --band-ink-2: #c9c8c0;
+  --band-surface: #1b1b1a;
+  --band-rule: #f6f5ef;
+  --claude: #d97757;
+  --codex: #10a37f;
+  --gemini: #3a7cf0;
+  --waiting: #ffb400;
+  --done: #1faa5c;
+  --error: #e8382c;
+
+  --font-display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.045em;
+  --display-leading: 0.96;
+  --h1-size: clamp(40px, 4.6vw, 66px);
+  --h2-size: clamp(34px, 4.6vw, 60px);
+  --h3-size: 22px;
+  --label-size: 12.5px;
+  --label-tracking: 0.14em;
+  --label-weight: 500;
+  --label-color: #111111;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--rule);
+  --btn-shadow: 7px 7px 0 var(--waiting);
+  --device-edge: #3a3a36;
+  --edge-strength: 0.35;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 1.5px solid var(--ink); }
+.nav .wrap { height: 70px; }
+.brand { font-family: var(--font-display); font-size: 26px; letter-spacing: -0.03em; text-transform: lowercase; }
+.brand { flex: none; }
+.brand::after { content: "Am" / ""; font-family: var(--font-label); font-size: 11px; font-weight: 500; align-self: flex-start; margin: 4px 8px 0 -6px; }
+.brand img { border-radius: 0; }
+.nav-links { font-family: var(--font-label); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; gap: 18px; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 18px; letter-spacing: -0.01em; padding: 16px 28px; }
+.btn.small { font-family: var(--font-label); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; box-shadow: none; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 4px 4px 0 var(--waiting); }
+.dark .btn { background: var(--waiting); color: #111; box-shadow: 7px 7px 0 var(--band-ink); }
+.copy-code { background: var(--bg); border: 1.5px solid var(--ink); }
+
+/* Hero: the words in the table's gap, a block of elements beside them. */
+.hero { border-bottom: 1.5px solid var(--ink); }
+.hero-copy { border: 1.5px solid var(--ink); padding: clamp(24px, 3.4vw, 44px); background: var(--bg); }
+.hero .kicker { color: var(--ink); }
+.hero-copy .lede { color: #222; font-size: clamp(18px, 1.7vw, 21px); }
+.trust { font-weight: 500; }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; }
+.hero-art { min-height: calc(min(440px, 100vw - 44px) * 1.575); }
+.pt-table { width: min(440px, 100%); }
+.pt-table text { font-family: var(--font-label); }
+.pt-table .sym { font-family: var(--font-display); }
+.pt-table .st { transition: transform 0.5s var(--ease); }
+.pt-table .hi { opacity: 0; transition: opacity 0.6s var(--ease); }
+html[data-mood="waiting"] .pt-ny .hi, html[data-mood="error"] .pt-er .hi, html[data-mood="done"] .pt-dn .hi, html[data-mood="working"] .pt-wk .hi { opacity: 1; }
+
+/* Every kicker carries its group number in a small square cell. */
+main { counter-reset: group; }
+main .kicker { counter-increment: group; display: inline-flex; align-items: center; gap: 12px; }
+main .kicker::before { content: counter(group, decimal-leading-zero); display: inline-grid; place-items: center; width: 34px; height: 34px; border: 1.5px solid currentColor; font-weight: 600; letter-spacing: 0; }
+main > section { border-top: 1.5px solid var(--ink); }
+
+/* Grids are tiles that share borders, like the chart. */
+.grid { gap: 0; }
+.grid > .card { margin: 0 -1.5px -1.5px 0; counter-increment: z; position: relative; }
+.grid { counter-reset: z; }
+.grid > .card::before { content: counter(z); position: absolute; top: 12px; left: 14px; font: 600 13px/1 var(--font-label); }
+.card { padding: 46px 24px 26px; background: var(--surface); }
+.card h3 { letter-spacing: -0.02em; }
+.card p { color: var(--ink-2); }
+.dark .card p { color: var(--band-ink-2); }
+.states .card { border-top: 1.5px solid var(--ink); background: var(--state); color: #111; min-height: 240px; }
+.states .card p { color: #111; font-weight: 500; }
+.states .card .orb { background: #f6f5ef; box-shadow: 0 0 0 2px #111; }
+.states .card h3 { font-size: 30px; }
+.states .card:nth-child(1)::after { content: "Wk" / ""; }
+.states .card:nth-child(2)::after { content: "Ny" / ""; }
+.states .card:nth-child(3)::after { content: "Dn" / ""; }
+.states .card:nth-child(4)::after { content: "Er" / ""; }
+.states .card::after { position: absolute; top: 18px; right: 18px; font: 400 52px/1 var(--font-display); letter-spacing: -0.04em; opacity: 0.9; }
+.agents .card { background: var(--surface-2); }
+.steps .card { background: #f1e4d8; }
+.wallpaper-features .card { background: var(--band-surface); }
+.dest { border: 1.5px solid var(--ink); }
+.dest li { border-top: 1.5px solid var(--ink); font-weight: 500; }
+.dest .where { font-weight: 500; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.06em; color: #333; }
+.wallpaper { border: 1.5px solid var(--ink); }
+.chip { font-weight: 500; text-transform: uppercase; font-size: 13px; letter-spacing: 0.06em; border: 1.5px solid currentColor; min-height: 44px; }
+.voice-tablist { border: 1.5px solid var(--ink) !important; }
+.voice-tab { font-weight: 500; text-transform: uppercase; font-size: 13px; min-height: 44px; }
+.voice-panel { border: 1.5px solid var(--ink); }
+.step { border-radius: 0; width: 46px; height: 46px; font: 400 22px/1 var(--font-display); background: #111; color: #f6f5ef; margin-top: 4px; }
+.steps .card::before { content: none; }
+.stat { font-family: var(--font-display); color: #111; letter-spacing: -0.05em; text-shadow: 6px 6px 0 var(--waiting); }
+.faq details { border-top: 1.5px solid var(--ink); }
+.faq details:last-child { border-bottom: 1.5px solid var(--ink); }
+.faq summary { font-size: 19px; letter-spacing: -0.01em; }
+.guide-list { gap: 0; }
+.guide-list li { margin: 0 -1.5px -1.5px 0; }
+.guide-list a { border: 1.5px solid var(--ink); background: var(--bg); }
+.guide-list a:hover { background: #dfe7f2; border-color: var(--ink); }
+.guide-list strong { font-size: 19px; letter-spacing: -0.02em; }
+footer { border-top: 1.5px solid var(--ink); font-family: var(--font-label); font-size: 12.5px; }
+dialog { border: 1.5px solid var(--ink); box-shadow: 10px 10px 0 var(--waiting), 0 30px 80px rgba(0, 0, 0, 0.3); }
+.field input { border: 1.5px solid var(--ink); }
+@media (max-width: 760px) { .states .card::after { font-size: 40px; } .grid > .card { margin-right: 0; } }

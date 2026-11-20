@@ -1,0 +1,110 @@
+/* Ink tearoom. Washi paper with a faint fibre, sumi ink, one vermilion seal, a brushed ensō and a great deal
+   of empty space. Lines are hairlines; buttons are a word over a brushed underline. Dark bands are wet ink. */
+:root {
+  --vermilion: #c8361d;
+  --bg: #f1ede2;
+  --bg-alt: #ebe6d8;
+  --surface: #f6f3ea;
+  --surface-2: #ebe6d8;
+  --ink: #1d1b18;
+  --ink-2: #4f4b44;
+  --rule: #1d1b1840;
+  --accent: #1d1b18;
+  --on-accent: #f1ede2;
+  --link: #1d1b18;
+  --band: #1d1b18;
+  --band-ink: #f1ede2;
+  --band-ink-2: #bdb7aa;
+  --band-surface: #282521;
+  --band-rule: #f1ede230;
+  --waiting: #c98a14;
+  --done: #5d7a4a;
+  --error: #a8321e;
+
+  --font-display: "Shippori Mincho", "Hiragino Mincho ProN", "Iowan Old Style", Georgia, serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", -apple-system, "Helvetica Neue", sans-serif;
+  --font-label: "Zen Kaku Gothic New", "Hiragino Sans", -apple-system, "Helvetica Neue", sans-serif;
+  --display-tracking: -0.02em;
+  --display-leading: 1.1;
+  --h1-size: clamp(46px, 6.2vw, 92px);
+  --h2-size: clamp(34px, 4.2vw, 54px);
+  --h3-size: 27px;
+  --body-size: 17px;
+  --body-leading: 1.8;
+  --label-size: 12px;
+  --label-tracking: 0.34em;
+  --label-weight: 400;
+  --label-color: var(--ink-2);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --texture: repeating-linear-gradient(90deg, #00000005 0 1px, transparent 1px 7px), repeating-linear-gradient(#00000004 0 1px, transparent 1px 11px);
+  --band-texture: radial-gradient(900px 400px at 80% 0, #ffffff08, transparent 70%);
+  --section-pad: 140px;
+  --device-edge: #5a554c;
+  --edge-strength: 0.28;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: normal; line-height: normal; }
+h1, h2, h3 { font-weight: 400; }
+.alt { background-image: var(--texture); }
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 1px solid var(--rule); }
+.nav .wrap { height: 72px; }
+.brand { font-size: 24px; letter-spacing: 0.14em; font-weight: 500; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 14px; letter-spacing: 0.08em; }
+
+/* Buttons: a word on a brushed underline, the seal's red dot after it. */
+.btn { background: transparent; color: var(--ink); font-family: var(--font-body); font-weight: 400; font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; padding: 12px 2px 10px; border-bottom: 1.5px solid currentColor; }
+.btn::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--vermilion); margin-left: 8px; }
+.btn:hover { filter: none; color: var(--vermilion); }
+.btn.small { font-size: 12.5px; min-height: 44px; padding: 8px 2px; }
+.dark .btn { color: var(--band-ink); }
+.sheet .inline .btn { border: 1px solid var(--ink); padding: 8px 14px; }
+.copy-code { background: transparent; }
+
+/* Hero */
+.hero { padding: calc(var(--hero-pad) + 30px) 0 calc(var(--hero-pad) + 60px); }
+.hero-copy .lede { font-size: clamp(17px, 1.6vw, 20px); line-height: 1.85; max-width: 500px; }
+.trust { font-size: 14px; letter-spacing: 0.04em; }
+.hero-art { aspect-ratio: 1 / 1; width: 100%; max-width: 520px; margin: 0 auto; }
+.ink-art { width: 100%; height: auto; overflow: visible; }
+.ink-art .light { fill: var(--state, var(--claude)); transition: fill 0.8s var(--ease); }
+.ink-art .ring { fill: none; stroke: var(--state, var(--claude)); opacity: 0.4; transform-box: fill-box; transform-origin: center; animation: ink-ripple 4s ease-out infinite; }
+@keyframes ink-ripple { from { transform: scale(0.6); opacity: 0.5; } to { transform: scale(1.8); opacity: 0; } }
+@media (max-width: 860px) { .hero-art { max-width: 300px; } }
+
+main > section { border-top: 1px solid var(--rule); }
+main > section.dark { border-top: 0; }
+.kicker { margin-bottom: 26px; }
+.section-lede { line-height: 1.8; color: var(--ink-2); }
+
+/* Cards: no boxes, only a hairline above, as in the mockup's row of four. */
+.card { background: transparent; border: 0; border-top: 1px solid var(--rule); padding: 30px 4px 6px; }
+.card p { line-height: 1.75; }
+.states .card { border-top: 1px solid var(--rule); min-height: 0; }
+.states .card .orb { width: 12px; height: 12px; box-shadow: none; margin-bottom: 26px; }
+.states .card .orb.check::after, .states .card .orb.bang::after { content: none; }
+.states .card:nth-child(4) .orb { border-radius: 2px; }
+.dest { background: transparent; border: 0; border-top: 1px solid var(--rule); }
+.dest li { padding-left: 2px; padding-right: 2px; }
+.wallpaper { border: 0; }
+.chip { min-height: 44px; letter-spacing: 0.08em; }
+.voice-tablist { border-radius: 0; }
+.voice-panel { background: var(--surface); }
+.voice-flow .end { font-size: 13px; letter-spacing: 0.08em; }
+
+.step { background: transparent; color: var(--vermilion); border: 1px solid var(--vermilion); font-family: var(--font-display); font-size: 16px; }
+.stat { font-weight: 400; }
+.faq details { padding: 24px 0; }
+.faq summary { font-size: 20px; }
+.faq summary::after { font-family: var(--font-body); font-weight: 300; }
+.guide-list a { background: transparent; border: 0; border-top: 1px solid var(--rule); padding: 22px 2px; }
+.guide-list a:hover strong { color: var(--vermilion); }
+.guide-list strong { font-weight: 400; }
+.closing img { border-radius: 22px; }
+footer { font-size: 12.5px; letter-spacing: 0.04em; }
+dialog { border-color: var(--rule); }

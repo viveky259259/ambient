@@ -1,0 +1,112 @@
+/* Barometer — a hallway aneroid barometer on a duck-egg wall. Enamel-ivory cards ringed in brass, Bodoni italics,
+   engraved mono lettering, round brass-ringed buttons, and a dial whose blued needle follows the demo's state. */
+:root {
+  --bg: #cdd8cf;
+  --bg-alt: #c2cfc5;
+  --surface: #f6f1e3;
+  --surface-2: #ece5d0;
+  --ink: #17251f;
+  --ink-2: #2f4239;
+  --rule: #17251f;
+  --brass: #a9843a;
+  --accent: #17251f;
+  --on-accent: #f6f1e3;
+  --link: #17251f;
+  --band: #17251f;
+  --band-ink: #f6f1e3;
+  --band-ink-2: #c3cdc4;
+  --band-surface: #213229;
+  --band-rule: #5c6b55;
+  --claude: #d0663f;
+  --codex: #0f8f70;
+  --gemini: #2f6fb3;
+  --waiting: #d98a00;
+  --done: #2e8b57;
+  --error: #b8322f;
+
+  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-label: "Spline Sans Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Spline Sans Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.03em;
+  --display-leading: 1;
+  --h1-size: clamp(50px, 7.4vw, 112px);
+  --h2-size: clamp(36px, 5vw, 66px);
+  --h3-size: 30px;
+  --body-size: 18px;
+  --label-size: 12.5px;
+  --label-tracking: 0.2em;
+  --label-weight: 500;
+  --label-color: #2f4239;
+
+  --radius: 22px;
+  --radius-sm: 10px;
+  --radius-btn: 100px;
+  --border: 1px solid var(--rule);
+  --card-shadow: inset 0 0 0 5px var(--surface), inset 0 0 0 6.5px var(--brass);
+  --btn-shadow: 0 0 0 4px var(--bg), 0 0 0 5.5px var(--brass);
+  --texture: repeating-linear-gradient(90deg, rgba(23, 37, 31, 0.045) 0 1px, transparent 1px 90px);
+  --band-texture: repeating-linear-gradient(90deg, rgba(246, 241, 227, 0.035) 0 1px, transparent 1px 90px);
+  --device-edge: #a9843a;
+  --edge-strength: 0.35;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid var(--ink); }
+.nav .wrap { height: 76px; }
+.brand { font-family: var(--font-display); font-style: italic; font-size: 30px; text-transform: lowercase; letter-spacing: 0; flex: none; margin-right: 8px; }
+.brand img { border-radius: 50%; box-shadow: 0 0 0 2px var(--brass); }
+.nav-links { font-family: var(--font-label); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; gap: 18px; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.01em; padding: 15px 36px; }
+.btn.small { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; box-shadow: none; border: 1px solid var(--ink); background: transparent; color: var(--ink); }
+.dark .btn { background: var(--band-ink); color: var(--band); box-shadow: 0 0 0 4px var(--band), 0 0 0 5.5px var(--brass); }
+.alt .btn { box-shadow: 0 0 0 4px var(--bg-alt), 0 0 0 5.5px var(--brass); }
+.copy-code { background: var(--surface); border-radius: 100px; padding-left: 14px; }
+
+/* Hero: the headline and lede left, the dial right. */
+.hero h1 { font-style: normal; }
+.hero .kicker { color: var(--ink); letter-spacing: 0.22em; }
+.hero-copy .lede { color: var(--ink); }
+.trust { font-family: var(--font-body); font-style: italic; font-size: 17px; }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); }
+.hero-art { width: 100%; max-width: 580px; margin: 0 auto; aspect-ratio: 1; min-height: 0; }
+.hero-art svg { width: 100%; height: 100%; }
+.bar-dial { font-family: var(--font-display); }
+.bar-dial .mono { font-family: var(--font-label); }
+.bar-dial .it { font-family: var(--font-body); font-style: italic; }
+.bar-needle { transform-box: view-box; transform-origin: 500px 500px; transform: rotate(-30deg); transition: transform 1.4s var(--spring); }
+html[data-mood="error"] .bar-needle { transform: rotate(-91deg); }
+html[data-mood="waiting"] .bar-needle { transform: rotate(-30deg); }
+html[data-mood="working"] .bar-needle { transform: rotate(30deg); }
+html[data-mood="done"] .bar-needle { transform: rotate(91deg); }
+
+/* Sections hang from a hairline; kickers are engraved. */
+main > section { border-top: 1px solid var(--ink); }
+main > section.dark { border-top-color: var(--brass); }
+h2 em, h3 { font-style: italic; }
+h3 { font-weight: 500; letter-spacing: -0.01em; }
+.dark .kicker { color: #d9c48d; }
+
+.card { padding: 32px 30px; }
+.dark .card { --card-shadow: inset 0 0 0 5px var(--band-surface), inset 0 0 0 6.5px #7d6630; }
+.states .card { border-top: 1px solid var(--ink); }
+.states .card .orb, .agents .card .orb { box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--ink); }
+.states .card h3 { font-size: 34px; }
+.dest { border-radius: var(--radius); box-shadow: var(--card-shadow); }
+.dest .where { font-family: var(--font-body); font-style: italic; font-size: 15px; }
+.dot { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink); }
+.wallpaper { border-radius: var(--radius); }
+.chip { border-radius: 100px; font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; min-height: 44px; }
+.voice-tab { border-radius: 100px; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12.5px; min-height: 44px; }
+.voice.tabs-on .voice-tablist { border-radius: 100px; }
+.step { background: transparent; color: var(--ink); border: 1px solid var(--ink); box-shadow: 0 0 0 3px var(--surface), 0 0 0 4.5px var(--brass); font: italic 400 18px/1 var(--font-display); }
+.stat { font-style: italic; color: var(--ink); }
+.faq summary { font-style: italic; font-size: 23px; }
+.faq details { border-top: 1px solid var(--ink); }
+.guide-list a { border-radius: var(--radius); box-shadow: var(--card-shadow); }
+.guide-list strong { font-style: italic; }
+footer { border-top: 1px solid var(--ink); font-family: var(--font-label); font-size: 12px; letter-spacing: 0.04em; }
+dialog { border-radius: 28px; box-shadow: inset 0 0 0 6px var(--bg), inset 0 0 0 7.5px var(--brass), 0 30px 80px rgba(0, 0, 0, 0.35); }
+.field input { border-radius: 100px; padding-left: 18px; background: var(--surface); }

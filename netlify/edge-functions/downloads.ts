@@ -3,6 +3,7 @@
 // or email is stored. scripts/downloads.sh prints the totals.
 import { getStore } from "@netlify/blobs";
 import type { Config, Context } from "https://edge.netlify.com";
+import { cleanVariant } from "./lib/ab-core.ts";
 
 // Link previews (Slack, Discord, iMessage, Telegram, WhatsApp) fetch links too; they aren't downloads.
 const BOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|whatsapp/i;
@@ -43,7 +44,9 @@ export default async (request: Request, context: Context) => {
     const version = url.pathname.match(/Ambient-([\d.]+)\.dmg$/)?.[1] ?? "other";
     const day = new Date().toISOString().slice(0, 10);
     const country = clean(context.geo?.country?.code ?? null).toUpperCase() || "XX";
-    const key = `${day}/${version}/${launchTag(request, url)}/${country}/${crypto.randomUUID()}`;
+    // The homepage design test's variant, when the download came from its button (?v=, see lib/ab-core.ts).
+    const variant = cleanVariant(url.searchParams.get("v"));
+    const key = `${day}/${version}/${launchTag(request, url)}/${country}/${variant ? `${variant}/` : ""}${crypto.randomUUID()}`;
     const write = getStore("downloads")
       .set(key, "1")
       .catch((error) => console.error("download count failed", error));

@@ -1,0 +1,13 @@
+{
+  "name": "Session score",
+  "set": "opt",
+  "inspiration": "A musical score of agent sessions: one lane per agent on a timeline, hatched while working, a struck note when it stops",
+  "order": 5,
+  "hero": "under",
+  "fonts": [
+    { "family": "Instrument Serif", "axes": "ital@0;1" },
+    { "family": "Hanken Grotesk", "axes": "wght@400;500;600" },
+    { "family": "Martian Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free · native · macOS 14+", "h1": "Agents work for minutes. Know the second they stop." }
+}

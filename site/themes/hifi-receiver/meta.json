@@ -1,0 +1,11 @@
+{
+  "name": "Hi-fi receiver",
+  "set": "insp",
+  "inspiration": "A quiet hi-fi receiver: a speaker grille, four state lamps, a tuning dial for the agents and a row of keys, in warm grey with one orange control",
+  "order": 8,
+  "hero": "split",
+  "fonts": [
+    { "family": "Inter Tight", "axes": "wght@400;500;600" }
+  ],
+  "copy": { "h1": "Less noise. More aware." }
+}

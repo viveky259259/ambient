@@ -1,0 +1,13 @@
+{
+  "name": "Signal halo",
+  "set": "opt",
+  "inspiration": "Rings of real hook events radiating from the notch, in a quiet editorial serif on warm paper",
+  "order": 1,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Newsreader", "axes": "opsz,wght@6..72,400;6..72,500;6..72,600" },
+    { "family": "Instrument Sans", "axes": "wght@400;500;600" },
+    { "family": "JetBrains Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "A free, native macOS app" }
+}

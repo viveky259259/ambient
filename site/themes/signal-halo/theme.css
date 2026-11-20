@@ -1,0 +1,106 @@
+/* Signal halo: warm paper, an editorial serif and a mono for the machine's words. Around the notch, rings of the
+   hook events Ambient listens to; the current state's words light up in its colour. */
+:root {
+  --bg: #f7f4ee;
+  --bg-alt: #efebe2;
+  --surface: #fffdf9;
+  --surface-2: #f3efe6;
+  --ink: #26241e;
+  --ink-2: #57534a;
+  --rule: #e0dacd;
+  --accent: #26241e;
+  --on-accent: #f7f4ee;
+  --link: #26241e;
+  --band: #151513;
+  --band-ink: #efece4;
+  --band-ink-2: #c4c0b5;
+  --band-surface: #1f1e1b;
+  --band-rule: #34322d;
+
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-body: "Instrument Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-leading: 0.98;
+  --h1-size: clamp(48px, 7.4vw, 104px);
+  --h2-size: clamp(36px, 4.6vw, 58px);
+  --h3-size: 28px;
+  --label-size: 12px;
+  --label-tracking: 0.14em;
+  --label-color: #6b665a;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-btn: 999px;
+  --border: 1px solid var(--rule);
+  --card-shadow: 0 1px 0 #fff inset, 0 14px 30px -22px #26241e55;
+  --device-edge: #b9b3a4;
+  --edge-strength: 0.4;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 90%, transparent); }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 26px; letter-spacing: -0.02em; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: 0; }
+.nav-links a { color: var(--ink); }
+.btn { font-family: var(--font-body); font-size: 17px; font-weight: 500; letter-spacing: 0; padding: 15px 32px; }
+.btn.small { font-size: 14px; min-height: 40px; padding: 9px 20px; }
+.chip, .voice-tab { border-radius: 999px; font-family: var(--font-body); font-size: 14px; }
+
+/* Hero: the halo sits behind the words; the space above them is reserved for the notch and the first rings. */
+.hero { padding-top: 0; }
+html[data-theme] .hero-art { position: relative; min-height: 210px; z-index: 0; }
+.hero-copy { position: relative; z-index: 1; }
+.hero-copy::before { content: ""; position: absolute; inset: -70px -16% -60px; z-index: -1; background: radial-gradient(closest-side, var(--bg) 74%, color-mix(in srgb, var(--bg) 0%, transparent)); }
+.hero .kicker { color: var(--ink-2); }
+html[data-theme] .hero-copy .lede { color: #3d3a32; max-width: 600px; }
+.trust { color: var(--ink); }
+.fineprint { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em; }
+@media (max-width: 760px) { html[data-theme] .hero-art { min-height: 150px; } }
+
+.sh-halo { position: absolute; left: 50%; top: 0; width: 1440px; max-width: none !important; height: auto; transform: translateX(-50%); pointer-events: none; }
+.sh-halo text { font-family: var(--font-mono); fill: var(--ink); }
+.sh-halo tspan { transition: fill 0.6s var(--ease), opacity 0.6s var(--ease); }
+.sh-halo .w { fill: #b4502d; }
+.sh-halo .q { fill: #a86400; }
+.sh-halo .d { fill: #23793a; }
+.sh-halo .e { fill: #c03a31; }
+html[data-mood="working"] .sh-halo .w, html[data-mood="waiting"] .sh-halo .q,
+html[data-mood="done"] .sh-halo .d, html[data-mood="error"] .sh-halo .e { font-weight: 700; }
+.sh-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 230px; height: 38px; border-radius: 0 0 18px 18px; background: #0b0b0a; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: #f7f4ee; font: 500 10px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.sh-notch i { width: 12px; height: 12px; border-radius: 50%; background: var(--state, var(--claude)); box-shadow: 0 0 14px 4px color-mix(in srgb, var(--state, var(--claude)) 55%, transparent); transition: background 0.6s var(--ease); animation: breathe 3.2s ease-in-out infinite; }
+.sh-notch b::after { content: "working"; font-weight: 500; }
+html[data-mood="waiting"] .sh-notch b::after { content: "needs you"; }
+html[data-mood="done"] .sh-notch b::after { content: "done"; }
+html[data-mood="error"] .sh-notch b::after { content: "error"; }
+@media (max-width: 760px) { .sh-halo { width: 1000px; } }
+
+/* Sections */
+.kicker { font-weight: 500; }
+.section-lede, p.body { color: var(--ink-2); }
+.card h3 { letter-spacing: -0.02em; }
+.states { position: relative; margin-top: 72px; gap: 28px; }
+.states::before { content: ""; position: absolute; top: -44px; left: 12%; right: 12%; height: 44px; border: 1.5px dashed #b9b3a4; border-bottom: 0; border-radius: 8px 8px 0 0; }
+.states .card { border-top: 1px solid var(--rule); }
+.states .card .orb { margin-bottom: 38px; width: 16px; height: 16px; }
+.states .card .orb.big { width: 22px; height: 22px; }
+.states .card h3 { font-size: 30px; }
+.dark .card { box-shadow: none; }
+.dark .kicker { color: #9a958a; }
+.dest li { font-size: 16px; }
+.dest .where { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+.step { background: var(--ink); color: var(--bg); font-family: var(--font-mono); }
+.stat { color: var(--ink); font-weight: 500; letter-spacing: -0.04em; }
+.faq summary { font-size: 23px; font-weight: 500; letter-spacing: -0.01em; }
+.guide-list a { box-shadow: var(--card-shadow); }
+.guide-list strong { font-size: 22px; }
+footer { font-family: var(--font-mono); font-size: 12px; }
+dialog { border-radius: 14px; }
+.copy-code { border-radius: 999px; padding-left: 14px; }
+
+@media (prefers-reduced-motion: reduce) { .sh-notch i { animation: none; } }
+
+/* Dark bands: the ink button would vanish on the band, so it turns over. */
+.dark .btn { background: var(--band-ink); color: var(--band); }

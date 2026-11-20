@@ -1,0 +1,13 @@
+{
+  "name": "Azulejo wall",
+  "set": "culture",
+  "inspiration": "A wall of painted azulejo tiles: cobalt on tin-white glaze with gold rims, read as one pattern until the eye finds the tile that differs",
+  "order": 22,
+  "hero": "split",
+  "fonts": [
+    { "family": "Marcellus", "axes": "wght@400" },
+    { "family": "Mulish", "axes": "wght@400;600;700" },
+    { "family": "Fira Code", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free · native macOS · made for the Mac", "h1": "Every agent in one place, read in one color." }
+}

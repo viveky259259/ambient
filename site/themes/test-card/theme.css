@@ -1,0 +1,140 @@
+/* Test card: a mid-grey alignment grid with white lines, every block of content set on a black caption box, and
+   colour bars for the four states. Unbounded for the station-ident headings, Instrument Sans for prose,
+   Martian Mono for the technical captions. A generic test pattern, not any broadcaster's card. */
+:root {
+  --bg: #7b7f84;
+  --bg-alt: #73777c;
+  --surface: #161618;
+  --surface-2: #1f1f22;
+  --ink: #f4f4f1;
+  --ink-2: #c8c8c2;
+  --rule: rgba(244, 244, 241, 0.75);
+  --accent: #f4f4f1;
+  --on-accent: #0a0a0b;
+  --link: #f4f4f1;
+  --band: #0a0a0b;
+  --band-ink: #f4f4f1;
+  --band-ink-2: #c8c8c2;
+  --band-surface: #161618;
+  --band-rule: rgba(244, 244, 241, 0.6);
+  --hero-bg: transparent;
+  --claude: #d97757;
+  --waiting: #ffb000;
+  --done: #3fc76a;
+  --error: #ff4b55;
+
+  --font-display: "Unbounded", "Arial Black", "Helvetica Neue", sans-serif;
+  --font-body: "Instrument Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 900;
+  --display-transform: uppercase;
+  --display-tracking: -0.03em;
+  --display-leading: 1.06;
+  --h1-size: clamp(34px, 5.4vw, 72px);
+  --h2-size: clamp(26px, 3.8vw, 48px);
+  --h3-size: 19px;
+  --body-size: 17px;
+  --label-size: 12.5px;
+  --label-tracking: 0.16em;
+  --label-weight: 400;
+  --label-color: #c8c8c2;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --texture: repeating-linear-gradient(0deg, transparent 0 78px, #f4f4f1 78px 80px), repeating-linear-gradient(90deg, transparent 0 78px, #f4f4f1 78px 80px);
+  --band-texture: none;
+  --section-pad: 80px;
+  --device-edge: #555;
+  --edge-strength: 0.3;
+}
+
+.alt { background-image: var(--texture); }
+
+.nav { background: #0a0a0b; border-bottom: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.nav .wrap { height: 72px; }
+.brand { font-family: var(--font-display); font-weight: 900; font-size: 24px; letter-spacing: -0.02em; text-transform: lowercase; color: #f4f4f1; }
+.brand img { border-radius: 0; }
+.nav-links { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; gap: 14px; }
+.nav-links a { color: #f4f4f1; }
+.nav-links a:hover { color: #ffb000; }
+.edge-glow.top { top: 72px; }
+
+.btn { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; padding: 16px 30px; }
+.btn.small { font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; min-height: 44px; }
+
+/* Every section's content sits on a black caption box over the grid. */
+main > section:not(.dark) > .wrap { background: #0a0a0b; padding: 64px 56px; position: relative; }
+main > section:not(.dark) > .wrap::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: linear-gradient(90deg, #000 0 7.7%, #2a2a2a 0 15.4%, #555 0 23.1%, #808080 0 30.8%, #aaa 0 38.5%, #d5d5d5 0 46.2%, #fff 0 53.8%, #d5d5d5 0 61.5%, #aaa 0 69.2%, #808080 0 76.9%, #555 0 84.6%, #2a2a2a 0 92.3%, #000 0); }
+.dark { border-top: 10px solid #0a0a0b; }
+.dark > .wrap { position: relative; }
+
+/* Hero: the test circle above a black caption box. */
+.hero { padding-top: 48px; }
+.hero-grid { gap: 28px; }
+.hero-copy { background: #0a0a0b; padding: 48px 56px 44px; box-shadow: 0 0 0 2px #f4f4f1; }
+.hero .kicker { color: #c8c8c2; }
+.hero h1 { margin-bottom: 22px; }
+.hero-copy .lede { color: #e9e9e4; font-weight: 500; margin-left: auto; margin-right: auto; }
+.trust { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+.fineprint { font-family: var(--font-mono); font-size: 12px; color: #c8c8c2; }
+.copy-code { background: #1f1f22; border: 2px solid #f4f4f1; color: #f4f4f1; }
+.hero .link-btn { color: #f4f4f1; font-weight: 700; }
+.hero-art { width: min(600px, 94%); margin: 0 auto; aspect-ratio: 1; }
+.tcd { width: 100%; height: auto; }
+.tcd text { font-family: var(--font-display); }
+.tcd .bn { font-weight: 900; font-size: 20px; }
+.tcd .bl { font-family: var(--font-mono); letter-spacing: 1px; }
+.tcd .mk { transition: transform 0.7s var(--ease); }
+@media (max-width: 760px) {
+  .hero-copy { padding: 32px 22px 30px; }
+  main > section:not(.dark) > .wrap { padding: 44px 22px; margin: 0 10px; }
+}
+
+/* Cards: outlined boxes on the black caption, like a test card's castellations. */
+.card, .dest, .guide-list a, .voice-panel { background: #0a0a0b; border: 2px solid #f4f4f1; }
+.dark .card { background: #0a0a0b; }
+.card h3, .guide-list strong { font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; }
+.card p { color: #c8c8c2; }
+/* The four states are the colour bars. */
+.states { gap: 0; }
+.states .card { --ink: #0a0a0b; --ink-2: #0a0a0b; background: var(--state); border: 0; color: #0a0a0b; }
+.states .card h3 { font-weight: 900; font-size: 24px; }
+.states .card p { color: #0a0a0b; font-weight: 500; }
+.states .card .orb { background: #0a0a0b; box-shadow: none; }
+.states .card .orb::after { color: var(--state); }
+.agents .grid { gap: 0; }
+.agents .card { border-top: 12px solid var(--state); }
+.dest li { font-family: var(--font-body); border-top: 2px solid rgba(244, 244, 241, 0.35); }
+.dest .where { color: #f4f4f1; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.06em; }
+.step { background: #f4f4f1; color: #0a0a0b; border-radius: 0; font-family: var(--font-display); font-weight: 900; }
+.stat { font-weight: 900; color: #ffb000; text-transform: uppercase; letter-spacing: -0.04em; }
+
+.faq details { border-top: 2px solid rgba(244, 244, 241, 0.3); }
+.faq details:last-child { border-bottom: 2px solid rgba(244, 244, 241, 0.3); }
+.faq summary { font-family: var(--font-body); font-weight: 700; font-size: 19px; }
+.faq summary::after { color: #ffb000; font-family: var(--font-display); }
+
+.voice.tabs-on .voice-tablist { background: #0a0a0b; border: 2px solid #f4f4f1; }
+.voice-tab { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #f4f4f1; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #f4f4f1; color: #0a0a0b; }
+.voice-panel h3 { text-transform: uppercase; font-weight: 900; letter-spacing: -0.02em; font-size: clamp(22px, 2.6vw, 30px); }
+.voice-flow { border-radius: 0; background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--state) 25%, transparent), transparent 70%), #161618; }
+.voice-flow .end { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; background: #0a0a0b; border: 2px solid #f4f4f1; }
+.voice-steps li::before { color: #0a0a0b; }
+.chip { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; min-height: 44px; }
+.wallpaper { border: 2px solid #f4f4f1; }
+
+footer { background: #0a0a0b; color: #c8c8c2; border-top: 0; font-family: var(--font-mono); font-size: 11.5px; }
+footer a { color: #f4f4f1; }
+
+dialog { background: #0a0a0b; background-image: none; border: 2px solid #f4f4f1; }
+.sheet h2 { font-size: 24px; }
+.field input { background: #161618; border: 2px solid #f4f4f1; }
+.error { color: #ff7a80; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+@media (prefers-reduced-motion: reduce) { .tcd .mk { transition: none; } }

@@ -1,0 +1,14 @@
+{
+  "name": "Mineral cabinet",
+  "set": "nature",
+  "inspiration": "A museum mineral drawer: walnut dividers, faceted crystals in each state's colour and typed specimen labels",
+  "order": 36,
+  "hero": "split",
+  "fonts": [
+    { "family": "Libre Caslon Display", "axes": "wght@400" },
+    { "family": "Libre Caslon Text", "axes": "ital,wght@0,400;0,700;1,400" },
+    { "family": "Special Elite", "axes": "wght@400" },
+    { "family": "Courier Prime", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Cabinet of agent states · free for macOS", "h1": "Four states, one colour at the notch." }
+}

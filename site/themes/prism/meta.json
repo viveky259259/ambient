@@ -1,0 +1,13 @@
+{
+  "name": "Prism",
+  "set": "nature",
+  "inspiration": "An optical bench on white paper: three agents' beams focused through a lens and a slit, then split by a glass block into Ambient's four state colours",
+  "order": 37,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Syne", "axes": "wght@700;800" },
+    { "family": "DM Sans", "axes": "opsz,wght@9..40,400;9..40,500;9..40,700" },
+    { "family": "DM Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Every agent, resolved into one colour." }
+}

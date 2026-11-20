@@ -1,0 +1,12 @@
+{
+  "name": "Riso zine",
+  "set": "insp",
+  "inspiration": "A two-ink risograph zine: fluorescent pink and blue overprinted on cream, misregistered type, halftone dots and a stuck-on sticker",
+  "order": 10,
+  "hero": "split",
+  "fonts": [
+    { "family": "Bowlby One", "axes": "wght@400" },
+    { "family": "Space Grotesk", "axes": "wght@400;500;700" }
+  ],
+  "copy": { "kicker": "Issue 0.10 · a free Mac app for coding agents", "h1": "Your Mac watches the agents." }
+}
