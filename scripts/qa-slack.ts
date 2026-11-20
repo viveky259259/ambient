@@ -1,21 +1,23 @@
-// Posts a QA run's summary to Slack (#ambient-qa) through an incoming webhook.
+// Posts a QA run's summary to Slack (#ambient-qa) as the Ocean Slack app ("Ocean Assurance").
 //
 //   node scripts/qa-slack.ts            print the message for the latest run (nothing is sent)
 //   node scripts/qa-slack.ts --send     send it
 //   node scripts/qa-slack.ts --run build/qa-results/<time> [--send]
 //
-// The webhook URL is read from this Mac's login Keychain, never from a file:
-//   security add-generic-password -U -s ambient-qa-slack-webhook -a "$USER" -w
-// (paste the URL Slack gave for #ambient-qa when asked). AMBIENT_QA_DASHBOARD_URL, if set, is
-// linked from the message.
+// It uses the one Ocean Slack app every Ocean tool posts through, not a webhook of its own: the
+// app's bot token is read from ~/.config/ocean-slack/slack-bot-token (0600, never printed). The app
+// must be in the channel (/invite @Ocean Assurance). AMBIENT_QA_SLACK_CHANNEL overrides the channel
+// name; AMBIENT_QA_DASHBOARD_URL, if set, is linked from the message.
 
-import { spawnSync } from "node:child_process";
-import { basename, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadRuns, type Run } from "./qa-dashboard.ts";
 import type { Result } from "./qa-run.ts";
 
-const KEYCHAIN_SERVICE = "ambient-qa-slack-webhook";
+const TOKEN_FILE = join(homedir(), ".config/ocean-slack/slack-bot-token");
+const CHANNEL = process.env.AMBIENT_QA_SLACK_CHANNEL ?? "#ambient-qa";
 const DEFAULT_DASHBOARD = "https://docket.tail823fd6.ts.net/p/ambient/d/build/qa-dashboard/index.html";
 
 const bad = (r: Result) => r.status === "fail" || r.status === "error";
@@ -99,20 +101,46 @@ async function main(argv: string[]): Promise<number> {
     console.log("\n(dry run: pass --send to post it to Slack)");
     return 0;
   }
-  const key = spawnSync("security", ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"], { encoding: "utf8" });
-  const url = key.stdout.trim();
-  if (key.status !== 0 || !url.startsWith("https://hooks.slack.com/")) {
+  let token: string;
+  try {
+    token = readFileSync(TOKEN_FILE, "utf8").trim();
+  } catch {
+    console.error(`No Ocean Slack bot token at ${TOKEN_FILE}.`);
+    return 2;
+  }
+  if (!token.startsWith("xoxb-")) {
+    console.error(`${TOKEN_FILE} does not hold a bot token (xoxb-…).`);
+    return 2;
+  }
+  const slack = async (method: string, body?: object) => {
+    const res = await fetch(`https://slack.com/api/${method}`, {
+      method: body ? "POST" : "GET",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json; charset=utf-8" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return (await res.json()) as { ok: boolean; error?: string; channels?: { id: string; name: string; is_member: boolean }[] };
+  };
+  const name = CHANNEL.replace(/^#/, "");
+  const list = await slack("conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=1000");
+  const channel = list.channels?.find((c) => c.name === name);
+  if (!list.ok || !channel) {
     console.error(
-      `No Slack webhook in the Keychain. Add the one for #ambient-qa with:\n  security add-generic-password -U -s ${KEYCHAIN_SERVICE} -a "$USER" -w`,
+      list.ok
+        ? `The Ocean Slack app can't see #${name}. Create it in the app's workspace, or, if it is private, invite the app: /invite @Ocean Assurance`
+        : `Slack refused to list channels: ${list.error}`,
     );
     return 2;
   }
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-  if (!res.ok) {
-    console.error(`Slack refused the message: ${res.status} ${await res.text()}`);
+  if (!channel.is_member) {
+    console.error(`The Ocean Slack app is not in #${name}. In Slack, open #${name} and type: /invite @Ocean Assurance`);
+    return 2;
+  }
+  const posted = await slack("chat.postMessage", { channel: channel.id, ...payload, unfurl_links: false });
+  if (!posted.ok) {
+    console.error(`Slack refused the message: ${posted.error}`);
     return 1;
   }
-  console.log(`Posted run ${runs[index].dir} to Slack.`);
+  console.log(`Posted run ${runs[index].dir} to #${name}.`);
   return 0;
 }
 
