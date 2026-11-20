@@ -3,10 +3,9 @@
 // or email is stored. scripts/downloads.sh prints the totals.
 import { getStore } from "@netlify/blobs";
 import type { Config, Context } from "https://edge.netlify.com";
-import { cleanVariant } from "./lib/ab-core.ts";
-
-// Link previews (Slack, Discord, iMessage, Telegram, WhatsApp) fetch links too; they aren't downloads.
-const BOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|whatsapp/i;
+// BOTS: link previews (Slack, Discord, iMessage, Telegram, WhatsApp) and crawlers fetch links too; they aren't
+// downloads. The design test filters its visitors with the same list.
+import { BOTS, cleanVariant, PREVIEW_HOST } from "./lib/ab-core.ts";
 
 const clean = (value: string | null) =>
   (value ?? "").toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 60);
@@ -47,7 +46,8 @@ export default async (request: Request, context: Context) => {
     // The homepage design test's variant, when the download came from its button (?v=, see lib/ab-core.ts).
     const variant = cleanVariant(url.searchParams.get("v"));
     const key = `${day}/${version}/${launchTag(request, url)}/${country}/${variant ? `${variant}/` : ""}${crypto.randomUUID()}`;
-    const write = getStore("downloads")
+    // A download from a draft deploy is testing: it goes to a store of its own that the reports don't read.
+    const write = getStore(PREVIEW_HOST.test(url.hostname) ? "downloads-preview" : "downloads")
       .set(key, "1")
       .catch((error) => console.error("download count failed", error));
     // Never hold up the download for the count.

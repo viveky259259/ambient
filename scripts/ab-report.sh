@@ -3,7 +3,7 @@
 # a 95% range, and whether the differences are more than chance.
 #
 #   scripts/ab-report.sh                         every count since the test began
-#   scripts/ab-report.sh --since 2026-11-21      only from a day on (after changing the designs, say)
+#   scripts/ab-report.sh --since 2026-11-21      only from a day on: after raising ROUND in site/themes/loader.js
 #   scripts/ab-report.sh --target 1000           the number of downloads to wait for (default 1000)
 #
 # Visitors come from netlify/edge-functions/ab.ts (one record per new visitor), downloads from downloads.ts (only

@@ -5,7 +5,10 @@
 import { readFileSync } from "node:fs";
 import { downloadVariant } from "../netlify/edge-functions/lib/ab-core.ts";
 
-export type Row = { variant: string; visitors: number; downloads: number; rate: number; low: number; high: number };
+/** Below this many visitors a design is listed but not ranked or named the leader. */
+export const MIN_VISITORS = 30;
+
+export type Row ={ variant: string; visitors: number; downloads: number; rate: number; low: number; high: number };
 export type Summary = { rows: Row[]; visitors: number; downloads: number; chi2: number; df: number; p: number };
 
 /** Wilson score interval for a proportion (95% by default). */
@@ -65,17 +68,23 @@ export function chiSquare(rows: { visitors: number; downloads: number }[]): { ch
   return { chi2, df, p: gammaQ(df / 2, chi2 / 2) };
 }
 
-export function summarize(viewKeys: string[], downloadKeys: string[], variants: string[] = [], since = ""): Summary {
+/**
+ * Visitors and downloads per variant. `variants` are the designs in the test (each gets a row even with no data);
+ * `known`, when given, is every design that has ever been in it, and records naming anything else (a forged
+ * /api/ab post, a hand-edited ?v=) are left out.
+ */
+export function summarize(viewKeys: string[], downloadKeys: string[], variants: string[] = [], since = "", known?: Set<string>): Summary {
   const visitors = new Map<string, number>(variants.map((v) => [v, 0]));
   const downloads = new Map<string, number>(variants.map((v) => [v, 0]));
+  const real = (variant: string | null | undefined): variant is string => !!variant && (!known || known.has(variant));
   for (const key of viewKeys) {
     const [day, variant] = key.split("/");
-    if (!variant || day < since) continue;
+    if (!real(variant) || day < since) continue;
     visitors.set(variant, (visitors.get(variant) ?? 0) + 1);
   }
   for (const key of downloadKeys) {
     const variant = downloadVariant(key);
-    if (!variant || key.slice(0, 10) < since) continue;
+    if (!real(variant) || key.slice(0, 10) < since) continue;
     downloads.set(variant, (downloads.get(variant) ?? 0) + 1);
     if (!visitors.has(variant)) visitors.set(variant, 0);
   }
@@ -84,7 +93,9 @@ export function summarize(viewKeys: string[], downloadKeys: string[], variants: 
     const [low, high] = wilson(d, Math.max(v, d));
     return { variant, visitors: v, downloads: d, rate: v ? d / v : 0, low, high };
   });
-  rows.sort((a, b) => b.rate - a.rate || b.downloads - a.downloads || a.variant.localeCompare(b.variant));
+  // Ranked by rate, but a design with too few visitors to say anything (1 visitor, 1 download) goes below the rest.
+  const enough = (r: Row) => (r.visitors >= MIN_VISITORS ? 1 : 0);
+  rows.sort((a, b) => enough(b) - enough(a) || b.rate - a.rate || b.downloads - a.downloads || a.variant.localeCompare(b.variant));
   return {
     rows,
     visitors: rows.reduce((s, r) => s + r.visitors, 0),
@@ -102,11 +113,11 @@ export function render(s: Summary, target: number, control = "almanac"): string 
   out.push("");
   out.push(`${"variant".padEnd(24)}${"visitors".padStart(9)}${"downloads".padStart(11)}${"rate".padStart(8)}   95% range`);
   for (const r of s.rows) {
-    out.push(`${r.variant.padEnd(24)}${String(r.visitors).padStart(9)}${String(r.downloads).padStart(11)}${pct(r.rate).padStart(8)}   ${pct(r.low)}–${pct(r.high)}`);
+    out.push(`${r.variant.padEnd(24)}${String(r.visitors).padStart(9)}${String(r.downloads).padStart(11)}${pct(r.rate).padStart(8)}   ${pct(r.low)}–${pct(r.high)}${r.visitors < MIN_VISITORS ? "   (too few visitors to rank)" : ""}`);
   }
   out.push("");
   out.push(`Chi-square across ${s.df + 1} variants: ${s.chi2.toFixed(1)} on ${s.df} df, p = ${s.p < 0.0001 ? "<0.0001" : s.p.toFixed(4)}.`);
-  const leader = s.rows.find((r) => r.visitors > 0);
+  const leader = s.rows.find((r) => r.visitors >= MIN_VISITORS);
   const base = s.rows.find((r) => r.variant === control);
   if (s.p >= 0.05 || !leader) {
     out.push("No design is clearly ahead yet: the differences are within what chance alone produces.");
@@ -128,10 +139,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const [views, downloads, ...rest] = process.argv.slice(2);
   const flag = (name: string) => { const i = rest.indexOf(name); return i >= 0 ? rest[i + 1] : undefined; };
   let variants: string[] = [];
+  let known: Set<string> | undefined;
   try {
-    variants = JSON.parse(readFileSync(new URL("../site/themes/manifest.json", import.meta.url), "utf8"))
-      .filter((t: { off: boolean }) => !t.off).map((t: { id: string }) => t.id);
-  } catch { /* the manifest is optional */ }
-  const summary = summarize(keys(views), keys(downloads), variants, flag("--since") ?? "");
+    const manifest: { id: string; off: boolean }[] = JSON.parse(readFileSync(new URL("../site/themes/manifest.json", import.meta.url), "utf8"));
+    variants = manifest.filter((t) => !t.off).map((t) => t.id);
+    known = new Set(manifest.map((t) => t.id));
+  } catch { /* without the manifest, every variant in the stores is reported */ }
+  const summary = summarize(keys(views), keys(downloads), variants, flag("--since") ?? "", known);
   console.log(render(summary, Number(flag("--target") ?? 1000)));
 }

@@ -63,3 +63,16 @@ test("summarize counts per variant, from a start day, including variants nobody 
   assert.deepEqual(s.rows.map((r) => [r.variant, r.visitors, r.downloads]), [["iris", 2, 1], ["almanac", 1, 0], ["barometer", 0, 0]]);
   assert.match(render(s, 1000), /999 downloads to go/);
 });
+
+test("summarize leaves out variants that were never in the test", () => {
+  const s = summarize(["2026-11-20/iris/a", "2026-11-20/forged/b"], ["2026-11-20/0.10.0/site/US/forged/x"], ["iris"], "", new Set(["iris", "almanac"]));
+  assert.deepEqual(s.rows.map((r) => r.variant), ["iris"]);
+  assert.equal(s.visitors, 1);
+  assert.equal(s.downloads, 0);
+});
+
+test("a tiny sample doesn't top the table", () => {
+  const views = [...Array(200)].map((_, i) => `2026-11-20/iris/${i}`).concat(["2026-11-20/prism/p"]);
+  const downloads = [...Array(30)].map((_, i) => `2026-11-20/0.10.0/site/US/iris/${i}`).concat(["2026-11-20/0.10.0/site/US/prism/p"]);
+  assert.deepEqual(summarize(views, downloads).rows.map((r) => r.variant), ["iris", "prism"]);
+});

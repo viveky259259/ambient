@@ -190,14 +190,17 @@
   const startDownload = () => {
     const a = document.createElement("a");
     const ref = store.get("ambient-ref");
-    // The design-test variant this visitor was shown (themes/loader.js); counted with the download.
-    const variant = window.AmbientAB && window.AmbientAB.counted ? window.AmbientAB.variant : "";
-    const query = new URLSearchParams();
-    if (ref) query.set("ref", ref);
-    if (variant) query.set("v", variant);
-    a.href = query.toString() ? `${dmg}?${query}` : dmg;
+    const url = (params) => { const q = new URLSearchParams(params); return q.toString() ? `${dmg}?${q}` : dmg; };
+    const plain = url(ref ? { ref } : {});
+    // The design this visitor was shown (themes/loader.js) goes with their first download only, so a design's
+    // rate is the share of its visitors who downloaded, not how many times they clicked.
+    const ab = window.AmbientAB;
+    const once = ab && ab.counted ? `${ab.round}:${ab.variant}` : "";
+    const first = once && store.get("ambient-variant-downloaded") !== once;
+    a.href = first ? url({ ...(ref ? { ref } : {}), v: ab.variant }) : plain;
+    if (first) store.set("ambient-variant-downloaded", once);
     const again = document.getElementById("download-again");
-    if (again) again.href = a.href;
+    if (again) again.href = plain;
     a.download = "";
     document.body.appendChild(a);
     a.click();
@@ -214,7 +217,7 @@
   const track = (name, data) => { try { window.umami?.track(name, data); } catch { /* ignore */ } };
 
   const open = (e) => {
-    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none", variant: (window.AmbientAB && window.AmbientAB.variant) || "none" });
+    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none", variant: (window.AmbientAB && window.AmbientAB.counted && window.AmbientAB.variant) || "none" });
     startDownload();
     if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
   };

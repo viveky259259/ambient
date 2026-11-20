@@ -36,6 +36,14 @@ site/themes/<id>/
 To take a theme out of the test without deleting it, add `"off": true` to its meta.json and rebuild the list.
 New visitors stop drawing it; visitors who already have it keep it, so their downloads still count.
 
+To start a new round (after cutting the test to the best few, say), raise `ROUND` in `loader.js` as well. Every
+visitor then draws again from the designs that are on and is recorded again, so after deploying, read the new
+round with `scripts/ab-report.sh --since <the day after the deploy>`.
+
+What's counted: a visitor once, when their browser first draws a design (only if it can keep it), and their first
+download from the homepage button in that round. Visits and downloads on this Mac's previews and on draft
+deploys go to the `ab-views-preview` and `downloads-preview` stores, which the reports don't read.
+
 ## meta.json
 
 ```json
