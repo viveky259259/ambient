@@ -299,7 +299,7 @@ struct MCPServer {
     private func history(_ name: String, _ arguments: [String: Any], folder: String) -> (String, Bool) {
         var command = HistoryCommand(paths: memory.paths)
         command.folder = folder
-        command.findModel = { nil }
+        command.findModel = { _ in nil }
         let context = command.context()
         do {
             switch name {

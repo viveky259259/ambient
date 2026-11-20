@@ -33,8 +33,11 @@ public enum Episodes {
             }
             if isRequest || current == nil {
                 close(current, at: event.n - 1)
+                // A chat another session started opens with that session's brief, not with something a person typed
+                // here. The brief is what was asked, so it stands as the request.
+                let brief = event.kind == .system && event.actor == nil && !isNotice(event.text) ? event.text : ""
                 current = Episode(n: episodes.count + 1, firstEvent: event.n, lastEvent: event.n, at: event.at,
-                                  request: isRequest ? event.text : "", changed: [], made: [])
+                                  request: isRequest ? event.text : brief, changed: [], made: [])
                 acted = !isRequest
                 continue
             }
@@ -54,6 +57,14 @@ public enum Episodes {
             episodes[index].made = record.commits.filter { $0.event.map(range.contains) == true }.map(\.sha)
         }
         return episodes
+    }
+
+    /// True for text a harness adds about something that happened (a task finished, a check failed, a turn was cut
+    /// short), as opposed to a brief that asks for work.
+    static func isNotice(_ text: String) -> Bool {
+        let start = text.drop { $0 == " " || $0 == "\n" }
+        return start.hasPrefix("<") || start.hasPrefix("[Request interrupted") || start.hasPrefix("The app was quit")
+            || start.hasPrefix("This session is being continued") || start.hasPrefix("Caveat:")
     }
 
     static func inRepository(_ path: String) -> Bool { !path.hasPrefix("/") && !path.hasPrefix("~") }

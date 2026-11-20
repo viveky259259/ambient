@@ -30,7 +30,7 @@ public enum HistoryPage {
             body += "<h2 class=\"section\">Requests</h2>\n<ol class=\"cards\">\n"
             for card in cards {
                 body += "<li><a href=\"#e\(card.firstEvent)\">\(escape(Episodes.clip(firstLine(card.request), 140)))</a>"
-                if !card.summary.isEmpty { body += "<div>\(escape(Episodes.clip(card.summary, 400)))</div>" }
+                if !card.brief.isEmpty { body += "<div>\(escape(card.brief))</div>" }
                 if !card.why.isEmpty { body += "<div><b>Why:</b> \(escape(card.why))</div>" }
                 if !card.files.isEmpty {
                     body += "<div class=\"files\">\(card.files.map { "<code>\(escape($0))</code>" }.joined(separator: " "))</div>"

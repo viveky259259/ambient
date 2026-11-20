@@ -203,8 +203,7 @@ public struct HistoryAnswerer {
         hits.map { hit in
             let card = hit.card
             var text = "\(HistoryPage.stamp(card.at ?? hit.chat.session.startedAt).prefix(10))  \(Episodes.clip(card.request.replacingOccurrences(of: "\n", with: " "), 160))"
-            let opening = card.source == "extract" ? (card.summary.components(separatedBy: "\n\n").first ?? "") : card.summary
-            if !opening.isEmpty { text += "\n  \(Episodes.clip(opening, 500))" }
+            if !card.brief.isEmpty { text += "\n  \(card.brief)" }
             if !card.why.isEmpty { text += "\n  Why: \(card.why)" }
             return text
         }.joined(separator: "\n\n")

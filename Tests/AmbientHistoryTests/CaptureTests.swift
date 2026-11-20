@@ -215,7 +215,7 @@ import Testing
 
     @Test func messagesInARowAreOneRequest() {
         let record = ChatRecord(session: Sample.session, events: [
-            ChatEvent(n: 1, kind: .system, text: "resumed"),
+            ChatEvent(n: 1, kind: .system, text: "<task-notification>resumed</task-notification>"),
             ChatEvent(n: 2, kind: .agent, text: "Hello again."),
             ChatEvent(n: 3, kind: .user, text: "First thing."),
             ChatEvent(n: 4, kind: .user, text: "And another."),
@@ -224,10 +224,23 @@ import Testing
             ChatEvent(n: 7, kind: .user, text: "Last."),
         ])
         let episodes = Episodes.split(record)
+        // Nobody asked for the first stretch: it opens with a notice, not a brief.
         #expect(episodes.map(\.request) == ["", "First thing.\n\nAnd another.", "Last."])
         #expect(episodes.map(\.firstEvent) == [1, 3, 7])
         #expect(episodes.map(\.lastEvent) == [2, 6, 7])
         #expect(Episodes.split(ChatRecord(session: Sample.session, events: [])).isEmpty)
+    }
+
+    @Test func aChatStartedByAnotherSessionTakesItsBriefAsTheRequest() {
+        let record = ChatRecord(session: Sample.session, events: [
+            ChatEvent(n: 1, kind: .system, text: "Check whether the remote agents work is ready to publish."),
+            ChatEvent(n: 2, kind: .agent, text: "It is ready."),
+            ChatEvent(n: 3, kind: .system, text: "<ci-monitor-event>checks passed"),
+        ])
+        let episodes = Episodes.split(record)
+        #expect(episodes.map(\.request) == ["Check whether the remote agents work is ready to publish."])
+        #expect(Episodes.isNotice("  <system-reminder>x") && Episodes.isNotice("[Request interrupted by user]"))
+        #expect(!Episodes.isNotice("Fix the <b>board</b>"))
     }
 
     @Test func placesEachFileOncePerRequestByTheStrongestTouch() {

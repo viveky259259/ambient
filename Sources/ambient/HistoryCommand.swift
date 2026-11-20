@@ -8,8 +8,9 @@ struct HistoryCommand {
     var shell: Shell = .system
     /// The folder commands run in; tests set it.
     var folder: String = FileManager.default.currentDirectoryPath
-    /// Finds the model that writes cards and answers; tests replace it.
-    var findModel: () -> (any TextModel)? = { ClaudeAPI.fromKeychain() }
+    /// Finds the model that writes cards and answers; tests replace it. `asking` is false when the app started the
+    /// command by itself: then the Keychain is read only if macOS won't show a permission dialog.
+    var findModel: (_ asking: Bool) -> (any TextModel)? = { ClaudeAPI.fromKeychain(asking: $0) }
     private let out = Terminal()
 
     static let usage = """
@@ -235,7 +236,8 @@ struct HistoryCommand {
             if !quiet { out.skip("History isn't set up for any repository.") }
             return 0
         }
-        let model = options.flags.contains("--no-model") || !config.useModel ? nil : findModel()
+        let wantsModel = !options.flags.contains("--no-model") && config.useModel
+        let model = wantsModel ? findModel(!quiet) : nil
         let pipeline = HistoryPipeline(paths: paths, config: config, shell: shell, model: model)
         let dryRun = options.flags.contains("--dry-run")
         var transcripts: [String] = []
@@ -281,6 +283,10 @@ struct HistoryCommand {
                             + stored.pullRequests.map { "#\($0)" }.joined(separator: ", "))
                     }
                     stored.notes.forEach { out.warn($0) }
+                    if quiet, wantsModel, model == nil {
+                        out.note("If the key is in the Keychain, macOS needs your permission once: run "
+                            + "`ambient history capture --session \(stored.session.id)` in a terminal and choose Always Allow.")
+                    }
                 }
             } catch {
                 failed = true
@@ -340,14 +346,6 @@ struct HistoryCommand {
         return 0
     }
 
-    /// A card's summary as shown in a list. One taken from the chat's own words is the agent's whole closing message,
-    /// so only its opening paragraph is shown; the chat has the rest.
-    static func shown(_ card: ChangeCard) -> String {
-        guard card.source == "extract" else { return card.summary }
-        let opening = card.summary.components(separatedBy: "\n\n").first ?? card.summary
-        return Episodes.clip(opening, 500)
-    }
-
     static func day(_ date: Date) -> String { String(HistoryPage.stamp(date).prefix(10)) }
 
     static func heading(_ hit: IndexHit) -> String {
@@ -395,7 +393,7 @@ struct HistoryCommand {
             lines.append("")
             lines.append("\(change.blamed ? "◆" : "●") \(out.bold(heading(change.hit)))")
             field("Asked", Episodes.clip(card.request, 400))
-            field("Did", shown(card))
+            field("Did", card.brief)
             field("Why", card.why)
             field("Rejected", card.rejected)
             field("Checked", card.verified)
@@ -482,7 +480,7 @@ struct HistoryCommand {
         let index = try index(for: context)
         let note = sync ? refresh(context, index: index, force: false) : nil
         let query = HistoryQuery(index: index, git: GitFacts(shell: shell), root: context.root)
-        let model = useModel && context.config.useModel ? findModel() : nil
+        let model = useModel && context.config.useModel ? findModel(true) : nil
         var config = context.config
         if !useModel { config.useModel = false }
         let answerer = HistoryAnswerer(query: query, config: config, model: model) { chat($0, in: context) }
@@ -588,7 +586,7 @@ struct HistoryCommand {
         if let note = refresh(context, index: index, force: true) { out.warn(note) }
         let query = HistoryQuery(index: index, git: GitFacts(shell: shell), root: context.root)
         let withAnswers = options.flags.contains("--answers")
-        let model = withAnswers ? findModel() : nil
+        let model = withAnswers ? findModel(true) : nil
         if withAnswers, model == nil { throw HistoryError.message("--answers needs a Claude API key.") }
         let answerer = HistoryAnswerer(query: query, config: context.config, model: model) { chat($0, in: context) }
         var results: [HistoryEval.Result] = []

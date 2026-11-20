@@ -206,6 +206,16 @@ public struct ChangeCard: Codable, Equatable, Sendable {
     }
 }
 
+extension ChangeCard {
+    /// The summary as shown in a list. A card taken from the chat's own words holds the agent's whole closing
+    /// message, so only its opening paragraph is shown; a model's summary is already short.
+    public var brief: String {
+        guard source == "extract" else { return summary }
+        let opening = summary.components(separatedBy: "\n\n").first ?? summary
+        return Episodes.clip(opening, 500)
+    }
+}
+
 /// A file touch placed in its chat: which request, which event.
 public struct PlacedTouch: Codable, Equatable, Sendable {
     public var path: String

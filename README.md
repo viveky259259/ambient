@@ -604,8 +604,9 @@ access to the bucket, so it is safe on a public repository. `--no-links` at setu
 `ambient history open SESSION` opens the same page from a checkout.
 
 S3 is reached through the `aws` command with your own sign-in (`aws login` or `aws sso login`); Ambient holds no AWS
-keys. Each Mac keeps its own index of the cards in `~/.ambient/history/`, rebuilt from the store, so a question is
-answered locally and the store is only listed for what is new.
+keys. Each Mac keeps its own index of the cards in `~/.ambient/history/`, built from the store, so a question is
+answered locally: the store is listed at most every ten minutes, and only the cards of new or changed chats are
+fetched. If the store can't be reached, questions are answered from what was fetched before.
 
 ## Command line
 

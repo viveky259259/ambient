@@ -14,6 +14,8 @@ final class HistoryLauncher {
     static let scanInterval: TimeInterval = 3_600
     /// An agent writes its transcript's last lines as it exits; reading sooner can miss them.
     static let settleDelay: TimeInterval = 5
+    /// A capture that hasn't finished by now is stopped, so it can't hold up the ones after it.
+    static let timeLimit: TimeInterval = 1_800
 
     init(paths: AmbientPaths, isAlive: @escaping (Int32) -> Bool = ProcessProbe.isAlive) {
         self.paths = paths
@@ -74,7 +76,10 @@ final class HistoryLauncher {
         process.environment = environment
         do {
             try process.run()
+            let watchdog = DispatchWorkItem { if process.isRunning { process.terminate() } }
+            DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeLimit, execute: watchdog)
             process.waitUntilExit()
+            watchdog.cancel()
         } catch {
             try? handle.write(contentsOf: Data("couldn't start: \(error.localizedDescription)\n".utf8))
         }

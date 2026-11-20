@@ -83,7 +83,7 @@ private final class World {
     var command: HistoryCommand {
         var command = HistoryCommand(paths: paths)
         command.folder = repo
-        command.findModel = { nil }
+        command.findModel = { _ in nil }
         return command
     }
 }
@@ -191,6 +191,24 @@ private final class World {
         #expect(command.run(["why", "Sources/Board.swift", "--json", "--no-sync"]) == 0)
         #expect(command.run(["ask", "why", "do", "tasks", "expire", "--no-model"]) == 0)
         #expect(command.run(["ask"]) == 1)
+    }
+
+    @Test func aCaptureTheAppStartedNeverAsksTheKeychain() throws {
+        final class Asked: @unchecked Sendable { var values: [Bool] = [] }
+        let asked = Asked()
+        let world = try World()
+        var command = world.command
+        command.findModel = { asking in
+            asked.values.append(asking)
+            return nil
+        }
+        #expect(command.run(["setup", "--store", world.store]) == 0)
+        // Setting up never looks for the key at all: it must not stop on a permission dialog.
+        #expect(asked.values.isEmpty)
+        #expect(command.run(["capture", "--transcript", world.transcript, "--quiet"]) == 0)
+        #expect(command.run(["capture", "--transcript", world.transcript]) == 0)
+        #expect(command.run(["capture", "--transcript", world.transcript, "--no-model"]) == 0)
+        #expect(asked.values == [false, true])
     }
 
     @Test func answersFromTheLastSyncWhenTheStoreIsAway() throws {

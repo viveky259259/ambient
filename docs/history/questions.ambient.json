@@ -19,6 +19,26 @@
     {"ask": "Why was the QA test suite put on a new branch instead of the branch the chat started on?",
      "expectSession": "77b822d2", "expectWords": ["main", "five packages|split|AmbientBase"]},
     {"ask": "Why did the Settings Board pane peg the main thread?",
-     "expectSession": "d0136e30"}
+     "expectSession": "d0136e30"},
+    {"ask": "How can the task board use a local model from a path on disk?",
+     "expectSession": "8c1c95c0", "expectFiles": ["Sources/AmbientCore/LocalAgent/LocalModel.swift"]},
+    {"ask": "How do agents share text and files with each other through working memory?",
+     "expectSession": "b9d4c32f", "expectFiles": ["Sources/AmbientCore/Memory/MemoryStore.swift"]},
+    {"ask": "What changed in Sources/AmbientCore/Memory/MemoryGuard.swift?", "file": "Sources/AmbientCore/Memory/MemoryGuard.swift",
+     "expectSession": "b9d4c32f", "expectFiles": ["Sources/AmbientCore/Memory/MemoryGuard.swift"]},
+    {"ask": "What did the review of the working memory pull request find and fix?",
+     "expectSession": "b9d4c32f"},
+    {"ask": "Why didn't v0.7.0 publish?",
+     "expectSession": "461386bb"},
+    {"ask": "What fixed the voice outbox's shim protocol issues, the epoch and following from an offset?",
+     "expectSession": "7b61ddd1", "expectFiles": ["Sources/AmbientCore/VoiceSync/VoiceOutbox.swift"]},
+    {"ask": "Why are Codex's JSON suggestion turns hidden?",
+     "expectSession": "1ace5639", "expectFiles": ["Sources/AmbientCore/Adapters/Adapters.swift"]},
+    {"ask": "What does a remote Bash permission request say at the standard level?",
+     "expectSession": "e87ccccf", "expectFiles": ["Sources/AmbientCore/Remote/RemoteEvent.swift"]},
+    {"ask": "Which notary profile was used to ship 0.8.0?",
+     "expectSession": "7f570034", "expectWords": ["ocean-notarize"]},
+    {"ask": "Are the remote agents P0 and P1 ready to publish?",
+     "expectSession": "91441010"}
   ]
 }

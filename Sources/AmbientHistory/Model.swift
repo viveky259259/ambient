@@ -55,11 +55,16 @@ public struct ClaudeAPI: TextModel {
     /// With `ANTHROPIC_API_KEY` when it is set, else the key Ambient already keeps in the Keychain for the board's
     /// skill pack. The environment comes first so a key given on purpose wins, and so nothing asks the Keychain
     /// (which can mean a permission dialog) when it doesn't have to.
-    public static func fromKeychain(environment: [String: String] = ProcessInfo.processInfo.environment) -> ClaudeAPI? {
+    ///
+    /// - Parameter asking: false when nobody is watching: the Keychain is then read only if macOS won't ask.
+    public static func fromKeychain(environment: [String: String] = ProcessInfo.processInfo.environment,
+                                    asking: Bool = true) -> ClaudeAPI? {
         if let key = environment["ANTHROPIC_API_KEY"]?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty {
             return ClaudeAPI(apiKey: key)
         }
-        return SecretStore.key(for: .anthropic, environment: environment).map { ClaudeAPI(apiKey: $0) }
+        let stored = asking ? SecretStore.key(for: .anthropic, environment: environment)
+            : SecretStore.keyWithoutAsking(for: .anthropic)
+        return stored.map { ClaudeAPI(apiKey: $0) }
     }
 
     func urlRequest(for request: ModelRequest) throws -> URLRequest {

@@ -28,6 +28,10 @@ public struct Shell: Sendable {
         run(tool, arguments, folder, input)
     }
 
+    /// The longest any one command may run. A tool that hangs (a network that never answers, a prompt nobody sees)
+    /// is stopped, so one stuck capture can't hold up every later one.
+    static let timeLimit: TimeInterval = 600
+
     /// Where to look for tools when `PATH` is the short one a GUI app or a hook gets.
     static let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
 
@@ -54,6 +58,10 @@ public struct Shell: Sendable {
         do { try process.run() } catch {
             return Output(status: 126, stderr: "\(tool): \(error.localizedDescription)")
         }
+        let running = Running(process)
+        let watchdog = DispatchWorkItem { running.stop() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeLimit, execute: watchdog)
+        defer { watchdog.cancel() }
         // Both pipes are drained while the tool runs: one left to fill would block it for good.
         let errData = Collected()
         let errReader = Thread { errData.set(err.fileHandleForReading.readDataToEndOfFile()) }
@@ -80,6 +88,17 @@ public struct Shell: Sendable {
             if FileManager.default.isExecutableFile(atPath: candidate) { return candidate }
         }
         return nil
+    }
+}
+
+/// A started process, for the watchdog that stops it when it runs too long.
+private final class Running: @unchecked Sendable {
+    private let process: Process
+
+    init(_ process: Process) { self.process = process }
+
+    func stop() {
+        if process.isRunning { process.terminate() }
     }
 }
 
