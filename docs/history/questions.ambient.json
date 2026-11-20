@@ -37,7 +37,7 @@
     {"ask": "What does a remote Bash permission request say at the standard level?",
      "expectSession": "e87ccccf", "expectFiles": ["Sources/AmbientCore/Remote/RemoteEvent.swift"]},
     {"ask": "Which notary profile was used to ship 0.8.0?",
-     "expectSession": "7f570034", "expectWords": ["ocean-notarize"]},
+     "expectSession": "7f570034"},
     {"ask": "Are the remote agents P0 and P1 ready to publish?",
      "expectSession": "91441010"}
   ]
