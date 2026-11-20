@@ -260,7 +260,7 @@ struct QADayLogTests {
             s.turnEndedAt = end
             return s
         }
-        let sessions = [
+        let sessions: [Session] = [
             live("a", .thinking, start: Self.morning),                                   // +600
             live("b", .tool(name: "x", detail: nil), start: QA.date(2026, 11, 20, 23)),   // clamped to midnight: +9h+600
             live("c", .waiting(reason: "q", message: nil), start: Self.morning),         // not busy
@@ -269,7 +269,9 @@ struct QADayLogTests {
             live("demo-f", .thinking, start: Self.morning),                              // demo
             live("g", .thinking, start: now.addingTimeInterval(50)),                     // future start: 0
         ]
-        #expect(log.agentTime(live: sessions, now: now) == 100 + 600 + (9 * 3_600 + 600))
+        let expected: TimeInterval = 100 + 600 + (9 * 3_600 + 600)
+        let measured: TimeInterval = log.agentTime(live: sessions, now: now)
+        #expect(measured == expected)
         #expect(log.agentTime(live: [], now: now) == 100)
     }
 
