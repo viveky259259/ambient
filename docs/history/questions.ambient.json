@@ -1,0 +1,24 @@
+{
+  "questions": [
+    {"ask": "Why do agent-made tasks leave the board three days after their last session ends?",
+     "expectSession": "f67f55ce", "expectFiles": ["Sources/AmbientCore/TaskStore.swift"], "expectWords": ["three days", "4,193|thousands|piled|never left"]},
+    {"ask": "Why did the task board get slow?",
+     "expectSession": "f67f55ce", "expectWords": ["re-sort|sorted|redrew|rewrote|tasks.json"]},
+    {"ask": "Why did clicking a task board card do nothing once its session had ended?",
+     "expectSession": "f67f55ce", "expectFiles": ["Sources/AmbientCore/TaskStore.swift"], "expectWords": ["last chat|remember|forgot"]},
+    {"ask": "How does a card from another Mac open its chat on that Mac?",
+     "expectSession": "f67f55ce", "expectFiles": ["Sources/AmbientCore/Remote/RemoteOpen.swift"], "expectWords": ["ssh", "ambient open"]},
+    {"ask": "What changed in Sources/AmbientCore/Remote/RemoteOpen.swift and why?", "file": "Sources/AmbientCore/Remote/RemoteOpen.swift",
+     "expectSession": "f67f55ce", "expectFiles": ["Sources/AmbientCore/Remote/RemoteOpen.swift"], "expectWords": ["ssh"]},
+    {"ask": "Which pull request carried the board cleanup and opening chats on another Mac?",
+     "expectSession": "f67f55ce", "expectWords": ["35"]},
+    {"ask": "Why was SessionStore.busyCount removed?",
+     "expectSession": "77b822d2", "expectFiles": ["Sources/AmbientCore/SessionStore.swift"], "expectWords": ["dead|unused|nothing used|nothing in the app"]},
+    {"ask": "Why is AmbientApp's test coverage low?",
+     "expectSession": "77b822d2", "expectWords": ["unit test", "can't run|cannot run|views|window"]},
+    {"ask": "Why was the QA test suite put on a new branch instead of the branch the chat started on?",
+     "expectSession": "77b822d2", "expectWords": ["main", "five packages|split|AmbientBase"]},
+    {"ask": "Why did the Settings Board pane peg the main thread?",
+     "expectSession": "d0136e30"}
+  ]
+}

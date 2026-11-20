@@ -56,6 +56,8 @@ final class AppModel: ObservableObject {
     /// Paired machines, for opening their tasks' chats there.
     private var pairedMachines: [Machine] = []
     private let remoteOpenQueue = DispatchQueue(label: "com.viveky259259.Ambient.remote-open", qos: .userInitiated)
+    /// Stores finished chats for the team, for repositories set up with `ambient history setup`.
+    private let history = HistoryLauncher(paths: .current())
 
     init(prefs: Preferences, stateURL: URL?, dayURL: URL? = nil, tasksURL: URL? = nil, memoryURL: URL? = nil,
          memoryBlobs: MemoryBlobStore? = nil, titles: SessionTitles? = nil) {
@@ -113,6 +115,7 @@ final class AppModel: ObservableObject {
         record(t)
         observeTask(t)
         endSessionMemory(t)
+        history.observe(t)
         refreshTitles()
         if t.session.mood.wantsAttention, t.session.mood != t.previousMood,
            HostActivator.isFrontmost(t.session.host) {
@@ -488,12 +491,14 @@ final class AppModel: ObservableObject {
         rollOverDay()
         memory.sweep()
         pruneTasks()
+        history.tick()
         let changes = store.sweep(now: Date())
         if prefs.quietUntil != nil, !prefs.isQuiet { prefs.quietUntil = nil }
         guard !changes.isEmpty else { return }
         publish()
         for change in changes {
             transitions.send(change)
+            history.observe(change)
             observeTask(change)
         }
     }

@@ -23,6 +23,7 @@ struct Commands {
         case "remote": return remote(rest)
         case "link": return link() ? 0 : 1
         case "memory": return memory(rest)
+        case "history": return HistoryCommand(paths: paths).run(rest)
         case "mcp":
             let send: (WireMessage) -> WireMessage? = { request($0) }
             return MCPServer(request: send, memory: MemoryClient(paths: paths, request: send)).run()
@@ -63,8 +64,10 @@ struct Commands {
                                                                   Share text (VALUE, or standard input) or a file with other agents
           ambient memory rm KEY [--global|--project] [--in FOLDER]
                                                                   Remove a shared entry
-          ambient mcp                                             Run as an MCP server (stdio) so agents can share working memory
-                                                                  and set the board's model: claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+          ambient mcp                                             Run as an MCP server (stdio) so agents can share working memory,
+                                                                  set the board's model and ask the team's chat history:
+                                                                  claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+        \(HistoryCommand.usage)
           ambient remote add NAME [--host HOST] [--label TEXT] [--redaction metadata|standard|full]
                  [--agents claude,codex] [--accept-new-identity] [-- TRANSPORT COMMAND...]
                                                                   Follow agents on another machine over your own ssh
