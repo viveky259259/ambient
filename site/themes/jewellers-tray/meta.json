@@ -1,0 +1,13 @@
+{
+  "name": "Jeweller's tray",
+  "set": "craft",
+  "inspiration": "A jeweller's velvet tray: four faceted stones in gold bezels, one for each state, with hallmarks for what Ambient never does",
+  "order": 54,
+  "hero": "split",
+  "fonts": [
+    { "family": "Italiana", "axes": "wght@400" },
+    { "family": "Outfit", "axes": "wght@300;400;500" },
+    { "family": "Martian Mono", "axes": "wght@300;400" }
+  ],
+  "copy": { "kicker": "A free, native macOS app", "h1": "Your Mac tells you, quietly." }
+}

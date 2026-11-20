@@ -1,0 +1,13 @@
+{
+  "name": "Stage cue lights",
+  "set": "culture",
+  "inspiration": "A theatre at curtain-up: velvet curtains, footlights, a gilt line and the stage manager's cue lights, one beam for each state",
+  "order": 23,
+  "hero": "under",
+  "fonts": [
+    { "family": "Playfair Display", "axes": "ital,wght@0,700;0,800;1,600;1,800" },
+    { "family": "Libre Franklin", "axes": "wght@400;500;600" },
+    { "family": "Anonymous Pro", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · for Claude Code, Codex and Gemini CLI", "h1": "Alerts only when they matter." }
+}

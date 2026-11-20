@@ -1,0 +1,13 @@
+{
+  "name": "Signal box",
+  "set": "machines",
+  "inspiration": "A railway signal box at night: an enamelled panel in brass frames, a signal head whose lamp shows the most urgent aspect, and a lever for each state",
+  "order": 26,
+  "hero": "split",
+  "fonts": [
+    { "family": "Saira Condensed", "axes": "wght@500;700;800" },
+    { "family": "Public Sans", "axes": "wght@400;600" },
+    { "family": "B612 Mono", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Every agent on the line. One color at the notch." }
+}

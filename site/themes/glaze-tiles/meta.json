@@ -1,0 +1,14 @@
+{
+  "name": "Glaze tiles",
+  "set": "craft",
+  "inspiration": "A potter's glaze test tiles on a studio shelf: bisque clay, glossy crazed glazes that pool and drip, kiln numbers and pencilled notes",
+  "order": 46,
+  "hero": "under",
+  "fonts": [
+    { "family": "Cormorant Garamond", "axes": "ital,wght@0,500;0,600;1,500" },
+    { "family": "Karla", "axes": "wght@400;500;700" },
+    { "family": "Courier Prime", "axes": "wght@400;700" },
+    { "family": "Caveat", "axes": "wght@500" }
+  ],
+  "copy": { "kicker": "A free Mac app · four glazes for your coding agents", "h1": "Glance, don't babysit." }
+}

@@ -1,0 +1,174 @@
+/* Road signs: an open sky, a blue direction board for the hero, white sign panels with a black inset border,
+   a warning shape for each state, and asphalt with lane markings for the dark bands. The general idiom of
+   roadside signs, not any country's official designs or lettering. */
+:root {
+  --bg: #d3e7f2;
+  --bg-alt: #e7f0ea;
+  --surface: #ffffff;
+  --surface-2: #eef3f6;
+  --ink: #12161c;
+  --ink-2: #343c46;
+  --rule: #12161c;
+  --accent: #ffcf1a;
+  --on-accent: #12161c;
+  --link: #143f82;
+  --band: #2f3439;
+  --band-ink: #f4f1e3;
+  --band-ink-2: #c6c9c4;
+  --band-surface: #ffffff;
+  --band-rule: rgba(244, 241, 227, 0.4);
+  --hero-bg: linear-gradient(180deg, #a9d0e6 0, #d3e7f2 70%);
+  --hero-ink: #ffffff;
+  --hero-ink-2: #dbe6f5;
+  --claude: #d9714f;
+  --waiting: #ffa90a;
+  --done: #12975a;
+  --error: #d81f26;
+
+  --font-display: "Overpass", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Overpass", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Overpass Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 900;
+  --display-tracking: -0.02em;
+  --display-leading: 0.98;
+  --h1-size: clamp(46px, 7vw, 100px);
+  --h2-size: clamp(34px, 4.8vw, 62px);
+  --h3-size: 26px;
+  --body-size: 18px;
+  --label-size: 14px;
+  --label-tracking: 0.14em;
+  --label-weight: 700;
+  --label-color: #143f82;
+
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-btn: 12px;
+  --border: 3px solid var(--rule);
+  --card-shadow: inset 0 0 0 5px #fff, inset 0 0 0 9px #12161c, 0 14px 24px rgba(27, 58, 90, 0.18);
+  --band-texture: linear-gradient(90deg, #f4f1e3 0 90px, transparent 90px 170px) 0 0 / 170px 10px repeat-x;
+  --device-edge: #7d868d;
+  --edge-strength: 0.32;
+}
+
+/* Nav: a gantry beam with the links on small white panels. */
+.nav { background: #a9d0e6; border-bottom: 0; padding-bottom: 22px; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.nav::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22px; border-top: 5px solid #7d868d; border-bottom: 5px solid #7d868d; background: repeating-linear-gradient(60deg, transparent 0 18px, #7d868d 18px 22px), repeating-linear-gradient(-60deg, transparent 0 18px, #7d868d 18px 22px), #a9d0e6; }
+.brand { flex: none; font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.01em; }
+.brand img { border-radius: 6px; }
+.nav-links { gap: 6px; font-weight: 800; font-size: 13px; letter-spacing: 0; }
+.nav-links a { color: #12161c; background: #fff; border: 2.5px solid #12161c; border-radius: 8px; padding: 3px 7px 1px; }
+.nav-links a:hover { background: #ffcf1a; }
+.edge-glow.top { top: 82px; }
+
+/* Buttons: a yellow panel with a black inset border. */
+.btn { font-family: var(--font-display); font-weight: 900; font-size: 22px; letter-spacing: 0; padding: 14px 26px 10px; box-shadow: inset 0 0 0 4px #ffcf1a, inset 0 0 0 7px #12161c; }
+.btn::after { content: ""; width: 14px; height: 14px; border: solid #12161c; border-width: 0 5px 5px 0; transform: rotate(45deg) translate(-3px, -3px); }
+.btn.small { font-size: 15px; padding: 9px 16px 6px; min-height: 44px; }
+.btn.small::after, .sheet .btn::after, .scene-controls .btn::after { content: none; }
+
+/* Hero: the copy is a big blue direction board; the art is the four state signs on posts. */
+.hero { padding-top: 40px; padding-bottom: 0; }
+.hero-grid { gap: 0; }
+.hero-copy { background: #143f82; border-radius: 26px; box-shadow: inset 0 0 0 8px #143f82, inset 0 0 0 14px #fff, 0 18px 30px rgba(27, 58, 90, 0.25); padding: 60px 64px 56px; position: relative; z-index: 1; }
+.hero .kicker { color: #ffcf1a; font-family: var(--font-mono); }
+.hero-copy .lede { color: #fff; font-weight: 500; }
+.trust { font-family: var(--font-body); font-weight: 600; }
+.fineprint { font-family: var(--font-mono); font-size: 13px; color: #dbe6f5; }
+.copy-code { background: #0e2f63; border: 2px solid #fff; color: #fff; }
+.copy-code span { color: #ffcf1a; }
+.hero .link-btn { color: #fff; font-weight: 600; }
+.hero-art { width: 100%; aspect-ratio: 1120 / 400; margin-top: -10px; }
+.rds-wide, .rds-tall { width: 100%; height: auto; display: block; }
+.hero-art .rds-tall { display: none; }
+.rds text { font-family: var(--font-display); }
+.rds .pl { font-weight: 900; font-size: 30px; }
+.rds .ps { font-family: var(--font-body); font-weight: 500; font-size: 17px; fill: #12161c; }
+.rds .on { animation: rds-blink 1.2s ease-in-out infinite; }
+@keyframes rds-blink { 50% { opacity: 0.55; } }
+@media (max-width: 760px) {
+  .hero-copy { padding: 36px 26px 34px; border-radius: 18px; box-shadow: inset 0 0 0 5px #143f82, inset 0 0 0 9px #fff; }
+  .hero-art { aspect-ratio: 600 / 640; }
+  .hero-art .rds-wide { display: none; }
+  .hero-art .rds-tall { display: block; }
+}
+
+/* Sections */
+main > section { border-top: 0; }
+.dark { --label-color: #ffcf1a; }
+.dark .kicker { font-family: var(--font-mono); }
+.dark::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 14px; background: #5d8a4e; }
+.dark { background-position: 0 calc(100% - 46px); }
+.kicker { font-family: var(--font-mono); }
+.section-lede, p.body { font-weight: 500; }
+
+/* Sign panels */
+.card, .dest, .guide-list a, .voice-panel, .faq { border: 0; box-shadow: var(--card-shadow); }
+.card { padding: 32px 30px; }
+.card h3, .guide-list strong { font-weight: 900; }
+.card p { font-size: 16.5px; color: #343c46; }
+.dark .card { --ink: #12161c; --ink-2: #343c46; color: #12161c; }
+.dark .card p { color: #343c46; }
+
+/* Each state is its own warning shape. */
+.states .card { border-top: 0; text-align: center; }
+.states .card .orb { width: 84px; height: 84px; margin: 4px auto 22px; box-shadow: none; border-radius: 50%; }
+.states .card .orb::after { color: #fff; font: 900 38px/84px var(--font-display); }
+.states .card:nth-child(1) .orb { background: radial-gradient(circle, #fff 0 15px, var(--state) 16px 23px, #fff 24px 29px, var(--state) 30px); -webkit-mask: none; mask: none; outline: 3px solid #12161c; outline-offset: 2px; }
+.states .card:nth-child(2) .orb { border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: #12161c; }
+.states .card:nth-child(2) .orb::before { content: ""; position: absolute; inset: 6px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: var(--state); }
+.states .card:nth-child(2) .orb::after { content: "!"; color: #12161c; position: absolute; }
+.states .card:nth-child(3) .orb { width: 96px; border-radius: 12px; outline: 3px solid #12161c; outline-offset: -1px; box-shadow: inset 0 0 0 5px #fff; }
+.states .card:nth-child(4) .orb { border-radius: 0; clip-path: polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%); }
+.states .card:nth-child(4) .orb::after { content: "✕"; font-size: 40px; }
+.states .card h3 { font-size: 30px; }
+.states .card:nth-child(1) h3 { color: #a9472a; }
+.states .card:nth-child(2) h3 { color: #9a5d00; }
+.states .card:nth-child(3) h3 { color: #0e7a47; }
+.states .card:nth-child(4) h3 { color: #c41d23; }
+
+.dest { padding: 14px 20px; }
+.dest li { border-top: 4px solid #12161c; padding: 16px 6px; font-family: var(--font-body); font-weight: 600; font-size: 17px; }
+.dest .where { font-family: var(--font-display); font-weight: 800; color: #12161c; font-size: 15px; }
+.dest .where::after { content: "→"; margin-left: 10px; font-weight: 900; }
+.step { width: 48px; height: 48px; border-radius: 0; background: #12161c; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); position: relative; color: #12161c; font: 900 18px/1 var(--font-display); }
+.step::before { content: ""; position: absolute; inset: 4px; clip-path: inherit; background: #ffcf1a; z-index: -1; }
+.step { isolation: isolate; }
+.step::before { z-index: -1; }
+.steps .card .step { color: #12161c; }
+.stat { font-weight: 900; color: #143f82; }
+
+.faq { padding: 10px 32px; }
+.faq details { border-top: 4px solid #12161c; }
+.faq details:first-child { border-top: 0; }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { font-family: var(--font-display); font-weight: 800; font-size: 20px; }
+.faq summary::after { font-weight: 900; color: #12161c; }
+
+.voice.tabs-on .voice-tablist { background: #fff; border: 3px solid #12161c; border-radius: 12px; }
+.voice-tab { font-weight: 800; color: #12161c; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #143f82; color: #fff; }
+.voice-flow { border-radius: 10px; }
+.voice-flow .end { font-family: var(--font-mono); font-weight: 700; font-size: 13px; border: 3px solid #12161c; }
+.chip { font-weight: 800; min-height: 44px; border: 3px solid #12161c; background: #fff; color: #12161c; }
+.dark .chip { border-color: #f4f1e3; background: transparent; color: #f4f1e3; }
+.dark .chip[aria-pressed="true"] { background: #ffcf1a; color: #12161c; border-color: #ffcf1a; }
+.wallpaper { border: 0; box-shadow: var(--card-shadow); padding: 34px; }
+.closing h2 { font-size: clamp(36px, 5vw, 66px); }
+
+footer { background: #2f3439; color: #c6c9c4; border-top: 14px solid #5d8a4e; font-weight: 500; }
+footer a { color: #f4f1e3; }
+
+dialog { border: 0; background: #fff; box-shadow: inset 0 0 0 6px #fff, inset 0 0 0 10px #12161c, 0 30px 80px rgba(0, 0, 0, 0.35); }
+.sheet { padding: 38px 34px 32px; }
+.field input { border: 3px solid #12161c; border-radius: 8px; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+@media (max-width: 760px) {
+  .card { padding: 28px 24px; }
+  .faq { padding: 6px 20px; }
+  .edge-glow.top { top: 82px; }
+}
+@media (prefers-reduced-motion: reduce) { .rds .on { animation: none; } }

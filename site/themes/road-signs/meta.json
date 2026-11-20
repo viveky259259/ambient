@@ -1,0 +1,13 @@
+{
+  "name": "Road signs",
+  "set": "machines",
+  "inspiration": "Roadside signage under an open sky: a blue direction board, white panels with black borders, and a warning shape for each state",
+  "order": 30,
+  "hero": "under",
+  "fonts": [
+    { "family": "Overpass", "axes": "wght@600;800;900" },
+    { "family": "Barlow", "axes": "wght@400;500;600" },
+    { "family": "Overpass Mono", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Read your agents like the road ahead." }
+}

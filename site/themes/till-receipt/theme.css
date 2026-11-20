@@ -1,0 +1,162 @@
+/* Till receipt: a red shop counter with a halftone, and every surface a strip of thermal till paper with a torn
+   zigzag edge. Anton for the shouted headings, Space Grotesk for prose, IBM Plex Mono for the till's print. */
+:root {
+  --bg: #b82e1b;
+  --bg-alt: #fbfaf4;
+  --surface: #fbfaf4;
+  --surface-2: #f1efe6;
+  --ink: #ffffff;
+  --ink-2: #fdeae4;
+  --rule: rgba(255, 255, 255, 0.55);
+  --accent: #1a1a1a;
+  --on-accent: #ffffff;
+  --link: #ffffff;
+  --band: #1a1a1a;
+  --band-ink: #fbfaf4;
+  --band-ink-2: #cfcbc0;
+  --band-surface: #fbfaf4;
+  --band-rule: rgba(251, 250, 244, 0.35);
+  --hero-bg: transparent;
+  --hero-ink: #ffffff;
+  --hero-ink-2: #fdeae4;
+  --waiting: #ffb400;
+  --done: #16a34a;
+  --error: #e11d2e;
+
+  --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --font-body: "Space Grotesk", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-transform: uppercase;
+  --display-tracking: 0.005em;
+  --display-leading: 0.95;
+  --h1-size: clamp(64px, 10vw, 156px);
+  --h2-size: clamp(42px, 6vw, 84px);
+  --h3-size: 30px;
+  --body-size: 17px;
+  --label-size: 14px;
+  --label-tracking: 0.12em;
+  --label-weight: 500;
+  --label-color: #1a1a1a;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px dashed var(--rule);
+  --texture: radial-gradient(rgba(0, 0, 0, 0.11) 1.5px, transparent 1.6px) 0 0 / 14px 14px;
+  --band-texture: radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.6px) 0 0 / 14px 14px;
+  --device-edge: #1a1a1a;
+  --edge-strength: 0.3;
+  /* A torn till-paper edge along the bottom (and both edges for loose strips). */
+  --rcp-zz: 16px;
+  --rcp-bottom: linear-gradient(#000 0 0) top / 100% calc(100% - var(--rcp-zz) / 2 + 1px) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--rcp-zz) calc(var(--rcp-zz) / 2) repeat-x;
+}
+
+/* Paper sections and every paper surface print in black. */
+.alt, .card, .dest, .guide-list a, .voice-panel, .faq, dialog, .wallpaper-features .card {
+  --ink: #1a1a1a; --ink-2: #4a4a4a; --rule: rgba(26, 26, 26, 0.55); --link: #a8261a; --label-color: #a8261a;
+  --surface: #fbfaf4; --surface-2: #f1efe6;
+  color: var(--ink);
+}
+.alt { --label-color: #fbfaf4; }
+.alt .kicker { background: #1a1a1a; }
+.dark { --label-color: #1a1a1a; }
+
+/* Nav */
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 2px dashed rgba(255, 255, 255, 0.5); }
+.brand { font-family: var(--font-display); text-transform: uppercase; font-size: 30px; letter-spacing: 0.04em; color: #fff; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-weight: 700; font-size: 15px; letter-spacing: 0; }
+.nav-links a { color: #fff; }
+.nav-links a:hover { color: #1a1a1a; }
+
+/* Buttons: a black till key with a paper shadow. */
+.btn { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; font-size: 24px; letter-spacing: 0.05em; padding: 12px 30px; box-shadow: 6px 6px 0 #fbfaf4; }
+.btn.small { font-family: var(--font-body); text-transform: none; font-weight: 700; font-size: 15px; letter-spacing: 0; box-shadow: none; min-height: 40px; }
+.alt .btn, .card .btn, dialog .btn, .voice-panel .btn { box-shadow: 6px 6px 0 #b82e1b; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #fbfaf4; }
+
+/* Kickers: a strip of paper with a printed label. */
+.kicker { display: inline-block; background: #fbfaf4; padding: 6px 12px; }
+.hero .kicker { color: #1a1a1a; }
+.card .kicker { background: #1a1a1a; color: #fbfaf4; }
+
+/* Hero */
+.hero h1 { margin-bottom: 26px; }
+.hero-copy .lede { font-weight: 500; color: #fff; }
+.trust { font-family: var(--font-label); font-size: 14px; }
+.fineprint { font-family: var(--font-label); font-size: 13px; color: #fdeae4; }
+.hero .link-btn { font-weight: 700; }
+.copy-code { background: transparent; border: 2px dashed rgba(255, 255, 255, 0.6); color: #fff; }
+.hero-art { width: min(440px, 100%); margin: 0 auto; aspect-ratio: 460 / 800; }
+.rcp { width: 100%; height: auto; transform: rotate(1.4deg); filter: drop-shadow(-14px 18px 0 rgba(0, 0, 0, 0.2)); }
+.rcp text { font-family: var(--font-mono); fill: #1a1a1a; font-size: 15px; }
+.rcp .h { font-family: var(--font-display); font-size: 62px; letter-spacing: 3px; }
+.rcp .b { font-weight: 700; }
+.rcp .big { font-weight: 700; font-size: 26px; }
+.rcp .s { font-size: 11.5px; fill: #555; }
+.rcp .tw { fill: var(--claude); } .rcp .tn { fill: var(--waiting); } .rcp .td { fill: var(--done); } .rcp .te { fill: var(--error); }
+.rcp .now { fill: var(--state, var(--claude)); transition: fill 0.6s var(--ease); }
+.rcp .tl { font-weight: 700; font-size: 13px; fill: #fff; }
+.rcp .tl.dk { fill: #1a1a1a; }
+@media (max-width: 860px) { .hero-art { width: min(340px, 88%); } }
+
+/* Sections: a dashed tear line between them. */
+main > section { border-top: 2px dashed rgba(0, 0, 0, 0.28); }
+h2 { margin-bottom: 22px; }
+.section-lede, p.body { font-weight: 500; }
+
+/* Paper surfaces */
+.card, .dest, .guide-list a, .voice-panel { border: 0; -webkit-mask: var(--rcp-bottom); mask: var(--rcp-bottom); padding-bottom: 38px; }
+.dest { padding-bottom: 10px; }
+.card p { font-size: 15.5px; }
+.card h3, .guide-list strong { text-transform: uppercase; letter-spacing: 0.02em; }
+.alt .card, .alt .dest, .alt .voice-panel { background: #fff; outline: 2px dashed rgba(26, 26, 26, 0.35); outline-offset: -8px; }
+.states .card { border-top: 12px solid var(--state); counter-increment: rcp; }
+.states { counter-reset: rcp; }
+.states .card::before { content: "0" counter(rcp); float: right; font-family: var(--font-display); font-size: 34px; line-height: 1; color: #1a1a1a; }
+.states .card .orb { width: 26px; height: 26px; border: 3px solid #1a1a1a; box-shadow: none; }
+.dest li { font-family: var(--font-mono); font-size: 15px; border-top: 2px dashed rgba(26, 26, 26, 0.3); }
+.dest .where { text-transform: uppercase; font-weight: 700; color: #1a1a1a; }
+.step { background: #1a1a1a; color: #fff; font-family: var(--font-display); font-size: 20px; border-radius: 0; }
+.stat { color: #fff; text-transform: uppercase; }
+.wallpaper { border: 0; }
+.dock-stage, .scene-demo { border-radius: 0; }
+
+/* FAQ: a long till roll. */
+.faq { background: #fff; padding: 18px 30px 40px; -webkit-mask: var(--rcp-bottom); mask: var(--rcp-bottom); }
+.faq details { border-top: 2px dashed rgba(26, 26, 26, 0.3); }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { font-family: var(--font-body); font-weight: 700; font-size: 19px; }
+.faq summary::after { color: #1a1a1a; }
+
+.voice-tab { font-weight: 500; color: #1a1a1a; }
+.voice-tab[aria-selected="true"] { background: #1a1a1a; color: #fff; }
+.voice.tabs-on .voice-tablist { background: #fff; border: 2px dashed rgba(26, 26, 26, 0.4); }
+.voice-flow { border-radius: 0; }
+.voice-flow .end { border: 2px dashed rgba(26, 26, 26, 0.4); }
+.chip { font-weight: 500; }
+
+.closing h2 { font-size: clamp(44px, 6vw, 92px); }
+.closing img { border-radius: 22px; }
+
+footer { background: #1a1a1a; color: #cfcbc0; border-top: 0; font-family: var(--font-mono); }
+footer a { color: #fbfaf4; }
+
+dialog { border: 0; background: #fbfaf4; background-image: none; }
+.sheet h2 { font-size: 34px; }
+.sheet .btn { box-shadow: 4px 4px 0 #b82e1b; }
+.field input { border: 2px solid #1a1a1a; background: #fff; }
+.close { color: #1a1a1a; }
+
+@media (max-width: 760px) {
+  .btn { font-size: 21px; }
+  .faq { padding: 10px 18px 36px; }
+}
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+.rcp .sp { letter-spacing: 5px; }
+.chip, .voice-tab, .btn.small { min-height: 44px; }

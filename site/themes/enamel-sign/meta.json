@@ -1,0 +1,13 @@
+{
+  "name": "Enamel sign",
+  "set": "craft",
+  "inspiration": "A vitreous enamel sign: cobalt ground, cream border, arrow plates with lamps in the four state colours and the odd chip in the enamel",
+  "order": 49,
+  "hero": "split",
+  "fonts": [
+    { "family": "Anton", "axes": "wght@400" },
+    { "family": "Archivo Narrow", "axes": "wght@400;500;600;700" },
+    { "family": "Overpass Mono", "axes": "wght@400;600" }
+  ],
+  "copy": { "kicker": "Free native macOS app · coding agents", "h1": "Back in one click." }
+}

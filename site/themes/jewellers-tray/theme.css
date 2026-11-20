@@ -1,0 +1,125 @@
+/* Jeweller's tray. Plum velvet with a nap, a dark lined tray with gold stitching, faceted stones in gold
+   bezels, Italiana display type and Martian Mono hallmarks. Buttons are gold bars; cards are tray compartments. */
+:root {
+  --bg: #2a1233;
+  --bg-alt: #22102a;
+  --surface: #1a0b20;
+  --surface-2: #241029;
+  --ink: #f3e9dc;
+  --ink-2: #dacbd9;
+  --rule: rgba(220, 185, 108, 0.32);
+  --accent: #dcb96c;
+  --on-accent: #241029;
+  --link: #e8c97f;
+  --band: #140816;
+  --band-ink: #f3e9dc;
+  --band-ink-2: #d2c0d0;
+  --band-surface: #1d0c24;
+  --band-rule: rgba(220, 185, 108, 0.24);
+  --jt-gold: #dcb96c;
+  --claude: #ef8f6c;
+  --codex: #34c79c;
+  --gemini: #6f9bff;
+  --waiting: #f5b02e;
+  --done: #3fd08a;
+  --error: #f25a6a;
+
+  --font-display: Italiana, "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: Outfit, "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: 0;
+  --display-leading: 1.02;
+  --h1-size: clamp(50px, 7.4vw, 112px);
+  --h2-size: clamp(38px, 5vw, 66px);
+  --h3-size: 34px;
+  --body-size: 17.5px;
+  --label-size: 11px;
+  --label-tracking: 0.26em;
+  --label-weight: 400;
+  --label-color: var(--jt-gold);
+
+  --radius: 18px;
+  --radius-sm: 4px;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --card-shadow: inset 0 14px 36px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  --btn-shadow: 0 0 0 1px #f6e6b6 inset, 0 0 0 6px rgba(220, 185, 108, 0.16), 0 14px 30px rgba(0, 0, 0, 0.5);
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2 .5' numOctaves='2' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .7 0 0 0 0 .9 0 0 0 1.2 -.62'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E"), radial-gradient(1100px 900px at 25% 20%, #3a1a46, transparent 65%);
+  --band-texture: radial-gradient(900px 600px at 50% 0, #2a1233, transparent 70%);
+  --device-edge: #b8964f;
+  --device-wallpaper-light: linear-gradient(135deg, #e9d2e4, #c9a46a);
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+
+.macbook .display { letter-spacing: normal; }
+.hero, .alt { background-image: var(--texture); }
+.nav { background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--rule); }
+.brand { font-size: 32px; letter-spacing: 0.06em; color: var(--jt-gold); }
+.nav-links { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; gap: 18px; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: var(--jt-gold); }
+.btn { background: linear-gradient(135deg, #f3dc9c, #c79b4a 55%, #e9cb82); font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; padding: 16px 32px; }
+.btn.small { background: transparent; color: var(--jt-gold); box-shadow: inset 0 1px 0 var(--jt-gold), inset 0 -1px 0 var(--jt-gold); font-size: 11px; font-family: var(--font-label); font-weight: 400; padding: 8px 6px; }
+.link-btn { color: var(--link); font-weight: 400; }
+.copy-code { background: var(--surface); border-color: var(--rule); }
+.fineprint { font-family: var(--font-label); font-size: 11.5px; line-height: 2; letter-spacing: 0.04em; }
+/* The trust line reads as hallmarks. */
+.trust { font-family: var(--font-display); font-size: 21px; color: var(--jt-gold); }
+
+h1 { color: #fbf3e6; }
+.hero .kicker { display: flex; align-items: center; gap: 14px; color: var(--jt-gold); }
+.hero .kicker::before { content: ""; width: 40px; height: 1px; background: var(--jt-gold); }
+@media (max-width: 860px) { .hero .kicker::before { display: none; } }
+.hero-copy .lede { color: #f1e6ee; font-weight: 300; }
+.hero-art { width: 100%; max-width: 600px; margin: 0 auto; aspect-ratio: 640 / 860; }
+.hero-art svg { width: 100%; height: 100%; }
+@media (max-width: 860px) { .hero-art { max-width: 400px; } }
+.jt-glint { opacity: 0; transition: opacity 0.6s var(--ease); }
+html:not([data-mood]) .jt-glint.waiting, html[data-mood="working"] .jt-glint.working, html[data-mood="waiting"] .jt-glint.waiting,
+html[data-mood="done"] .jt-glint.done, html[data-mood="error"] .jt-glint.error { opacity: 1; }
+
+.kicker { color: var(--jt-gold); }
+h2 { color: #fbf3e6; }
+/* Cards are tray compartments: sunk, lined and stitched in gold. */
+.card, .dest, .guide-list a, .voice-panel { background: linear-gradient(160deg, #1d0c24, #120716); border: 1px solid rgba(220, 185, 108, 0.18); box-shadow: var(--card-shadow); outline: 1px dashed rgba(220, 185, 108, 0.4); outline-offset: -9px; }
+.card { padding: 34px 30px; }
+.card h3 { color: #fbf3e6; }
+.dark .card { background: linear-gradient(160deg, #1d0c24, #0f0612); }
+/* State cards hold a cut stone in a gold bezel. */
+.states { counter-reset: stone; }
+.states .card { counter-increment: stone; border-top: 1px solid rgba(220, 185, 108, 0.18); text-align: center; }
+.states .card .orb, .states .card .orb.big { width: 62px; height: 62px; margin: 4px auto 16px; border-radius: 50%;
+  background: conic-gradient(from 22deg, color-mix(in srgb, var(--state) 55%, #fff), var(--state), color-mix(in srgb, var(--state) 60%, #000), var(--state), color-mix(in srgb, var(--state) 70%, #fff), color-mix(in srgb, var(--state) 65%, #000), var(--state), color-mix(in srgb, var(--state) 55%, #fff));
+  box-shadow: 0 0 0 4px #0d0511, 0 0 0 8px #c79b4a, 0 0 0 9px #f3dc9c, 0 0 26px color-mix(in srgb, var(--state) 60%, transparent); }
+.states .card .orb::after { font-size: 26px; line-height: 62px; color: rgba(0, 0, 0, 0.7); }
+.states .card::before { content: "Stone " counter(stone, upper-roman); display: block; font-family: var(--font-label); font-size: 10.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jt-gold); order: 2; margin-bottom: 22px; }
+.states .card h3 { font-size: 40px; }
+.agents .card .orb { box-shadow: 0 0 0 3px #0d0511, 0 0 0 5px #c79b4a, 0 0 18px var(--state); }
+
+.dest .where { color: var(--jt-gold); font-size: 11px; letter-spacing: 0.04em; }
+.dest li { border-top-color: rgba(220, 185, 108, 0.16); }
+.step { background: linear-gradient(135deg, #f3dc9c, #c79b4a 55%, #e9cb82); color: #241029; font-family: var(--font-display); font-size: 18px; }
+.stat { color: var(--jt-gold); }
+.faq details { border-top-color: var(--rule); }
+.faq summary { font-size: 25px; }
+.faq summary::after { color: var(--jt-gold); }
+.guide-list a:hover { border-color: var(--jt-gold); }
+.guide-list strong { color: #fbf3e6; font-size: 24px; }
+.voice-tablist { background: var(--surface) !important; border-color: var(--rule) !important; }
+.voice-tab { font-size: 13px; }
+.voice-tab[aria-selected="true"] { background: var(--jt-gold); color: #241029; }
+.voice-steps kbd { color: var(--ink); }
+.chip { min-height: 44px; border-color: var(--rule); }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: var(--jt-gold); color: #241029; }
+.closing h2 { color: #fbf3e6; }
+footer { background: #1c0b23; font-family: var(--font-label); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; border-top: 1px solid var(--rule); }
+footer .spacer { text-transform: none; letter-spacing: 0.04em; }
+footer a { color: var(--link); }
+dialog { border: 1px solid var(--jt-gold); outline: 1px dashed rgba(220, 185, 108, 0.45); outline-offset: -10px; }
+.field input { background: #1a0b20; color: var(--ink); }
+.error { color: #ff9aa8; }
+.close { color: var(--ink-2); }
+.chip, .voice-tab { min-height: 44px; }

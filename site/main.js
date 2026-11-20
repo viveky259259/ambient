@@ -17,7 +17,8 @@
 
   // MARK: - Hero island
 
-  const hero = document.querySelector(".hero");
+  // The demo's state colour also reaches the theme's hero art through --state on <html> (see themes/README.md).
+  const hero = document.querySelector(".demo") || document.querySelector(".hero");
   const island = document.getElementById("island-demo");
   if (hero && island) {
     const el = (id) => document.getElementById(id);
@@ -38,6 +39,8 @@
       paintEdge();
       hero.style.setProperty("--state", s.color);
       hero.style.setProperty("--glow", s.color);
+      document.documentElement.style.setProperty("--state", s.color);
+      document.documentElement.dataset.mood = s.mood;
       island.classList.toggle("open", s.open);
       el("island-caption").textContent = s.caption;
       if (s.open) {
@@ -187,7 +190,17 @@
   const startDownload = () => {
     const a = document.createElement("a");
     const ref = store.get("ambient-ref");
-    a.href = ref ? `${dmg}?ref=${encodeURIComponent(ref)}` : dmg;
+    const url = (params) => { const q = new URLSearchParams(params); return q.toString() ? `${dmg}?${q}` : dmg; };
+    const plain = url(ref ? { ref } : {});
+    // The design this visitor was shown (themes/loader.js) goes with their first download only, so a design's
+    // rate is the share of its visitors who downloaded, not how many times they clicked.
+    const ab = window.AmbientAB;
+    const once = ab && ab.counted ? `${ab.round}:${ab.variant}` : "";
+    const first = once && store.get("ambient-variant-downloaded") !== once;
+    a.href = first ? url({ ...(ref ? { ref } : {}), v: ab.variant }) : plain;
+    if (first) store.set("ambient-variant-downloaded", once);
+    const again = document.getElementById("download-again");
+    if (again) again.href = plain;
     a.download = "";
     document.body.appendChild(a);
     a.click();
@@ -204,7 +217,7 @@
   const track = (name, data) => { try { window.umami?.track(name, data); } catch { /* ignore */ } };
 
   const open = (e) => {
-    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none" });
+    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none", variant: (window.AmbientAB && window.AmbientAB.counted && window.AmbientAB.variant) || "none" });
     startDownload();
     if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
   };

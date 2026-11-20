@@ -1,0 +1,135 @@
+/* Mineral cabinet: catalogue paper with a faint ruling, walnut drawers for the dark bands, cream cells sunk into
+   them, and typed specimen labels for every card. Hard facets and mitred corners only. Libre Caslon for the
+   catalogue, Special Elite and Courier Prime for the labels. */
+:root {
+  --bg: #ece2cc;
+  --bg-alt: #e4d8bd;
+  --surface: #fffaf0;
+  --surface-2: #f6efdf;
+  --ink: #1d1612;
+  --ink-2: #4d3c30;
+  --rule: #1d1612;
+  --accent: #1d1612;
+  --on-accent: #ece2cc;
+  --link: #6b2f1f;
+  --band: #4a3122;
+  --band-ink: #ece2cc;
+  --band-ink-2: #d9c7a8;
+  --band-surface: #f6efdf;
+  --band-rule: rgba(236, 226, 204, 0.35);
+  --hero-bg: transparent;
+  --claude: #c8673f;
+  --waiting: #e39a12;
+  --done: #1f9a5b;
+  --error: #c4263a;
+
+  --font-display: "Libre Caslon Display", "Iowan Old Style", Georgia, serif;
+  --font-body: "Libre Caslon Text", "Iowan Old Style", Georgia, serif;
+  --font-label: "Special Elite", "Courier New", ui-monospace, monospace;
+  --font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
+  --display-leading: 1;
+  --h1-size: clamp(50px, 6.6vw, 92px);
+  --h2-size: clamp(38px, 4.8vw, 62px);
+  --h3-size: 32px;
+  --body-size: 17.5px;
+  --body-leading: 1.62;
+  --label-size: 13.5px;
+  --label-tracking: 0.14em;
+  --label-weight: 400;
+  --label-color: #6b4a35;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --card-shadow: 2px 3px 0 rgba(44, 28, 19, 0.25);
+  --texture: repeating-linear-gradient(0deg, rgba(74, 49, 34, 0.035) 0 1px, transparent 1px 4px);
+  --band-texture: repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 9px, rgba(255, 220, 170, 0.05) 9px 11px, transparent 11px 23px);
+  --device-edge: #6a4833;
+  --edge-strength: 0.3;
+}
+.alt { background-image: var(--texture); }
+
+.nav { background: color-mix(in srgb, #ece2cc 94%, transparent); border-bottom: 0; box-shadow: 0 1px 0 #1d1612, 0 4px 0 -2px #ece2cc, 0 4px 0 -1px #1d1612; }
+.brand { font-family: var(--font-display); font-size: 30px; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-label); font-size: 14px; letter-spacing: 0.04em; }
+.nav-links a { color: #1d1612; }
+.nav-links a:hover { color: #6b2f1f; }
+
+.btn { font-family: var(--font-label); font-weight: 400; font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 28px 13px; box-shadow: 6px 6px 0 #b79a6a; }
+.btn.small { font-size: 13px; padding: 8px 14px 6px; min-height: 44px; box-shadow: none; background: transparent; color: #1d1612; border: 1.5px solid #1d1612; }
+.dark .btn { background: #ece2cc; color: #1d1612; box-shadow: 6px 6px 0 #2c1c13; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #b79a6a; }
+
+/* Hero */
+.hero { padding-top: 56px; }
+.hero-copy { border-top: 1.5px solid #1d1612; padding-top: 4px; }
+.hero-copy::before { content: ""; display: block; border-top: 0.5px solid #1d1612; margin-bottom: 24px; }
+.hero-copy .lede { color: #33271f; }
+.trust { font-family: var(--font-body); font-style: italic; font-size: 17px; }
+.fineprint { font-family: var(--font-mono); font-size: 13.5px; color: #6b4a35; }
+.copy-code { background: #fffaf0; border: 1px solid #1d1612; }
+.hero-art { width: min(560px, 100%); margin: 0 auto; aspect-ratio: 760 / 880; }
+.mnl { width: 100%; height: auto; }
+.mnl text { font-family: var(--font-label); }
+.mnl .nm { font-family: var(--font-display); font-size: 34px; fill: #1d1612; }
+.mnl .no { font-size: 11.5px; letter-spacing: 1.4px; fill: #6b4a35; }
+.mnl .vr { font-family: var(--font-body); font-style: italic; font-size: 15px; fill: #4d3c30; }
+.mnl .lit { opacity: 0; transition: opacity 0.6s; }
+.mnl .on .lit { opacity: 1; }
+@media (max-width: 860px) { .hero-art { width: min(420px, 94%); } }
+
+/* Sections ruled like a catalogue page. */
+main > section { border-top: 0; box-shadow: inset 0 1.5px 0 #1d1612, inset 0 4px 0 #ece2cc, inset 0 4.5px 0 #1d1612; }
+main > section.dark { box-shadow: inset 0 0 0 3px #2c1c13, inset 0 0 0 7px #6a4833; }
+
+/* Specimen labels */
+.card, .guide-list a, .dest, .voice-panel { background: #fffaf0; border: 1px solid #1d1612; box-shadow: var(--card-shadow); }
+.card { padding: 22px 22px 20px; }
+.card::before { display: block; font-family: var(--font-label); font-size: 11.5px; letter-spacing: 0.12em; color: #6b4a35; border-bottom: 1px solid #1d1612; padding-bottom: 6px; margin-bottom: 14px; }
+main { counter-reset: spec; }
+.card { counter-increment: spec; }
+.card::before { content: "No. " counter(spec, upper-roman); }
+.card h3, .guide-list strong { font-family: var(--font-display); font-weight: 400; }
+.card p, .guide-list span { font-family: var(--font-label); font-size: 14.5px; line-height: 1.45; color: #33271f; }
+/* Cells sunk into the walnut drawer. */
+.dark .card { --ink: #1d1612; --ink-2: #4d3c30; color: #1d1612; background: #f6efdf; border: 0; box-shadow: inset 0 10px 22px rgba(44, 28, 19, 0.28), inset 0 0 0 1px #2c1c13; padding: 26px; }
+.dark .grid { gap: 18px; }
+.states .card { border-top: 1px solid #1d1612; }
+.states .card .orb, .agents .card .orb { width: 22px; height: 22px; border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); box-shadow: none; margin-bottom: 14px; }
+.states .card .orb::after { font-size: 11px; line-height: 22px; color: #fff; }
+.agents .card .orb { margin: 0 auto 14px; }
+.dest li { font-size: 17px; border-top: 0.5px solid #1d1612; }
+.dest .where { font-family: var(--font-body); font-style: italic; font-size: 15px; color: #4d3c30; }
+.step { border-radius: 0; background: transparent; color: #1d1612; font-family: var(--font-display); font-size: 34px; width: auto; height: auto; }
+.stat { color: #1d1612; }
+
+.faq details { border-top: 0.5px solid #1d1612; }
+.faq details:first-child { border-top: 1.5px solid #1d1612; }
+.faq details:last-child { border-bottom: 1.5px solid #1d1612; }
+.faq summary { font-family: var(--font-body); font-weight: 700; font-size: 18px; }
+.faq summary::after { font-family: var(--font-display); color: #6b4a35; }
+.faq p { font-size: 16.5px; }
+
+.voice.tabs-on .voice-tablist { background: #fffaf0; border: 1px solid #1d1612; }
+.voice-tab { font-family: var(--font-label); font-size: 14px; color: #1d1612; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #1d1612; color: #ece2cc; }
+.voice-flow { border-radius: 0; background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--state) 20%, transparent), transparent 70%), #f6efdf; box-shadow: inset 0 8px 18px rgba(44, 28, 19, 0.2); }
+.voice-flow .end { font-family: var(--font-label); background: #fffaf0; border: 1px solid #1d1612; }
+.voice-steps li { border-top: 0.5px solid #1d1612; }
+.chip { font-family: var(--font-label); min-height: 44px; }
+.wallpaper { border: 0; box-shadow: inset 0 0 0 3px #2c1c13, inset 0 0 0 7px #6a4833; padding: 34px; background-color: #4a3122; }
+.scene-demo, .dock-stage { box-shadow: 0 0 0 1px #2c1c13; }
+.closing img { border-radius: 0; clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%); }
+
+footer { border-top: 0; box-shadow: inset 0 1.5px 0 #1d1612; font-family: var(--font-mono); }
+
+dialog { background: #fffaf0; background-image: none; border: 1px solid #1d1612; box-shadow: 8px 10px 0 rgba(44, 28, 19, 0.35); }
+.sheet h2 { font-size: 32px; }
+.field input { background: #fffaf0; border: 1px solid #1d1612; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }

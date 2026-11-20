@@ -1,0 +1,13 @@
+{
+  "name": "Till receipt",
+  "set": "machines",
+  "inspiration": "A shop till's printed receipt on a red counter: every session itemised with its state, the total is free",
+  "order": 28,
+  "hero": "split",
+  "fonts": [
+    { "family": "Anton", "axes": "wght@400" },
+    { "family": "Space Grotesk", "axes": "wght@400;500;700" },
+    { "family": "IBM Plex Mono", "axes": "wght@400;500;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Your agents, itemised." }
+}

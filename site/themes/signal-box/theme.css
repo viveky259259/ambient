@@ -1,0 +1,123 @@
+/* Signal box. A railway signal box at night: a green enamelled panel, brass frames and labels, condensed lettering,
+   lamps that light in the state colours, track lines across the dark bands, and a lever for each state. */
+:root {
+  --bg: #10211c;
+  --bg-alt: #0d1b17;
+  --surface: #0a1612;
+  --surface-2: #13281f;
+  --ink: #efe6cc;
+  --ink-2: #d2cab0;
+  --rule: rgba(200, 165, 90, 0.7);
+  --accent: #c8a55a;
+  --on-accent: #14100a;
+  --link: #e0bf75;
+  --band: #0a1612;
+  --band-ink: #efe6cc;
+  --band-ink-2: #c2baa0;
+  --band-surface: #10211c;
+  --band-rule: rgba(200, 165, 90, 0.6);
+  --hero-bg: transparent;
+  --waiting: #ffb224;
+  --done: #3fd07a;
+  --error: #ff4d4d;
+
+  --font-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "B612 Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "B612 Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-transform: uppercase;
+  --display-tracking: -0.005em;
+  --display-leading: 0.92;
+  --h1-size: clamp(52px, 7.6vw, 108px);
+  --h2-size: clamp(40px, 5.4vw, 72px);
+  --h3-size: 32px;
+  --body-size: 18px;
+  --label-size: 13px;
+  --label-tracking: 0.2em;
+  --label-weight: 400;
+  --label-color: #c8a55a;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --texture: radial-gradient(1200px 700px at 30% 0, #17302a 0, transparent 70%);
+  --band-texture: repeating-linear-gradient(0deg, transparent 0 64px, rgba(239, 230, 204, 0.06) 64px 69px, transparent 69px 70px);
+  --device-edge: #55665f;
+  --edge-strength: 0.45;
+  color-scheme: dark;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+.nav { background: color-mix(in srgb, #0a1612 94%, transparent); border-bottom: 2px solid #c8a55a; }
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: 0.14em; text-transform: uppercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; gap: 16px; }
+.nav-links a { color: #d2cab0; }
+.nav-links a:hover { color: #e0bf75; }
+
+/* Buttons: a polished brass plate. */
+.btn { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 32px; background: linear-gradient(#e0bf75, #b08a3d); border: 2px solid #f1d9a0; box-shadow: 0 6px 0 #5d4618; }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #5d4618; }
+.btn.small { font-size: 17px; min-height: 44px; padding: 6px 16px; box-shadow: none; }
+.sheet .inline .btn { font-size: 18px; padding: 8px 16px; }
+.chip, .voice-tab { min-height: 44px; text-transform: uppercase; font-size: 13px; letter-spacing: 0.08em; }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: #c8a55a; color: #0a1612; }
+.copy-code { background: #0a1612; border: 1px solid #c8a55a; }
+
+/* Hero */
+.hero .kicker { color: #e0bf75; }
+.hero h1 { font-size: clamp(52px, 6.6vw, 96px); }
+.hero-copy .lede { color: #dcd4bb; }
+.hero-art { width: 100%; max-width: min(420px, 80vw); aspect-ratio: 420 / 560; margin: 0 auto; }
+.sbx-head { width: 100%; }
+.sbx-head .lamp { opacity: 0.16; transition: opacity 0.6s var(--ease); }
+.sbx-head .glow { opacity: 0; transition: opacity 0.6s var(--ease); }
+.sbx-head .lab { fill: #8f8a76; transition: fill 0.6s var(--ease); }
+html:not([data-mood]) .sbx-head .m-working, html[data-mood="working"] .sbx-head .m-working, html[data-mood="waiting"] .sbx-head .m-waiting, html[data-mood="done"] .sbx-head .m-done, html[data-mood="error"] .sbx-head .m-error { opacity: 1; }
+html:not([data-mood]) .sbx-head .lab.m-working, html[data-mood="working"] .sbx-head .lab.m-working, html[data-mood="waiting"] .sbx-head .lab.m-waiting, html[data-mood="done"] .sbx-head .lab.m-done, html[data-mood="error"] .sbx-head .lab.m-error { fill: #efe6cc; }
+.trust { font-family: var(--font-label); font-size: 13.5px; letter-spacing: 0.04em; }
+.fineprint { font-family: var(--font-label); font-size: 13px; color: #c2baa0; }
+
+/* Every section is a panel in a brass frame, its kicker a brass label plate. */
+main > section { border-top: 2px solid #c8a55a; }
+main .kicker { display: inline-block; border: 1.5px solid #c8a55a; padding: 6px 12px 5px; background: #0a1612; }
+.dark .kicker { background: #10211c; }
+
+.card { background: var(--surface); border: 2px solid var(--rule); position: relative; }
+.card h3 { text-transform: uppercase; letter-spacing: 0.03em; }
+.dark .card { background: var(--band-surface); }
+
+/* The lever frame: one lever per state, pulled for the one that needs you. */
+.states .card { border-top: 2px solid var(--rule); padding-right: 76px; }
+.states .card::before { content: ""; position: absolute; right: 34px; top: 34px; width: 16px; height: 104px; border-radius: 4px; background: var(--state); transform: rotate(6deg); transform-origin: 50% 100%; box-shadow: 0 0 16px color-mix(in srgb, var(--state) 50%, transparent); }
+.states .card:nth-child(2)::before { transform: rotate(-20deg); }
+.states .card::after { content: ""; position: absolute; right: 18px; top: 136px; width: 48px; height: 14px; background: #2a3833; border-radius: 3px; }
+.states .card h3 { font-size: 38px; color: color-mix(in srgb, var(--state) 75%, #ffffff); }
+.agents .card { border-top: 8px solid var(--state); }
+
+.dest { background: #0a1612; border: 2px solid #c8a55a; }
+.dest li { border-top: 1px solid #2c3d37; }
+.dest .where { color: #c8a55a; font-size: 12.5px; letter-spacing: 0.06em; }
+.wallpaper { border: 2px solid #c8a55a; }
+.step { background: #c8a55a; color: #0a1612; border-radius: 0; font-family: var(--font-display); font-weight: 800; font-size: 20px; }
+.stat { color: #e0bf75; }
+.faq summary { font-weight: 700; text-transform: uppercase; font-size: 23px; letter-spacing: 0.02em; }
+.faq details { border-top: 1px solid #2c3d37; }
+.faq details:last-child { border-bottom: 1px solid #2c3d37; }
+.faq summary::after { color: #c8a55a; }
+.guide-list a { background: #0a1612; border: 2px solid rgba(200, 165, 90, 0.6); }
+.guide-list a:hover { border-color: #e0bf75; }
+.guide-list strong { text-transform: uppercase; font-size: 22px; line-height: 1.05; letter-spacing: 0.02em; }
+.voice-panel { background: #0a1612; border: 2px solid #c8a55a; }
+.voice-panel h3 { text-transform: uppercase; }
+.voice-tablist { border: 2px solid #c8a55a; background: #0a1612; }
+.voice-tab[aria-selected="true"] { background: #c8a55a; color: #0a1612; }
+.voice-flow .end { background: #10211c; border: 1px solid #c8a55a; font-size: 12.5px; }
+footer { background: #0a1612; border-top: 2px solid #c8a55a; font-family: var(--font-label); font-size: 12px; }
+footer a { color: #e0bf75; }
+dialog { background-color: #10211c; border: 2px solid #c8a55a; outline: 1px solid #c8a55a; outline-offset: -8px; }
+dialog .m-error { color: #ff9a8f; }
+.field input { background: #0a1612; }

@@ -1,0 +1,12 @@
+{
+  "name": "Ink tearoom",
+  "set": "insp",
+  "inspiration": "A quiet tearoom scroll: an ensō brushed in sumi ink on washi paper, a vermilion seal, wide margins and a single light where the circle opens",
+  "order": 15,
+  "hero": "split",
+  "fonts": [
+    { "family": "Shippori Mincho", "axes": "wght@400;500" },
+    { "family": "Zen Kaku Gothic New", "axes": "wght@300;400" }
+  ],
+  "copy": { "kicker": "Ambient · for macOS", "h1": "Quiet, until it matters." }
+}

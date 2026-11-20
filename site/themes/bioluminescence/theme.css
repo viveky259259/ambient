@@ -1,0 +1,148 @@
+/* Bioluminescence: the deep sea at night. An abyss gradient with drifting marine snow, foam-white type, and
+   surfaces that hang like bells: domed tops, soft trailing glow in each state's colour. Cormorant Garamond for
+   headings, Manrope for prose, JetBrains Mono for the depth-gauge labels. */
+:root {
+  --bg: #03101a;
+  --bg-alt: #05192a;
+  --surface: rgba(13, 58, 74, 0.32);
+  --surface-2: rgba(13, 58, 74, 0.5);
+  --ink: #d9f3f2;
+  --ink-2: #b9dcde;
+  --rule: rgba(157, 240, 230, 0.22);
+  --accent: #9df0e6;
+  --on-accent: #03101a;
+  --link: #9df0e6;
+  --band: #020509;
+  --band-ink: #d9f3f2;
+  --band-ink-2: #b2d4d7;
+  --band-surface: rgba(13, 58, 74, 0.3);
+  --band-rule: rgba(157, 240, 230, 0.2);
+  --hero-bg: radial-gradient(1200px 520px at 50% -60px, #15566a 0%, #0b3140 38%, transparent 72%), linear-gradient(#06202c, #03101a);
+  --hero-ink: #d9f3f2;
+  --hero-ink-2: #c2e2e4;
+  --claude: #ff9a76;
+  --codex: #3fd6a6;
+  --gemini: #7aa8ff;
+  --waiting: #ffb347;
+  --done: #5ef2a0;
+  --error: #ff5d6c;
+
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --font-body: "Manrope", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.015em;
+  --display-leading: 0.98;
+  --h1-size: clamp(54px, 9vw, 128px);
+  --h2-size: clamp(42px, 5.6vw, 76px);
+  --h3-size: 30px;
+  --body-size: 17px;
+  --body-leading: 1.6;
+  --label-size: 12.5px;
+  --label-tracking: 0.32em;
+  --label-weight: 400;
+  --label-color: #7fd6d8;
+
+  --radius: 34px 34px 34px 10px;
+  --radius-sm: 10px;
+  --radius-btn: 60px 60px 60px 10px;
+  --border: 1px solid var(--rule);
+  --card-shadow: 0 0 40px rgba(110, 240, 225, 0.06), inset 0 1px 0 rgba(217, 243, 242, 0.08);
+  --texture: radial-gradient(1.2px 1.2px at 13px 27px, rgba(200, 240, 238, 0.32), transparent), radial-gradient(1px 1px at 71px 9px, rgba(200, 240, 238, 0.22), transparent), radial-gradient(1.6px 1.6px at 43px 88px, rgba(200, 240, 238, 0.2), transparent), radial-gradient(1px 1px at 96px 61px, rgba(200, 240, 238, 0.28), transparent);
+  --band-texture: var(--texture);
+  --device-edge: #2a4f5c;
+  --device-wallpaper-light: linear-gradient(135deg, #8fc7d2, #c9b8e8);
+  --edge-strength: 0.4;
+}
+body { background-size: 110px 110px; }
+.alt { background-image: var(--texture); background-size: 137px 137px; }
+.dark { background-size: 90px 90px; }
+.hero { background: var(--hero-bg); }
+
+.nav { background: color-mix(in srgb, #03101a 80%, transparent); border-bottom: 1px solid rgba(157, 240, 230, 0.12); }
+.nav .wrap { height: 72px; }
+.brand { font-family: var(--font-display); font-style: italic; font-size: 30px; color: #d9f3f2; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-weight: 500; font-size: 14px; letter-spacing: 0; }
+.nav-links a { color: #a9d3d6; }
+.nav-links a:hover { color: #d9f3f2; }
+
+/* Buttons: a glowing bell of foam. */
+.btn { font-family: var(--font-body); font-weight: 600; font-size: 17px; letter-spacing: 0; padding: 16px 36px; background: linear-gradient(#eafffb, #9df0e6); box-shadow: 0 0 50px rgba(110, 240, 225, 0.35); }
+.btn.small { background: #d9f3f2; box-shadow: none; font-size: 14px; min-height: 44px; padding: 8px 20px; }
+
+/* Hero: words on the surface; the organisms hang below. */
+.hero { padding-bottom: 20px; }
+.hero h1 { margin: 20px 0 28px; }
+.hero-copy .lede { margin-left: auto; margin-right: auto; color: #c2e2e4; font-size: clamp(18px, 1.8vw, 21px); line-height: 1.6; }
+.trust { font-family: var(--font-body); font-weight: 500; font-size: 15px; color: #d9f3f2; }
+.fineprint { font-family: var(--font-mono); font-size: 12.5px; color: #9cc8cc; letter-spacing: 0.04em; }
+.copy-code { background: rgba(13, 58, 74, 0.5); border: 1px solid rgba(157, 240, 230, 0.35); color: #d9f3f2; border-radius: 30px 30px 30px 6px; }
+.copy-code span { color: #9df0e6; }
+.hero .link-btn { color: #9df0e6; }
+.hero-art { width: 100%; aspect-ratio: 1200 / 560; }
+.blm-wide, .blm-tall { width: 100%; height: auto; display: block; overflow: visible; }
+.hero-art .blm-tall { display: none; }
+.blm text { font-family: var(--font-display); }
+.blm .nm { font-style: italic; font-weight: 500; font-size: 44px; }
+.blm .lt { font-family: var(--font-mono); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+.blm .jl { animation: blm-bob 7s ease-in-out infinite; }
+.blm .jl:nth-of-type(2n) { animation-duration: 8.5s; animation-delay: -2s; }
+.blm .jl:nth-of-type(3n) { animation-duration: 6.4s; animation-delay: -4s; }
+.blm .glow { opacity: 0.45; transition: opacity 0.8s; }
+.blm .on .glow { opacity: 0.9; }
+@keyframes blm-bob { 50% { transform: translateY(-14px); } }
+@media (max-width: 760px) {
+  .hero-art { aspect-ratio: 600 / 760; }
+  .hero-art .blm-wide { display: none; }
+  .hero-art .blm-tall { display: block; }
+}
+
+main > section { border-top: 0; }
+h2 { font-weight: 400; }
+.kicker { font-weight: 400; }
+.section-lede, p.body { color: #b9dcde; }
+
+/* Surfaces hang like bells, with the state's colour glowing through them. */
+.card, .dest, .guide-list a, .voice-panel { background: linear-gradient(180deg, rgba(21, 86, 106, 0.32), rgba(5, 25, 42, 0.2)); border: 1px solid rgba(157, 240, 230, 0.2); }
+.card h3, .guide-list strong { font-style: italic; font-weight: 500; }
+.guide-list strong { font-size: 23px; }
+.card p { color: #b9dcde; }
+.states .card, .agents .card { border-radius: 140px 140px 22px 22px; text-align: center; padding-top: 44px; border-top: 1px solid color-mix(in srgb, var(--state) 55%, transparent); background: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--state) 26%, transparent), transparent 70%), rgba(5, 25, 42, 0.5); box-shadow: 0 -10px 60px color-mix(in srgb, var(--state) 16%, transparent); }
+.states .card .orb, .agents .card .orb { margin: 0 auto 22px; box-shadow: 0 0 26px var(--state), 0 0 6px #fff; }
+.states .card h3, .agents .card h3 { color: var(--state); font-size: 36px; }
+.states .card .orb::after { color: #03101a; }
+.dest li { border-top: 1px solid rgba(157, 240, 230, 0.15); }
+.dest .where { color: #7fd6d8; font-family: var(--font-mono); font-size: 12.5px; }
+.step { background: transparent; color: #9df0e6; border: 1px solid rgba(157, 240, 230, 0.5); box-shadow: 0 0 24px rgba(110, 240, 225, 0.3); font-family: var(--font-mono); }
+.stat { font-style: italic; color: #9df0e6; text-shadow: 0 0 40px rgba(110, 240, 225, 0.45); }
+
+.faq summary { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 24px; }
+.faq summary::after { color: #9df0e6; font-family: var(--font-body); font-weight: 400; }
+.faq p { color: #b9dcde; }
+
+.voice.tabs-on .voice-tablist { background: rgba(5, 25, 42, 0.7); border: 1px solid rgba(157, 240, 230, 0.25); border-radius: 60px; }
+.voice-tab { font-family: var(--font-body); font-weight: 500; color: #b9dcde; border-radius: 60px; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #d9f3f2; color: #03101a; }
+.voice-panel h3 { font-style: italic; font-weight: 500; }
+.voice-flow { border-radius: 120px 120px 20px 20px; background: radial-gradient(110% 80% at 50% 0%, color-mix(in srgb, var(--state) 30%, transparent), transparent 70%), rgba(2, 8, 14, 0.6); }
+.voice-flow .end { background: rgba(5, 25, 42, 0.9); border: 1px solid rgba(157, 240, 230, 0.25); font-family: var(--font-mono); font-size: 12.5px; border-radius: 30px 30px 30px 6px; }
+.voice-steps li::before { color: #03101a; }
+.chip { font-family: var(--font-body); font-weight: 500; border-radius: 40px 40px 40px 8px; min-height: 44px; }
+.chip[aria-pressed="true"] { background: #d9f3f2; color: #03101a; }
+.scene-demo, .dock-stage, .wallpaper { border-radius: 26px; }
+.closing img { box-shadow: 0 0 60px rgba(110, 240, 225, 0.35); }
+.closing h2 { font-style: italic; }
+
+footer { background: #020509; color: #9cc8cc; border-top: 1px solid rgba(157, 240, 230, 0.12); font-family: var(--font-mono); font-size: 12px; }
+footer a { color: #d9f3f2; }
+
+dialog { background: #051824; background-image: radial-gradient(400px 200px at 50% 0, rgba(21, 86, 106, 0.6), transparent); border: 1px solid rgba(157, 240, 230, 0.25); border-radius: 30px 30px 30px 10px; }
+.sheet h2 { font-size: 34px; }
+.field input { background: rgba(2, 8, 14, 0.6); border: 1px solid rgba(157, 240, 230, 0.35); }
+.error { color: #ff8a95; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+@media (prefers-reduced-motion: reduce) { .blm .jl { animation: none; } }

@@ -1,0 +1,13 @@
+{
+  "name": "Zellige",
+  "set": "craft",
+  "inspiration": "A zellige arch: hand-cut glazed eight-pointed stars on plaster, a few glazed in the state colours and a keystone that takes the most urgent",
+  "order": 53,
+  "hero": "split",
+  "fonts": [
+    { "family": "Marcellus", "axes": "wght@400" },
+    { "family": "Spectral", "axes": "ital,wght@0,400;0,500;0,600;1,400" },
+    { "family": "Inconsolata", "axes": "wght@400;500;600" }
+  ],
+  "copy": { "kicker": "A free, native macOS app", "h1": "One colour says what every agent is doing." }
+}

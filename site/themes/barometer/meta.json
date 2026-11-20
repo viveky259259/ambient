@@ -1,0 +1,13 @@
+{
+  "name": "Barometer",
+  "set": "nature",
+  "inspiration": "A hallway aneroid barometer: an enamel dial lettered round its arc, a blued needle that swings to the current state, brass rings",
+  "order": 39,
+  "hero": "split",
+  "fonts": [
+    { "family": "Bodoni Moda", "axes": "ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,500" },
+    { "family": "Spectral", "axes": "ital,wght@0,400;0,500;1,400" },
+    { "family": "Spline Sans Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "An instrument for coding agents · free for macOS", "h1": "Glance, don't babysit." }
+}

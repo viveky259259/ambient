@@ -1,0 +1,12 @@
+{
+  "name": "Contour map",
+  "set": "insp",
+  "inspiration": "A surveyor's topographic sheet: contour lines rising to peaks where each session runs, marked with coloured triangles, a grid, a legend and a scale bar",
+  "order": 13,
+  "hero": "split",
+  "fonts": [
+    { "family": "Spectral", "axes": "ital,wght@0,400;0,500;1,400" },
+    { "family": "Overpass Mono", "axes": "wght@400;600" }
+  ],
+  "copy": { "kicker": "Ambient · a survey of your coding agents", "h1": "Know where every agent stands." }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Lantern street",
+  "set": "culture",
+  "inspiration": "A night-market street strung with paper lanterns: each session is a lantern you read by its colour, under a dusk sky above the rooftops",
+  "order": 18,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Fraunces", "axes": "ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500" },
+    { "family": "Karla", "axes": "wght@400;600" },
+    { "family": "DM Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "A free, native macOS app for coding agents", "h1": "Your Mac tells you, quietly, at the moment it matters." }
+}

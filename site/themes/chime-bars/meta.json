@@ -1,0 +1,13 @@
+{
+  "name": "Chime bars",
+  "set": "craft",
+  "inspiration": "Tuned chime bars on a walnut frame: eight metal bars in the four state colours, brass pins and a mallet striking the one that matters",
+  "order": 51,
+  "hero": "under",
+  "fonts": [
+    { "family": "DM Serif Display", "axes": "ital@0;1" },
+    { "family": "Mulish", "axes": "wght@400;500;600;700" },
+    { "family": "Fira Code", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free native macOS app · eight bars, four states", "h1": "A soft chime, the moment it matters." }
+}

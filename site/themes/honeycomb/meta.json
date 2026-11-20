@@ -1,0 +1,13 @@
+{
+  "name": "Honeycomb",
+  "set": "nature",
+  "inspiration": "A brood frame of honeycomb: a beekeeper reads the hive by glancing at the cells, and each lit cell is a session in its state's colour",
+  "order": 40,
+  "hero": "split",
+  "fonts": [
+    { "family": "Bricolage Grotesque", "axes": "opsz,wght@12..96,500;12..96,800" },
+    { "family": "Figtree", "axes": "wght@400;500;600;700" },
+    { "family": "Space Mono", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Every agent in one place." }
+}

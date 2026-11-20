@@ -1,0 +1,12 @@
+{
+  "name": "Departure board",
+  "set": "insp",
+  "inspiration": "A split-flap departures board: every agent session is a row, most urgent first, its status flipping into its state's colour",
+  "order": 7,
+  "hero": "under",
+  "fonts": [
+    { "family": "Barlow Condensed", "axes": "wght@500;600;700" },
+    { "family": "Barlow", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Every session on one board, most urgent first", "h1": "Glance, don't babysit." }
+}

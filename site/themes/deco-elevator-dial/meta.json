@@ -1,0 +1,12 @@
+{
+  "name": "Deco elevator dial",
+  "set": "culture",
+  "inspiration": "The floor indicator above an Art Deco lift door: a gilt half-dial with a sunburst, a needle that rests on the most urgent state, stepped setbacks and a double frame",
+  "order": 17,
+  "hero": "under",
+  "fonts": [
+    { "family": "Poiret One", "axes": "wght@400" },
+    { "family": "Josefin Sans", "axes": "wght@300;400;600" },
+    { "family": "Cutive Mono", "axes": "wght@400" }
+  ]
+}

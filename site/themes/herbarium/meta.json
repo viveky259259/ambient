@@ -1,0 +1,13 @@
+{
+  "name": "Herbarium",
+  "set": "insp",
+  "inspiration": "A naturalist's herbarium: a pressed specimen taped to a mount sheet, its blooms in the four state colours, typed collection labels and pencilled notes",
+  "order": 11,
+  "hero": "split",
+  "fonts": [
+    { "family": "IM Fell English", "axes": "ital@0;1" },
+    { "family": "Special Elite", "axes": "wght@400" },
+    { "family": "Caveat", "axes": "wght@500" }
+  ],
+  "copy": { "kicker": "Ambient · macOS 14 or later · free", "h1": "A field guide to the agents living on your Mac." }
+}

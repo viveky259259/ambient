@@ -1,0 +1,155 @@
+/* Letterpress broadside. Wood type on yellow poster stock: fat slab capitals, tall condensed caps, Old Standard
+   body, printer's fleurons and four inks printed a hair out of register. The page sits in a heavy ink frame. */
+:root {
+  --bg: #f2df74;
+  --bg-alt: #ecd35c;
+  --surface: #f6e891;
+  --surface-2: #efdc78;
+  --ink: #1a1410;
+  --ink-2: #3a2e1e;
+  --rule: #1a1410;
+  --accent: #1a1410;
+  --on-accent: #f2df74;
+  --link: #9e1b12;
+  --band: #1a1410;
+  --band-ink: #f2df74;
+  --band-ink-2: #e2cf7c;
+  --band-surface: #2a211a;
+  --band-rule: #6a5a2c;
+  --claude: #c2491f;
+  --codex: #0f7a5c;
+  --gemini: #1d3c8f;
+  --waiting: #b35000;
+  --done: #1c7446;
+  --error: #c2241a;
+  --lp-red: #c2241a;
+
+  --font-display: Ultra, "Rockwell Extra Bold", "Clarendon", Georgia, serif;
+  --font-body: "Old Standard TT", "Iowan Old Style", Georgia, serif;
+  --font-label: "Old Standard TT", "Iowan Old Style", Georgia, serif;
+  --font-mono: "Cutive Mono", "Courier New", monospace;
+  --display-weight: 400;
+  --display-transform: uppercase;
+  --display-tracking: -0.01em;
+  --display-leading: 0.95;
+  --h1-size: clamp(50px, 10.5vw, 168px);
+  --h2-size: clamp(36px, 5.2vw, 72px);
+  --h3-size: 26px;
+  --body-size: 18.5px;
+  --label-size: 15px;
+  --label-tracking: 0.32em;
+  --label-weight: 700;
+  --label-color: var(--ink);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--ink);
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='8'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .15 0 0 0 2.2 -1.1'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E");
+  --band-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .87 0 0 0 0 .45 0 0 0 9 -7.6'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23p)'/%3E%3C/svg%3E");
+  /* Worn ink: speckles where the type didn't take the ink. */
+  --lp-wear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 7.4'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23w)'/%3E%3C/svg%3E");
+  --device-edge: #1a1410;
+  --device-wallpaper-light: linear-gradient(135deg, #f6e891, #e9c95a);
+  --edge-strength: 0.3;
+}
+
+/* The heavy ink frame round the sheet. */
+body::before { content: ""; position: fixed; inset: 10px; border: 6px solid var(--ink); outline: 1.5px solid var(--ink); outline-offset: -12px; pointer-events: none; z-index: 30; }
+@media (max-width: 760px) { body::before { inset: 4px; border-width: 3px; outline-offset: -8px; } }
+
+h1, h2, .stat { -webkit-mask: var(--lp-wear); mask: var(--lp-wear); }
+.nav { background: color-mix(in srgb, var(--bg) 95%, transparent); border-bottom: 4px double var(--ink); }
+.nav .wrap { height: 66px; padding: 0 30px; gap: 18px; }
+.brand { font-family: Ultra, Georgia, serif; font-size: 24px; text-transform: lowercase; }
+.nav-links { font-family: "Six Caps", "Impact", sans-serif; font-size: 21px; letter-spacing: 0.08em; text-transform: uppercase; gap: 9px; align-items: center; }
+.macbook .display { text-transform: none; letter-spacing: normal; }
+.nav-links a { color: var(--ink); }
+.nav-links a + a::before { content: "✦"; font-family: var(--font-body); font-size: 10px; margin-right: 9px; vertical-align: 4px; }
+.nav-links a:hover { color: var(--lp-red); }
+
+.btn { font-family: Ultra, Georgia, serif; font-size: 22px; font-weight: 400; letter-spacing: 0.02em; text-transform: uppercase; padding: 14px 32px 15px; -webkit-mask: var(--lp-wear); mask: var(--lp-wear); }
+.btn::before { content: "☞"; font-family: var(--font-body); font-size: 30px; line-height: 0.8; }
+.btn.small { font-family: "Six Caps", Impact, sans-serif; font-size: 24px; letter-spacing: 0.14em; padding: 4px 16px 2px; }
+.btn.small::before, .sheet .btn::before, .scene-controls .btn::before { content: none; }
+.sheet .inline .btn { font-size: 16px; padding: 8px 14px; }
+.link-btn { font-style: italic; }
+.copy-code { background: transparent; border: 1px dashed var(--ink); }
+
+/* Hero: centred bill matter over the four inks. */
+.hero { padding-top: 40px; }
+.hero .kicker { color: var(--ink); font-size: clamp(12px, 1.4vw, 18px); letter-spacing: 0.3em; }
+.hero h1 { margin-bottom: 14px; text-shadow: 3px 2px 0 rgba(194, 36, 26, 0.85); }
+.hero-copy .lede { color: var(--ink); font-size: clamp(19px, 2vw, 26px); max-width: 1000px; }
+.trust { font-family: "Six Caps", Impact, sans-serif; font-size: clamp(22px, 2.4vw, 30px); letter-spacing: 0.14em; text-transform: uppercase; }
+.fineprint { font-family: var(--font-mono); }
+.hero-art { width: 100%; max-width: 1180px; margin: 0 auto; aspect-ratio: 1200 / 440; }
+.hero-art svg { width: 100%; height: 100%; }
+.lp-ink { transition: transform 0.7s var(--spring); transform-box: fill-box; transform-origin: center; }
+html[data-mood="working"] .lp-ink.i1, html[data-mood="waiting"] .lp-ink.i2, html[data-mood="done"] .lp-ink.i3, html[data-mood="error"] .lp-ink.i4 { transform: scale(1.12); }
+
+/* Every section is set off by a heavy double rule and a fleuron. */
+main > section { border-top: 6px solid var(--ink); box-shadow: inset 0 6px 0 var(--bg), inset 0 7.5px 0 var(--ink); }
+main > section.alt { box-shadow: inset 0 6px 0 var(--bg-alt), inset 0 7.5px 0 var(--ink); }
+main > section.dark { border-top-color: var(--bg); box-shadow: none; }
+main > section::before { content: "✦ ☙ ✦"; position: absolute; top: -17px; left: 50%; transform: translateX(-50%); padding: 0 16px; font-family: var(--font-body); font-size: 20px; line-height: 28px; color: var(--ink); background: var(--bg); white-space: nowrap; }
+main > section.alt::before { background: var(--bg-alt); }
+main > section.dark::before { background: var(--band); color: var(--band-ink); }
+.kicker::before, .kicker::after { content: " ❦ "; letter-spacing: 0; }
+h2 { color: var(--ink); }
+.dark h2 { color: var(--band-ink); }
+.section-lede { color: var(--ink); }
+p.body { color: var(--ink); }
+
+.card { background: transparent; border: 0; border-left: 1.5px solid var(--ink); }
+.card h3 { font-family: Ultra, Georgia, serif; text-transform: uppercase; font-size: 24px; }
+.card p { color: var(--ink); font-size: 17px; }
+.dark .card { border-left-color: var(--band-rule); }
+.dark .card p { color: var(--band-ink-2); }
+.grid { gap: 0; border-top: 5px solid var(--ink); border-bottom: 5px solid var(--ink); }
+.dark .grid { border-color: var(--band-ink); }
+.grid > .card:first-child { border-left: 0; }
+
+/* The four inks: a fat roundel with its impression ring knocked out of register, then tall condensed caps. */
+.states { counter-reset: ink; }
+.states .card { counter-increment: ink; text-align: center; border-top: 0; min-height: 0; }
+.states .card::before { content: "Ink the " counter(ink, lower-alpha); display: block; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; }
+.states .card:nth-child(1)::before { content: "Ink the first"; }
+.states .card:nth-child(2)::before { content: "Ink the second"; }
+.states .card:nth-child(3)::before { content: "Ink the third"; }
+.states .card:nth-child(4)::before { content: "Ink the fourth"; }
+.states .card .orb, .states .card .orb.big { width: 92px; height: 92px; margin: 0 auto 10px; box-shadow: 4px 3px 0 -1px var(--bg), 4px 3px 0 2px var(--state); }
+.states .card .orb::after { font-size: 40px; line-height: 92px; color: var(--bg); }
+.states .card h3 { font-family: "Six Caps", Impact, sans-serif; font-size: 84px; line-height: 1; letter-spacing: 0.02em; color: var(--state); margin: 6px 0 4px; white-space: nowrap; }
+.states .card p { font-weight: 700; }
+.agents .card .orb { box-shadow: 3px 2px 0 -1px var(--bg), 3px 2px 0 1px var(--state); }
+
+.dest { background: transparent; border: 0; border-top: 5px solid var(--ink); border-bottom: 5px solid var(--ink); }
+.dest li { border-top: 1.5px solid var(--ink); }
+.dest .where { font-family: var(--font-body); font-style: italic; font-size: 17px; color: var(--ink); }
+.dark .dest { border-color: var(--band-ink); }
+.dark .dest .where { color: var(--band-ink); }
+.step { background: var(--ink); color: var(--bg); font-family: Ultra, Georgia, serif; font-size: 16px; border-radius: 0; }
+.stat { color: var(--lp-red); font-family: "Playfair Display", Georgia, serif; font-style: italic; font-weight: 900; }
+#private h2 { font-family: "Playfair Display", Georgia, serif; font-style: italic; font-weight: 900; text-transform: none; }
+.faq summary { font-family: var(--font-body); font-weight: 700; font-size: 21px; text-transform: none; }
+.faq details { border-top: 1.5px solid var(--ink); }
+.faq p { color: var(--ink); }
+.guide-list a { background: transparent; border: 1.5px solid var(--ink); }
+.guide-list strong { font-family: var(--font-body); font-weight: 700; font-size: 21px; }
+.guide-list span { color: var(--ink-2); }
+.voice-panel { background: var(--surface); border: 1.5px solid var(--ink); outline: 1.5px solid var(--ink); outline-offset: 4px; }
+.voice-tab { font-family: "Six Caps", Impact, sans-serif; font-size: 24px; letter-spacing: 0.12em; text-transform: uppercase; }
+.voice-tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.chip { font-family: "Six Caps", Impact, sans-serif; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; min-height: 44px; border-color: currentColor; }
+.dark .kicker { color: var(--band-ink); }
+.dark .btn { background: #f2df74; color: #1a1410; }
+.closing h2 { font-size: clamp(34px, 5vw, 72px); }
+.closing h2 br { display: none; }
+footer { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; border-top: 5px solid var(--ink); }
+footer .wrap { padding-bottom: 8px; }
+dialog { border: 6px solid var(--ink); outline: 1.5px solid var(--ink); outline-offset: -12px; }
+.sheet h2 { font-size: 30px; }
+.error { color: #8e1810; }
+.hero, .alt { background-image: var(--texture); }
+.chip, .voice-tab { min-height: 44px; }

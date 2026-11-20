@@ -1,0 +1,13 @@
+{
+  "name": "Night desk",
+  "set": "opt",
+  "inspiration": "A desk late at night: a dark room, a light serif, and the notch's open island casting its state's glow",
+  "order": 2,
+  "hero": "split",
+  "fonts": [
+    { "family": "Fraunces", "axes": "opsz,wght@9..144,300;9..144,400" },
+    { "family": "Geist", "axes": "wght@400;500" },
+    { "family": "Geist Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Ambient for macOS · Free and open source", "h1": "Glance, don't babysit." }
+}

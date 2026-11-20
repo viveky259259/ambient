@@ -1,0 +1,126 @@
+/* Loom — ecru cloth with a woven texture, charcoal ink, natural dyes (indigo, ochre, green, madder). Madder
+   buttons with a running stitch, striped selvedge swatches on kickers, spools of thread on the state cards. */
+:root {
+  --bg: #e9dfc9;
+  --bg-alt: #dfd3b8;
+  --surface: #f1e9d6;
+  --surface-2: #e2d6bc;
+  --ink: #2b2623;
+  --ink-2: #4a423b;
+  --rule: #2b2623;
+  --accent: #b83a2a;
+  --on-accent: #fff6e6;
+  --link: #2b2623;
+  --indigo: #2f4a8a;
+  --band: #2b2623;
+  --band-ink: #efe6d2;
+  --band-ink-2: #c5b9a2;
+  --band-surface: #36302b;
+  --band-rule: #5c524a;
+  --claude: #c8643f;
+  --codex: #2e8a6a;
+  --gemini: #3f63b8;
+  --waiting: #d8962a;
+  --done: #4d7c4a;
+  --error: #b83a2a;
+
+  --font-display: "Syne", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Jost", "Futura", "Avenir Next", -apple-system, Arial, sans-serif;
+  --font-label: "DM Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-tracking: -0.035em;
+  --display-leading: 0.96;
+  --h1-size: clamp(42px, 5.8vw, 82px);
+  --h2-size: clamp(32px, 4vw, 52px);
+  --h3-size: 24px;
+  --body-size: 18px;
+  --label-size: 12.5px;
+  --label-tracking: 0.18em;
+  --label-weight: 400;
+  --label-color: #2b2623;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --stitch: repeating-linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 8px);
+  --texture: repeating-linear-gradient(0deg, rgba(43, 38, 35, 0.035) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(43, 38, 35, 0.03) 0 1px, transparent 1px 4px);
+  --band-texture: repeating-linear-gradient(0deg, rgba(239, 230, 210, 0.03) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(239, 230, 210, 0.025) 0 1px, transparent 1px 4px);
+  --device-edge: #5a4635;
+  --edge-strength: 0.35;
+}
+.alt { background-image: var(--texture); }
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 2px solid var(--ink); }
+.nav .wrap { height: 72px; }
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 25px; letter-spacing: -0.02em; text-transform: lowercase; flex: none; margin-right: 8px; }
+.brand img { border-radius: 0; }
+.nav-links { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; gap: 18px; }
+.nav-links a { color: var(--ink); }
+.nav .btn.small { background: var(--ink); color: var(--bg); }
+.nav .btn.small::after { content: none; }
+
+/* Buttons: madder cloth with a running stitch along the hem. */
+.btn { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: 0; padding: 16px 28px; margin-bottom: 8px; }
+.btn::after { content: ""; position: absolute; left: 6px; right: -8px; bottom: -8px; height: 6px; background: var(--stitch); }
+.btn.small { margin-bottom: 0; }
+.dark .btn::after { background: repeating-linear-gradient(90deg, var(--band-ink) 0 4px, transparent 4px 8px); }
+.copy-code { background: var(--surface); border: 1px dashed var(--ink); }
+
+/* Kickers carry a striped selvedge swatch. */
+.kicker { display: inline-flex; align-items: center; gap: 12px; }
+.kicker::before { content: ""; width: 44px; height: 6px; flex: none; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, var(--ink) 6px 12px); }
+.dark .kicker::before { background: repeating-linear-gradient(90deg, #e07a63 0 6px, var(--band-ink) 6px 12px); }
+
+/* Hero */
+.hero .kicker { color: var(--ink); }
+.hero-copy .lede { color: var(--ink); }
+.trust { font-family: var(--font-label); font-size: 13px; letter-spacing: 0.02em; }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); }
+.hero-art { width: 100%; max-width: 540px; margin: 0 auto; aspect-ratio: 700 / 820; min-height: 0; }
+.lm-loom { position: relative; width: 100%; height: 100%; }
+.lm-loom canvas { width: 100%; height: 100%; display: block; }
+.lm-beam { position: absolute; left: 26%; right: 26%; top: 0; height: 5.4%; background: var(--ink); border-radius: 0 0 22px 22px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--bg); font: 400 clamp(9px, 1.6vw, 12px)/1 var(--font-label); letter-spacing: 0.14em; text-transform: uppercase; }
+.lm-beam b { width: 14px; height: 14px; border-radius: 50%; background: var(--state, var(--waiting)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--state, var(--waiting)) 35%, transparent); transition: background 0.6s var(--ease); flex: none; }
+.lm-beam span::after { content: "working"; }
+html[data-mood="waiting"] .lm-beam span::after { content: "needs you"; }
+html[data-mood="done"] .lm-beam span::after { content: "done"; }
+html[data-mood="error"] .lm-beam span::after { content: "error"; }
+
+/* Sections */
+main > section { border-top: 2px solid var(--ink); }
+h1 em { color: var(--accent); font-style: normal; }
+.card { background: transparent; border: 0; border-left: 1px dashed var(--ink); padding: 22px 22px 18px; }
+.dark .card { border-left-color: var(--band-ink-2); }
+.grid { gap: 0; border-top: 2px solid var(--ink); }
+.dark .grid { border-top-color: var(--band-ink-2); }
+.grid > .card:first-child { border-left: 0; }
+.wallpaper-features.grid { border-top-color: var(--band-ink-2); }
+.card h3 { font-weight: 700; letter-spacing: -0.02em; }
+.states .card { border-top: 0; padding-left: 90px; position: relative; min-height: 210px; }
+.states .card::before { content: ""; position: absolute; left: 18px; top: 24px; width: 54px; height: 140px; background: linear-gradient(#6b5340 0 14px, transparent 14px calc(100% - 14px), #6b5340 calc(100% - 14px)), repeating-linear-gradient(8deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 4px) 7px 14px / 40px 112px no-repeat, linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 30%, rgba(255, 255, 255, 0.25) 55%, rgba(0, 0, 0, 0.35)) 7px 14px / 40px 112px no-repeat, linear-gradient(var(--state), var(--state)) 7px 14px / 40px 112px no-repeat; }
+.states .card .orb { margin-bottom: 14px; }
+.agents .card .orb { margin: 0 auto 16px; }
+.dest { background: var(--surface); border: 2px solid var(--ink); }
+.dest li { border-top: 1px dashed var(--ink); }
+.dest .where { color: var(--ink-2); }
+.wallpaper { border: 2px solid var(--ink); }
+.chip { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; min-height: 44px; border: 2px solid currentColor; }
+.voice.tabs-on .voice-tablist { border: 2px solid var(--ink); }
+.voice-tab { text-transform: uppercase; letter-spacing: 0.06em; font-size: 13px; min-height: 44px; }
+.voice-panel { border: 2px solid var(--ink); background: var(--surface); }
+.step { border-radius: 0; background: var(--accent); color: var(--on-accent); font-family: var(--font-display); font-weight: 700; }
+.stat { font-weight: 800; color: var(--accent); }
+.faq details { border-top: 1px dashed var(--ink); }
+.faq details:last-child { border-bottom: 2px solid var(--ink); }
+.faq summary { font-weight: 700; letter-spacing: -0.02em; font-size: 19px; }
+.guide-list a { background: var(--surface); border: 2px solid var(--ink); }
+.guide-list strong { font-weight: 700; letter-spacing: -0.02em; }
+footer { border-top: 2px solid var(--ink); font-family: var(--font-label); font-size: 12.5px; }
+dialog { border: 2px solid var(--ink); }
+@media (max-width: 760px) {
+  .card { border-left: 0; border-top: 1px dashed var(--ink); }
+  .grid > .card:first-child { border-top: 0; }
+  .dark .card { border-top-color: var(--band-ink-2); }
+}

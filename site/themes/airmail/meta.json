@@ -1,0 +1,13 @@
+{
+  "name": "Airmail",
+  "set": "machines",
+  "inspiration": "An airmail envelope: striped border, perforated stamps for the four states, a postmark and a typed address",
+  "order": 32,
+  "hero": "split",
+  "fonts": [
+    { "family": "Rozha One", "axes": "wght@400" },
+    { "family": "Figtree", "axes": "wght@400;500;700" },
+    { "family": "Special Elite", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "Word from your agents, delivered to the notch." }
+}

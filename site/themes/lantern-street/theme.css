@@ -1,0 +1,117 @@
+/* Lantern street. A night market at dusk: an indigo sky with a few stars, strings of paper lanterns, warm
+   cream type in a soft old-style serif, a red lantern for the button and leaf-shaped corners. */
+:root {
+  --red: #d23f26;
+  --bg: #12132e;
+  --bg-alt: #17183a;
+  --surface: #1e1f46;
+  --surface-2: #26275a;
+  --ink: #f6e7c8;
+  --ink-2: #ddd0b4;
+  --rule: #f6e7c833;
+  --accent: #d23f26;
+  --on-accent: #fff6e6;
+  --link: #ffcf7a;
+  --band: #0b0b1c;
+  --band-ink: #f6e7c8;
+  --band-ink-2: #d4c6a8;
+  --band-surface: #17172e;
+  --band-rule: #f6e7c82b;
+  --hero-bg: linear-gradient(180deg, #0e0f26 0%, #17183a 70%, #22193d 100%);
+  --waiting: #ffad1f;
+  --done: #3ccf73;
+  --error: #f0452f;
+
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Karla", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "DM Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 600;
+  --display-tracking: -0.02em;
+  --display-leading: 1.02;
+  --h1-size: clamp(42px, 6.2vw, 92px);
+  --h2-size: clamp(34px, 4.6vw, 60px);
+  --h3-size: 30px;
+  --body-size: 17.5px;
+  --label-size: 13px;
+  --label-tracking: 0.14em;
+  --label-weight: 400;
+  --label-color: #f0b86a;
+
+  --radius: 28px 8px 28px 8px;
+  --radius-sm: 6px;
+  --radius-btn: 60px 16px 60px 16px;
+  --border: 1px solid var(--rule);
+  --btn-shadow: 0 0 40px #e2492f80;
+  --texture: radial-gradient(1.2px 1.2px at 12% 18%, #f6e7c880 50%, transparent 51%), radial-gradient(1px 1px at 68% 8%, #f6e7c870 50%, transparent 51%), radial-gradient(1.4px 1.4px at 41% 62%, #f6e7c860 50%, transparent 51%), radial-gradient(1px 1px at 88% 44%, #f6e7c870 50%, transparent 51%);
+  --band-texture: radial-gradient(1100px 380px at 50% 100%, #2a1c3f, transparent 70%);
+  --device-edge: #3a2f55;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+body { background-size: 420px 420px; }
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; letter-spacing: normal; line-height: normal; }
+h3 { font-weight: 600; }
+
+.nav { background: color-mix(in srgb, #0e0f26 86%, transparent); border-bottom: 1px solid var(--rule); }
+.brand { font-style: italic; font-weight: 500; font-size: 30px; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 16px; letter-spacing: 0; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: #ffcf7a; }
+.nav .btn.small { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); box-shadow: none; }
+
+.btn { font-family: var(--font-body); font-weight: 600; font-size: 19px; letter-spacing: 0.01em; padding: 16px 34px; }
+.btn.small { font-size: 15px; min-height: 40px; }
+.copy-code { background: var(--surface); color: var(--ink); }
+.copy-code span { color: #ffcf7a; }
+
+/* Hero: lanterns strung across the top, the words under them. */
+.hero { padding-top: 8px; }
+.hero h1 { font-weight: 600; max-width: 980px; margin-left: auto; margin-right: auto; }
+.hero-copy .lede { font-size: clamp(18px, 1.8vw, 21px); }
+.trust, .fineprint { font-family: var(--font-label); font-size: 13px; letter-spacing: 0.02em; }
+.trust { color: var(--ink-2); }
+.hero-art { aspect-ratio: 1200 / 330; width: 100vw; max-width: 1440px; margin: 0 calc(50% - min(50vw, 720px)); }
+.lnt-art { width: 100%; height: auto; overflow: visible; }
+.lnt-art .lan { transform-box: fill-box; transform-origin: 50% 0; animation: lnt-sway 6s ease-in-out infinite alternate; }
+.lnt-art .lan:nth-child(2n) { animation-duration: 7.5s; animation-delay: -2s; }
+.lnt-art .lan:nth-child(3n) { animation-duration: 5.2s; animation-delay: -4s; }
+@keyframes lnt-sway { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+.lnt-art .now { fill: var(--state, var(--waiting)); transition: fill 0.8s var(--ease); }
+.lnt-art .now-glow { fill: var(--state, var(--waiting)); opacity: 0.22; transition: fill 0.8s var(--ease); }
+
+main > section { border-top: 1px solid var(--rule); }
+.section-lede { color: var(--ink-2); }
+.dark .kicker { color: #f0b86a; }
+
+/* Cards glow like a lantern from above in their state's colour. */
+.card { background: var(--surface); }
+.dark .card { background: var(--band-surface); }
+.states .card { border-top: 1px solid var(--rule); text-align: center; background: radial-gradient(90% 70% at 50% 0, color-mix(in srgb, var(--state) 30%, transparent), transparent 70%), var(--surface); }
+.states .card .orb { width: 34px; height: 42px; border-radius: 48% / 40%; margin: 0 auto 22px; box-shadow: 0 0 34px 8px color-mix(in srgb, var(--state) 60%, transparent); }
+.states .card .orb.check::after, .states .card .orb.bang::after { line-height: 42px; }
+.states .card h3 { font-size: 34px; }
+.agents .card .orb { box-shadow: 0 0 24px 6px color-mix(in srgb, var(--state) 55%, transparent); }
+.dest .where { font-family: var(--font-label); font-size: 12.5px; }
+.wallpaper { border-radius: var(--radius); }
+.chip { min-height: 44px; border-radius: 22px 8px 22px 8px; }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: var(--ink); color: #12132e; }
+.voice-tab { min-height: 44px; border-radius: 22px 8px 22px 8px; }
+.voice-tab[aria-selected="true"] { background: var(--ink); color: #12132e; }
+.voice-tablist { border-radius: 26px 10px 26px 10px; }
+.voice-steps kbd { color: var(--ink); }
+
+.step { background: var(--red); color: #fff6e6; border-radius: 48% / 40%; width: 36px; height: 44px; box-shadow: 0 0 24px #e2492f88; font-family: var(--font-display); }
+.stat { color: #ffcf7a; font-style: italic; font-weight: 500; text-shadow: 0 0 40px #ffad1f55; }
+.faq summary { font-size: 21px; font-weight: 600; }
+.faq summary::after { color: #ffcf7a; }
+.guide-list a { border-radius: var(--radius); }
+.guide-list a:hover { border-color: #ffcf7a; }
+.guide-list strong { font-weight: 600; font-size: 21px; }
+footer { background: #0b0b1c; font-family: var(--font-body); }
+dialog { border-radius: 30px 10px 30px 10px; }
+.error { color: #ff9a8f; }
+.field input { background: var(--surface-2); }
+@media (max-width: 760px) { .hero-art { aspect-ratio: 16 / 9; } .hero-art .lnt-art { height: 100%; } }

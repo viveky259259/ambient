@@ -1,0 +1,128 @@
+/* Chime bars. Tuned metal bars on a walnut frame: dark oiled wood, brass pins and a brass mallet, DM Serif
+   headings with the second line in brass italic, and each state card topped with its own bar. */
+:root {
+  --bg: #23150e;
+  --bg-alt: #2b1b11;
+  --surface: #33221a;
+  --surface-2: #3d2a1f;
+  --ink: #f4e8d2;
+  --ink-2: #dccbad;
+  --rule: rgba(211, 168, 92, 0.3);
+  --accent: #d3a85c;
+  --on-accent: #23150e;
+  --link: #e7c27c;
+  --band: #150c07;
+  --band-ink: #f4e8d2;
+  --band-ink-2: #d2c0a0;
+  --band-surface: #241710;
+  --band-rule: rgba(211, 168, 92, 0.24);
+  --cb-brass: #d3a85c;
+  --claude: #e48a6c;
+  --codex: #2fbf93;
+  --gemini: #7da6f5;
+  --waiting: #f0a92b;
+  --done: #5cc288;
+  --error: #ee6a5a;
+
+  --font-display: "DM Serif Display", "Iowan Old Style", Georgia, serif;
+  --font-body: Mulish, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Fira Code", ui-monospace, Menlo, monospace;
+  --font-mono: "Fira Code", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.015em;
+  --display-leading: 1.0;
+  --h1-size: clamp(50px, 8.6vw, 128px);
+  --h2-size: clamp(38px, 5vw, 66px);
+  --h3-size: 30px;
+  --body-size: 17.5px;
+  --label-size: 12.5px;
+  --label-tracking: 0.2em;
+  --label-weight: 500;
+  --label-color: var(--cb-brass);
+
+  --radius: 14px;
+  --radius-sm: 6px;
+  --radius-btn: 999px;
+  --border: 1px solid var(--rule);
+  --card-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.06), 0 14px 30px rgba(0, 0, 0, 0.35);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 26px rgba(0, 0, 0, 0.5);
+  --texture: radial-gradient(900px 600px at 70% 30%, rgba(211, 168, 92, 0.12), transparent 70%), repeating-linear-gradient(178deg, rgba(255, 200, 140, 0.035) 0 2px, transparent 2px 17px), repeating-linear-gradient(181deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 41px);
+  --band-texture: radial-gradient(800px 500px at 50% 0, rgba(211, 168, 92, 0.12), transparent 70%), repeating-linear-gradient(179deg, rgba(255, 200, 140, 0.03) 0 2px, transparent 2px 19px);
+  --device-edge: #6b4a2c;
+  --device-wallpaper-light: linear-gradient(135deg, #e9d3a8, #b98a52);
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+
+.macbook .display { letter-spacing: normal; }
+.nav { background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--rule); }
+.brand { color: var(--cb-brass); font-size: 28px; }
+.nav-links { font-family: var(--font-body); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: var(--cb-brass); }
+.btn { background: linear-gradient(180deg, #ecc983, #c2924a); font-family: var(--font-body); font-size: 17px; font-weight: 700; letter-spacing: 0.01em; padding: 15px 32px; }
+.btn.small { background: transparent; color: var(--cb-brass); border: 1.5px solid var(--cb-brass); box-shadow: none; font-size: 14px; }
+.link-btn { color: var(--link); font-weight: 600; }
+.copy-code { background: var(--surface); border-color: var(--rule); }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; }
+
+/* Hero: left-aligned words over the full width of bars. */
+.hero-grid { text-align: left !important; }
+.hero-copy .lede { margin-left: 0 !important; color: #eadcc3; }
+.hero .cta-row { justify-content: flex-start !important; }
+.hero h1 { max-width: 7.4em; color: var(--cb-brass); font-style: italic; }
+.hero h1::first-line { color: var(--ink); font-style: normal; }
+.hero .kicker { color: var(--cb-brass); }
+.hero-art { width: 100%; aspect-ratio: 1440 / 600; margin-top: 8px; }
+.hero-art svg { width: 100%; height: 100%; }
+.cb-mallet { transition: transform 0.9s var(--spring); }
+html[data-mood="working"] .cb-mallet { transform: translate(-322px, 0); }
+html[data-mood="done"] .cb-mallet { transform: translate(322px, 0); }
+html[data-mood="error"] .cb-mallet { transform: translate(644px, 0); }
+.cb-ring { opacity: 0; }
+html:not([data-mood]) .cb-ring.waiting, html[data-mood="working"] .cb-ring.working, html[data-mood="waiting"] .cb-ring.waiting,
+html[data-mood="done"] .cb-ring.done, html[data-mood="error"] .cb-ring.error { opacity: 1; animation: cb-ring 1.6s ease-out infinite; }
+@keyframes cb-ring { 0% { opacity: 1; } 100% { opacity: 0.2; } }
+
+h2 { color: var(--ink); }
+.section-lede, p.body { color: var(--ink-2); }
+.kicker { color: var(--cb-brass); }
+
+.card { background: linear-gradient(180deg, #3a271c, #2e1e15); }
+.dark .card { background: linear-gradient(180deg, #2a1b12, #1e130c); }
+/* Each state card is topped by its bar, pinned with brass. */
+.states .card { position: relative; border-top: 0; padding-top: 64px; text-align: center; }
+.states .card::before {
+  content: ""; position: absolute; left: 18px; right: 18px; top: 18px; height: 26px; border-radius: 6px;
+  background: radial-gradient(circle at 12% 50%, #1a110a 0 4px, var(--cb-brass) 4.5px 7px, transparent 7.5px), radial-gradient(circle at 88% 50%, #1a110a 0 4px, var(--cb-brass) 4.5px 7px, transparent 7.5px),
+    linear-gradient(180deg, color-mix(in srgb, var(--state) 55%, #000), color-mix(in srgb, var(--state) 70%, #fff) 42%, var(--state) 60%, color-mix(in srgb, var(--state) 55%, #000));
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.45);
+}
+.states .card .orb { margin: 0 auto 18px; }
+.states .card h3 { color: var(--state); font-size: 36px; }
+.agents .card h3 { color: var(--ink); }
+
+.dest { background: linear-gradient(180deg, #3a271c, #2e1e15); }
+.dest .where { color: var(--cb-brass); font-size: 12.5px; }
+.step { background: radial-gradient(circle at 35% 30%, #fff3d6, #d9b47a 50%, #7a5a30); color: #23150e; font-weight: 600; }
+.stat { color: var(--cb-brass); font-style: italic; }
+.faq summary { font-size: 22px; }
+.faq summary::after { color: var(--cb-brass); }
+.guide-list a { background: linear-gradient(180deg, #3a271c, #2e1e15); }
+.guide-list a:hover { border-color: var(--cb-brass); }
+.voice-tab[aria-selected="true"] { background: var(--cb-brass); color: #23150e; }
+.voice-tablist, .voice-panel { background: #2e1e15 !important; }
+.voice-steps kbd { color: var(--ink); }
+.chip { min-height: 44px; border-color: var(--rule); }
+.chip[aria-pressed="true"] { background: var(--cb-brass); color: #23150e; }
+.dark .chip[aria-pressed="true"] { background: var(--cb-brass); color: #23150e; }
+.closing h2 { font-style: italic; color: var(--cb-brass); }
+.closing .section-lede { color: var(--ink-2); }
+footer { font-family: var(--font-label); font-size: 12px; border-top: 1px solid var(--rule); }
+footer a { color: var(--link); }
+dialog { border: 1px solid var(--cb-brass); }
+.field input { background: #1a100a; color: var(--ink); }
+.error { color: #ff9c8c; }
+.close { color: var(--ink-2); }
+.hero, .alt { background-image: var(--texture); }
+.chip, .voice-tab { min-height: 44px; }

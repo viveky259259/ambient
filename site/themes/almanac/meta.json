@@ -1,0 +1,13 @@
+{
+  "name": "Almanac",
+  "set": "machines",
+  "inspiration": "A nineteenth-century almanac: a sun of engraved rays, small-capital headings and a table of the four aspects",
+  "order": 0,
+  "hero": "stack",
+  "fonts": [
+    { "family": "IM Fell DW Pica", "axes": "ital@0;1" },
+    { "family": "IM Fell English SC", "axes": "wght@400" },
+    { "family": "Old Standard TT", "axes": "ital,wght@0,400;0,700;1,400" },
+    { "family": "Cutive Mono", "axes": "wght@400" }
+  ]
+}

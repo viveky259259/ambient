@@ -1,0 +1,162 @@
+/* Elevator panel: brushed stainless steel with screwed-on plates, an engraved double rule, and the car's black
+   glass panel with lit call buttons. Josefin Sans for the engraved capitals, Crimson Pro for prose, Share Tech
+   Mono for the small stamped legends. */
+:root {
+  --bg: #cdd0d1;
+  --bg-alt: #c4c7c9;
+  --surface: #d9dbdc;
+  --surface-2: #c9ccce;
+  --ink: #17191b;
+  --ink-2: #2c2f31;
+  --rule: #17191b;
+  --accent: #0d0e10;
+  --on-accent: #f3f4f4;
+  --link: #17191b;
+  --band: #0d0e10;
+  --band-ink: #eceeee;
+  --band-ink-2: #b2b6b8;
+  --band-surface: #1a1c1f;
+  --band-rule: #55595c;
+  --hero-bg: transparent;
+  --claude: #e08463;
+  --waiting: #ffae1a;
+  --done: #44d07b;
+  --error: #ff5a4d;
+
+  --font-display: "Josefin Sans", "Futura", "Avenir Next", "Helvetica Neue", sans-serif;
+  --font-body: "Crimson Pro", "Iowan Old Style", Georgia, serif;
+  --font-label: "Josefin Sans", "Futura", "Avenir Next", sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 700;
+  --display-transform: uppercase;
+  --display-tracking: 0.03em;
+  --display-leading: 1.06;
+  --h1-size: clamp(44px, 6.2vw, 86px);
+  --h2-size: clamp(32px, 4.4vw, 56px);
+  --h3-size: 22px;
+  --body-size: 20px;
+  --body-leading: 1.45;
+  --label-size: 14px;
+  --label-tracking: 0.32em;
+  --label-weight: 600;
+  --label-color: #17191b;
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-btn: 60px;
+  --border: 2px solid var(--rule);
+  --steel-lines: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 1px, rgba(0, 0, 0, 0.035) 1px 2px, transparent 2px 4px);
+  --texture: var(--steel-lines), linear-gradient(100deg, #b9bcbe 0, #e3e5e6 28%, #c3c6c8 55%, #dcdedf 80%, #b4b7b9 100%);
+  --band-texture: linear-gradient(170deg, #191b1e, #08090a);
+  --screws: radial-gradient(circle at 40% 35%, #fff 0, #8a8e90 4.5px, #5d6163 5.5px, transparent 6px);
+  --device-edge: #a9acae;
+  --edge-strength: 0.3;
+}
+
+.alt { background-image: var(--steel-lines), linear-gradient(100deg, #aeb1b3 0, #d6d8d9 30%, #b7babc 60%, #cfd1d2 85%, #a9acae 100%); }
+
+/* Nav: an engraved name above a double rule. */
+.nav { background: color-mix(in srgb, #cdd0d1 90%, transparent); border-bottom: 4px double #17191b; }
+.nav .wrap { height: 68px; }
+.brand { font-family: var(--font-display); font-weight: 300; text-transform: uppercase; letter-spacing: 0.36em; font-size: 24px; }
+.brand img { display: none; }
+.nav-links { gap: 14px; font-family: var(--font-label); font-weight: 600; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.nav-links a { color: #17191b; }
+
+/* Buttons: black glass in a steel ring. */
+.btn { font-weight: 600; text-transform: uppercase; letter-spacing: 0.26em; font-size: 16px; padding: 18px 34px 15px; box-shadow: 0 0 0 5px #cdd0d1, 0 0 0 7px #17191b, 0 12px 22px rgba(0, 0, 0, 0.3); margin: 7px; }
+.btn.small { font-size: 12px; padding: 12px 18px 9px; min-height: 44px; box-shadow: none; margin: 0; border: 2px solid #17191b; background: transparent; color: #17191b; }
+.dark .btn { box-shadow: 0 0 0 5px #6d7173, 0 0 0 7px #cdd0d1; background: #222428; }
+
+/* Hero */
+.hero h1 { font-weight: 700; }
+.hero-copy .lede { color: #17191b; font-size: clamp(20px, 2vw, 25px); }
+.trust { font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
+.fineprint { font-family: var(--font-mono); font-size: 13.5px; letter-spacing: 0.04em; color: #2c2f31; }
+.copy-code { background: rgba(255, 255, 255, 0.35); border: 1.5px solid #17191b; }
+.hero .link-btn { font-family: var(--font-label); font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; font-size: 14px; }
+.hero-art { width: min(500px, 100%); margin: 0 auto; aspect-ratio: 520 / 760; }
+.elv { width: 100%; height: auto; filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.35)); }
+.elv text { font-family: var(--font-display); }
+.elv .lab { font-weight: 700; font-size: 27px; letter-spacing: 5px; }
+.elv .sub { font-family: "Crimson Pro", Georgia, serif; font-size: 18px; fill: #eceeee; }
+.elv .cap { font-family: var(--font-mono); font-size: 13px; letter-spacing: 3.5px; fill: #9da1a3; }
+.elv .num { font-weight: 300; font-size: 50px; fill: var(--c); }
+.elv .needle { transform-origin: 260px 250px; transition: transform 1.1s var(--spring); }
+.elv .lit .bulb { fill: var(--c); }
+.elv .lit .num { fill: #221400; }
+.elv .lit .halo { opacity: 1; }
+.elv .halo { opacity: 0; transition: opacity 0.6s; }
+@media (max-width: 860px) { .hero-art { width: min(380px, 92%); } }
+
+/* Sections: every section ends on an engraved double rule. */
+main > section { border-top: 4px double #17191b; }
+main > section.dark { border-top: 0; box-shadow: inset 0 0 0 0 transparent; }
+.kicker { font-weight: 600; }
+.section-lede, p.body { color: #2c2f31; }
+.dark .section-lede, .dark p.body { color: var(--band-ink-2); }
+
+/* Plates: screwed-on steel with an inner engraved line. */
+.card, .dest, .guide-list a, .voice-panel, .faq {
+  position: relative;
+  background: var(--screws) 8px 8px / 12px 12px no-repeat, var(--screws) right 8px top 8px / 12px 12px no-repeat,
+    var(--screws) left 8px bottom 8px / 12px 12px no-repeat, var(--screws) right 8px bottom 8px / 12px 12px no-repeat,
+    linear-gradient(120deg, #dfe1e2, #c0c3c5);
+  border: 2px solid #17191b;
+  box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.35), inset 0 0 0 6px #17191b, 0 10px 18px rgba(0, 0, 0, 0.18);
+}
+.card { padding: 34px 30px; }
+.card h3, .guide-list strong { font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; font-size: 19px; }
+.card p { font-size: 17px; color: #2c2f31; }
+.dark .card { background: var(--screws) 8px 8px / 12px 12px no-repeat, var(--screws) right 8px top 8px / 12px 12px no-repeat, var(--screws) left 8px bottom 8px / 12px 12px no-repeat, var(--screws) right 8px bottom 8px / 12px 12px no-repeat, #16181b; border-color: #6d7173; box-shadow: inset 0 0 0 6px #2a2c2e; }
+.dark .card p { color: var(--band-ink-2); }
+
+/* The four states are the car's call buttons. */
+.states .card { --ink: #eceeee; --ink-2: #b2b6b8; color: #eceeee; border: 2px solid #6d7173; background: var(--screws) 8px 8px / 12px 12px no-repeat, var(--screws) right 8px top 8px / 12px 12px no-repeat, linear-gradient(170deg, #1b1d20, #08090a); box-shadow: 0 0 0 6px #a9acae, 0 0 0 8px #6d7173, 0 14px 24px rgba(0, 0, 0, 0.35); border-radius: 60px 60px 6px 6px; text-align: center; margin: 8px; }
+.states .card .orb { width: 64px; height: 64px; margin: 4px auto 22px; background: radial-gradient(circle at 42% 34%, #fff8 0, var(--state) 55%, color-mix(in srgb, var(--state) 60%, #000)); box-shadow: 0 0 0 4px #8c9092, 0 0 0 7px var(--state), 0 0 34px var(--state); }
+.states .card .orb::after { font-size: 26px; line-height: 64px; }
+.states .card h3 { color: var(--state); font-weight: 700; letter-spacing: 0.2em; }
+.states .card p { color: #c6cacc; }
+.agents .card .orb { width: 26px; height: 26px; box-shadow: 0 0 0 3px #8c9092, 0 0 14px var(--state); }
+
+.dest li { border-top: 1px solid #17191b; font-size: 18px; }
+.dest .where { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: #17191b; }
+.step { width: 52px; height: 52px; background: radial-gradient(circle at 40% 30%, #3b3e42, #0c0d0e 70%); color: #eceeee; font-family: var(--font-display); font-weight: 300; font-size: 26px; padding-top: 5px; box-shadow: 0 0 0 4px #8c9092, 0 0 0 6px #17191b; }
+.stat { font-weight: 300; color: #17191b; letter-spacing: 0.04em; }
+
+.faq { padding: 14px 36px 18px; }
+.faq details:last-child { border-bottom: 0; }
+.faq details { border-top: 1px solid #17191b; }
+.faq details:first-child { border-top: 0; }
+.faq summary { font-family: var(--font-body); font-weight: 600; font-size: 21px; }
+.faq summary::after { font-family: var(--font-display); font-weight: 300; font-size: 28px; color: #17191b; }
+
+.voice.tabs-on .voice-tablist { background: #0d0e10; border: 0; border-radius: 60px; padding: 6px; box-shadow: 0 0 0 5px #cdd0d1, 0 0 0 7px #17191b; }
+.voice-tab { color: #c6cacc; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; border-radius: 60px; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #eceeee; color: #0d0e10; }
+.voice-flow { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--state) 28%, transparent), transparent 70%), #101113; border-radius: 120px 120px 6px 6px; }
+.voice-flow .end { background: #1f2124; color: #eceeee; border: 1px solid #6d7173; font-family: var(--font-mono); text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.1em; }
+.voice-steps li { border-top: 1px solid #17191b; }
+.chip { font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 13px; min-height: 44px; padding: 10px 18px 7px; }
+.dark .chip { border-color: #6d7173; }
+.wallpaper { border: 2px solid #17191b; box-shadow: 0 0 0 5px #cdd0d1, 0 0 0 7px #17191b; }
+
+.closing h2 { font-weight: 300; letter-spacing: 0.08em; }
+.closing h2 { font-size: clamp(32px, 4.6vw, 60px); }
+
+footer { background: transparent; border-top: 4px double #17191b; color: #2c2f31; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; }
+
+dialog { background: #cdd0d1; background-image: var(--texture); border: 2px solid #17191b; box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.3), inset 0 0 0 7px #17191b, 0 30px 80px rgba(0, 0, 0, 0.4); }
+.sheet .btn { margin: 7px; }
+.field input { border: 2px solid #17191b; background: #e4e6e7; }
+.sheet .inline .btn { font-size: 13px; letter-spacing: 0.14em; padding: 12px 18px 9px; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+@media (max-width: 760px) {
+  .btn { letter-spacing: 0.16em; font-size: 15px; padding: 16px 24px 13px; }
+  .faq { padding: 8px 20px 12px; }
+  .states .card { margin: 10px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .elv .needle { transition: none; } }

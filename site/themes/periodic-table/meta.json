@@ -1,0 +1,13 @@
+{
+  "name": "Periodic table",
+  "set": "nature",
+  "inspiration": "The classroom periodic table: square cells with atomic numbers and two-letter symbols, the four states as heavy coloured elements",
+  "order": 38,
+  "hero": "split",
+  "fonts": [
+    { "family": "Archivo Black", "axes": "wght@400" },
+    { "family": "Archivo", "axes": "wght@400;500;700" },
+    { "family": "IBM Plex Mono", "axes": "wght@400;500;600" }
+  ],
+  "copy": { "kicker": "The elements of knowing what your agents are doing", "h1": "Four states. One colour at the notch." }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Iris",
+  "set": "nature",
+  "inspiration": "An ophthalmic plate of an iris with four sectors of pigment, one per state, a measuring ring and dead-straight annotation leaders",
+  "order": 42,
+  "hero": "split",
+  "fonts": [
+    { "family": "DM Serif Display", "axes": "ital@0;1" },
+    { "family": "Newsreader", "axes": "ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400" },
+    { "family": "Azeret Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Plate I · the anatomy of a glance · free for macOS", "h1": "Know at a glance." }
+}

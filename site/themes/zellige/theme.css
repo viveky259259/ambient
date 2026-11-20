@@ -1,0 +1,128 @@
+/* Zellige. Hand-cut glazed tilework on lime plaster: deep teal grout, eight-pointed stars, saffron and
+   terracotta crosses, Marcellus capitals and Spectral text. Section heads carry a star border; buttons are
+   teal tiles with a saffron shadow. */
+:root {
+  --bg: #f2e9d9;
+  --bg-alt: #ebe0ca;
+  --surface: #f8f2e6;
+  --surface-2: #efe5d1;
+  --ink: #143f42;
+  --ink-2: #33585a;
+  --rule: rgba(20, 63, 66, 0.3);
+  --accent: #143f42;
+  --on-accent: #f4ecdc;
+  --link: #1f6468;
+  --band: #143f42;
+  --band-ink: #f4ecdc;
+  --band-ink-2: #c9dcd8;
+  --band-surface: #1b5054;
+  --band-rule: rgba(244, 236, 220, 0.22);
+  --zl-saff: #e3a21a;
+  --zl-terra: #9a4f2a;
+  --claude: #c8673f;
+  --gemini: #2a4fa3;
+  --waiting: #e3a21a;
+  --done: #2d8a57;
+  --error: #b3271f;
+
+  --font-display: Marcellus, "Optima", "Iowan Old Style", Georgia, serif;
+  --font-body: Spectral, "Iowan Old Style", Georgia, serif;
+  --font-label: Inconsolata, ui-monospace, Menlo, monospace;
+  --font-mono: Inconsolata, ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
+  --display-leading: 1.03;
+  --h1-size: clamp(46px, 6.4vw, 96px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 30px;
+  --body-size: 18.5px;
+  --label-size: 14px;
+  --label-tracking: 0.22em;
+  --label-weight: 600;
+  --label-color: var(--zl-terra);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--ink);
+  --card-shadow: 6px 6px 0 rgba(20, 63, 66, 0.14);
+  --btn-shadow: 7px 7px 0 var(--zl-saff);
+  --zl-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-15 -15 30 30'%3E%3Cpath d='M0-14L4.1-9.9L9.9-9.9L9.9-4.1L14 0L9.9 4.1L9.9 9.9L4.1 9.9L0 14L-4.1 9.9L-9.9 9.9L-9.9 4.1L-14 0L-9.9-4.1L-9.9-9.9L-4.1-9.9Z' fill='%23000'/%3E%3C/svg%3E");
+  --texture: radial-gradient(900px 700px at 20% 20%, #f8f1e4, transparent 70%), radial-gradient(700px 600px at 90% 90%, #e8dcc6, transparent 70%);
+  --band-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cpath d='M35 7l8.1 8.4 11.7-.2-.2 11.7L63 35l-8.4 8.1.2 11.7-11.7-.2L35 63l-8.1-8.4-11.7.2.2-11.7L7 35l8.4-8.1-.2-11.7 11.7.2z' fill='%23fff' opacity='.05'/%3E%3Crect x='-6' y='-6' width='12' height='12' transform='rotate(45)' fill='%23e3a21a' opacity='.18'/%3E%3C/svg%3E");
+  --device-edge: #143f42;
+  --device-wallpaper-light: linear-gradient(135deg, #f4ecdc, #d9c49c);
+  --edge-strength: 0.35;
+}
+
+.macbook .display { letter-spacing: normal; }
+.hero, .alt { background-image: var(--texture); }
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 3px double var(--ink); }
+.brand { font-size: 27px; letter-spacing: 0.04em; }
+.brand::before { content: ""; width: 22px; height: 22px; background: var(--zl-saff); -webkit-mask: var(--zl-star) center / contain no-repeat; mask: var(--zl-star) center / contain no-repeat; order: -1; }
+.brand img { display: none; }
+.nav-links { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; gap: 20px; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { box-shadow: inset 0 -3px 0 var(--zl-saff); }
+
+.btn { font-family: var(--font-display); font-size: 21px; font-weight: 400; letter-spacing: 0.04em; padding: 14px 30px 14px 22px; }
+.btn::before { content: ""; width: 20px; height: 20px; background: var(--zl-saff); -webkit-mask: var(--zl-star) center / contain no-repeat; mask: var(--zl-star) center / contain no-repeat; }
+.btn.small { font-size: 15px; box-shadow: 4px 4px 0 var(--zl-saff); }
+.btn.small::before, .sheet .btn::before { content: none; }
+.btn:active { box-shadow: 3px 3px 0 var(--zl-saff); transform: translate(3px, 3px); }
+.link-btn { color: var(--link); }
+.copy-code { background: var(--surface); border-color: var(--ink); }
+.fineprint { font-family: var(--font-label); font-size: 15px; }
+.trust { border-left: 6px solid var(--zl-saff); padding-left: 14px; font-family: var(--font-label); font-size: 16px; }
+html[data-hero="split"] .trust { text-align: left; }
+
+.hero-art { width: 100%; max-width: 560px; margin: 0 auto; aspect-ratio: 640 / 856; }
+.hero-art svg { width: 100%; height: 100%; }
+@media (max-width: 860px) { .hero-art { max-width: 340px; } }
+.zl-key { fill: var(--state, #e3a21a); transition: fill 0.8s var(--ease); }
+.zl-t { display: none; }
+html:not([data-mood]) .zl-t.waiting, html[data-mood="working"] .zl-t.working, html[data-mood="waiting"] .zl-t.waiting,
+html[data-mood="done"] .zl-t.done, html[data-mood="error"] .zl-t.error { display: inline; }
+
+/* Each section opens on a border of small glazed stars between teal rules. */
+main > section::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 22px;
+  background: linear-gradient(var(--ink), var(--ink)) 0 0 / 100% 3px no-repeat, linear-gradient(var(--ink), var(--ink)) 0 100% / 100% 3px no-repeat,
+    linear-gradient(var(--zl-saff), var(--zl-saff)) 0 50% / 100% 16px no-repeat, var(--ink);
+  -webkit-mask: linear-gradient(#000, #000) 0 0 / 100% 3px no-repeat, linear-gradient(#000, #000) 0 100% / 100% 3px no-repeat, var(--zl-star) 0 50% / 16px 16px repeat-x;
+  mask: linear-gradient(#000, #000) 0 0 / 100% 3px no-repeat, linear-gradient(#000, #000) 0 100% / 100% 3px no-repeat, var(--zl-star) 0 50% / 16px 16px repeat-x;
+}
+.dark::before { filter: brightness(2.4); }
+.kicker, .hero .kicker { color: var(--zl-terra); }
+.dark .kicker { color: #f0c46a; }
+
+.card { background: var(--surface); }
+.card h3 { font-size: 30px; }
+.dark .card { background: var(--band-surface); border-color: var(--band-rule); }
+/* State cards: a glazed star in the state colour, with a glint. */
+.states .card { border-top: 1.5px solid var(--ink); position: relative; padding-top: 112px; }
+.states .card::before { content: ""; position: absolute; left: 22px; top: 20px; width: 76px; height: 76px; background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.55) 0 9%, transparent 22%), var(--state); -webkit-mask: var(--zl-star) center / contain no-repeat; mask: var(--zl-star) center / contain no-repeat; filter: drop-shadow(0 3px 0 rgba(20, 63, 66, 0.3)); }
+.states .card .orb { position: absolute; left: 53px; top: 51px; box-shadow: 0 0 0 3px var(--surface); }
+.states .card .orb.big { left: 48px; top: 46px; }
+.states .card h3 { font-size: 36px; }
+.agents .card { padding-top: 34px; }
+
+.dest { background: var(--surface); }
+.dest li { border-top: 1px solid var(--rule); }
+.dest .where { color: var(--zl-terra); font-size: 14px; }
+.dark .dest .where { color: #f0c46a; }
+.step { width: 46px; height: 46px; border-radius: 0; background: var(--ink); color: var(--on-accent); -webkit-mask: var(--zl-star) center / contain no-repeat; mask: var(--zl-star) center / contain no-repeat; font-family: var(--font-display); font-size: 17px; }
+.stat { color: var(--zl-terra); }
+.faq details { border-top: 1.5px solid var(--rule); }
+.faq summary { font-size: 23px; }
+.faq summary::after { color: var(--zl-terra); }
+.guide-list a { box-shadow: var(--card-shadow); }
+.guide-list a:hover { border-color: var(--zl-saff); }
+.voice-panel { box-shadow: var(--card-shadow); }
+.voice-tab[aria-selected="true"] { background: var(--ink); color: var(--on-accent); }
+.chip { font-size: 15px; min-height: 44px; }
+.dark .btn { background: #f4ecdc; color: #143f42; }
+.closing h2 { letter-spacing: 0; }
+footer { font-family: var(--font-label); font-size: 14px; border-top: 3px double var(--ink); }
+dialog { border: 1.5px solid var(--ink); box-shadow: 10px 10px 0 var(--zl-saff), 0 30px 80px rgba(0, 0, 0, 0.3); }
+.chip, .voice-tab { min-height: 44px; }

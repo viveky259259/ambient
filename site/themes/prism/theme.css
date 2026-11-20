@@ -1,0 +1,108 @@
+/* Prism — an optical bench on white paper. Hairline rules, millimetre ticks, figure captions in mono, and
+   one spectrum bar: agents' light goes in, Ambient's four state colours come out. Nothing rounded. */
+:root {
+  --bg: #f4f3ee;
+  --bg-alt: #eae9e2;
+  --surface: #fbfbf8;
+  --surface-2: #efeee8;
+  --ink: #111216;
+  --ink-2: #474955;
+  --rule: #c5c4bc;
+  --accent: #111216;
+  --on-accent: #f4f3ee;
+  --link: #111216;
+  --band: #0c0d11;
+  --band-ink: #f4f2ea;
+  --band-ink-2: #a9abb8;
+  --band-surface: #16171d;
+  --band-rule: #2c2e37;
+  --claude: #d1653f;
+  --codex: #0e8f6f;
+  --gemini: #3f78e6;
+  --waiting: #e59a12;
+  --done: #23a35d;
+  --error: #dd3344;
+  --spectrum: linear-gradient(90deg, #dd3344, #e59a12 33%, #23a35d 66%, #5b63e6);
+
+  --font-display: "Syne", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "DM Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "DM Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-tracking: -0.045em;
+  --display-leading: 0.98;
+  --h1-size: clamp(40px, 6.6vw, 96px);
+  --h2-size: clamp(34px, 4.8vw, 62px);
+  --h3-size: 22px;
+  --label-size: 12.5px;
+  --label-tracking: 0.18em;
+  --label-weight: 500;
+  --label-color: #474955;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --texture: linear-gradient(#11121608 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, #11121608 1px, transparent 1px) 0 0 / 24px 24px;
+  --band-texture: linear-gradient(#ffffff06 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, #ffffff06 1px, transparent 1px) 0 0 / 24px 24px;
+  --device-edge: #6f717c;
+  --edge-strength: 0.35;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid var(--ink); }
+.nav .wrap { height: 68px; }
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.03em; text-transform: lowercase; flex: none; }
+.nav-links { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; gap: 18px; }
+
+/* Buttons: a white-light slab with one corner cut, like the mockup's beam stop. */
+.btn { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: 0; padding: 15px 34px 15px 28px; clip-path: polygon(0 0, 100% 0, 100% 64%, calc(100% - 14px) 100%, 0 100%); }
+.btn.small { font-size: 14px; padding: 8px 22px 8px 16px; clip-path: polygon(0 0, 100% 0, 100% 60%, calc(100% - 9px) 100%, 0 100%); }
+.dark .btn { background: var(--band-ink); color: var(--band); }
+.copy-code { background: var(--surface); border-color: var(--ink); }
+
+/* Hero: the bench diagram first, the statement beneath it. */
+.hero { padding-top: 34px; border-bottom: 1px solid var(--ink); }
+.hero-art { width: 100%; max-width: 1160px; margin: 0 auto; aspect-ratio: 1200 / 470; min-height: 0; }
+.hero-art svg { width: 100%; height: 100%; }
+.hero h1 { margin-top: 8px; }
+.hero h1::after { content: ""; display: block; width: min(420px, 60%); height: 8px; margin: 22px auto 0; background: var(--spectrum); }
+.hero .kicker { color: var(--ink-2); letter-spacing: 0.22em; }
+.trust { font-family: var(--font-label); font-size: 13px; letter-spacing: 0.06em; }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; }
+.prm-bench { width: 100%; }
+.prm-bench text { font-family: var(--font-label); }
+.prm-band { opacity: 0.88; transition: opacity 0.8s var(--ease); }
+html[data-mood] .prm-band { opacity: 0.28; }
+html[data-mood="error"] .prm-b0, html[data-mood="waiting"] .prm-b1, html[data-mood="done"] .prm-b2, html[data-mood="working"] .prm-b3 { opacity: 1; }
+@media (max-width: 640px) { .prm-small { display: none; } }
+
+/* Figures: every section is numbered like a figure and sits under a millimetre rule. */
+main { counter-reset: fig 1; }
+main .kicker { counter-increment: fig; }
+main .kicker::before { content: "Fig. " counter(fig, decimal-leading-zero) " — "; }
+main > section { border-top: 1px solid var(--ink); }
+main > section::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 9px; background: repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 12px), repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 60px); background-size: 100% 5px, 100% 9px; background-repeat: no-repeat; opacity: 0.55; }
+main > section.dark::before { background-image: repeating-linear-gradient(90deg, var(--band-ink-2) 0 1px, transparent 1px 12px), repeating-linear-gradient(90deg, var(--band-ink-2) 0 1px, transparent 1px 60px); }
+h2 { font-weight: 800; }
+
+.card { border-color: var(--rule); }
+.dark .card { border-color: var(--band-rule); }
+.states { counter-reset: lambda; }
+.states .card { border-top: 6px solid var(--state); position: relative; }
+.states .card::before { counter-increment: lambda; content: "λ " counter(lambda, decimal-leading-zero); position: absolute; top: 18px; right: 20px; font-family: var(--font-label); font-size: 12px; letter-spacing: 0.14em; color: var(--ink-2); }
+.states .card h3 { font-size: 26px; letter-spacing: -0.03em; }
+.dest { border-color: var(--ink); }
+.dest li { font-weight: 500; }
+.dest .where { text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; }
+.chip { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; min-height: 44px; }
+.voice-tab { text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; min-height: 44px; }
+.step { border-radius: 0; background: var(--ink); color: var(--bg); font-family: var(--font-label); }
+.stat { font-weight: 800; letter-spacing: -0.05em; background: var(--spectrum); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.faq summary { font-weight: 700; letter-spacing: -0.02em; }
+.guide-list a { border-color: var(--rule); }
+.guide-list a:hover { border-color: var(--ink); }
+.guide-list strong { font-weight: 700; letter-spacing: -0.02em; }
+.closing h2::after { content: ""; display: block; width: min(360px, 60%); height: 6px; margin: 26px auto 0; background: var(--spectrum); }
+footer { border-top: 1px solid var(--ink); font-family: var(--font-label); font-size: 12.5px; }
+dialog { border: 1px solid var(--ink); }
+dialog .sheet::before { content: ""; display: block; height: 6px; margin: -32px -30px 26px; background: var(--spectrum); }
