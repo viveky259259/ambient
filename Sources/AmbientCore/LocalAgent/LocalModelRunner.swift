@@ -109,11 +109,6 @@ public enum LocalModelRunner {
         live.stopAll(closing: true)
     }
 
-    /// Stops the loaded model and any run under way, for tests.
-    static func unload() {
-        live.stopAll(closing: false)
-    }
-
     static func llamaArguments(binary: String, model: String, promptFile: String, maxTokens: Int,
                                temperature: Double) -> [String] {
         // `-st` is one chat turn with the model's own template, then exit; a model without a template gets plain

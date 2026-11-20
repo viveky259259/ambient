@@ -41,7 +41,6 @@ public final class SessionStore {
     }
 
     public var mood: Mood { byId.values.map(\.mood).max() ?? .idle }
-    public var busyCount: Int { byId.values.filter { $0.activity.isBusy }.count }
     public var waitingCount: Int { byId.values.filter { $0.mood == .waiting }.count }
 
     public func session(id: String) -> Session? { byId[id] }

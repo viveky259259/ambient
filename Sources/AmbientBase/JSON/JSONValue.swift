@@ -21,16 +21,6 @@ public indirect enum JSONValue: Equatable, Sendable {
         }
     }
 
-    public var objectKeys: [String]? {
-        guard case let .object(members) = self else { return nil }
-        return members.map(\.key)
-    }
-
-    public var arrayCount: Int? {
-        guard case let .array(items) = self else { return nil }
-        return items.count
-    }
-
     public var stringValue: String? {
         guard case let .string(s) = self else { return nil }
         return s

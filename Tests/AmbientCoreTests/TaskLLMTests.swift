@@ -55,9 +55,9 @@ import Testing
         #expect(!URL(string: "http://example.com:5051/mcp")!.isLoopback)
         #expect(!URL(string: "https://api.openai.com/v1")!.isLoopback)
         var config = TaskLLMConfig(enabled: true, mcpURL: "http://10.0.0.5:5051/mcp")
-        #expect(config.refusesNonLoopback)
+        #expect(refusesNonLoopback(config))
         config.mcpURL = "http://127.0.0.1:5051/mcp"
-        #expect(!config.refusesNonLoopback)
+        #expect(!refusesNonLoopback(config))
     }
 }
 

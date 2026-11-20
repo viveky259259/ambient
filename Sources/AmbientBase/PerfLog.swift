@@ -61,8 +61,6 @@ public struct PerfLog: Sendable {
 
     public init() {}
 
-    public var minuteCount: Int { minutes.count }
-
     public mutating func recordSample(cpu: Double, memoryMB: Double, at date: Date) {
         update(at: date) { m in
             m.cpuTotal += cpu

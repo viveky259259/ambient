@@ -50,12 +50,6 @@ public struct TaskLLMConfig: Codable, Equatable, Sendable {
     public static func isCloudModel(_ id: String) -> Bool {
         id.lowercased().contains(":cloud") || id.lowercased().contains("cloud/")
     }
-
-    /// True when the configured MCP URL is not a loopback http(s) endpoint.
-    public var refusesNonLoopback: Bool {
-        guard let url = mcpEndpoint else { return true }
-        return !url.isLoopback
-    }
 }
 
 /// A change to the board's model from `ambient task model` or `ambient mcp`; nil leaves a setting alone.
@@ -145,13 +139,6 @@ public enum TaskLLMStatus: Codable, Equatable, Sendable {
         case let .cloudModelBlocked(m): m
         case let .nonLoopbackBlocked(m): m
         case let .failed(m): m
-        }
-    }
-
-    public var isUsable: Bool {
-        switch self {
-        case .ready, .summarizing: true
-        default: false
         }
     }
 }
