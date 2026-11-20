@@ -18,6 +18,9 @@ public struct Capture: Sendable {
     public var git: GitFacts
     public var home: String
     public var limits = Limits()
+    /// How long after a chat's last event a commit can still be counted as carrying one of its shell edits: time
+    /// for the person to commit by hand what the agent left.
+    public var commitGrace: TimeInterval = 600
 
     public init(git: GitFacts = GitFacts(), home: String) {
         self.git = git
@@ -26,17 +29,39 @@ public struct Capture: Sendable {
 
     /// Where a chat's repository is, and what it's called.
     public struct Place: Equatable, Sendable {
-        /// The checkout the chat started in; nil when its folder is gone or was never a repository.
+        /// A checkout of the repository that git can be asked in: the chat's own, or, when that was a worktree
+        /// that has been removed, the checkout it sat inside. Nil when there is none.
         public var root: String?
         public var repo: String
+        /// False when the chat's own folder is gone.
+        public var ownCheckout: Bool
+
+        public init(root: String?, repo: String, ownCheckout: Bool = true) {
+            self.root = root
+            self.repo = repo
+            self.ownCheckout = ownCheckout
+        }
     }
 
     public func place(of chat: RawChat) -> Place {
         let folder = chat.folder ?? home
-        guard let root = git.root(of: folder) else {
-            return Place(root: nil, repo: Self.folderName(folder))
+        if let root = git.root(of: folder) {
+            return Place(root: root, repo: git.slug(of: root) ?? Self.folderName(root))
         }
-        return Place(root: root, repo: git.slug(of: root) ?? Self.folderName(root))
+        // The folder is gone. If it was a worktree made inside another checkout of the repository, that checkout
+        // still knows the repository. The chat's branch must exist there and be a branch of its own (two worktrees
+        // can't share one), or the folder may have been some other project that only sat inside.
+        var ancestor = PathFinder.standard(folder)
+        while ancestor.count > 1, !FileManager.default.fileExists(atPath: ancestor) {
+            ancestor = (ancestor as NSString).deletingLastPathComponent
+        }
+        if ancestor.count > 1, let root = git.root(of: ancestor),
+           PathFinder.standard(folder).hasPrefix(PathFinder.standard(root) + "/"),
+           let branch = chat.branch, !["main", "master", "HEAD"].contains(branch), git.hasBranch(branch, in: root),
+           let slug = git.slug(of: root) {
+            return Place(root: root, repo: slug, ownCheckout: false)
+        }
+        return Place(root: nil, repo: Self.folderName(folder), ownCheckout: false)
     }
 
     static func folderName(_ path: String) -> String {
@@ -52,23 +77,31 @@ public struct Capture: Sendable {
 
         var roots: [String] = []
         var tracked = Set<String>()
-        var dirty = Set<String>()
-        // When each file was last committed, by anyone, since the chat began.
-        var lastCommitted: [String: Date] = [:]
         var nearby: [ChatCommit] = []
         var merges = Set<String>()
+        // When each file was committed, by anyone, from the chat's start until a little after its end.
+        var committed: [String: [Date]] = [:]
         if let root = place.root {
             roots = [root] + worktrees(of: root)
             tracked = git.trackedFiles(in: root)
-            nearby = git.commits(in: root, from: started.addingTimeInterval(-2), to: now.addingTimeInterval(2))
-            merges = git.merges(in: root, from: started.addingTimeInterval(-2), to: ended.addingTimeInterval(180))
+            let until = ended.addingTimeInterval(commitGrace)
+            nearby = git.commits(in: root, from: started.addingTimeInterval(-2), to: until)
+            merges = git.merges(in: root, from: started.addingTimeInterval(-2), to: until)
             for commit in nearby {
-                for file in commit.files where (lastCommitted[file] ?? .distantPast) < commit.at { lastCommitted[file] = commit.at }
+                for file in commit.files { committed[file, default: []].append(commit.at) }
             }
-            dirty = dirtyFiles(in: root)
-            tracked.formUnion(lastCommitted.keys)
-            tracked.formUnion(dirty)
+            tracked.formUnion(committed.keys)
         }
+        // What differs from HEAD in each checkout, asked once per checkout and only for ones the chat worked in:
+        // a chat can start in one worktree and edit in another, and each has its own uncommitted work.
+        var dirtyByRoot: [String: Set<String>] = [:]
+        func dirty(in root: String) -> Set<String> {
+            if let known = dirtyByRoot[root] { return known }
+            let files = dirtyFiles(in: root)
+            dirtyByRoot[root] = files
+            return files
+        }
+        if let root = place.root, place.ownCheckout { tracked.formUnion(dirty(in: root)) }
         let finder = PathFinder(roots: roots, home: home, known: tracked)
 
         var events: [ChatEvent] = []
@@ -80,10 +113,12 @@ public struct Capture: Sendable {
             if let id = raw.callID, let at = raw.at, resultTime[id] == nil { resultTime[id] = at }
             if raw.failed, let id = raw.callID { failedCalls.insert(id) }
         }
+        // The files the chat changed, by the checkout it changed them in.
+        var changedIn: [String: Set<String>] = [:]
         for raw in chat.events {
             let n = events.count + 1
-            var event = ChatEvent(n: n, at: raw.at, kind: raw.kind, actor: raw.actor, text: raw.text, tool: raw.tool,
-                                  label: raw.label, diff: raw.diff)
+            var event = ChatEvent(n: n, at: raw.at, kind: raw.kind, actor: redactor.clean(raw.actor), text: raw.text,
+                                  tool: raw.tool, label: raw.label, diff: raw.diff)
             var touches: [FileTouch] = []
             var limit = limits.said
             switch raw.kind {
@@ -91,21 +126,35 @@ public struct Capture: Sendable {
                 limit = limits.command
                 if let id = raw.callID, numberOfCall[id] == nil { numberOfCall[id] = n }
                 let failed = raw.callID.map(failedCalls.contains) ?? false
-                touches = raw.paths.map {
-                    FileTouch(path: finder.relative($0.path, from: raw.folder), how: failed && $0.how.changes ? .read : $0.how)
+                let placed = raw.paths.map { (location: finder.locate($0.path, from: raw.folder), how: $0.how) }
+                for (location, how) in placed {
+                    let kept: FileTouch.How = failed && how.changes ? .read : how
+                    touches.append(FileTouch(path: location.path, how: kept))
+                    if kept.changes, let root = location.root { changedIn[root, default: []].insert(location.path) }
                 }
-                if let first = touches.first, raw.paths.count == 1, raw.text == raw.paths[0].path {
-                    event.text = first.path
+                if let first = placed.first, raw.paths.count == 1, raw.text == raw.paths[0].path {
+                    event.text = first.location.path
                 } else if raw.tool == "Bash" {
-                    let writes = PathFinder.writes(raw.text)
-                    for path in finder.paths(in: raw.text, from: raw.folder) {
-                        // A command that writes files and names this one changed it only if git agrees: the file
-                        // was committed after the command ran, or still differs from HEAD. Without a repository to
-                        // ask, the command's word is all there is.
-                        let after = (raw.at ?? started).addingTimeInterval(-2)
-                        let changed = writes && (place.root == nil || dirty.contains(path)
-                            || (lastCommitted[path] ?? .distantPast) >= after)
-                        touches.append(FileTouch(path: path, how: changed ? .shell : .read))
+                    let writing = PathFinder.writing(raw.text)
+                    var targets = Set<String>()
+                    if case let .only(names) = writing {
+                        targets = Set(names.map { finder.locate($0, from: raw.folder).path })
+                    }
+                    let after = (raw.at ?? started).addingTimeInterval(-2)
+                    for location in finder.located(in: raw.text, from: raw.folder) {
+                        // The command must be one that could have written this file: it changes files in place, or
+                        // this file is where it sends its output.
+                        var changed = writing == .anything || targets.contains(location.path)
+                        // And git must agree: the file still differs from HEAD in the checkout it was named in, or
+                        // it was committed after the command ran and before the chat was long over. Without a
+                        // repository to ask, the command's word is all there is.
+                        if changed, place.root != nil {
+                            let stillDirty = location.root.map { dirty(in: $0).contains(location.path) } ?? false
+                            let committedAfter = (committed[location.path] ?? []).contains { $0 >= after }
+                            changed = stillDirty || committedAfter
+                        }
+                        touches.append(FileTouch(path: location.path, how: changed ? .shell : .read))
+                        if changed, let root = location.root { changedIn[root, default: []].insert(location.path) }
                     }
                 }
             case .result:
@@ -148,7 +197,7 @@ public struct Capture: Sendable {
 
         var commits: [ChatCommit] = []
         var taken = Set<String>()
-        let named = Set(events.flatMap { $0.touches ?? [] }.map(\.path))
+        let changedByChat = Set(events.flatMap { $0.touches ?? [] }.filter { $0.how.changes }.map(\.path))
         for (index, raw) in chat.events.enumerated() where raw.kind == .tool && raw.tool == "Bash"
             && PathFinder.commits(raw.text) {
             guard let at = raw.at else { continue }
@@ -157,36 +206,40 @@ public struct Capture: Sendable {
             let window = at.addingTimeInterval(-1.5)...max(end, at).addingTimeInterval(1.5)
             for commit in nearby where window.contains(commit.at) {
                 // The time alone isn't proof: a command that runs the tests and then commits stays open for
-                // minutes, and another chat in the same checkout may commit meanwhile. So the commit must also
-                // look like this chat's: its message is in the command, or it holds a file this chat named, or it
-                // is a merge and the command merges. A commit with no files has nothing to compare, and is taken
-                // on the time.
+                // minutes, and another chat in the same repository may commit meanwhile. So the commit must also
+                // look like this chat's: its message is in the command, or it holds a file this chat changed, or
+                // it is a merge and the command merges. A commit with no files has nothing to compare, and is
+                // taken on the time.
                 let merging = merges.contains(commit.sha) && PathFinder.merges(raw.text)
                 let mine = (!commit.subject.isEmpty && raw.text.contains(commit.subject)) || merging
-                    || commit.files.isEmpty || !named.isDisjoint(with: commit.files)
+                    || commit.files.isEmpty || !changedByChat.isDisjoint(with: commit.files)
                 guard mine, taken.insert(commit.sha).inserted else { continue }
                 var commit = commit
                 commit.event = index + 1
                 commit.subject = redactor.clean(commit.subject)
+                commit.files = commit.files.map { (file: String) -> String in redactor.clean(file) }
                 commits.append(commit)
             }
         }
 
+        // Each checkout's own uncommitted work, for the files the chat changed there and no others: another chat
+        // may be working in the same checkout.
         var uncommitted: String?
-        if let root = place.root {
-            let changed = Set(events.flatMap { $0.touches ?? [] }.filter { $0.how.changes }.map(\.path))
-                .filter { !$0.hasPrefix("/") && !$0.hasPrefix("~") }
-            // Only this chat's files: another chat may be working in the same checkout.
-            let diff = git.uncommitted(changed.sorted(), in: root)
-            if !diff.isEmpty { uncommitted = redactor.clean(diff) }
+        let diffs = changedIn.keys.sorted().compactMap { root -> String? in
+            let diff = git.uncommitted((changedIn[root] ?? []).sorted(), in: root)
+            return diff.isEmpty ? nil : diff
+        }
+        if !diffs.isEmpty {
+            let cleaned: String = redactor.clean(diffs.joined())
+            uncommitted = cleaned
         }
 
         let firstRequest = events.first { $0.kind == .user }?.text
         let title = chat.title ?? firstRequest.map { String($0.split(separator: "\n").first ?? "").prefix(80) }.map(String.init)
+        let branch = chat.branch ?? (place.ownCheckout ? place.root.flatMap(git.branch) : nil)
         let session = ChatSession(id: chat.sessionID, agent: chat.agent, repo: place.repo,
-                                  branch: chat.branch ?? place.root.flatMap(git.branch),
-                                  developer: place.root.flatMap(git.developer), title: redactor.clean(title),
-                                  startedAt: started, endedAt: ended)
+                                  branch: redactor.clean(branch), developer: place.root.flatMap(git.developer),
+                                  title: redactor.clean(title), startedAt: started, endedAt: ended)
         return ChatRecord(session: session, commits: commits, uncommitted: uncommitted, events: events)
     }
 

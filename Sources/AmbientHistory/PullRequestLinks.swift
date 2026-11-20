@@ -23,23 +23,16 @@ public struct PullRequestLinks: Sendable {
         return numbers.sorted()
     }
 
-    /// One chat's line in the comment. The session id in a hidden tag keys it, so capturing the chat again replaces
-    /// its line.
+    /// One chat's line in the comment. It says when, which agent and how much, and nothing the chat said: the title
+    /// is the first thing the person typed, and a pull request may be public. The session id in a hidden tag keys
+    /// the line, so capturing the chat again replaces it.
     static func line(for record: ChatRecord, url: String, changes: Int) -> String {
         let session = record.session
-        // A chat's title and a developer's name are free text going into a public comment: nothing in them may become
-        // a link, a mention that notifies someone, or markup.
-        func plain(_ text: String) -> String {
-            var cleaned = text.replacingOccurrences(of: "[", with: "(").replacingOccurrences(of: "]", with: ")")
-            for character in ["\n", "\r", "@", "<", ">", "`"] { cleaned = cleaned.replacingOccurrences(of: character, with: " ") }
-            return cleaned.split(separator: " ", omittingEmptySubsequences: true).joined(separator: " ")
-        }
-        let title = plain(session.title ?? "Agent chat")
+        let agent = String(session.agent.filter { $0.isASCII && ($0.isLetter || $0.isNumber) }.prefix(20))
+        let id = String(session.id.filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }.prefix(80))
         let day = HistoryPage.stamp(session.endedAt).prefix(10)
-        var parts = ["\(plain(session.agent))", String(day)]
-        if let developer = session.developer { parts.append(plain(developer)) }
-        parts.append(changes == 1 ? "1 request changed code" : "\(changes) requests changed code")
-        return "- [\(title)](\(url)) — \(parts.joined(separator: ", ")) <!-- chat:\(session.agent):\(session.id) -->"
+        let work = changes == 1 ? "1 request changed code" : "\(changes) requests changed code"
+        return "- [\(agent) chat of \(day)](\(url)) — \(work) <!-- chat:\(agent):\(id) -->"
     }
 
     /// The comment with this chat's line added, or put in place of its earlier one.
@@ -57,8 +50,9 @@ public struct PullRequestLinks: Sendable {
     @discardableResult
     public func post(for record: ChatRecord, url: String, changes: Int, to numbers: [Int]) -> [Int] {
         let repo = record.session.repo
-        let tag = "<!-- chat:\(record.session.agent):\(record.session.id) -->"
         let line = Self.line(for: record, url: url, changes: changes)
+        // The tag as the line itself spells it.
+        let tag = line.range(of: "<!-- chat:").map { String(line[$0.lowerBound...]) } ?? line
         var posted: [Int] = []
         for number in numbers {
             let listed = shell("gh", ["api", "repos/\(repo)/issues/\(number)/comments", "--paginate",

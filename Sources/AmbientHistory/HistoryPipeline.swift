@@ -42,6 +42,9 @@ public struct HistoryPipeline: Sendable {
     /// Captures one Claude chat from its transcript.
     /// - Parameter dryRun: do everything except write to the store, the index and GitHub.
     public func capture(transcript path: String, dryRun: Bool = false, postLinks: Bool = true) throws -> Outcome {
+        // The transcript's size and time as they are before it is read: anything written while this runs then
+        // makes it look changed, and it is captured again, instead of being marked captured without being read.
+        let before = try? FileManager.default.attributesOfItem(atPath: path)
         let chat = try ClaudeTranscript.read(path: path)
         guard chat.events.contains(where: { $0.kind == .user || $0.kind == .agent }) else {
             return .skipped("the chat has nothing in it yet")
@@ -60,15 +63,25 @@ public struct HistoryPipeline: Sendable {
             notes.append("The chat's folder is gone, so its commits and uncommitted changes couldn't be read from git.")
         }
 
+        let folder = HistoryKeys.folder(for: record.session)
+        let url = store.address(of: folder + HistoryKeys.page)
+        // The chat goes up before anything is asked of a model: a store that can't be reached (an expired sign-in)
+        // then fails here, having cost nothing, however many times it is tried again. It also goes up before its
+        // cards, so a reader that syncs in between never finds cards whose chat isn't there.
+        var earlier: [ChangeCard] = []
+        if !dryRun {
+            earlier = ((try? store.get(folder + HistoryKeys.cards)) ?? nil)
+                .flatMap { try? HistoryCoding.decode(CardFile.self, from: $0) }?.cards ?? []
+            try store.put(try HistoryCoding.encode(record), key: folder + HistoryKeys.chat, contentType: "application/json")
+        }
+
         let writer = CardWriter(model: config.useModel ? model : nil, modelName: config.cardModel)
-        let written = writer.cards(for: record)
+        let written = writer.cards(for: record, earlier: earlier)
         notes += written.failures.map { "The model couldn't write a card (\($0)); the chat's own words were used." }
         if config.useModel, model == nil {
             notes.append("No Claude API key was found, so cards come from the chat's own words.")
         }
 
-        let folder = HistoryKeys.folder(for: record.session)
-        let url = store.address(of: folder + HistoryKeys.page)
         let episodes = Episodes.split(record)
         let cardFile = CardFile(session: record.session, url: url, commits: record.commits,
                                 touches: Episodes.touches(in: record, episodes: episodes), cards: written.cards)
@@ -76,8 +89,6 @@ public struct HistoryPipeline: Sendable {
                             cards: written.cards, commits: record.commits.count, pullRequests: [], notes: notes)
         if dryRun { return .stored(stored) }
 
-        // The chat first and the cards last: a reader that syncs between the two never sees cards without a chat.
-        try store.put(try HistoryCoding.encode(record), key: folder + HistoryKeys.chat, contentType: "application/json")
         try store.put(Data(HistoryPage.render(record, cards: written.cards).utf8), key: folder + HistoryKeys.page,
                       contentType: "text/html; charset=utf-8")
         let cardData = try HistoryCoding.encode(cardFile)
@@ -88,14 +99,15 @@ public struct HistoryPipeline: Sendable {
         try index.upsert(cardFile, folder: folder, revision: "local")
 
         var ledger = CaptureLedger.load(from: paths.historyLedger)
-        if let attributes = try? FileManager.default.attributesOfItem(atPath: path),
-           let modified = attributes[.modificationDate] as? Date, let size = (attributes[.size] as? NSNumber)?.intValue {
+        if let modified = before?[.modificationDate] as? Date, let size = (before?[.size] as? NSNumber)?.intValue {
             ledger.captured["\(chat.agent):\(chat.sessionID)"] = .init(size: size, modified: modified, capturedAt: now(),
                                                                        repo: place.repo, folder: folder)
             try ledger.save(to: paths.historyLedger)
         }
 
-        if postLinks, entry.postLinks, let url, url.hasPrefix("https://") {
+        // Only where the repository is on GitHub (named owner/name, with no other host in front).
+        if postLinks, entry.postLinks, let url, url.hasPrefix("https://"),
+           record.session.repo.split(separator: "/").count == 2 {
             let links = PullRequestLinks(shell: shell)
             let numbers = links.pullRequests(for: record, recorded: chat.pullRequests)
             let changed = written.cards.filter { !$0.files.isEmpty }.count

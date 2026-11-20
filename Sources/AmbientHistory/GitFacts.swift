@@ -19,28 +19,44 @@ public struct GitFacts: Sendable {
         return git(["rev-parse", "--show-toplevel"], in: folder).map(Self.trimmed).flatMap { $0.isEmpty ? nil : $0 }
     }
 
-    /// "owner/name" from the `origin` remote, for any host; nil without one.
+    /// The repository's name from its `origin` remote: "owner/name" on GitHub, "host/owner/name" anywhere else, so
+    /// two repositories that share an owner and a name on different hosts stay two. Nil without a remote.
     public func slug(of root: String) -> String? {
         git(["remote", "get-url", "origin"], in: root).flatMap { Self.slug(fromRemote: Self.trimmed($0)) }
     }
 
-    /// `git@github.com:owner/name.git`, `https://github.com/owner/name`, `ssh://git@host:22/owner/name.git`.
+    /// `git@github.com:owner/name.git`, `https://github.com/owner/name`, `ssh://git@host:22/group/name.git`.
     static func slug(fromRemote url: String) -> String? {
-        var rest = url
-        if let scheme = rest.range(of: "://") {
-            rest = String(rest[scheme.upperBound...])
+        var host: String
+        var path: String
+        if let scheme = url.range(of: "://") {
+            let rest = url[scheme.upperBound...]
             guard let slash = rest.firstIndex(of: "/") else { return nil }
-            rest = String(rest[rest.index(after: slash)...])
-        } else if let colon = rest.firstIndex(of: ":") {
-            rest = String(rest[rest.index(after: colon)...])
+            host = String(rest[..<slash])
+            path = String(rest[rest.index(after: slash)...])
+        } else if let colon = url.firstIndex(of: ":"), !url.hasPrefix("/") {
+            host = String(url[..<colon])
+            path = String(url[url.index(after: colon)...])
         } else {
             return nil
         }
-        if rest.hasSuffix(".git") { rest = String(rest.dropLast(4)) }
-        let parts = rest.split(separator: "/").map(String.init)
-        guard parts.count >= 2 else { return nil }
-        let slug = parts.suffix(2).joined(separator: "/")
-        return slug.range(of: "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$", options: .regularExpression) == nil ? nil : slug
+        // "user@host:port" names the host in the middle.
+        if let at = host.lastIndex(of: "@") { host = String(host[host.index(after: at)...]) }
+        if let port = host.firstIndex(of: ":") { host = String(host[..<port]) }
+        if path.hasSuffix(".git") { path = String(path.dropLast(4)) }
+        let parts = path.split(separator: "/").map(String.init)
+        guard parts.count >= 2, !host.isEmpty else { return nil }
+        let name = parts.suffix(2).joined(separator: "/")
+        let slug = host.lowercased() == "github.com" ? name : host.lowercased() + "/" + name
+        return slug.range(of: "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+){1,2}$", options: .regularExpression) == nil ? nil : slug
+    }
+
+    /// True when the repository has a branch of this name, here or on `origin`.
+    public func hasBranch(_ name: String, in root: String) -> Bool {
+        guard name.range(of: "^[A-Za-z0-9._/-]+$", options: .regularExpression) != nil, !name.contains("..") else { return false }
+        return ["refs/heads/", "refs/remotes/origin/"].contains {
+            shell("git", ["rev-parse", "--verify", "--quiet", $0 + name], in: root).succeeded
+        }
     }
 
     public func branch(of root: String) -> String? {

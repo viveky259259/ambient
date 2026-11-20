@@ -67,6 +67,8 @@ public struct Shell: Sendable {
         let errReader = Thread { errData.set(err.fileHandleForReading.readDataToEndOfFile()) }
         errReader.start()
         if let input {
+            // A tool that exits without reading its input must cost a failed write, not the whole process.
+            _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
             DispatchQueue.global().async {
                 try? stdin.fileHandleForWriting.write(contentsOf: input)
                 try? stdin.fileHandleForWriting.close()

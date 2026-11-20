@@ -58,6 +58,38 @@ private let written = #"{"summary":"Tasks expire after three days.","why":"Nothi
         #expect(CardWriter(model: refusing).cards(for: Sample.record).failures == ["Request 1: The model declined to answer."])
     }
 
+    @Test func aChatStoredAgainOnlyAsksAboutWhatIsNew() {
+        let model = FakeModel(fallback: written)
+        var earlier = CardWriter(model: model).cards(for: Sample.record).cards
+        #expect(model.requests.count == 1)
+        earlier[0].why = "Kept from the first time."
+
+        // The chat picked up again: one more request, with a tool call.
+        var grown = Sample.record
+        grown.events.append(ChatEvent(n: 11, kind: .user, text: "Now make it five days."))
+        grown.events.append(ChatEvent(n: 12, kind: .tool, text: "ls", tool: "Bash"))
+        grown.events.append(ChatEvent(n: 13, kind: .agent, text: "Five days it is."))
+        let again = FakeModel(fallback: #"{"summary":"Five days.","why":"Asked.","rejected":"","verified":"","evidence":[13]}"#)
+        let result = CardWriter(model: again).cards(for: grown, earlier: earlier)
+        #expect(again.requests.count == 1)
+        #expect(again.requests.first?.user.contains("Now make it five days.") == true)
+        #expect(result.cards.map(\.why) == ["Kept from the first time.", "", "Asked."])
+        #expect(result.cards[0].source == "claude-haiku-5-5")
+
+        // A request whose events changed is asked about again, and a card taken from the chat's words is never kept.
+        var changed = Sample.record
+        changed.events.insert(ChatEvent(n: 0, kind: .agent, text: "One more thing."), at: 8)
+        for index in changed.events.indices { changed.events[index].n = index + 1 }
+        let third = FakeModel(fallback: written)
+        _ = CardWriter(model: third).cards(for: changed, earlier: earlier)
+        #expect(third.requests.count == 1)
+        var extract = earlier
+        extract[0].source = "extract"
+        let fourth = FakeModel(fallback: written)
+        _ = CardWriter(model: fourth).cards(for: Sample.record, earlier: extract)
+        #expect(fourth.requests.count == 1)
+    }
+
     @Test func aLongRequestIsCutToFitByDroppingOutputFirst() {
         var record = Sample.record
         record.events[4].text = String(repeating: "noise ", count: 5_000)

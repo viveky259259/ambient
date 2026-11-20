@@ -216,6 +216,31 @@ private final class World {
         #expect(asked.values == [false, true])
     }
 
+    @Test func opensAPageMadeHereNotTheOneInTheStore() throws {
+        final class Opened: @unchecked Sendable { var files: [String] = [] }
+        let opened = Opened()
+        let world = try World()
+        var command = world.command
+        command.shell = Shell { tool, arguments, folder, input in
+            if tool == "open" {
+                opened.files += arguments
+                return Shell.Output(status: 0)
+            }
+            return Shell.system(tool, arguments, in: folder, input: input)
+        }
+        #expect(command.run(["setup", "--store", world.store]) == 0)
+        #expect(command.run(["capture", "--transcript", world.transcript, "--no-model"]) == 0)
+        // Someone with access to the store swaps the page for one that runs a script.
+        let stored = try FolderStore(root: world.store).list(prefix: "").first { $0.key.hasSuffix("page.html") }
+        let key = try #require(stored?.key)
+        try FolderStore(root: world.store).put(Data("<script>alert('from the store')</script>".utf8), key: key, contentType: "text/html")
+        #expect(command.run(["open", "sess"]) == 0)
+        let file = try #require(opened.files.first)
+        let page = try String(contentsOfFile: file, encoding: .utf8)
+        #expect(page.contains("The board is slow. Fix it.") && !page.contains("from the store"))
+        #expect(file.hasPrefix(world.paths.historyHome.path))
+    }
+
     @Test func answersFromTheLastSyncWhenTheStoreIsAway() throws {
         let world = try World()
         let command = world.command
@@ -296,6 +321,11 @@ private final class World {
         let read = try call(server, "history_read", ["session": "sess-0001", "from": 2, "to": 3, "project": world.repo])
         #expect(!read.isError && read.text.hasPrefix("[2] TOOL Edit: Sources/Board.swift") && read.text.contains("[3] TOOL Bash"))
         #expect(try call(server, "history_read", ["session": "sess-0001", "from": 3, "to": 2, "project": world.repo]).isError)
+        // One bound alone still narrows it.
+        let tail = try call(server, "history_read", ["session": "sess-0001", "from": 4, "project": world.repo])
+        #expect(tail.text.hasPrefix("[4] RESULT") && !tail.text.contains("[1] USER"))
+        let head = try call(server, "history_read", ["session": "sess-0001", "to": 1, "project": world.repo])
+        #expect(head.text.hasPrefix("[1] USER") && !head.text.contains("[2] TOOL"))
         #expect(try call(server, "history_read", ["session": "nope", "project": world.repo]).isError)
         #expect(try call(server, "history_why", ["project": world.repo]).text == "path is required.")
         #expect(try call(server, "history_search", ["project": world.repo]).text == "query is required.")

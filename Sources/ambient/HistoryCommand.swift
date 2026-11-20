@@ -164,7 +164,7 @@ struct HistoryCommand {
         }
         // A repository is known by its remote's OWNER/NAME, never by its folder's name: two unrelated folders can
         // share a name, and one's chats must not end up in the other's store.
-        guard context.repo.range(of: "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$", options: .regularExpression) != nil else {
+        guard context.repo.range(of: "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+){1,2}$", options: .regularExpression) != nil else {
             throw HistoryError.message("This repository has no `origin` remote to name it by. Add one, or name it with --repo OWNER/NAME.")
         }
         guard let location = options.values["--store"] else {
@@ -562,16 +562,19 @@ struct HistoryCommand {
     private func open(_ args: [String]) throws -> Int32 {
         guard let name = args.first else { throw HistoryError.message("Say which chat: ambient history open SESSION") }
         let context = context()
-        guard let store = context.store else { throw notSetUp(context) }
+        guard context.config.repos[context.repo] != nil else { throw notSetUp(context) }
         let index = try index(for: context)
         let session = try session(named: name, in: context, index: index)
-        guard let data = try store.get(session.folder + HistoryKeys.page) else {
-            throw HistoryError.message("That chat's page isn't in the store.")
+        guard let record = chat(session, in: context) else {
+            throw HistoryError.message("The chat couldn't be fetched from the store.")
         }
+        // The page is made here from the chat's record, with everything in it escaped. The store's own page.html is
+        // never opened: anyone who can write to the store could have put a script in it.
+        let cards = try index.cards(inSession: session.key).map(\.card)
         let file = paths.historyFolder(for: context.repo).appendingPathComponent("pages", isDirectory: true)
             .appendingPathComponent(Self.fileName(for: session) + ".html")
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try data.write(to: file, options: .atomic)
+        try Data(HistoryPage.render(record, cards: cards).utf8).write(to: file, options: .atomic)
         _ = shell("open", [file.path])
         out.success("Opened \(file.path)")
         return 0

@@ -319,7 +319,10 @@ struct MCPServer {
             default:
                 guard let session = arguments["session"] as? String, !session.isEmpty else { return ("session is required.", true) }
                 var range: ClosedRange<Int>?
-                if let from = (arguments["from"] as? NSNumber)?.intValue, let to = (arguments["to"] as? NSNumber)?.intValue {
+                let first = (arguments["from"] as? NSNumber)?.intValue, last = (arguments["to"] as? NSNumber)?.intValue
+                if first != nil || last != nil {
+                    // One bound alone still narrows it: from there on, or up to there.
+                    let from = first ?? max(1, (last ?? 1) - 400), to = last ?? (from + 400)
                     guard from >= 1, from <= to else { return ("from and to are event numbers, from first.", true) }
                     range = from...min(to, from + 400)
                 }

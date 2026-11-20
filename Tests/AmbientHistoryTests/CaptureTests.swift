@@ -7,7 +7,10 @@ import Testing
 
     @Test(arguments: [
         ("git@github.com:acme/widgets.git", "acme/widgets"), ("https://github.com/acme/widgets", "acme/widgets"),
-        ("https://github.com/acme/widgets.git", "acme/widgets"), ("ssh://git@gitlab.example.com:22/group/sub/widgets.git", "sub/widgets"),
+        ("https://github.com/acme/widgets.git", "acme/widgets"), ("https://GitHub.com/acme/widgets", "acme/widgets"),
+        // Anywhere else the host is part of the name, so the same owner and name on two hosts stay two repositories.
+        ("ssh://git@gitlab.example.com:22/group/sub/widgets.git", "gitlab.example.com/sub/widgets"),
+        ("git@gitlab.internal:acme/widgets.git", "gitlab.internal/acme/widgets"),
         ("/local/path/widgets", nil), ("https://github.com/widgets", nil), ("git@github.com:acme/wid gets.git", nil),
     ] as [(String, String?)])
     func readsTheRepositoryNameFromItsRemote(_ url: String, _ slug: String?) {
@@ -233,13 +236,104 @@ import Testing
         #expect(record.commits.first?.files == ["far/away.txt"])
     }
 
+    @Test func uncommittedWorkComesFromTheCheckoutTheChatEditedIn() throws {
+        let repo = try Repo()
+        try repo.commit("a.txt", "one\n", message: "a", at: Date().addingTimeInterval(-3_600))
+        let worktree = repo.root + "-wt"
+        try repo.git("worktree", "add", "-q", "-b", "feat/x", worktree)
+        defer { try? FileManager.default.removeItem(atPath: worktree) }
+        // Someone else's uncommitted line in the main checkout; the chat's own edit is in the worktree.
+        try repo.scratch.write("one\nsomeone else\n", to: "a.txt")
+        try Data("one\nthe chat's line\n".utf8).write(to: URL(fileURLWithPath: worktree + "/a.txt"))
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: Date(), kind: .user, text: "edit it in the worktree", folder: repo.root),
+            .init(at: Date(), kind: .tool, text: worktree + "/a.txt", tool: "Edit", diff: "+the chat's line",
+                  paths: [FileTouch(path: worktree + "/a.txt", how: .edit)], callID: "c1", folder: worktree),
+            .init(at: Date(), kind: .result, text: "Updated.", callID: "c1"),
+        ], pullRequests: [])
+        let record = Capture(git: GitFacts(), home: "/Users/pat").record(from: chat, now: Date())
+        #expect(record.events[1].touches == [FileTouch(path: "a.txt", how: .edit)])
+        let uncommitted = try #require(record.uncommitted)
+        #expect(uncommitted.contains("+the chat's line"))
+        #expect(!uncommitted.contains("someone else"))
+    }
+
+    @Test func aCommandThatOnlyReadsAFileNeverChangedIt() throws {
+        let repo = try Repo()
+        let earlier = Date().addingTimeInterval(-3_600)
+        try repo.commit("b.txt", "one\n", message: "b", at: earlier)
+        try repo.commit("out.txt", "old\n", message: "out", at: earlier)
+        let began = Date()
+        // Someone else commits b.txt just after the chat grepped it, and the chat's redirect target changes too.
+        let theirs = try repo.commit("b.txt", "two\n", message: "feat: theirs")
+        try repo.scratch.write("new\n", to: "out.txt")
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: began, kind: .user, text: "look for it", folder: repo.root),
+            .init(at: began, kind: .tool, text: "grep -n one b.txt > out.txt && git commit -qm 'chore: note' --allow-empty",
+                  tool: "Bash", callID: "c1", folder: repo.root),
+            .init(at: Date(), kind: .result, text: "", callID: "c1"),
+        ], pullRequests: [])
+        let record = Capture(git: GitFacts(), home: "/Users/pat").record(from: chat, now: Date())
+        // The redirect's target was written; the file that was only read was not, whoever committed it since.
+        #expect(record.events[1].touches == [FileTouch(path: "out.txt", how: .shell), FileTouch(path: "b.txt", how: .read)])
+        // And a commit of a file the chat only read isn't the chat's.
+        #expect(!record.commits.map(\.sha).contains(theirs))
+    }
+
+    @Test func aShellEditCountsOnlyIfCommittedSoonAfterTheChat() throws {
+        let repo = try Repo()
+        try repo.commit("a.txt", "one\n", message: "a", at: Date().addingTimeInterval(-7_200))
+        let chatTime = Date().addingTimeInterval(-3_600)
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: chatTime, kind: .user, text: "change it", folder: repo.root),
+            .init(at: chatTime, kind: .tool, text: "sed -i '' 's/one/two/' a.txt", tool: "Bash", callID: "c1", folder: repo.root),
+        ], pullRequests: [])
+        var capture = Capture(git: GitFacts(), home: "/Users/pat")
+        // Committed by someone an hour after the chat ended: too late to be the chat's edit.
+        try repo.commit("a.txt", "three\n", message: "later")
+        #expect(capture.record(from: chat, now: Date()).events[1].touches == [FileTouch(path: "a.txt", how: .read)])
+        capture.commitGrace = 7_200
+        #expect(capture.record(from: chat, now: Date()).events[1].touches == [FileTouch(path: "a.txt", how: .shell)])
+    }
+
+    @Test func aChatFromARemovedWorktreeStillBelongsToItsRepository() throws {
+        let repo = try Repo()
+        try repo.commit("a.txt", "one\n", message: "a", at: Date().addingTimeInterval(-3_600))
+        try repo.git("branch", "feat/gone")
+        let gone = repo.root + "/.claude/worktrees/gone"
+        func chat(branch: String?, folder: String = gone) -> RawChat {
+            RawChat(sessionID: "s", agent: "claude", title: "t", folder: folder, branch: branch, events: [
+                .init(at: Date(), kind: .user, text: "edit", folder: folder),
+                .init(at: Date(), kind: .tool, text: folder + "/a.txt", tool: "Edit", diff: "+x",
+                      paths: [FileTouch(path: folder + "/a.txt", how: .edit)], callID: "c1", folder: folder),
+            ], pullRequests: [])
+        }
+        let capture = Capture(git: GitFacts(), home: "/Users/pat")
+        let place = capture.place(of: chat(branch: "feat/gone"))
+        #expect(place.repo == "acme/widgets" && !place.ownCheckout && place.root != nil)
+        let record = capture.record(from: chat(branch: "feat/gone"), now: Date())
+        // Its file is the repository's own, not a file of the main checkout called ".claude/worktrees/…".
+        #expect(record.events[1].touches == [FileTouch(path: "a.txt", how: .edit)])
+        // The main checkout's uncommitted work isn't the removed worktree's.
+        try repo.scratch.write("someone else\n", to: "a.txt")
+        #expect(capture.record(from: chat(branch: "feat/gone"), now: Date()).uncommitted == nil)
+
+        // Without a branch of its own that the repository knows, the folder may have been anything.
+        #expect(capture.place(of: chat(branch: "main")).repo == "gone")
+        #expect(capture.place(of: chat(branch: "feat/unknown")).repo == "gone")
+        #expect(capture.place(of: chat(branch: nil)).repo == "gone")
+        // And a folder that was never inside the repository is never taken for it.
+        let outside = (repo.root as NSString).deletingLastPathComponent + "/elsewhere-\(UUID().uuidString)"
+        #expect(capture.place(of: chat(branch: "feat/gone", folder: outside)).root == nil)
+    }
+
     @Test func aChatWhoseFolderIsGoneIsStillRecorded() {
         let capture = Capture(git: GitFacts(), home: "/Users/pat")
         let chat = RawChat(sessionID: "s", agent: "claude", title: "Gone", folder: "/Users/pat/removed/widgets", branch: nil, events: [
             .init(at: Sample.at(0), kind: .user, text: "edit /Users/pat/removed/widgets/src/app/main.py", folder: "/Users/pat/removed/widgets"),
             .init(at: Sample.at(1), kind: .tool, text: "sed -i '' 's/a/b/' src/app/main.py", tool: "Bash", folder: "/Users/pat/removed/widgets"),
         ], pullRequests: [])
-        #expect(capture.place(of: chat) == .init(root: nil, repo: "widgets"))
+        #expect(capture.place(of: chat) == .init(root: nil, repo: "widgets", ownCheckout: false))
         let record = capture.record(from: chat, now: Sample.at(100))
         #expect(record.session.repo == "widgets")
         #expect(record.commits.isEmpty && record.uncommitted == nil)

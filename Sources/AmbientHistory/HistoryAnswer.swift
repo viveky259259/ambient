@@ -89,11 +89,22 @@ public struct HistoryAnswerer {
                                      : "The model is turned off, so these are the cards as stored.")
         }
         let cards = Self.cardText(hits)
+        // A model that fails (the network, a limit, an answer cut short) costs the written answer, never the
+        // question: the cards that were found are still shown.
+        func fallback(_ error: Error) -> HistoryAnswer {
+            HistoryAnswer(text: Self.plain(hits), depth: .cards, sources: hits,
+                          note: "The model couldn't answer (\(error)), so these are the cards as stored.")
+        }
         var need: [Int] = []
         if !deep {
-            let reply = try model.answer(ModelRequest(model: config.cardModel, system: Self.quickInstructions,
+            let reply: String
+            do {
+                reply = try model.answer(ModelRequest(model: config.cardModel, system: Self.quickInstructions,
                                                       user: "Question: \(question)\n\n\(cards)", schema: Self.quickSchema,
                                                       effort: "low", maxTokens: 4_000))
+            } catch {
+                return fallback(error)
+            }
             let parsed = Self.parse(reply)
             if parsed.sufficient || parsed.need.isEmpty && parsed.cited.isEmpty {
                 return HistoryAnswer(text: parsed.answer, depth: .quick, sources: Self.pick(parsed.cited, from: hits), note: nil)
@@ -127,9 +138,15 @@ public struct HistoryAnswerer {
             }
         }
         let redacted = Redactor(home: NSHomeDirectory()).clean(context)
-        let reply = try model.answer(ModelRequest(model: config.answerModel, system: Self.deepInstructions,
+        let reply: String
+        do {
+            // Room for the model's thinking as well as its answer: both count against this.
+            reply = try model.answer(ModelRequest(model: config.answerModel, system: Self.deepInstructions,
                                                   user: "Question: \(question)\n\n\(cards)\(redacted)",
-                                                  schema: Self.deepSchema, effort: "medium", maxTokens: 8_000))
+                                                  schema: Self.deepSchema, effort: "medium", maxTokens: 16_000))
+        } catch {
+            return fallback(error)
+        }
         let parsed = Self.parse(reply)
         return HistoryAnswer(text: parsed.answer, depth: .deep, sources: Self.pick(parsed.cited, from: hits),
                              note: context.isEmpty ? "The chats couldn't be fetched, so this rests on the cards alone." : nil)

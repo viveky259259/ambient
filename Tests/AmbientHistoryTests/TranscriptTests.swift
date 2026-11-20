@@ -168,9 +168,13 @@ private func results(_ blocks: [[String: Any]], uuid: String, at: String, extra:
 }
 
 @Suite struct PathFinderTests {
+    /// Only these folders are on disk; everything else a path names is gone.
+    private static let onDisk: Set<String> = ["/repo", "/repo/.claude/worktrees/w1", "/Users/pat/other-project", "/tmp/scratch",
+                                              "/repo/backup"]
     private let finder = PathFinder(roots: ["/repo", "/repo/.claude/worktrees/w1"], home: "/Users/pat",
                                     known: ["Sources/Board.swift", "Sources/Deep/Card.swift", "Tests/BoardTests.swift",
-                                            "README.md", "a/Card.swift"])
+                                            "README.md", "a/Card.swift"],
+                                    exists: { PathFinderTests.onDisk.contains($0) })
 
     @Test(arguments: [
         ("/repo/Sources/Board.swift", nil, "Sources/Board.swift"),
@@ -179,18 +183,55 @@ private func results(_ blocks: [[String: Any]], uuid: String, at: String, extra:
         ("../README.md", "/repo/Sources", "README.md"),
         // Another worktree of the same repository names the same file.
         ("/repo/.claude/worktrees/w1/Sources/Board.swift", nil, "Sources/Board.swift"),
-        // So does a checkout that is gone, or a sibling clone: the tracked tail wins.
-        ("/Users/pat/old-clone/Sources/Board.swift", nil, "Sources/Board.swift"),
+        // So does a worktree that has been removed, inside the checkout or beside it.
+        ("/repo/.claude/worktrees/gone/Sources/Board.swift", nil, "Sources/Board.swift"),
+        ("/repo-qa/Sources/Board.swift", nil, "Sources/Board.swift"),
+        // Another project is never this repository, however its files are named.
+        ("/Users/pat/other-project/README.md", nil, "~/other-project/README.md"),
+        ("/Users/pat/other-project/Sources/Board.swift", nil, "~/other-project/Sources/Board.swift"),
+        ("/tmp/scratch/README.md", nil, "/tmp/scratch/README.md"),
+        // Nor is a folder that is gone and was nowhere near the repository's checkouts.
+        ("/Users/pat/deleted/Sources/Board.swift", nil, "~/deleted/Sources/Board.swift"),
+        // A copy kept inside the checkout is its own file.
+        ("/repo/backup/Sources/Board.swift", nil, "backup/Sources/Board.swift"),
         ("~/notes/todo.md", nil, "~/notes/todo.md"),
         ("/Users/pat/notes/todo.md", nil, "~/notes/todo.md"),
         ("/etc/hosts", nil, "/etc/hosts"),
         // Worked out from the text alone, so a file that no longer exists is named the same way.
         ("/repo/./Sources//Deleted/../Gone.swift", nil, "Sources/Gone.swift"),
-        ("/private/tmp/x/Sources/Board.swift", nil, "Sources/Board.swift"),
+        ("/private/tmp/x/Sources/Board.swift", nil, "/tmp/x/Sources/Board.swift"),
         ("/private/var/data.bin", nil, "/var/data.bin"),
     ] as [(String, String?, String)])
     func namesEachFileOneWay(_ path: String, _ folder: String?, _ expected: String) {
         #expect(finder.relative(path, from: folder) == expected)
+    }
+
+    @Test func saysWhichCheckoutAFileIsIn() {
+        #expect(finder.locate("/repo/Sources/Board.swift", from: nil) == .init(root: "/repo", path: "Sources/Board.swift"))
+        #expect(finder.locate("Sources/Board.swift", from: "/repo/.claude/worktrees/w1")
+            == .init(root: "/repo/.claude/worktrees/w1", path: "Sources/Board.swift"))
+        #expect(finder.locate("/repo/.claude/worktrees/gone/README.md", from: nil) == .init(root: nil, path: "README.md"))
+        #expect(finder.locate("/repo/New.swift", from: nil) == .init(root: "/repo", path: "New.swift"))
+        #expect(finder.located(in: "cat README.md", from: "/repo/.claude/worktrees/w1").map(\.root) == ["/repo/.claude/worktrees/w1"])
+    }
+
+    @Test func aFileInAnotherProjectIsNotNamedInTextEither() {
+        #expect(finder.paths(in: "see /Users/pat/other-project/README.md and ~/other-project/Sources/Board.swift", from: "/repo").isEmpty)
+        #expect(finder.paths(in: "see other-project/README.md", from: "/Users/pat").isEmpty)
+        // Given from the repository's root while in a subfolder, or with a diff's prefix, it is the repository's.
+        #expect(finder.paths(in: "Sources/Board.swift b/README.md", from: "/repo/Tests") == ["Sources/Board.swift", "README.md"])
+    }
+
+    @Test(arguments: [
+        ("grep -n one b.txt > /tmp/out.txt", PathFinder.Writing.only(["/tmp/out.txt"])),
+        ("cat > Sources/New.swift <<'EOF'\nlet a: Int -> Void\nEOF", .only(["Sources/New.swift"])),
+        ("echo x >> \"my log.txt\"; echo y > 'b.txt'", .only(["my log.txt", "b.txt"])),
+        ("sed -i '' 's/a/b/' f.swift > /dev/null", .anything),
+        ("python3 - <<'EOF'\nopen(p,'w').write(s)\nEOF", .anything),
+        ("swift build 2>&1 | tail -5", .nothing), ("swift test 2> errors.log", .nothing),
+    ] as [(String, PathFinder.Writing)])
+    func tellsWhatACommandWritesTo(_ command: String, _ writing: PathFinder.Writing) {
+        #expect(PathFinder.writing(command) == writing, "\(command)")
     }
 
     @Test func findsFilesNamedInACommand() {

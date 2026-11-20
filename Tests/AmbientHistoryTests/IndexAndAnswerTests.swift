@@ -292,6 +292,56 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
         #expect(!fake.calls[before...].contains { $0.tool == "gh" })
     }
 
+    @Test func aStoreThatIsDownCostsNoModelCalls() throws {
+        let repo = try Repo()
+        try repo.commit("a.txt", "one\n", message: "a")
+        let (home, transcript) = try home(for: repo)
+        let fake = FakeShell()
+        fake.when("aws", containing: "get-object", status: 254, stderr: "An error occurred (NoSuchKey)")
+        fake.when("aws", containing: "put-object", status: 255, stderr: "Error when retrieving token from sso: Token has expired")
+        let shell = Shell { tool, arguments, folder, input in
+            tool == "git" ? Shell.system(tool, arguments, in: folder, input: input) : fake.shell(tool, arguments, in: folder, input: input)
+        }
+        let model = FakeModel()
+        var pipeline = pipeline(home: home, store: "s3://team-history/agent", model: model, shell: shell)
+        pipeline.config.repos["acme/widgets"]?.region = "eu-north-1"
+        #expect { try pipeline.capture(transcript: transcript) } throws: { "\($0)".contains("Token has expired") }
+        // The upload is tried before any card is written, so an expired sign-in, retried every hour, costs nothing.
+        #expect(model.requests.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: pipeline.paths.historyLedger.path))
+    }
+
+    @Test func aRepositoryOnAnotherHostGetsNoPullRequestComment() throws {
+        let repo = try Repo(remote: "git@gitlab.internal:acme/widgets.git")
+        try repo.commit("a.txt", "one\n", message: "a")
+        let (home, transcript) = try home(for: repo)
+        let fake = FakeShell()
+        fake.when("aws", containing: "put-object")
+        let shell = Shell { tool, arguments, folder, input in
+            tool == "git" ? Shell.system(tool, arguments, in: folder, input: input) : fake.shell(tool, arguments, in: folder, input: input)
+        }
+        var config = HistoryConfig()
+        config.repos["gitlab.internal/acme/widgets"] = .init(store: "s3://team-history/agent", region: "eu-north-1")
+        let paths = AmbientPaths(userHome: home.url, home: home.url.appendingPathComponent(".ambient"))
+        let pipeline = HistoryPipeline(paths: paths, config: config, shell: shell)
+        guard case let .stored(stored) = try pipeline.capture(transcript: transcript) else {
+            Issue.record("the chat wasn't stored")
+            return
+        }
+        #expect(stored.folder.hasPrefix("gitlab.internal/acme/widgets/sessions/"))
+        #expect(!fake.calls.contains { $0.tool == "gh" })
+        // The same owner and name on GitHub is a different repository, and isn't set up.
+        let onGitHub = try Repo()
+        try onGitHub.commit("a.txt", "one\n", message: "a")
+        let (otherHome, otherTranscript) = try self.home(for: onGitHub)
+        let other = HistoryPipeline(paths: AmbientPaths(userHome: otherHome.url, home: otherHome.url.appendingPathComponent(".ambient")),
+                                    config: config, shell: shell)
+        guard case .skipped = try other.capture(transcript: otherTranscript) else {
+            Issue.record("a repository on another host was taken for the one set up")
+            return
+        }
+    }
+
     @Test func findsChatsThatWentQuietAfterSetup() throws {
         let repo = try Repo()
         try repo.commit("a.txt", "one\n", message: "a")
@@ -436,6 +486,20 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
         #expect(!deep.user.contains("<chat card=\"C9\">"))
     }
 
+    @Test func aModelThatFailsCostsTheWordsNotTheAnswer() throws {
+        let failing = FakeModel()
+        failing.fail("The model's answer was cut off.")
+        let quick = try answerer(failing).ask("why do finished tasks expire?")
+        #expect(quick.depth == .cards && !quick.sources.isEmpty)
+        #expect(quick.text.contains("Finished tasks now expire") && quick.note?.contains("cut off") == true)
+
+        let deepFailing = FakeModel([#"{"answer":"?","cited":["C1"],"sufficient":false,"need":["C1"]}"#])
+        deepFailing.fail("The Claude API answered 529.")
+        let deep = try answerer(deepFailing).ask("why do finished tasks expire?")
+        #expect(deep.depth == .cards && deep.note?.contains("529") == true)
+        #expect(deepFailing.requests.last?.maxTokens == 16_000)
+    }
+
     @Test func askedToGoDeepItSkipsTheQuickPass() throws {
         let model = FakeModel([#"{"answer":"Deep.","cited":[]}"#])
         let answer = try answerer(model, chat: nil).ask("finished tasks expire", deep: true)
@@ -456,20 +520,26 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
 @Suite struct PullRequestLinkTests {
     @Test func writesOneLinePerChatAndReplacesItsOwn() {
         let line = PullRequestLinks.line(for: Sample.record, url: "https://example.com/x", changes: 1)
-        #expect(line == "- [Board cleanup](https://example.com/x) — claude, 2026-11-18, Test Dev, 1 request changed code <!-- chat:claude:11111111-2222-3333-4444-555555555555 -->")
-        let first = PullRequestLinks.body(adding: line, sessionTag: "<!-- chat:claude:11111111-2222-3333-4444-555555555555 -->", to: nil)
+        #expect(line == "- [claude chat of 2026-11-18](https://example.com/x) — 1 request changed code <!-- chat:claude:11111111-2222-3333-4444-555555555555 -->")
+        let tag = "<!-- chat:claude:11111111-2222-3333-4444-555555555555 -->"
+        let first = PullRequestLinks.body(adding: line, sessionTag: tag, to: nil)
         #expect(first.hasPrefix(PullRequestLinks.marker) && first.contains(line))
-        let other = "- [Other](https://example.com/o) — codex <!-- chat:codex:zzz -->"
+        let other = "- [codex chat of 2026-11-17](https://example.com/o) — 2 requests changed code <!-- chat:codex:zzz -->"
         let existing = first + other + "\n"
         let newer = line.replacingOccurrences(of: "1 request", with: "3 requests")
-        let updated = PullRequestLinks.body(adding: newer, sessionTag: "<!-- chat:claude:11111111-2222-3333-4444-555555555555 -->", to: existing)
+        let updated = PullRequestLinks.body(adding: newer, sessionTag: tag, to: existing)
         #expect(updated.components(separatedBy: "\n").filter { $0.hasPrefix("- ") } == [other, newer])
-        var titled = Sample.record
-        titled.session.title = "Fix [board]\nnow, cc @octocat <!-- chat:x --> `x`"
-        titled.session.developer = "@org/team"
-        let careful = PullRequestLinks.line(for: titled, url: "u", changes: 2)
-        // Free text can't become a link, a mention or a comment tag of its own.
-        #expect(careful.hasPrefix("- [Fix (board) now, cc octocat !-- chat:x -- x](u) — claude, 2026-11-18, org/team, 2 requests"))
+    }
+
+    @Test func thePublicLineSaysNothingTheChatSaid() {
+        var private_ = Sample.record
+        private_.session.title = "Rotate the leaked prod key for @octocat"
+        private_.session.developer = "Pat Example"
+        private_.session.agent = "cl[au]de(x) <b>"
+        private_.session.id = "id --> <!-- chat:x"
+        let line = PullRequestLinks.line(for: private_, url: "u", changes: 2)
+        // A pull request may be public: no title, no name, and nothing free-form that could become markup.
+        #expect(line == "- [claudexb chat of 2026-11-18](u) — 2 requests changed code <!-- chat:claudexb:id----chatx -->")
     }
 
     @Test func findsThePullRequestsHoldingAChatsCommits() {

@@ -21,12 +21,27 @@ public struct CardWriter: Sendable {
         public var failures: [String]
     }
 
-    public func cards(for record: ChatRecord) -> Result {
+    /// - Parameter earlier: the cards from the last time this chat was stored. A request that hasn't changed since
+    ///   keeps the card a model already wrote for it, so a chat that picks up again is only asked about what is new.
+    public func cards(for record: ChatRecord, earlier: [ChangeCard] = []) -> Result {
         let episodes = Episodes.split(record)
         var cards = episodes.map { Episodes.card(for: $0, in: record) }
+        var kept = Set<Int>()
+        for index in cards.indices {
+            guard let old = earlier.first(where: { $0.episode == cards[index].episode }), old.source != "extract",
+                  old.firstEvent == cards[index].firstEvent, old.lastEvent == cards[index].lastEvent,
+                  old.request == cards[index].request else { continue }
+            cards[index].summary = old.summary
+            cards[index].why = old.why
+            cards[index].rejected = old.rejected
+            cards[index].verified = old.verified
+            cards[index].evidence = old.evidence
+            cards[index].source = old.source
+            kept.insert(index)
+        }
         guard let model else { return Result(cards: cards, failures: []) }
 
-        let wanted = episodes.indices.filter { Self.worthAsking(episodes[$0], in: record) }
+        let wanted = episodes.indices.filter { !kept.contains($0) && Self.worthAsking(episodes[$0], in: record) }
         let collected = Collected(count: episodes.count)
         let gate = DispatchSemaphore(value: max(1, parallel))
         let group = DispatchGroup()

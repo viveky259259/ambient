@@ -565,8 +565,8 @@ ambient history ask "why do finished tasks leave the board after three days?"
 ```
 
 It is off until you run `setup` in a repository, and it only ever stores chats that started in a repository you set
-up, which is known by its `origin` remote. A chat is stored whole: if it also worked on files outside that
-repository, what it did there is in the record too. Today it reads Claude Code's chats; other agents' aren't read yet.
+up, which is known by its `origin` remote (`owner/name` on GitHub, with the host in front anywhere else). A chat is
+stored whole: if it also worked on files outside that repository, what it did there is in the record too. Today it reads Claude Code's chats; other agents' aren't read yet.
 
 **What gets stored, and when.** A chat is stored once it is over: when its session ends or its agent exits, or after
 its transcript has been still for 24 hours. If it picks up again later, it is stored again in the same place. Chats
@@ -579,15 +579,19 @@ Each chat becomes three files under `<repo>/sessions/<date>/<agent>-<session>/`:
 | `cards.json` | One card per request: what was asked, what was done, why, what was rejected, how it was checked, the files changed and the commits that carry them |
 | `page.html` | The chat as a page to read, with removed lines in red and added lines in green |
 
-Before anything is written, credentials are blanked (API keys, tokens, private keys, passwords in URLs and in
-`NAME_TOKEN=…` assignments) and your home folder is written as `~`. That is a net, not a guarantee: a secret in a
+Before anything is written, credentials are blanked and your home folder is written as `~`: API keys and tokens
+in their known shapes, private keys, authorization headers, passwords in URLs and after `curl -u`, `NAME_TOKEN=…`
+assignments, and config or JSON fields named like a credential. That is a net, not a guarantee: a secret in a
 shape Ambient doesn't know would be stored, so keep the store private.
 
 **How a chat is tied to the code.** Git is the record of what happened and the chat is the explanation. An edit made
-with the agent's edit tool is stored as its exact diff. A commit made while one of the chat's `git commit` commands
-ran is that chat's. A file named by a shell command counts as changed by it only if git agrees: it was committed
-after the command ran, or still differs from `HEAD` when the chat is stored. What the chat's files still differ from
-`HEAD` by is stored too, so work that was never committed isn't lost.
+with the agent's edit tool is stored as its exact diff, unless the tool said it failed. A commit is a chat's when it
+was made while one of the chat's `git commit` commands ran and it also looks like the chat's: its message is in the
+command, it holds a file the chat changed, or it is a merge the chat ran. A file named by a shell command counts as
+changed by it only if the command could have written it (it edits in place, or the file is where its output goes)
+and git agrees: the file was committed between the command and ten minutes after the chat ended, or still differs
+from `HEAD` in that checkout when the chat is stored. What the chat's files still differ from `HEAD` by is stored
+too, checkout by checkout, so work that was never committed isn't lost.
 
 **Asking.** `ambient history why FILE` needs no model: it lists the requests that changed the file, newest first,
 each with its commit, then the commits no stored chat explains. `ambient history ask` answers in words. With a
@@ -599,10 +603,11 @@ one (`claude-opus-5-5`) read the chats themselves. Without a key, cards are take
 Agents can ask too: `ambient mcp` adds `history_why`, `history_search` and `history_read`, so an agent that is
 debugging can look up why a line is the way it is before changing it.
 
-**Links on pull requests.** With an S3 store, Ambient leaves one comment on each pull request that holds a chat's
-commits, with a line per chat linking to its page in the AWS console. The link shows nothing to anyone without
-access to the bucket, so it is safe on a public repository. `--no-links` at setup turns this off, and
-`ambient history open SESSION` opens the same page from a checkout.
+**Links on pull requests.** With an S3 store and a repository on GitHub, Ambient leaves one comment on each pull
+request that holds a chat's commits, with a line per chat linking to its page in the AWS console. The line gives the
+chat's date, its agent and how many requests changed code, and nothing the chat said: not its title, not who ran
+it. The link shows nothing to anyone without access to the bucket. `--no-links` at setup turns this off.
+`ambient history open SESSION` builds the same page on your Mac from the stored chat and opens it.
 
 S3 is reached through the `aws` command with your own sign-in (`aws login` or `aws sso login`); Ambient holds no AWS
 keys. Each Mac keeps its own index of the cards in `~/.ambient/history/`, built from the store, so a question is
