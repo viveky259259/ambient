@@ -129,6 +129,11 @@ private final class World {
         #expect(try FileManager.default.contentsOfDirectory(atPath: world.store).isEmpty)
         #expect(command.run(["setup"]) == 1)
         #expect(command.run(["setup", "--store", "s3:/typo"]) == 1)
+        // A repository is named by its remote, never by a bare folder name that another folder could share.
+        #expect(command.run(["setup", "--store", world.store, "--repo", "widgets"]) == 1)
+        var elsewhere = command
+        elsewhere.folder = world.base.path
+        #expect(elsewhere.run(["setup", "--store", world.store]) == 1)
         #expect(!FileManager.default.fileExists(atPath: world.paths.historyConfig.path))
     }
 

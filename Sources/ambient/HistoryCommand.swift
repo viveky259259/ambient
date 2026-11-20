@@ -162,6 +162,11 @@ struct HistoryCommand {
         guard context.root != nil || options.values["--repo"] != nil else {
             throw HistoryError.message("Run this inside the repository whose chats you want kept, or name it with --repo OWNER/NAME.")
         }
+        // A repository is known by its remote's OWNER/NAME, never by its folder's name: two unrelated folders can
+        // share a name, and one's chats must not end up in the other's store.
+        guard context.repo.range(of: "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$", options: .regularExpression) != nil else {
+            throw HistoryError.message("This repository has no `origin` remote to name it by. Add one, or name it with --repo OWNER/NAME.")
+        }
         guard let location = options.values["--store"] else {
             throw HistoryError.message("Say where to keep the chats: --store s3://BUCKET[/PREFIX], or a folder's path.")
         }

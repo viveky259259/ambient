@@ -564,8 +564,9 @@ ambient history why Sources/AmbientCore/TaskStore.swift:120    # …or behind on
 ambient history ask "why do finished tasks leave the board after three days?"
 ```
 
-It is off until you run `setup` in a repository, and it only ever stores chats that worked in a repository you set
-up. Today it reads Claude Code's chats; other agents' aren't read yet.
+It is off until you run `setup` in a repository, and it only ever stores chats that started in a repository you set
+up, which is known by its `origin` remote. A chat is stored whole: if it also worked on files outside that
+repository, what it did there is in the record too. Today it reads Claude Code's chats; other agents' aren't read yet.
 
 **What gets stored, and when.** A chat is stored once it is over: when its session ends or its agent exits, or after
 its transcript has been still for 24 hours. If it picks up again later, it is stored again in the same place. Chats
