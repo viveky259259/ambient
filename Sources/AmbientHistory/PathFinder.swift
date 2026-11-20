@@ -130,8 +130,16 @@ public struct PathFinder: Sendable {
     }
 
     private static let commitSign = try? NSRegularExpression(
-        pattern: "(^|[\\s;&|(])git\\s+(-[A-Za-z]\\s+\\S+\\s+)*(commit|merge|cherry-pick|revert|am|rebase)\\b",
+        pattern: "(^|[\\s;&|(])git\\s+(-[A-Za-z]\\s+\\S+\\s+)*(commit|merge|pull|cherry-pick|revert|am|rebase)\\b",
         options: [.anchorsMatchLines])
+
+    private static let mergeSign = try? NSRegularExpression(
+        pattern: "(^|[\\s;&|(])git\\s+(-[A-Za-z]\\s+\\S+\\s+)*(merge|pull)\\b", options: [.anchorsMatchLines])
+
+    /// True when a shell command merges one branch into another.
+    public static func merges(_ command: String) -> Bool {
+        mergeSign?.firstMatch(in: command, range: NSRange(command.startIndex..., in: command)) != nil
+    }
 
     /// True when a shell command could have made a commit.
     public static func commits(_ command: String) -> Bool {

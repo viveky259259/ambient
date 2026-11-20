@@ -167,6 +167,72 @@ import Testing
         #expect(!uncommitted.contains("someone else"))
     }
 
+    @Test func anEditThatFailedChangedNothing() throws {
+        let repo = try Repo()
+        try repo.commit("a.txt", "one\n", message: "a", at: Date().addingTimeInterval(-3_600))
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: Date(), kind: .user, text: "change it", folder: repo.root),
+            .init(at: Date(), kind: .tool, text: repo.root + "/a.txt", tool: "Edit", diff: "-nope\n+two",
+                  paths: [FileTouch(path: repo.root + "/a.txt", how: .edit)], callID: "c1", folder: repo.root),
+            .init(at: Date(), kind: .result, text: "String to replace not found", callID: "c1", failed: true),
+            .init(at: Date(), kind: .tool, text: repo.root + "/a.txt", tool: "Edit", diff: "-one\n+two",
+                  paths: [FileTouch(path: repo.root + "/a.txt", how: .edit)], callID: "c2", folder: repo.root),
+            .init(at: Date(), kind: .result, text: "Updated.", callID: "c2"),
+        ], pullRequests: [])
+        let events = Capture(git: GitFacts(), home: "/Users/pat").record(from: chat, now: Date()).events
+        #expect(events[1].touches == [FileTouch(path: "a.txt", how: .read)])
+        #expect(events[2].failed == true)
+        #expect(events[3].touches == [FileTouch(path: "a.txt", how: .edit)])
+    }
+
+    @Test func aCommitSomeoneElseMadeMeanwhileIsNotThisChats() throws {
+        let repo = try Repo()
+        try repo.commit("mine.txt", "one\n", message: "base", at: Date().addingTimeInterval(-3_600))
+        // A long command: the tests run, then the commit. While it runs, another chat commits an unrelated file.
+        let began = Date()
+        let theirs = try repo.commit("theirs.txt", "x\n", message: "feat: someone else's work")
+        try repo.scratch.write("two\n", to: "mine.txt")
+        try repo.git("commit", "-qam", "fix: mine")
+        let mine = try repo.git("rev-parse", "HEAD")
+        try repo.git("commit", "-q", "--allow-empty", "-m", "chore: an empty marker")
+        let empty = try repo.git("rev-parse", "HEAD")
+        let done = Date()
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: began, kind: .user, text: "fix it", folder: repo.root),
+            .init(at: began, kind: .tool, text: "swift test && sed -i '' 's/one/two/' mine.txt && git commit -qam 'fix: mine'",
+                  tool: "Bash", callID: "c1", folder: repo.root),
+            .init(at: done, kind: .result, text: "", callID: "c1"),
+        ], pullRequests: [])
+        let record = Capture(git: GitFacts(), home: "/Users/pat").record(from: chat, now: Date())
+        #expect(!record.commits.map(\.sha).contains(theirs))
+        #expect(record.commits.map(\.sha).contains(mine))
+        // A commit with no files can only be judged by when it was made.
+        #expect(record.commits.map(\.sha).contains(empty))
+    }
+
+    @Test func aMergeTheChatRanIsItsOwnWhateverItBroughtIn() throws {
+        let repo = try Repo()
+        let earlier = Date().addingTimeInterval(-3_600)
+        try repo.commit("mine.txt", "one\n", message: "base", at: earlier)
+        try repo.git("checkout", "-q", "-b", "other")
+        try repo.commit("far/away.txt", "x\n", message: "feat: elsewhere", at: earlier)
+        try repo.git("checkout", "-q", "main")
+        try repo.commit("mine.txt", "two\n", message: "fix: mine", at: earlier)
+        let began = Date()
+        try repo.git("merge", "-q", "--no-ff", "-m", "Merge branch 'other'", "other")
+        let merge = try repo.git("rev-parse", "HEAD")
+        let chat = RawChat(sessionID: "s", agent: "claude", title: "t", folder: repo.root, branch: nil, events: [
+            .init(at: began, kind: .user, text: "bring main up to date", folder: repo.root),
+            .init(at: began, kind: .tool, text: "git fetch -q; git merge -q --no-ff other", tool: "Bash", callID: "c1", folder: repo.root),
+            .init(at: Date(), kind: .result, text: "", callID: "c1"),
+        ], pullRequests: [])
+        let record = Capture(git: GitFacts(), home: "/Users/pat").record(from: chat, now: Date())
+        // The merge brought in a file the chat never named, and its message isn't in the command: it is still the
+        // chat's, because the chat's command was a merge and the commit is one.
+        #expect(record.commits.map(\.sha) == [merge])
+        #expect(record.commits.first?.files == ["far/away.txt"])
+    }
+
     @Test func aChatWhoseFolderIsGoneIsStillRecorded() {
         let capture = Capture(git: GitFacts(), home: "/Users/pat")
         let chat = RawChat(sessionID: "s", agent: "claude", title: "Gone", folder: "/Users/pat/removed/widgets", branch: nil, events: [

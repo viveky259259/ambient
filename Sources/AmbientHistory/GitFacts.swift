@@ -79,6 +79,14 @@ public struct GitFacts: Sendable {
         return commits.sorted { ($0.at, $0.sha) < ($1.at, $1.sha) }
     }
 
+    /// The merge commits, on any branch, whose committer time is within the window.
+    public func merges(in root: String, from: Date, to: Date) -> Set<String> {
+        guard let output = git(["log", "--all", "--merges", "--since=@\(Int(from.timeIntervalSince1970.rounded(.down)))",
+                                "--until=@\(Int(to.timeIntervalSince1970.rounded(.up)))", "--format=%H"], in: root)
+        else { return [] }
+        return Set(output.split(separator: "\n").map { Self.trimmed(String($0)) }.filter { !$0.isEmpty })
+    }
+
     /// What `files` differ from `HEAD` by right now, including ones git doesn't track yet. Empty when nothing does.
     public func uncommitted(_ files: [String], in root: String, limit: Int = 200_000) -> String {
         guard !files.isEmpty else { return "" }

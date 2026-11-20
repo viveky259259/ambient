@@ -225,8 +225,16 @@ private func results(_ blocks: [[String: Any]], uuid: String, at: String, extra:
         ("git commit -qam 'x'", true), ("git add -A && git commit -q -F - <<'EOF'\nmsg\nEOF", true),
         ("git -C /repo commit -m x", true), ("git merge origin/main", true), ("git cherry-pick abc", true),
         ("git log --grep commit", false), ("echo git commit", true), ("git status", false), ("gh pr merge 3", false),
+        ("git pull --no-rebase origin main", true),
     ] as [(String, Bool)])
     func tellsCommandsThatMayCommit(_ command: String, _ commits: Bool) {
         #expect(PathFinder.commits(command) == commits, "\(command)")
+    }
+
+    @Test func tellsCommandsThatMerge() {
+        #expect(PathFinder.merges("git fetch -q && git merge -q origin/main"))
+        #expect(PathFinder.merges("git -C /repo pull"))
+        #expect(!PathFinder.merges("git commit -m 'merge the lists'"))
+        #expect(!PathFinder.merges("gh pr merge 3"))
     }
 }

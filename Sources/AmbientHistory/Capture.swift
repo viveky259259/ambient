@@ -56,10 +56,12 @@ public struct Capture: Sendable {
         // When each file was last committed, by anyone, since the chat began.
         var lastCommitted: [String: Date] = [:]
         var nearby: [ChatCommit] = []
+        var merges = Set<String>()
         if let root = place.root {
             roots = [root] + worktrees(of: root)
             tracked = git.trackedFiles(in: root)
             nearby = git.commits(in: root, from: started.addingTimeInterval(-2), to: now.addingTimeInterval(2))
+            merges = git.merges(in: root, from: started.addingTimeInterval(-2), to: ended.addingTimeInterval(180))
             for commit in nearby {
                 for file in commit.files where (lastCommitted[file] ?? .distantPast) < commit.at { lastCommitted[file] = commit.at }
             }
@@ -72,8 +74,11 @@ public struct Capture: Sendable {
         var events: [ChatEvent] = []
         var numberOfCall: [String: Int] = [:]
         var resultTime: [String: Date] = [:]
+        // Calls whose tool said they failed: an edit that didn't apply changed nothing.
+        var failedCalls = Set<String>()
         for raw in chat.events where raw.kind == .result {
             if let id = raw.callID, let at = raw.at, resultTime[id] == nil { resultTime[id] = at }
+            if raw.failed, let id = raw.callID { failedCalls.insert(id) }
         }
         for raw in chat.events {
             let n = events.count + 1
@@ -85,7 +90,10 @@ public struct Capture: Sendable {
             case .tool:
                 limit = limits.command
                 if let id = raw.callID, numberOfCall[id] == nil { numberOfCall[id] = n }
-                touches = raw.paths.map { FileTouch(path: finder.relative($0.path, from: raw.folder), how: $0.how) }
+                let failed = raw.callID.map(failedCalls.contains) ?? false
+                touches = raw.paths.map {
+                    FileTouch(path: finder.relative($0.path, from: raw.folder), how: failed && $0.how.changes ? .read : $0.how)
+                }
                 if let first = touches.first, raw.paths.count == 1, raw.text == raw.paths[0].path {
                     event.text = first.path
                 } else if raw.tool == "Bash" {
@@ -140,13 +148,23 @@ public struct Capture: Sendable {
 
         var commits: [ChatCommit] = []
         var taken = Set<String>()
+        let named = Set(events.flatMap { $0.touches ?? [] }.map(\.path))
         for (index, raw) in chat.events.enumerated() where raw.kind == .tool && raw.tool == "Bash"
             && PathFinder.commits(raw.text) {
             guard let at = raw.at else { continue }
             let end = raw.callID.flatMap { resultTime[$0] } ?? at.addingTimeInterval(120)
             // Git keeps whole seconds; the transcript keeps milliseconds.
             let window = at.addingTimeInterval(-1.5)...max(end, at).addingTimeInterval(1.5)
-            for commit in nearby where window.contains(commit.at) && taken.insert(commit.sha).inserted {
+            for commit in nearby where window.contains(commit.at) {
+                // The time alone isn't proof: a command that runs the tests and then commits stays open for
+                // minutes, and another chat in the same checkout may commit meanwhile. So the commit must also
+                // look like this chat's: its message is in the command, or it holds a file this chat named, or it
+                // is a merge and the command merges. A commit with no files has nothing to compare, and is taken
+                // on the time.
+                let merging = merges.contains(commit.sha) && PathFinder.merges(raw.text)
+                let mine = (!commit.subject.isEmpty && raw.text.contains(commit.subject)) || merging
+                    || commit.files.isEmpty || !named.isDisjoint(with: commit.files)
+                guard mine, taken.insert(commit.sha).inserted else { continue }
                 var commit = commit
                 commit.event = index + 1
                 commit.subject = redactor.clean(commit.subject)
