@@ -1,0 +1,46 @@
+name: QA on merge
+
+# When a pull request is merged into main, the QA Mac (a self-hosted runner labelled ambient-qa)
+# runs the scripted QA cases the merge touched, publishes the dashboard and posts to #ambient-qa.
+# See qa/run/README.md.
+#
+# It runs on the push to main, never on pull_request events: the repository is public, and a
+# self-hosted runner must only ever run code that has been merged, never a fork's.
+on:
+  push:
+    branches: [main]
+    paths: ["Sources/**", "Drivers/**", "Voice/Sources/**", "Resources/**", "Package.swift", "qa/**", "scripts/qa-*.ts"]
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Run every scripted case, not only those the last merge touched
+        type: boolean
+        default: false
+
+concurrency:
+  group: qa-on-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    if: github.repository == 'viveky259259/ambient'
+    runs-on: [self-hosted, macOS, ambient-qa]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build, run the cases, report
+        env:
+          QA_ALL: ${{ inputs.all && '1' || '0' }}
+        run: qa/run/on-merge.sh "${{ github.event.before }}"
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: build/qa-results
+          retention-days: 14
