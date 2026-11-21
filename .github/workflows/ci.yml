@@ -28,6 +28,26 @@ jobs:
       - name: Test ambient-remote
         run: REQUIRE_ALL=1 scripts/test-remote-shim.sh
 
+  # The QA cases in qa/cases name the code each one covers. This keeps that map honest (every source
+  # file covered, every path and test name real) and, on a pull request, lists the cases it touches.
+  qa-cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test the selector
+        run: node --test scripts/qa-cases.test.ts
+      - name: Check the cases
+        run: node scripts/qa-cases.ts check
+      - name: Cases for this pull request
+        if: github.event_name == 'pull_request'
+        run: node scripts/qa-cases.ts select --base "origin/${{ github.base_ref }}" --format markdown >> "$GITHUB_STEP_SUMMARY"
+
   build:
     runs-on: macos-15
     timeout-minutes: 30

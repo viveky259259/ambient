@@ -1,0 +1,86 @@
+name: QA
+
+# The QA Mac (a self-hosted runner labelled ambient-qa) runs the scripted QA cases a change touches,
+# publishes the dashboard and posts to #ambient-qa:
+#   - after every merge to main, for what the merge changed;
+#   - on every push to a branch of this repository that has an open pull request, for what the
+#     branch changes against main.
+# See qa/run/README.md.
+#
+# It runs on push events only, never on pull_request events. The repository is public and the
+# runner is this Mac: a push needs write access to this repository, while a pull_request run would
+# execute a fork's own copy of this workflow on it.
+on:
+  push:
+    paths: ["Sources/**", "Drivers/**", "Voice/Sources/**", "Resources/**", "Package.swift", "qa/**", "scripts/qa-*.ts"]
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Run every scripted case, not only those the change touches
+        type: boolean
+        default: false
+
+# One run per branch at a time; a newer push to a pull request's branch replaces the older run.
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # Cheap, on GitHub's runners: decides whether the QA Mac has anything to do.
+  plan:
+    if: github.repository == 'viveky259259/ambient'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      base: ${{ steps.plan.outputs.base }}
+      context: ${{ steps.plan.outputs.context }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ $GITHUB_REF == refs/heads/main ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "base=$BEFORE" >> "$GITHUB_OUTPUT"
+            echo "context=main" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [[ -z $pr && $GITHUB_EVENT_NAME != workflow_dispatch ]]; then
+            echo "No open pull request for $BRANCH; nothing to run."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "base=origin/main" >> "$GITHUB_OUTPUT"
+          echo "context=${pr:+PR #$pr · }$BRANCH" >> "$GITHUB_OUTPUT"
+
+  qa:
+    needs: plan
+    if: needs.plan.outputs.run == 'true'
+    runs-on: [self-hosted, macOS, ambient-qa]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build, run the cases, report
+        env:
+          QA_ALL: ${{ inputs.all && '1' || '0' }}
+          QA_CONTEXT: ${{ needs.plan.outputs.context }}
+          QA_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: qa/run/ci.sh "${{ needs.plan.outputs.base }}"
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: build/qa-results
+          retention-days: 14
