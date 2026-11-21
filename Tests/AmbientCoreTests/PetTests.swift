@@ -80,8 +80,8 @@ private let waiting = Activity.waiting(reason: "permission", message: "Bash: rm 
             let frames = PetArt.frames(species)
             #expect(frames.count == 2)
             for f in frames {
-                #expect(f.body.width == PetArt.bodySize.width, "\(species)")
-                #expect(f.body.height == PetArt.bodySize.height, "\(species)")
+                #expect(f.body.width == 16, "\(species)")
+                #expect(f.body.height == 13, "\(species)")
             }
         }
     }

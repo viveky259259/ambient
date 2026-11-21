@@ -43,6 +43,12 @@ let package = Package(
         // The CLI's own parsing: `ambient mcp`'s JSON-RPC and tools, `ambient task model`'s arguments, and
         // `ambient history` end to end against a folder store.
         .testTarget(name: "AmbientCLITests", dependencies: ["ambient", "AmbientHistory"]),
+        // The app's view models and the logic behind its views, without a window server. See docs/testing/QA-TEST-PLAN.md.
+        .testTarget(
+            name: "AmbientAppTests",
+            dependencies: ["AmbientApp", "AmbientHistory"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ],
     // The libraries and the CLI build in Swift 6 mode; the AppKit app opts into 5 above.
     swiftLanguageModes: [.v5, .v6]
