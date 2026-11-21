@@ -77,7 +77,10 @@ public struct HistoryPipeline: Sendable {
 
         let writer = CardWriter(model: config.useModel ? model : nil, modelName: config.cardModel)
         let written = writer.cards(for: record, earlier: earlier)
-        notes += written.failures.map { "The model couldn't write a card (\($0)); the chat's own words were used." }
+        notes += written.failures.map {
+            $0.hasPrefix("The Claude API turned the key down") ? $0 + " Cards come from the chat's own words until then."
+                : "The model couldn't write a card (\($0)); the chat's own words were used."
+        }
         if config.useModel, model == nil {
             notes.append("No Claude API key was found, so cards come from the chat's own words.")
         }

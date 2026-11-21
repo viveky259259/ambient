@@ -46,6 +46,8 @@ public struct CardWriter: Sendable {
         let gate = DispatchSemaphore(value: max(1, parallel))
         let group = DispatchGroup()
         for index in wanted {
+            // A key the API turned down fails every request the same way: stop asking after the first.
+            if collected.keyRejected != nil { break }
             let episode = episodes[index]
             let request = ModelRequest(model: modelName, system: Self.instructions,
                                        user: Self.prompt(for: episode, in: record, budget: budget),
@@ -55,6 +57,8 @@ public struct CardWriter: Sendable {
                 defer { gate.signal() }
                 do {
                     collected.set(index, .success(try Self.parse(try model.answer(request), episode: episode)))
+                } catch let HistoryError.keyRejected(message) {
+                    collected.reject(message)
                 } catch {
                     collected.set(index, .failure("Request \(episode.n): \(error)"))
                 }
@@ -62,6 +66,19 @@ public struct CardWriter: Sendable {
         }
         group.wait()
 
+        if let rejected = collected.keyRejected {
+            // Said once, not once per request. The cards a model did write before it are kept.
+            for index in wanted {
+                guard case let .success(written)? = collected.get(index) else { continue }
+                cards[index].summary = written.summary.isEmpty ? cards[index].summary : written.summary
+                cards[index].why = written.why
+                cards[index].rejected = written.rejected
+                cards[index].verified = written.verified
+                if !written.evidence.isEmpty { cards[index].evidence = written.evidence }
+                cards[index].source = modelName
+            }
+            return Result(cards: cards, failures: [rejected])
+        }
         var failures: [String] = []
         for index in wanted {
             switch collected.get(index) {
@@ -197,6 +214,20 @@ private final class Collected: @unchecked Sendable {
 
     private let lock = NSLock()
     private var outcomes: [Outcome?]
+    private var rejection: String?
+
+    /// Why the API turned the key down, once it has.
+    var keyRejected: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return rejection
+    }
+
+    func reject(_ message: String) {
+        lock.lock()
+        if rejection == nil { rejection = message }
+        lock.unlock()
+    }
 
     init(count: Int) { outcomes = Array(repeating: nil, count: count) }
 

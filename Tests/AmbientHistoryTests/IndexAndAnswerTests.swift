@@ -500,6 +500,19 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
         #expect(deepFailing.requests.last?.maxTokens == 16_000)
     }
 
+    @Test func withoutAModelOnlyTheLikeliestCardsAreListed() throws {
+        let many = (1...9).map { number -> IndexHit in
+            var hit = try! index().requests(touching: ["Sources/Board.swift"], changesOnly: true)[0]
+            hit.card.episode = number
+            hit.card.request = "Request number \(number)"
+            return hit
+        }
+        let text = HistoryAnswerer.plain(many)
+        #expect(text.contains("Request number 5") && !text.contains("Request number 6"))
+        #expect(text.hasSuffix("… and 4 less likely."))
+        #expect(!HistoryAnswerer.plain(Array(many.prefix(3))).contains("less likely"))
+    }
+
     @Test func askedToGoDeepItSkipsTheQuickPass() throws {
         let model = FakeModel([#"{"answer":"Deep.","cited":[]}"#])
         let answer = try answerer(model, chat: nil).ask("finished tasks expire", deep: true)

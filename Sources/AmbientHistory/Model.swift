@@ -117,6 +117,10 @@ public struct ClaudeAPI: TextModel {
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         guard (200..<300).contains(status) else {
             let message = ((object?["error"] as? [String: Any])?["message"] as? String) ?? "no details"
+            if status == 401 || status == 403 {
+                throw HistoryError.keyRejected("The Claude API turned the key down (\(status): \(message)). "
+                    + "Put a working key in ANTHROPIC_API_KEY or in Ambient's Keychain item.")
+            }
             throw HistoryError.message("The Claude API answered \(status): \(message)")
         }
         guard let object, let content = object["content"] as? [[String: Any]] else {

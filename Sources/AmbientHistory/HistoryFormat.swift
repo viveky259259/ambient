@@ -273,10 +273,13 @@ public enum HistoryCoding {
 
 public enum HistoryError: Error, Equatable, CustomStringConvertible {
     case message(String)
+    /// The model's API turned the key down. Asking again with the same key can only fail the same way.
+    case keyRejected(String)
 
     public var description: String {
         switch self {
         case let .message(text): text
+        case let .keyRejected(text): text
         }
     }
 }

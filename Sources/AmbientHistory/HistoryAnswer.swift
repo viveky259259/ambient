@@ -93,7 +93,7 @@ public struct HistoryAnswerer {
         // question: the cards that were found are still shown.
         func fallback(_ error: Error) -> HistoryAnswer {
             HistoryAnswer(text: Self.plain(hits), depth: .cards, sources: hits,
-                          note: "The model couldn't answer (\(error)), so these are the cards as stored.")
+                          note: "The model couldn't answer (\(error)), so these are the likeliest cards as stored.")
         }
         var need: [Int] = []
         if !deep {
@@ -215,14 +215,15 @@ public struct HistoryAnswerer {
         }.joined(separator: "\n")
     }
 
-    /// The cards as a person reads them, when no model writes an answer.
-    static func plain(_ hits: [IndexHit]) -> String {
-        hits.map { hit in
+    /// The cards as a person reads them, when no model writes an answer: the likeliest few. A model is handed more
+    /// than that because it can tell which ones matter; a person is better served by a short list.
+    static func plain(_ hits: [IndexHit], showing limit: Int = 5) -> String {
+        hits.prefix(limit).map { hit in
             let card = hit.card
             var text = "\(HistoryPage.stamp(card.at ?? hit.chat.session.startedAt).prefix(10))  \(Episodes.clip(card.request.replacingOccurrences(of: "\n", with: " "), 160))"
             if !card.brief.isEmpty { text += "\n  \(card.brief)" }
             if !card.why.isEmpty { text += "\n  Why: \(card.why)" }
             return text
-        }.joined(separator: "\n\n")
+        }.joined(separator: "\n\n") + (hits.count > limit ? "\n\n… and \(hits.count - limit) less likely." : "")
     }
 }

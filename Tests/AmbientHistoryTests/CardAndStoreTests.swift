@@ -90,6 +90,43 @@ private let written = #"{"summary":"Tasks expire after three days.","why":"Nothi
         #expect(fourth.requests.count == 1)
     }
 
+    @Test func aRejectedKeyIsSaidOnceAndStopsTheAsking() throws {
+        #expect(throws: HistoryError.keyRejected("The Claude API turned the key down (401: invalid x-api-key). "
+            + "Put a working key in ANTHROPIC_API_KEY or in Ambient's Keychain item.")) {
+            try ClaudeAPI.text(from: Data(#"{"error":{"message":"invalid x-api-key"}}"#.utf8), status: 401)
+        }
+        /// Turns every request down, as the API does with a bad key.
+        final class Rejecting: TextModel, @unchecked Sendable {
+            private let lock = NSLock()
+            private var count = 0
+            var asked: Int {
+                lock.lock()
+                defer { lock.unlock() }
+                return count
+            }
+            func answer(_ request: ModelRequest) throws -> String {
+                lock.lock()
+                count += 1
+                lock.unlock()
+                throw HistoryError.keyRejected("The Claude API turned the key down (401: invalid x-api-key).")
+            }
+        }
+        var events: [ChatEvent] = []
+        for request in 0..<40 {
+            events.append(ChatEvent(n: events.count + 1, kind: .user, text: "Request \(request)"))
+            events.append(ChatEvent(n: events.count + 1, kind: .tool, text: "ls", tool: "Bash"))
+            events.append(ChatEvent(n: events.count + 1, kind: .agent, text: "Done \(request)."))
+        }
+        let model = Rejecting()
+        var writer = CardWriter(model: model)
+        writer.parallel = 2
+        let result = writer.cards(for: ChatRecord(session: Sample.session, events: events))
+        // One line for the person, not forty; and nowhere near forty requests sent.
+        #expect(result.failures == ["The Claude API turned the key down (401: invalid x-api-key)."])
+        #expect(model.asked < 10)
+        #expect(result.cards.count == 40 && result.cards.allSatisfy { $0.source == "extract" && $0.summary.hasPrefix("Done") })
+    }
+
     @Test func aLongRequestIsCutToFitByDroppingOutputFirst() {
         var record = Sample.record
         record.events[4].text = String(repeating: "noise ", count: 5_000)
@@ -166,6 +203,7 @@ private let written = #"{"summary":"Tasks expire after three days.","why":"Nothi
         (#"{"stop_reason":"max_tokens","content":[{"type":"text","text":"{"}]}"#, 200, "cut off"),
         (#"{"stop_reason":"end_turn","content":[]}"#, 200, "empty"),
         (#"{"type":"error","error":{"type":"invalid_request_error","message":"bad schema"}}"#, 400, "400: bad schema"),
+        (#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#, 401, "turned the key down (401: invalid x-api-key)"),
         ("<html>", 200, "no content"),
     ])
     func turnsABadReplyIntoAnError(_ reply: String, _ status: Int, _ expected: String) {
