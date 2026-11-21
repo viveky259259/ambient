@@ -35,6 +35,7 @@ One file per feature area in `qa/cases/`, each with its own id prefix.
 | [remote.md](cases/remote.md) | `RMT-` | Remote machines over ssh |
 | [memory.md](cases/memory.md) | `MEM-` | Working memory shared between agents |
 | [board.md](cases/board.md) | `BRD-` | Task board, local model summaries, `ambient task` |
+| [history.md](cases/history.md) | `HIS-` | Agent history: storing finished chats, what is never stored, `ambient history`, answers, the pull-request link |
 | [app.md](cases/app.md) | `APP-` | Install, upgrade, settings window, performance, signing, CLI basics |
 
 **For a release**, run every P0 case plus the cases `select` picks for the changes since the last
