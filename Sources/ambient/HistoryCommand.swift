@@ -235,13 +235,15 @@ struct HistoryCommand {
 
     private func capture(_ args: [String]) throws -> Int32 {
         let options = try Arguments(args, valued: ["--session", "--transcript", "--since"])
-        let config = HistoryConfig.load(from: paths.historyConfig)
+        var config = HistoryConfig.load(from: paths.historyConfig)
         let quiet = options.flags.contains("--quiet")
         if config.repos.isEmpty {
             if !quiet { out.skip("History isn't set up for any repository.") }
             return 0
         }
-        let wantsModel = !options.flags.contains("--no-model") && config.useModel
+        // Asked not to use a model, this run is one with the model off: nothing then says a key is missing.
+        if options.flags.contains("--no-model") { config.useModel = false }
+        let wantsModel = config.useModel
         let model = wantsModel ? findModel(!quiet) : nil
         let pipeline = HistoryPipeline(paths: paths, config: config, shell: shell, model: model)
         let dryRun = options.flags.contains("--dry-run")
