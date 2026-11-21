@@ -93,7 +93,7 @@ async function main(argv: string[]): Promise<number> {
   const wanted = at >= 0 ? basename(argv[at + 1] ?? "") : undefined;
   const index = wanted ? runs.findIndex((r) => r.dir === wanted) : 0;
   if (index < 0 || !runs[index]) {
-    console.error(wanted ? `No run ${wanted} in build/qa-results.` : "No runs in build/qa-results yet.");
+    console.error(wanted ? `No run ${wanted} in the results folder.` : "No runs in the results folder yet.");
     return 2;
   }
   const payload = message(runs[index], runs.slice(index + 1), process.env.AMBIENT_QA_DASHBOARD_URL ?? DEFAULT_DASHBOARD);
