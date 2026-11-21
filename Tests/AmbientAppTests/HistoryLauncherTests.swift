@@ -99,6 +99,67 @@ import Testing
         #expect(launched.commands.count == 3)
     }
 
+    private func setUp(_ box: AppSandbox) throws {
+        var config = HistoryConfig()
+        config.repos["acme/widgets"] = .init(store: "/tmp/nowhere")
+        try config.save(to: box.paths.historyConfig)
+    }
+
+    @Test func theAppHandsOverAChatWhenItsSessionEnds() throws {
+        let box = try AppSandbox()
+        try setUp(box)
+        let launched = Launched()
+        let launcher = HistoryLauncher(paths: box.paths, isAlive: { _ in false })
+        launcher.launch = { launched.add($0) }
+        launcher.settle = 0
+        // The app's own model, with the launcher the app delegate would give it.
+        let model = AppModel(prefs: box.preferences(), stateURL: nil, history: launcher)
+        model.apply(AgentEvent(agent: .claude, sessionId: "abc", cwd: "/src/api", kind: .sessionStarted))
+        model.apply(AgentEvent(agent: .claude, sessionId: "abc", cwd: "/src/api", kind: .promptSubmitted))
+        model.apply(AgentEvent(agent: .claude, sessionId: "abc", cwd: "/src/api", kind: .turnCompleted(summary: "done")))
+        Thread.sleep(forTimeInterval: 0.1)
+        // A finished turn isn't a finished chat.
+        #expect(launched.commands.isEmpty)
+        model.apply(AgentEvent(agent: .claude, sessionId: "abc", cwd: "/src/api", kind: .sessionEnded))
+        wait(for: launched, count: 1)
+        #expect(launched.commands == [["history", "capture", "--session", "claude:abc", "--quiet"]])
+    }
+
+    @Test func runsTheCommandLineToolAndKeepsALog() throws {
+        let box = try AppSandbox()
+        try setUp(box)
+        // Stands in for the bundled tool: writes down how it was called and says something on both streams.
+        let record = box.root.appendingPathComponent("called.txt")
+        try FileManager.default.createDirectory(at: box.paths.binDir, withIntermediateDirectories: true)
+        let script = "#!/bin/sh\nprintf '%s\\n' \"$@\" > '\(record.path)'\necho \"NO_COLOR=$NO_COLOR\" >> '\(record.path)'\n"
+            + "echo stored one chat\necho a warning >&2\n"
+        try Data(script.utf8).write(to: box.paths.cliLink)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: box.paths.cliLink.path)
+
+        // The launcher as the app makes it: nothing replaced but the wait.
+        let launcher = HistoryLauncher(paths: box.paths, isAlive: { _ in false })
+        launcher.settle = 0
+        launcher.observe(change(session("abc"), event: .sessionEnded, removed: true))
+        let deadline = Date().addingTimeInterval(5)
+        while !FileManager.default.fileExists(atPath: record.path), Date() < deadline { Thread.sleep(forTimeInterval: 0.02) }
+        Thread.sleep(forTimeInterval: 0.2)
+        let called = try String(contentsOf: record, encoding: .utf8)
+        #expect(called == "history\ncapture\n--session\nclaude:abc\n--quiet\nNO_COLOR=1\n")
+        let log = try String(contentsOf: box.paths.logs.appendingPathComponent("history.log"), encoding: .utf8)
+        #expect(log.contains("ambient history capture --session claude:abc --quiet"))
+        #expect(log.contains("stored one chat") && log.contains("a warning"))
+    }
+
+    @Test func withoutTheToolItDoesNothingAndDoesNotFail() throws {
+        let box = try AppSandbox()
+        try setUp(box)
+        let launcher = HistoryLauncher(paths: box.paths, isAlive: { _ in false })
+        launcher.settle = 0
+        launcher.observe(change(session("abc"), event: .sessionEnded, removed: true))
+        Thread.sleep(forTimeInterval: 0.2)
+        #expect(!FileManager.default.fileExists(atPath: box.paths.logs.appendingPathComponent("history.log").path))
+    }
+
     @Test func anAppModelInATestHasNoLauncherAtAll() throws {
         let box = try AppSandbox()
         // Built the way every test builds it: ending a session there can't start a capture of the real home's chats.
