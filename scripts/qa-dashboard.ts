@@ -1,5 +1,5 @@
 // Builds the QA dashboard: one self-contained page from qa/cases, qa/run/cases and every run in
-// build/qa-results. Optionally publishes it to the Docket hub (private to the tailnet).
+// build/qa-results (or $QA_RESULTS_DIR). Optionally publishes it to the Docket hub (private to the tailnet).
 //
 //   node scripts/qa-dashboard.ts             write build/qa-dashboard/index.html
 //   node scripts/qa-dashboard.ts --publish   and publish it with `docket publish`
@@ -9,10 +9,10 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseCases, type QACase } from "./qa-cases.ts";
-import { parseScript, type Result, type RunInfo, type Status } from "./qa-run.ts";
+import { parseScript, RESULTS_DIR, type Result, type RunInfo, type Status } from "./qa-run.ts";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
-const RESULTS = join(ROOT, "build/qa-results");
+const RESULTS = RESULTS_DIR;
 const OUT = join(ROOT, "build/qa-dashboard");
 
 export interface Run {

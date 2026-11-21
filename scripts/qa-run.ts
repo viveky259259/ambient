@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 import { parseCases, select, type QACase } from "./qa-cases.ts";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
+/** Where runs are kept. CI sets QA_RESULTS_DIR outside the checkout, which every job wipes. */
+export const RESULTS_DIR = process.env.QA_RESULTS_DIR || join(ROOT, "build/qa-results");
 const RUN_DIR = join(ROOT, "qa/run/cases");
 const APP = join(ROOT, "build/AmbientQA.app");
 const APP_BIN = join(APP, "Contents/MacOS/AmbientQA");
@@ -289,7 +291,7 @@ async function main(argv: string[]): Promise<number> {
       console.log(r.output.split("\n").slice(-6).map((l) => `             ${l}`).join("\n"));
     }
   }
-  const out = join(ROOT, "build/qa-results", started.replace(/[ :]/g, "-"));
+  const out = join(RESULTS_DIR, started.replace(/[ :]/g, "-"));
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "results.json"), JSON.stringify(results, null, 2));
   const plist = join(APP, "Contents/Info.plist");

@@ -13,6 +13,8 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+# Kept outside the checkout: each job's checkout wipes build/, and with it every earlier run.
+export QA_RESULTS_DIR=${QA_RESULTS_DIR:-$HOME/ambient-qa/results}
 
 base=${1:-}
 if [[ -z $base || $base == 0000000000000000000000000000000000000000 ]] || ! git rev-parse -q --verify "$base^{commit}" >/dev/null; then
@@ -28,7 +30,7 @@ fi
 scripts/build-app.sh || exit 2
 qa/run/make-qa-app.sh || exit 2
 
-newest() { ls -td build/qa-results/*/ 2>/dev/null | head -1; }
+newest() { ls -td "$QA_RESULTS_DIR"/*/ 2>/dev/null | head -1; }
 before_run=$(newest)
 case $all in
   1) node scripts/qa-run.ts ;;
