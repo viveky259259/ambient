@@ -28,6 +28,26 @@ jobs:
       - name: Test ambient-remote
         run: REQUIRE_ALL=1 scripts/test-remote-shim.sh
 
+  # The QA cases in qa/cases name the code each one covers. This keeps that map honest (every source
+  # file covered, every path and test name real) and, on a pull request, lists the cases it touches.
+  qa-cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test the selector
+        run: node --test scripts/qa-cases.test.ts
+      - name: Check the cases
+        run: node scripts/qa-cases.ts check
+      - name: Cases for this pull request
+        if: github.event_name == 'pull_request'
+        run: node scripts/qa-cases.ts select --base "origin/${{ github.base_ref }}" --format markdown >> "$GITHUB_STEP_SUMMARY"
+
   build:
     runs-on: macos-15
     timeout-minutes: 30
@@ -42,7 +62,10 @@ jobs:
       - name: Toolchain
         run: swift --version && xcodebuild -version
       - name: Test
-        run: swift test
+        # One test at a time. The runner has 3 cores, so Swift's cooperative pool has 3 threads, and several tests
+        # (and MCPServer.blocking) wait synchronously on async work or on a socket server. Run in parallel, a few of
+        # them hold every thread and the rest time out. Serial adds about half a minute.
+        run: swift test --no-parallel
       - name: Build app (ad-hoc signed, universal)
         run: scripts/build-app.sh --universal
       - name: Smoke-test the CLI
