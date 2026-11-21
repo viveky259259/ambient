@@ -378,7 +378,6 @@ private func scratch() -> AmbientPaths {
         #expect(box.receive(line(1, .start(at: now)), now: now) == [])
         #expect(box.receive(line(2, 9, .start(at: now)), now: now) == [])
         #expect(box.receive(line(3, 9, .end(text: nil)), now: now) == [])
-        #expect(box.inFlight == [voiceID(1)])
     }
 
     @Test func linesOfAVoiceThatStartedBeforeTheCursorAreIgnored() {
@@ -392,7 +391,6 @@ private func scratch() -> AmbientPaths {
         let audit = RemoteAudit(url: scratch().home.appendingPathComponent("audit.jsonl"))
         let box = inbox(audit: audit)
         #expect(box.receive(line(1, to: otherHub, .start(at: now)), now: now) == [])
-        #expect(box.inFlight.isEmpty)
         #expect(audit.records().map(\.detail) == ["voiceAddress"])
     }
 

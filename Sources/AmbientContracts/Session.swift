@@ -114,12 +114,6 @@ public struct Session: Identifiable, Codable, Equatable, Sendable {
         guard let start = turnStartedAt, let end = turnEndedAt, end >= start else { return nil }
         return end.timeIntervalSince(start)
     }
-
-    /// How long the current turn has been running, or the last one ran.
-    public func elapsed(now: Date) -> TimeInterval? {
-        guard let start = turnStartedAt else { return nil }
-        return max(0, (turnEndedAt ?? now).timeIntervalSince(start))
-    }
 }
 
 /// The result of applying an event, for surfaces that react to changes.

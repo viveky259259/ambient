@@ -193,9 +193,6 @@ public final class VoiceInbox {
         return quiet.map { .ended(id: $0) }
     }
 
-    /// In flight, by id.
-    public var inFlight: Set<String> { Set(pending.keys) }
-
     private func refuse(_ id: String, _ code: String, now: Date) -> [VoiceInboxEvent] {
         pending[id] = nil
         done.insert(id)
