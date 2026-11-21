@@ -506,7 +506,11 @@ struct HistoryCommand {
                                         sync: !options.flags.contains("--no-sync"), in: context)
         if options.flags.contains("--json") {
             var object: [String: Any] = ["answer": answer.text, "depth": answer.depth.rawValue,
-                                         "sources": answer.sources.map(Self.json)]
+                                         "sources": zip(answer.labels, answer.sources).map { label, hit -> [String: Any] in
+                                             var item = Self.json(hit)
+                                             item["label"] = label
+                                             return item
+                                         }]
             object["note"] = answer.note
             printJSON(object)
             return 0
@@ -515,9 +519,10 @@ struct HistoryCommand {
         if answer.depth != .cards, !answer.sources.isEmpty {
             print("")
             print(out.bold("Sources"))
-            for hit in answer.sources {
-                print("  \(Self.heading(hit))")
-                print("    \(out.dim(Self.pointer(hit)))")
+            for (label, hit) in zip(answer.labels, answer.sources) {
+                print("  \(label)  \(Self.heading(hit))")
+                print("      \(out.dim(Episodes.clip(hit.card.request.replacingOccurrences(of: "\n", with: " "), 100)))")
+                print("      \(out.dim(Self.pointer(hit)))")
             }
         }
         if let text = answer.note { out.note(text) }

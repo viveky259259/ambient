@@ -16,7 +16,17 @@ public struct HistoryAnswer: Equatable, Sendable {
     public var depth: Depth
     /// The cards the answer cites, in the order it cites them; every card found, when no model answered.
     public var sources: [IndexHit]
+    /// What the answer calls each source ("C2"), in the same order, so a citation can be matched to its card.
+    public var labels: [String]
     public var note: String?
+
+    public init(text: String, depth: Depth, sources: [IndexHit], labels: [String]? = nil, note: String?) {
+        self.text = text
+        self.depth = depth
+        self.sources = sources
+        self.labels = labels ?? sources.indices.map { "C\($0 + 1)" }
+        self.note = note
+    }
 }
 
 /// Answers a question from the index, spending as little as the question allows: the cards alone when there is no
@@ -107,7 +117,8 @@ public struct HistoryAnswerer {
             }
             let parsed = Self.parse(reply)
             if parsed.sufficient || parsed.need.isEmpty && parsed.cited.isEmpty {
-                return HistoryAnswer(text: parsed.answer, depth: .quick, sources: Self.pick(parsed.cited, from: hits), note: nil)
+                let cited = Self.pick(parsed.cited, from: hits)
+                return HistoryAnswer(text: parsed.answer, depth: .quick, sources: cited.hits, labels: cited.labels, note: nil)
             }
             need = Self.positions(parsed.need, count: hits.count)
         }
@@ -148,7 +159,8 @@ public struct HistoryAnswerer {
             return fallback(error)
         }
         let parsed = Self.parse(reply)
-        return HistoryAnswer(text: parsed.answer, depth: .deep, sources: Self.pick(parsed.cited, from: hits),
+        let cited = Self.pick(parsed.cited, from: hits)
+        return HistoryAnswer(text: parsed.answer, depth: .deep, sources: cited.hits, labels: cited.labels,
                              note: context.isEmpty ? "The chats couldn't be fetched, so this rests on the cards alone." : nil)
     }
 
@@ -179,9 +191,11 @@ public struct HistoryAnswerer {
         }
     }
 
-    static func pick(_ ids: [String], from hits: [IndexHit]) -> [IndexHit] {
-        let cited = positions(ids, count: hits.count).map { hits[$0] }
-        return cited.isEmpty ? hits : cited
+    /// The cards an answer cited, each with the name the answer used for it; every card when it cited none.
+    static func pick(_ ids: [String], from hits: [IndexHit]) -> (hits: [IndexHit], labels: [String]) {
+        let cited = positions(ids, count: hits.count)
+        let chosen = cited.isEmpty ? Array(hits.indices) : cited
+        return (chosen.map { hits[$0] }, chosen.map { "C\($0 + 1)" })
     }
 
     static func files(in hits: [IndexHit], named: [String]) -> [String] {

@@ -477,6 +477,7 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
         #expect(answer.depth == .deep)
         #expect(answer.text == "The edit filters expired tasks (C1 e4).")
         #expect(answer.sources.count == 1 && answer.note == nil)
+        #expect(answer.labels == ["C1"])
         #expect(model.requests.map(\.model) == ["claude-haiku-5-5", "claude-opus-5-5"])
         let deep = model.requests[1]
         #expect(deep.effort == "medium")
@@ -521,6 +522,16 @@ private func index(with files: [CardFile] = [Sample.cardFile(), laterFile()]) th
         #expect(answer.note?.contains("cards alone") == true)
         // With nothing cited, every card it was given is listed.
         #expect(answer.sources.count >= 1)
+    }
+
+    @Test func aSourceKeepsTheNameTheAnswerGaveIt() throws {
+        // The answer cites its second card first: the list must still call it C2.
+        let model = FakeModel([#"{"answer":"See (C2), then (C1).","cited":["C2","C1"],"sufficient":true,"need":[]}"#])
+        let answer = try answerer(model).ask("finished tasks expire three days board open chat another Mac")
+        #expect(answer.labels == ["C2", "C1"])
+        #expect(answer.sources.count == 2)
+        let all = try answerer(nil).ask("finished tasks expire three days")
+        #expect(all.labels == all.sources.indices.map { "C\($0 + 1)" })
     }
 
     @Test func readsModelRepliesTolerantly() {
