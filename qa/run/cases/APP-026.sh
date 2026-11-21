@@ -9,7 +9,7 @@ repo=$QA_ROOT/repo
 # A CI checkout has no local main branch, only origin/main; take whichever exists.
 main_ref=$(git -C "$QA_REPO" rev-parse -q --verify refs/heads/main >/dev/null && echo refs/heads/main || echo refs/remotes/origin/main)
 git clone -q --no-hardlinks --no-checkout "$QA_REPO" "$repo" 2>/dev/null \
-  && git -C "$repo" fetch -q --update-head-ok "$QA_REPO" "+$main_ref:refs/heads/main" 2>/dev/null \
+  && git -C "$repo" fetch -q --update-head-ok "$QA_REPO" "+${main_ref}:refs/heads/main" 2>/dev/null \
   && git -C "$repo" checkout -q main 2>/dev/null || { echo "cannot clone main" >&2; exit 2; }
 git -C "$repo" remote set-url origin "$QA_ROOT/no-such-remote"
 git -C "$repo" config user.email qa@example.invalid
