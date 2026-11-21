@@ -42,7 +42,10 @@ jobs:
       - name: Toolchain
         run: swift --version && xcodebuild -version
       - name: Test
-        run: swift test
+        # One test at a time. The runner has 3 cores, so Swift's cooperative pool has 3 threads, and several tests
+        # (and MCPServer.blocking) wait synchronously on async work or on a socket server. Run in parallel, a few of
+        # them hold every thread and the rest time out. Serial adds about half a minute.
+        run: swift test --no-parallel
       - name: Build app (ad-hoc signed, universal)
         run: scripts/build-app.sh --universal
       - name: Smoke-test the CLI
