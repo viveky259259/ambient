@@ -10,6 +10,10 @@ final class HistoryLauncher {
     private let isAlive: (Int32) -> Bool
     private let queue = DispatchQueue(label: "com.viveky259259.Ambient.history", qos: .utility)
     private var nextScan = Date.distantPast
+    /// Runs `ambient` with these arguments and waits for it. Tests replace it.
+    var launch: ([String]) -> Void = { _ in }
+    /// How long to let a transcript settle before reading it. Tests shorten it.
+    var settle: TimeInterval = HistoryLauncher.settleDelay
     /// How often chats that went quiet without saying they ended are looked for.
     static let scanInterval: TimeInterval = 3_600
     /// An agent writes its transcript's last lines as it exits; reading sooner can miss them.
@@ -20,6 +24,7 @@ final class HistoryLauncher {
     init(paths: AmbientPaths, isAlive: @escaping (Int32) -> Bool = ProcessProbe.isAlive) {
         self.paths = paths
         self.isAlive = isAlive
+        launch = { [weak self] arguments in self?.run(arguments) }
     }
 
     private var isSetUp: Bool {
@@ -40,8 +45,8 @@ final class HistoryLauncher {
     func observe(_ change: SessionChange) {
         guard Self.isFinished(change, isAlive: isAlive), isSetUp else { return }
         let id = change.session.id
-        queue.asyncAfter(deadline: .now() + Self.settleDelay) { [weak self] in
-            self?.run(["history", "capture", "--session", id, "--quiet"])
+        queue.asyncAfter(deadline: .now() + settle) { [weak self] in
+            self?.launch(["history", "capture", "--session", id, "--quiet"])
         }
     }
 
@@ -50,7 +55,7 @@ final class HistoryLauncher {
         guard now >= nextScan else { return }
         nextScan = now.addingTimeInterval(Self.scanInterval)
         guard isSetUp else { return }
-        queue.async { [weak self] in self?.run(["history", "capture", "--due", "--quiet"]) }
+        queue.async { [weak self] in self?.launch(["history", "capture", "--due", "--quiet"]) }
     }
 
     private func run(_ arguments: [String]) {
