@@ -46,7 +46,7 @@ struct QATrimTruncateTests {
         #expect(Trim.truncate("🇮🇳🇺🇸🇯🇵", max: 2) == "🇮🇳…")
     }
 
-    @Test func negativeMaxIsSafe() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func negativeMaxIsSafe() async {
         await withKnownIssue("BUG: Trim.truncate traps (String.prefix with a negative length) when max < 0") {
             await #expect(processExitsWith: .success) {
                 _ = Trim.truncate("abc", max: -1)

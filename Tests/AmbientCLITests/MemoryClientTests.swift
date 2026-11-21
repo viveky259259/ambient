@@ -207,7 +207,7 @@ private let now = Date(timeIntervalSince1970: 1_800_000_000)
         }
         let digest = try #require(Recorder(reply: .entries(entries)).client(home.paths).digest(limit: 8, now: now))
         let lines = digest.split(separator: "\n")
-        #expect(lines.count == 9)
+        try #require(lines.count == 9)
         #expect(lines[0] == "- key-0 (global, text, just now)")
         #expect(lines[1] == "- key-1 (project, text, just now)")
         #expect(lines.last == "- …and 2 more; memory_list shows them all.")
@@ -276,7 +276,7 @@ private let now = Date(timeIntervalSince1970: 1_800_000_000)
         #expect(runCLI(["memory", "forget", "build", "--json"] + folder, paths: home.paths) == 0)
 
         let requests = app.received.compactMap { m -> MemoryRequest? in if case let .memory(r) = m { return r } else { return nil } }
-        #expect(requests.count == 8)
+        try #require(requests.count == 8)
         guard case let .write(write, _) = requests[0] else { Issue.record("First wasn't a write"); return }
         #expect(write.key == "build")
         #expect(write.value == "swift test")

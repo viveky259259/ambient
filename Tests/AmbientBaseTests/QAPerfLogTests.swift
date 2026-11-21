@@ -204,14 +204,14 @@ struct QAPerfLogTests {
         #expect(report.range(of: "## Last hour")!.lowerBound < report.range(of: "## Last 24 hours")!.lowerBound)
     }
 
-    @Test func reportSeparatesTheHourFromTheDay() {
+    @Test func reportSeparatesTheHourFromTheDay() throws {
         var log = PerfLog()
         log.recordSample(cpu: 80, memoryMB: 500, at: at(minute: 0))
         log.recordSample(cpu: 2, memoryMB: 50, at: at(minute: 300))
         log.recordFrame(intervalMs: 50, budgetMs: 25, source: .effect, at: at(minute: 300))
         let report = log.report(now: at(minute: 300), version: "1", system: "s")
         let parts = report.components(separatedBy: "## Last 24 hours")
-        #expect(parts.count == 2)
+        try #require(parts.count == 2)
         #expect(parts[0].contains("CPU: 2.0% average, 2.0% peak"))
         #expect(parts[0].contains("Memory: 50 MB now, 50 MB peak"))
         #expect(parts[0].contains("Notch effect: 1 frames, 20.0 fps, 100% late"))

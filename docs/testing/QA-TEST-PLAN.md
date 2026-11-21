@@ -26,6 +26,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test --enable-cod
 
 - `DEVELOPER_DIR` is required on a Mac whose `xcode-select` points at the Command Line Tools. They lack the Swift Testing and SwiftUI macro plugins, and the build fails with errors that look like broken code.
 - `AMBIENT_TEST_SSHD=1` makes the real-ssh remote test (`overARealSSHServer`) actually run.
+- `AMBIENT_TEST_CRASHES=1` runs the eight exit tests that crash a child process (Describe durations, `Trim.truncate`, JSON nesting depth, and the socket starvation repro). They're off by default: each crash makes macOS write a crash report, and on CI's small runner that froze every test process for about 20 s, long enough for socket timeouts to fail.
 
 Per-file coverage after a coverage run (each test target is its own bundle):
 
@@ -78,7 +79,7 @@ Line coverage, before → after this pass:
 - Pure functions (JSON, Trim, RGB, Loopback, Paths, PerfLog) are tested from tables with `arguments:`: boundaries, malformed input, exact error offsets.
 - JSON round trips are checked for stability (parse → serialize → parse) and against `JSONSerialization`.
 - Socket tests use short unique `/tmp/qab-*.sock` paths and `socketpair`. The suite is `.serialized`, and concurrent clients run on plain threads.
-- Anything that crashes or starves the process runs in an exit test.
+- Anything that crashes or starves the process runs in an exit test, opt-in with `AMBIENT_TEST_CRASHES=1`.
 - The Keychain is never read, written or deleted. The env-var fallback tests run only when an attributes-only query finds no stored item.
 
 | Area | Cases | Type | File |

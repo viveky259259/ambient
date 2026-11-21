@@ -155,31 +155,31 @@ struct QADescribeTests {
     /// `duration` converts with `Int(seconds)`, which traps for NaN, infinity and anything past `Int.max`. Session
     /// dates come from disk and the socket, so a corrupt or hostile timestamp (e.g. `turnStartedAt` of -1e300) turns
     /// `Describe.clock` into a crash of every surface that draws the session.
-    @Test func infiniteDurationMustNotTrap() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func infiniteDurationMustNotTrap() async {
         await withKnownIssue("BUG: Describe.duration traps on infinite seconds (Int(seconds))") {
             await #expect(processExitsWith: .success) { _ = Describe.duration(.infinity) }
         }
     }
 
-    @Test func nanDurationMustNotTrap() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func nanDurationMustNotTrap() async {
         await withKnownIssue("BUG: Describe.duration traps on NaN seconds (Int(seconds))") {
             await #expect(processExitsWith: .success) { _ = Describe.duration(.nan) }
         }
     }
 
-    @Test func durationPastIntMaxMustNotTrap() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func durationPastIntMaxMustNotTrap() async {
         await withKnownIssue("BUG: Describe.duration traps past Int.max seconds (Int(seconds))") {
             await #expect(processExitsWith: .success) { _ = Describe.duration(1e19) }
         }
     }
 
-    @Test func compactDurationPastIntMaxMustNotTrap() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func compactDurationPastIntMaxMustNotTrap() async {
         await withKnownIssue("BUG: Describe.compactDuration traps past Int.max hours (Int(seconds / 3_600))") {
             await #expect(processExitsWith: .success) { _ = Describe.compactDuration(1e30) }
         }
     }
 
-    @Test func clockWithAnAbsurdlyOldTurnStart() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func clockWithAnAbsurdlyOldTurnStart() async {
         await withKnownIssue("BUG: Describe.clock crashes for a session whose turnStartedAt is far in the past") {
             await #expect(processExitsWith: .success) {
                 var s = Session(agent: .claude, sessionId: "s", at: Date(timeIntervalSinceReferenceDate: 0))

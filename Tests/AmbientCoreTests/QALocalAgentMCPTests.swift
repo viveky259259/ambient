@@ -165,7 +165,7 @@ import Testing
         let mcp = gateway.mcp()
         _ = try await mcp.callTool(name: "a")
         _ = try await mcp.callTool(name: "b")
-        #expect(ids.count == 2)
+        try #require(ids.count == 2)
         #expect(ids[1] == ids[0] + 1)
     }
 

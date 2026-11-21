@@ -355,7 +355,7 @@ struct QAUnixSocketTests {
     /// Clients blocked in `UnixSocket.send` on every Swift cooperative thread stop the server from serving until they
     /// time out: its per-client work runs on a width-limited concurrent GCD queue. Reproduced in a child process so
     /// the starvation can't spill into other tests. Intermittent: it depends on which side gets threads first.
-    @Test func blockedCooperativePoolStarvesTheServer() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func blockedCooperativePoolStarvesTheServer() async {
         await withKnownIssue("BUG: UnixSocketServer stops serving while the process's cooperative pool is blocked in socket calls", isIntermittent: true) {
             await #expect(processExitsWith: .success) {
                 let path = "/tmp/qab-st-\(UUID().uuidString.prefix(8)).sock"

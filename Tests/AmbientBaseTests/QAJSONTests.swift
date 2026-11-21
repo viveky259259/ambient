@@ -214,7 +214,7 @@ struct QAJSONParserTests {
 
     /// The 512-level limit isn't sized to a secondary thread's 512 KiB stack in debug builds: ~400 levels fit,
     /// 448 don't. Optimized builds parse 511 levels in 128 KiB, so this is debug/test-only. Run in a child process.
-    @Test func nestingWithinTheLimitFitsASecondaryThreadStack() async {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AMBIENT_TEST_CRASHES"] == "1", "Spawns a child process that crashes; set AMBIENT_TEST_CRASHES=1")) func nestingWithinTheLimitFitsASecondaryThreadStack() async {
         await withKnownIssue("BUG (debug builds): JSONValue.parse overflows a 512 KiB thread stack below its own 512-level limit", isIntermittent: true) {
             await #expect(processExitsWith: .success) {
                 qaParseNestedOnSmallStack(depth: 511, stackSize: 512 * 1024)
