@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Agent history**: keep a team's finished agent chats in one place, and ask why the code is the way it is.
+  `ambient history setup --store s3://bucket/prefix` (or a folder) in a repository turns it on for that repository
+  only. When a Claude chat ends, Ambient stores it as one record with paths relative to the repository and credentials
+  blanked, a card per request (what was asked, done, why, rejected and checked), and a page to read with changes in
+  red and green. `ambient history why FILE[:LINE]` lists the requests and commits behind a file with no model;
+  `ambient history ask "…"` answers in words, from the cards with `claude-haiku-5-5` and from the chats themselves
+  with `claude-opus-5-5` only when the cards fall short. Agents get the same lookups through `ambient mcp`
+  (`history_why`, `history_search`, `history_read`), and each pull request gets one comment linking the chats behind
+  its commits. Other agents' chats aren't read yet.
+
 ## 0.10.0 — 2026-11-17
 
 - **Ambient Microphone**: use one Mac's microphone on another. Settings › Voice & Sound › Ambient Microphone adds an

@@ -49,6 +49,15 @@ public enum SecretStore {
          kSecAttrAccount as String: account.rawValue]
     }
 
+    /// The Keychain's secret only if it can be read without macOS asking the user: nil when reading it would show a
+    /// permission dialog. For work nobody is watching, where a dialog would appear from nowhere and block.
+    public static func keyWithoutAsking(for account: Account) -> String? {
+        let keychain: any LegacyKeychain.Type = InteractiveKeychain.self
+        keychain.setInteraction(allowed: false)
+        defer { keychain.setInteraction(allowed: true) }
+        return keychainKey(for: account)
+    }
+
     private static func keychainKey(for account: Account) -> String? {
         var q = query(account)
         q[kSecReturnData as String] = true
@@ -59,6 +68,20 @@ public enum SecretStore {
               let s = String(data: data, encoding: .utf8) else { return nil }
         let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+/// The one switch that stops the login keychain's "wants to use your confidential information" dialog: with it off, a
+/// read that would have asked fails instead. Apple deprecated it without a replacement that covers that dialog
+/// (`kSecUseAuthenticationUI` doesn't), so it is called through this protocol, which keeps the deprecation in one place.
+private protocol LegacyKeychain {
+    static func setInteraction(allowed: Bool)
+}
+
+private enum InteractiveKeychain: LegacyKeychain {
+    @available(macOS, deprecated: 10.10)
+    static func setInteraction(allowed: Bool) {
+        _ = SecKeychainSetUserInteractionAllowed(allowed)
     }
 }
 

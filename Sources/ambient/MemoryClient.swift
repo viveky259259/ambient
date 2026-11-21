@@ -15,7 +15,7 @@ struct MemoryClient {
     /// `named` if there is one. Otherwise where this process runs, unless that says nothing about the project: some
     /// apps start MCP servers in / or the home folder. Then the folder of the session that started it, which Ambient
     /// knows from its hooks.
-    private func workingFolder(_ named: String?) -> String {
+    func workingFolder(_ named: String?) -> String {
         if let named, !named.isEmpty { return Commands.absolute(named) }
         let cwd = FileManager.default.currentDirectoryPath
         guard cwd == "/" || cwd == paths.userHome.path, case let .status(sessions, _)? = request(.statusRequest),

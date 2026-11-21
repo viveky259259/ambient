@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "AmbientBase", targets: ["AmbientBase"]),
         .library(name: "AmbientContracts", targets: ["AmbientContracts"]),
         .library(name: "AmbientCore", targets: ["AmbientCore"]),
+        .library(name: "AmbientHistory", targets: ["AmbientHistory"]),
     ],
     targets: [
         .target(
@@ -20,10 +21,16 @@ let package = Package(
         ),
         .target(name: "AmbientContracts", dependencies: ["AmbientBase"]),
         .target(name: "AmbientCore", dependencies: ["AmbientBase", "AmbientContracts"]),
-        .executableTarget(name: "ambient", dependencies: ["AmbientCore"]),
+        // A public feature: finished agent chats, stored, indexed and asked about. It uses only the shared layers.
+        .target(
+            name: "AmbientHistory",
+            dependencies: ["AmbientBase", "AmbientContracts"],
+            linkerSettings: [.linkedLibrary("sqlite3")]
+        ),
+        .executableTarget(name: "ambient", dependencies: ["AmbientCore", "AmbientHistory"]),
         .executableTarget(
             name: "AmbientApp",
-            dependencies: ["AmbientCore"],
+            dependencies: ["AmbientCore", "AmbientHistory"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(name: "AmbientBaseTests", dependencies: ["AmbientBase"]),
@@ -31,12 +38,15 @@ let package = Package(
         .testTarget(name: "AmbientContractsTests", dependencies: ["AmbientContracts"], exclude: ["Fixtures"]),
         // Fixtures/ holds golden files, read by path rather than as resources.
         .testTarget(name: "AmbientCoreTests", dependencies: ["AmbientCore"], exclude: ["Fixtures"]),
-        // The CLI's own parsing: `ambient mcp`'s JSON-RPC and tools, and `ambient task model`'s arguments.
-        .testTarget(name: "AmbientCLITests", dependencies: ["ambient"]),
+        // Fixtures/ holds golden files, read by path rather than as resources.
+        .testTarget(name: "AmbientHistoryTests", dependencies: ["AmbientHistory", "AmbientBase"], exclude: ["Fixtures"]),
+        // The CLI's own parsing: `ambient mcp`'s JSON-RPC and tools, `ambient task model`'s arguments, and
+        // `ambient history` end to end against a folder store.
+        .testTarget(name: "AmbientCLITests", dependencies: ["ambient", "AmbientHistory"]),
         // The app's view models and the logic behind its views, without a window server. See docs/testing/QA-TEST-PLAN.md.
         .testTarget(
             name: "AmbientAppTests",
-            dependencies: ["AmbientApp"],
+            dependencies: ["AmbientApp", "AmbientHistory"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ],

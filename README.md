@@ -272,7 +272,7 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
 | `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
 | `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected), `permissions.json` (the island's permission setting), and what agents share through working memory (`memory.json`, and copies of shared files in `memory/`) |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected), `permissions.json` (the island's permission setting), what agents share through working memory (`memory.json`, and copies of shared files in `memory/`), and, once you set up agent history, `history.json` (which repositories, and where) and `history/` (this Mac's index of the stored chats) |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
@@ -325,6 +325,10 @@ Only these fields ever leave the hook process, and only to the local socket: the
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
+
+[Agent history](#agent-history) is the one exception, and only where you turn it on: for a repository you set up
+with `ambient history setup`, a finished chat is read from the agent's own transcript and stored in the place you
+named, with credentials blanked. No other chat is read.
 
 Working memory holds only what an agent chooses to share through `ambient mcp`, or you share with `ambient memory`, in
 `~/.ambient/memory.json` and `~/.ambient/memory/`, readable only by your user. Every agent you've given `ambient mcp`
@@ -547,6 +551,69 @@ in `~/.ambient/speaker` that only you can reach, and ssh carries it from there. 
 48 kHz stereo, and plays to the driver's hidden *Ambient Microphone Feed*, which Ambient Microphone gives back. It's
 held 60 ms, more after the network stalls, up to half a second.
 
+## Agent history
+
+A coding agent's chat holds what git doesn't: why a file changed, what was tried first, how it was checked. Ambient
+can keep a team's finished chats in one place and answer from them.
+
+```bash
+cd your-repo
+ambient history setup --store s3://your-bucket/agent-history   # or a folder: --store /Volumes/Team/history
+ambient history why Sources/AmbientCore/TaskStore.swift        # the chats and commits behind a file
+ambient history why Sources/AmbientCore/TaskStore.swift:120    # …or behind one line
+ambient history ask "why do finished tasks leave the board after three days?"
+```
+
+It is off until you run `setup` in a repository, and it only ever stores chats that started in a repository you set
+up, which is known by its `origin` remote (`owner/name` on GitHub, with the host in front anywhere else). A chat is
+stored whole: if it also worked on files outside that repository, what it did there is in the record too. Today it reads Claude Code's chats; other agents' aren't read yet.
+
+**What gets stored, and when.** A chat is stored once it is over: when its session ends or its agent exits, or after
+its transcript has been still for 24 hours. If it picks up again later, it is stored again in the same place. Chats
+that finished before you ran `setup` stay on your Mac unless you ask (`ambient history capture --due --since 30`).
+Each chat becomes three files under `<repo>/sessions/<date>/<agent>-<session>/`:
+
+| File | What it is |
+|---|---|
+| `chat.json` | The whole chat in one shape for every agent: what was said, the agent's thinking, each tool call with its command or diff, and the start and end of each tool's output. Paths are relative to the repository |
+| `cards.json` | One card per request: what was asked, what was done, why, what was rejected, how it was checked, the files changed and the commits that carry them |
+| `page.html` | The chat as a page to read, with removed lines in red and added lines in green |
+
+Before anything is written, credentials are blanked and your home folder is written as `~`: API keys and tokens
+in their known shapes, private keys, authorization headers, passwords in URLs and after `curl -u`, `NAME_TOKEN=…`
+assignments, and config or JSON fields named like a credential. That is a net, not a guarantee: a secret in a
+shape Ambient doesn't know would be stored, so keep the store private.
+
+**How a chat is tied to the code.** Git is the record of what happened and the chat is the explanation. An edit made
+with the agent's edit tool is stored as its exact diff, unless the tool said it failed. A commit is a chat's when it
+was made while one of the chat's `git commit` commands ran and it also looks like the chat's: its message is in the
+command, it holds a file the chat changed, or it is a merge the chat ran. A file named by a shell command counts as
+changed by it only if the command could have written it (it edits in place, or the file is where its output goes)
+and git agrees: the file was committed between the command and ten minutes after the chat ended, or still differs
+from `HEAD` in that checkout when the chat is stored. What the chat's files still differ from `HEAD` by is stored
+too, checkout by checkout, so work that was never committed isn't lost.
+
+**Asking.** `ambient history why FILE` needs no model: it lists the requests that changed the file, newest first,
+each with its commit, then the commits no stored chat explains. `ambient history ask` answers in words. With a
+Claude API key (`ANTHROPIC_API_KEY`, or the one in Ambient's Keychain item) a small model (`claude-haiku-5-5`) writes
+the cards when a chat is stored and answers from them; only when the cards don't settle a question does a stronger
+one (`claude-opus-5-5`) read the chats themselves. Without a key, cards are taken from the chat's own words and
+`ask` shows the cards it found. `"useModel": false` in `~/.ambient/history.json` turns the model off.
+
+Agents can ask too: `ambient mcp` adds `history_why`, `history_search` and `history_read`, so an agent that is
+debugging can look up why a line is the way it is before changing it.
+
+**Links on pull requests.** With an S3 store and a repository on GitHub, Ambient leaves one comment on each pull
+request that holds a chat's commits, with a line per chat linking to its page in the AWS console. The line gives the
+chat's date, its agent and how many requests changed code, and nothing the chat said: not its title, not who ran
+it. The link shows nothing to anyone without access to the bucket. `--no-links` at setup turns this off.
+`ambient history open SESSION` builds the same page on your Mac from the stored chat and opens it.
+
+S3 is reached through the `aws` command with your own sign-in (`aws login` or `aws sso login`); Ambient holds no AWS
+keys. Each Mac keeps its own index of the cards in `~/.ambient/history/`, built from the store, so a question is
+answered locally: the store is listed at most every ten minutes, and only the cards of new or changed chats are
+fetched. If the store can't be reached, questions are answered from what was fetched before.
+
 ## Command line
 
 ```
@@ -560,7 +627,20 @@ ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]
                                                        Show or set the board's local model (a folder or .gguf file)
 ambient memory [list|get KEY|set KEY [VALUE|--file PATH]|rm KEY] [--global] [--in FOLDER]
                                                        What agents share through working memory, or share something
-ambient mcp                                            MCP server (stdio): working memory, get_task_model / set_task_model_path
+ambient mcp                                            MCP server (stdio): working memory, get_task_model / set_task_model_path,
+                                                       history_why / history_search / history_read
+ambient history setup --store s3://BUCKET[/PREFIX]|FOLDER [--region R] [--profile NAME] [--no-links]
+                                                       Keep this repository's finished agent chats in a store
+ambient history status                                 What is set up, and what is waiting to be stored
+ambient history capture [--session ID|--transcript PATH|--due [--since DAYS]] [--dry-run] [--no-links] [--no-model]
+                                                       Store a finished chat now (the app does this itself)
+ambient history sync                                   Fetch the team's new chats into this Mac's index
+ambient history why PATH[:LINE] [--all] [--json]       The chats and commits behind a file, or one line of it
+ambient history ask "QUESTION" [--file PATH] [--deep] [--json] [--no-model]
+                                                       Answer a question from the stored chats
+ambient history show SESSION [FROM-TO]                 Print a stored chat, or some of its events
+ambient history open SESSION                           Open a stored chat's page in the browser
+ambient history eval FILE [--answers]                  Score retrieval (and answers) on a set of questions
 ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [-- COMMAND…]   Follow agents on another machine
 ambient remote remove NAME [--uninstall]               Stop following it; --uninstall also clears the machine
 ambient remote purge NAME                              Delete everything from it on this Mac

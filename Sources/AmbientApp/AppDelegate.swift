@@ -11,7 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile, dayURL: paths.dayFile,
                                       tasksURL: paths.tasksFile, memoryURL: paths.memoryFile,
                                       memoryBlobs: MemoryBlobStore(root: paths.memoryBlobs),
-                                      titles: SessionTitles(userHome: paths.userHome))
+                                      titles: SessionTitles(userHome: paths.userHome),
+                                      history: HistoryLauncher(paths: paths))
     private var server: EventServer?
     private lazy var permissions = PermissionDesk(model: model, prefs: prefs)
     private lazy var hookDoctor = HookDoctor(paths: paths, model: model)

@@ -2,19 +2,6 @@ import Foundation
 
 /// Keeps secrets out of shared memory: whatever one agent shares, every agent on the Mac can read.
 public enum MemoryGuard {
-    private static let secretPatterns: [(pattern: String, what: String)] = [
-        ("-----BEGIN [A-Z ]*PRIVATE KEY-----", "a private key"),
-        ("\\bAKIA[0-9A-Z]{16}\\b", "an AWS access key"),
-        ("\\bgh[pousr]_[A-Za-z0-9]{36,}", "a GitHub token"),
-        ("\\bgithub_pat_[A-Za-z0-9_]{40,}", "a GitHub token"),
-        ("\\bglpat-[A-Za-z0-9_-]{20,}", "a GitLab token"),
-        ("\\bsk-ant-[A-Za-z0-9_-]{20,}", "an Anthropic API key"),
-        ("\\bsk-(proj-)?[A-Za-z0-9_-]{32,}", "an OpenAI API key"),
-        ("\\bxox[abposr]-[A-Za-z0-9-]{10,}", "a Slack token"),
-        ("\\bAIza[0-9A-Za-z_-]{35}\\b", "a Google API key"),
-        ("\\bnpm_[A-Za-z0-9]{36}\\b", "an npm token"),
-    ]
-
     private static let secretNames: Set<String> = [
         ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials", "credentials.json",
         "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
@@ -27,11 +14,9 @@ public enum MemoryGuard {
 
     /// Why this text shouldn't be shared, or nil.
     public static func problem(withText text: String) -> String? {
-        for (pattern, what) in secretPatterns where text.range(of: pattern, options: .regularExpression) != nil {
-            return "That looks like it contains \(what). Every agent on this Mac can read shared memory, so Ambient "
-                + "doesn't share secrets. Leave it out, or say where the agent can find it instead."
-        }
-        return nil
+        guard let secret = SecretPatterns.firstMatch(in: text) else { return nil }
+        return "That looks like it contains \(secret.what). Every agent on this Mac can read shared memory, so Ambient "
+            + "doesn't share secrets. Leave it out, or say where the agent can find it instead."
     }
 
     /// Why the file at `path` shouldn't be shared, judged by its name and folder, or nil.

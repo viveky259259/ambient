@@ -37,8 +37,9 @@ helper in `Voice/` uses only `VoiceWire`, yet it links all of `AmbientCore`.
 
 ## Shipping: one package, many products
 
-Nine modules are library **products** of the root `Package.swift`: `AmbientBase`, `AmbientContracts`,
-`AmbientAgents`, `AmbientSpeech`, `AmbientMemory`, `AmbientLocalAgent`, `AmbientRemote`, `AmbientScene` and
+Ten modules are library **products** of the root `Package.swift`: `AmbientBase`, `AmbientContracts`,
+`AmbientAgents`, `AmbientSpeech`, `AmbientMemory`, `AmbientLocalAgent`, `AmbientRemote`, `AmbientScene`,
+`AmbientHistory` (added after this plan, already as its own module) and
 `AmbientCore`. Another package uses one like this:
 
 ```swift
@@ -65,6 +66,7 @@ Composition      ambient (CLI) · AmbientApp · ambient-voice (uses AmbientSpeec
 Internal         AmbientState · AmbientInstall
 Public, top      AmbientCore (Wire)
 Public features  AmbientAgents · AmbientSpeech · AmbientMemory · AmbientLocalAgent · AmbientRemote · AmbientScene
+                 · AmbientHistory
 Public, shared   AmbientContracts
                  AmbientBase
 ```
@@ -89,6 +91,7 @@ the port, and the composition root (the CLI or the app) hands that implementatio
 | `AmbientLocalAgent` | public | `LocalAgent/` | Running a local model to summarize sessions |
 | `AmbientRemote` | public | `Remote/`, `VoiceSync/` | Pairing machines and taking agent events from them safely |
 | `AmbientScene` | public | `SceneState`, `ScenePolicy`, `DayLight`, `SolarLayout`, `Notch*`, `Wallpaper*`, `Pet/`, and `Policy.swift`'s `AlertPolicy`, `IslandPolicy`, `Palette`, `GlowStyle` | Deciding what to show for a set of sessions |
+| `AmbientHistory` | public | New, not taken from `AmbientCore`: finished chats as stored records and change cards, the store (S3 or a folder), the SQLite index, and answering from them. Its two stored formats, `ChatRecord` and `CardFile`, have fixtures in `Tests/AmbientHistoryTests/Fixtures/` | Keeping a team's agent chats and asking why code changed |
 | `AmbientCore` | public | `Wire`, `Demo`, `FeatureRequests` | The CLI↔app protocol |
 | `AmbientState` | internal | `SessionStore`, `TaskStore`, `TaskFile`, `StateFile`, `SessionTitles`, `DayLogFile`, `Focus` | — shaped around Ambient's app |
 | `AmbientInstall` | internal | `Install/` (`HookInstaller`, `OpenCodePlugin`), `HookHealth` | — writes Ambient's own hook layout |

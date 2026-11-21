@@ -1,0 +1,80 @@
+{
+  "cards" : [
+    {
+      "at" : "2026-11-18T11:06:40Z",
+      "commits" : [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "episode" : 1,
+      "evidence" : [
+        4,
+        8
+      ],
+      "files" : [
+        "Sources/Board.swift"
+      ],
+      "firstEvent" : 1,
+      "landed" : "committed",
+      "lastEvent" : 8,
+      "rejected" : "Capping the board at a fixed size.",
+      "request" : "The board is slow. Fix it.",
+      "source" : "claude-haiku-5-5",
+      "summary" : "Finished tasks now expire after three days. All 12 tests pass.",
+      "verified" : "12 tests pass.",
+      "why" : "Finished tasks never left the board."
+    },
+    {
+      "at" : "2026-11-18T11:16:40Z",
+      "commits" : [
+
+      ],
+      "episode" : 2,
+      "evidence" : [
+        10
+      ],
+      "files" : [
+
+      ],
+      "firstEvent" : 9,
+      "landed" : "none",
+      "lastEvent" : 10,
+      "rejected" : "",
+      "request" : "Why three days and not one?",
+      "source" : "extract",
+      "summary" : "A weekend: a task finished on Friday should still be there on Monday.",
+      "verified" : "",
+      "why" : ""
+    }
+  ],
+  "commits" : [
+    {
+      "at" : "2026-11-18T11:11:40Z",
+      "event" : 6,
+      "files" : [
+        "Sources/Board.swift"
+      ],
+      "sha" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "subject" : "fix(board): expire finished tasks"
+    }
+  ],
+  "session" : {
+    "agent" : "claude",
+    "branch" : "feat/board",
+    "developer" : "Test Dev",
+    "endedAt" : "2026-11-18T11:21:40Z",
+    "id" : "11111111-2222-3333-4444-555555555555",
+    "repo" : "acme/widgets",
+    "startedAt" : "2026-11-18T11:06:40Z",
+    "title" : "Board cleanup"
+  },
+  "touches" : [
+    {
+      "episode" : 1,
+      "event" : 4,
+      "how" : "edit",
+      "path" : "Sources/Board.swift"
+    }
+  ],
+  "url" : "https://example.com/page.html",
+  "version" : 1
+}
