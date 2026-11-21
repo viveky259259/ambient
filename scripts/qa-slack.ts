@@ -48,8 +48,9 @@ export function message(run: Run, older: Run[], dashboard: string) {
   const c = changes(run, older);
   const failCount = n("fail") + n("error");
   const icon = failCount ? ":red_circle:" : ":large_green_circle:";
+  const what = run.info.context ? ` · ${run.info.context}` : "";
   const head =
-    `${icon} *Ambient QA* · ${run.info.version ?? ""} build ${run.info.build ?? "?"} · \`${run.info.commit ?? "?"}\`\n` +
+    `${icon} *Ambient QA*${what} · ${run.info.version ?? ""} build ${run.info.build ?? "?"} · \`${run.info.commit ?? "?"}\`\n` +
     `${run.results.length} scripted cases: *${n("pass")} passed*, *${failCount} failed*, ${n("known-gap")} known gaps` +
     (run.info.selection && run.info.selection !== "all scripted cases" ? ` (${run.info.selection})` : "");
   const list = (title: string, rs: Result[]) =>
@@ -78,7 +79,7 @@ export function message(run: Run, older: Run[], dashboard: string) {
         elements: [
           {
             type: "mrkdwn",
-            text: `<${dashboard}|Dashboard> · ${run.info.started} UTC on ${run.info.host ?? "the QA Mac"} · cases needing a person are not in this run`,
+            text: `<${dashboard}|Dashboard>${run.info.runUrl ? ` · <${run.info.runUrl}|Run log>` : ""} · ${run.info.started} UTC on ${run.info.host ?? "the QA Mac"} · cases needing a person are not in this run`,
           },
         ],
       },

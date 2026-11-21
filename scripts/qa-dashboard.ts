@@ -97,7 +97,7 @@ export function render(rows: CaseRow[], runs: Run[], now: string): string {
   const count = (s: Status) => rows.filter((r) => latest(r) === s).length;
   const notRun = scripted.filter((r) => !latest(r)).length;
   const manual = rows.filter((r) => r.scripted !== "all").length;
-  const lastFull = runs.find((r) => r.info.selection === "all scripted cases") ?? runs[0];
+  const lastFull = runs.find((r) => r.info.context === "main") ?? runs.find((r) => r.info.selection === "all scripted cases") ?? runs[0];
   const failing = rows.filter((r) => latest(r) === "fail" || latest(r) === "error");
   const tiles = [
     ["Cases", rows.length, "in qa/cases"],
@@ -152,7 +152,7 @@ export function render(rows: CaseRow[], runs: Run[], now: string): string {
     .slice(0, 40)
     .map((run) => {
       const n = (s: Status) => run.results.filter((r) => r.status === s).length;
-      return `<tr><td>${esc(run.info.started)}</td><td>${esc(run.info.commit ?? "")}</td><td>${esc(run.info.build ?? "")}</td><td>${esc(run.info.selection ?? "")}</td><td class="num">${run.results.length}</td><td class="num">${n("pass")}</td><td class="num">${n("fail") + n("error")}</td><td class="num">${n("known-gap")}</td></tr>`;
+      return `<tr><td>${esc(run.info.started)}</td><td>${esc(run.info.commit ?? "")}</td><td>${esc(run.info.build ?? "")}</td><td>${run.info.runUrl ? `<a href="${esc(run.info.runUrl)}">${esc(run.info.context ?? "CI")}</a>` : esc(run.info.context ?? "local")}<br><span class="muted">${esc(run.info.selection ?? "")}</span></td><td class="num">${run.results.length}</td><td class="num">${n("pass")}</td><td class="num">${n("fail") + n("error")}</td><td class="num">${n("known-gap")}</td></tr>`;
     })
     .join("");
 
@@ -189,7 +189,7 @@ summary{cursor:pointer}.ok{color:var(--pass);font-weight:600}td.hist{white-space
 <h2>Failing now</h2><div class="wrap">${failingHtml}</div>
 <h2>By area</h2><div class="wrap"><table><thead><tr><th>Area</th><th>Cases</th><th>Scripted</th><th>Pass</th><th>Fail</th><th>Known gap</th><th>Latest results</th></tr></thead><tbody>${areaRows.join("")}</tbody></table></div>
 <h2>Every case</h2>${caseSections.join("")}
-<h2>Runs</h2><div class="wrap"><table><thead><tr><th>Started (UTC)</th><th>Commit</th><th>Build</th><th>Selection</th><th>Cases</th><th>Pass</th><th>Fail</th><th>Known gap</th></tr></thead><tbody>${runRows}</tbody></table></div>
+<h2>Runs</h2><div class="wrap"><table><thead><tr><th>Started (UTC)</th><th>Commit</th><th>Build</th><th>For</th><th>Cases</th><th>Pass</th><th>Fail</th><th>Known gap</th></tr></thead><tbody>${runRows}</tbody></table></div>
 </main></body></html>
 `;
 }

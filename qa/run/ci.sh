@@ -1,16 +1,18 @@
 #!/bin/zsh
-# What the QA Mac does when a pull request is merged (.github/workflows/qa-on-merge.yml):
-# build, run the scripted cases the merge touched, publish the dashboard, post to #ambient-qa.
+# What the QA Mac does for .github/workflows/qa.yml, after a merge to main or a push to a branch
+# with an open pull request: build, run the scripted cases the change touches, publish the
+# dashboard, post to #ambient-qa.
 #
-#   qa/run/on-merge.sh <commit-before-the-merge>    cases the merge's changes pick
-#   QA_ALL=1 qa/run/on-merge.sh                      every scripted case
+#   qa/run/ci.sh <base>        cases picked by the changes since <base> (a commit or origin/main)
+#   QA_ALL=1 qa/run/ci.sh      every scripted case
+#   QA_CONTEXT, QA_RUN_URL     what the run is for and where its log is, shown in Slack and the dashboard
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
 before=${1:-}
-if [[ -z $before || $before == 0000000000000000000000000000000000000000 ]] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+if [[ -z $before || $before == 0000000000000000000000000000000000000000 ]] || ! git rev-parse -q --verify "$before^{commit}" >/dev/null; then
   before=$(git rev-parse HEAD~1)
 fi
 

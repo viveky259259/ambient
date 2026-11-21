@@ -46,6 +46,10 @@ export interface RunInfo {
   selection: string;
   totalCases: number;
   scriptedCases: number;
+  /** What the run is for, e.g. "main" or "PR #48 · feat/agent-history" (QA_CONTEXT). */
+  context?: string;
+  /** The CI run's log (QA_RUN_URL). */
+  runUrl?: string;
 }
 
 export type Status ="pass" | "fail" | "known-gap" | "gap-fixed" | "error";
@@ -305,6 +309,8 @@ async function main(argv: string[]): Promise<number> {
     selection: argv.filter((a) => a !== "--keep").join(" ") || "all scripted cases",
     totalCases: cases.size,
     scriptedCases: loadScripts().length,
+    context: process.env.QA_CONTEXT || undefined,
+    runUrl: process.env.QA_RUN_URL || undefined,
   };
   writeFileSync(join(out, "run.json"), JSON.stringify(run, null, 2));
   writeFileSync(join(out, "summary.md"), summary(results, started));

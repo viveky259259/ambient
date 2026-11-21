@@ -12,6 +12,12 @@ node scripts/qa-run.ts EVT-029 EVT-035       # some cases
 node scripts/qa-run.ts --changed origin/main # the scripted cases this branch's changes pick
 ```
 
+**Automatically:** `.github/workflows/qa.yml` runs `qa/run/ci.sh` on this Mac (the self-hosted
+runner `Advaits-Mac-Studio-arm64-ambient`, label `ambient-qa`, installed in `~/actions-runner-ambient`)
+after every merge to main and on every push to a branch with an open pull request. Each run
+publishes the dashboard and posts to #ambient-qa as the Ocean Slack app. Fork pull requests never
+reach this Mac: the workflow runs on push events only.
+
 Results print as they run and are written to `build/qa-results/<time>/summary.md` and
 `results.json`. A failed case keeps its folder (`/tmp/aq.*`) for a look; passing ones are removed.
 

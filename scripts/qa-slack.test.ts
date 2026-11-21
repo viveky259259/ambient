@@ -23,3 +23,10 @@ test("the message counts results and links the dashboard", () => {
   assert.match(m.text, /\*Newly failing\*\n• `A-002`/);
   assert.match(JSON.stringify(m.blocks), /<https:\/\/d\/x\|Dashboard>/);
 });
+
+test("the message says what the run was for and links its log", () => {
+  const withContext: Run = { dir: "3", info: { started: "3", build: "321", commit: "abc1234", context: "PR #48 · feat/agent-history", runUrl: "https://gh/run/1" }, results: [] };
+  const m = message(withContext, [], "https://d/x");
+  assert.match(m.text, /Ambient QA\* · PR #48 · feat\/agent-history ·/);
+  assert.match(JSON.stringify(m.blocks), /<https:\/\/gh\/run\/1\|Run log>/);
+});
