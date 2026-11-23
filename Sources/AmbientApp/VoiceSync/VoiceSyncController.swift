@@ -84,6 +84,8 @@ final class VoiceSyncController: ObservableObject {
     /// The link then starts from there, and the voice comes again.
     private var held: Set<String> = []
     private var player: AVAudioPlayer?
+    /// The note window while it's open.
+    private var composer: NoteComposer?
     private var playerDelegate: PlayerDelegate?
 
     init(paths: AmbientPaths, prefs: Preferences) {
@@ -177,12 +179,17 @@ final class VoiceSyncController: ObservableObject {
                     : "No Mac receives voices from this one yet. Pair it from the other Mac's Settings › Agents › Other Machines.")
     }
 
-    /// Asks for a note and sends it to `chosen`, or to the Mac voices go to.
+    /// Opens the note window for `chosen`, or for the Mac voices go to. One already open comes to the front as it is,
+    /// so a note being written isn't lost.
     func writeNote(to chosen: VoiceDestination?) {
+        if let composer { return composer.show() }
         refreshDestinations()
         guard let destination = chosen ?? destination else { return showNoDestination() }
-        guard let text = NoteComposer.compose(to: destination.label) else { return }
-        sendNote(text, to: destination)
+        let composer = NoteComposer(destinations: destinations, chosen: destination,
+                                    onSend: { [weak self] text, to in self?.sendNote(text, to: to) },
+                                    onClose: { [weak self] in self?.composer = nil })
+        self.composer = composer
+        composer.show()
     }
 
     /// Sends a typed note: one line in the outbox, which the other Mac shows as it shows a voice, without the audio.

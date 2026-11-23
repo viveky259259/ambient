@@ -3,7 +3,7 @@
 ## Unreleased
 
 - **Text notes**: send typed text to another Mac, as you send a voice. *Send Note to …* in the menu bar opens a
-  window to type or paste in; the other Mac shows it under the notch with *Copy Text* and keeps it with your voices.
+  window to type or paste in (⌘V, or its Paste button), with a choice of Mac and ⌘↩ to send; the other Mac shows it under the notch with *Copy Text* and keeps it with your voices.
   Line breaks and indentation stay, so a command or a list arrives as written. A Mac that's away gets it when it's
   back. Both Macs need this version.
 - **The Ambient speaker and the link to another Mac no longer stop after a few days.** Each time the link to a Mac
