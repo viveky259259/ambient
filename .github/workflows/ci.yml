@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 24
       - name: Test the selector
-        run: node --test scripts/qa-cases.test.ts
+        run: node --test scripts/qa-cases.test.ts scripts/qa-run.test.ts
       - name: Check the cases
         run: node scripts/qa-cases.ts check
       - name: Cases for this pull request

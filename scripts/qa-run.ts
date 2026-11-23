@@ -110,23 +110,112 @@ function listening(socket: string): Promise<boolean> {
   });
 }
 
-async function lock(): Promise<() => void> {
+/** Operations on other processes, replaced in tests. */
+export interface ProcessOps {
+  alive(pid: number): boolean;
+  /** The process's command line, empty when it can't be read. */
+  command(pid: number): string;
+  kill(pid: number, signal: NodeJS.Signals): void;
+  sleep(ms: number): Promise<void>;
+}
+
+const systemOps: ProcessOps = {
+  alive(pid) {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (e) {
+      return (e as NodeJS.ErrnoException).code === "EPERM";
+    }
+  },
+  command: (pid) => spawnSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }).stdout?.trim() ?? "",
+  kill: (pid, signal) => process.kill(pid, signal),
+  sleep,
+};
+
+/** The QA app's executable, from any checkout: runners on this Mac share the lock but not the checkout. */
+export function isQAApp(command: string): boolean {
+  return /\/AmbientQA\.app\/Contents\/MacOS\/AmbientQA(\s|$)/.test(command.trim());
+}
+
+function readLockFile(dir: string, name: string): string {
+  try {
+    return readFileSync(join(dir, name), "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Stops a QA app and the process group it leads: politely, then for good after three seconds. */
+async function stopApp(pid: number, ops: ProcessOps): Promise<void> {
+  const signal = (s: NodeJS.Signals) => {
+    try {
+      ops.kill(-pid, s);
+    } catch {
+      try {
+        ops.kill(pid, s);
+      } catch {}
+    }
+  };
+  signal("SIGTERM");
+  for (let i = 0; i < 15 && ops.alive(pid); i++) await ops.sleep(200);
+  if (ops.alive(pid)) signal("SIGKILL");
+}
+
+/**
+ * Clears the lock when the runner holding it has died, as when CI cancels a job: stops the QA app that runner
+ * started, which would otherwise keep running with its broken test settings, and removes that case's folder.
+ * False while the runner is alive.
+ */
+export async function clearStaleLock(dir: string, ops: ProcessOps = systemOps): Promise<boolean> {
+  if (!existsSync(dir)) return true;
+  const owner = Number(readLockFile(dir, "pid")) || 0;
+  if (owner && ops.alive(owner)) return false;
+  const app = Number(readLockFile(dir, "app")) || 0;
+  // A pid can be reused: only an AmbientQA is stopped.
+  if (app && ops.alive(app) && isQAApp(ops.command(app))) await stopApp(app, ops);
+  const folder = readLockFile(dir, "folder");
+  if (/^\/tmp\/aq\.[A-Za-z0-9]+$/.test(folder)) rmSync(folder, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true });
+  return true;
+}
+
+/** Takes the lock, noting this runner and the case's folder so another runner can clean up if this one dies. */
+async function lock(folder: string): Promise<() => void> {
   for (;;) {
     try {
       mkdirSync(LOCK);
       writeFileSync(join(LOCK, "pid"), String(process.pid));
-      return () => rmSync(LOCK, { recursive: true, force: true });
+      writeFileSync(join(LOCK, "folder"), folder);
+      held = true;
+      return () => {
+        held = false;
+        rmSync(LOCK, { recursive: true, force: true });
+      };
     } catch {
       // A lock left by a runner that died is taken over.
-      const pid = Number(readFileSync(join(LOCK, "pid"), "utf8").trim() || 0);
-      try {
-        if (pid) process.kill(pid, 0);
-      } catch {
-        rmSync(LOCK, { recursive: true, force: true });
-        continue;
-      }
+      if (await clearStaleLock(LOCK)) continue;
       await sleep(500);
     }
+  }
+}
+
+/** The QA app this runner started and the lock it holds, for stopping them when the runner is cancelled. */
+let runningApp: number | undefined;
+let held = false;
+
+/** CI cancels a job with SIGINT, then SIGTERM. Stop the app first: it runs in its own process group. */
+function stopOnSignal() {
+  for (const s of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    process.once(s, () => {
+      if (runningApp) {
+        try {
+          process.kill(-runningApp, "SIGKILL");
+        } catch {}
+      }
+      if (held) rmSync(LOCK, { recursive: true, force: true });
+      process.exit(130);
+    });
   }
 }
 
@@ -156,10 +245,12 @@ async function runOne(script: Script, qaCase: QACase, keep: boolean): Promise<Re
   let code: number | null = null;
   try {
     if (script.needsApp) {
-      release = await lock();
+      release = await lock(folder);
       spawnSync("defaults", ["delete", DEFAULTS_DOMAIN], { stdio: "ignore" });
       app = spawn(APP_BIN, [], { env, detached: true, stdio: ["ignore", "ignore", "ignore"] });
       env.QA_APP_PID = String(app.pid);
+      runningApp = app.pid;
+      if (app.pid) writeFileSync(join(LOCK, "app"), String(app.pid));
       const socket = join(ambientHome, "ambient.sock");
       const end = Date.now() + 15_000;
       while (!(await listening(socket))) {
@@ -189,6 +280,7 @@ async function runOne(script: Script, qaCase: QACase, keep: boolean): Promise<Re
       try {
         process.kill(-app.pid, "SIGKILL");
       } catch {}
+      runningApp = undefined;
     }
     release();
   }
@@ -281,6 +373,9 @@ async function main(argv: string[]): Promise<number> {
     return 2;
   }
 
+  // An app a cancelled run left behind keeps showing its test's alerts in the menu bar until it's stopped.
+  await clearStaleLock(LOCK);
+  stopOnSignal();
   const started = new Date().toISOString().replace(/\..*/, "").replace("T", " ");
   const results: Result[] = [];
   for (const s of scripts) {
