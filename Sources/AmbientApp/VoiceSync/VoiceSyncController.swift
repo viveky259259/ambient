@@ -159,13 +159,7 @@ final class VoiceSyncController: ObservableObject {
     func record(to chosen: VoiceDestination?) {
         guard outgoing == nil else { return }
         refreshDestinations()
-        guard let destination = chosen ?? destination else {
-            // Paired, but by a Mac whose Ambient doesn't ask for voices yet.
-            let paired = FileManager.default.fileExists(atPath: paths.userHome.appendingPathComponent(".ambient/bin/ambient-remote").path)
-            show(paired ? "The Mac that follows this one doesn't take voices yet. Update Ambient there, then pair this Mac again."
-                        : "No Mac receives voices from this one yet. Pair it from the other Mac's Settings › Agents › Other Machines.")
-            return
-        }
+        guard let destination = chosen ?? destination else { return showNoDestination() }
         Self.askForMicrophone { [weak self] allowed in
             guard let self else { return }
             guard allowed else {
@@ -174,6 +168,43 @@ final class VoiceSyncController: ObservableObject {
             }
             Self.askForSpeech { transcribe in self.begin(for: destination, transcribe: transcribe) }
         }
+    }
+
+    private func showNoDestination() {
+        // Paired, but by a Mac whose Ambient doesn't ask for voices yet.
+        let paired = FileManager.default.fileExists(atPath: paths.userHome.appendingPathComponent(".ambient/bin/ambient-remote").path)
+        show(paired ? "The Mac that follows this one doesn't take voices yet. Update Ambient there, then pair this Mac again."
+                    : "No Mac receives voices from this one yet. Pair it from the other Mac's Settings › Agents › Other Machines.")
+    }
+
+    /// Asks for a note and sends it to `chosen`, or to the Mac voices go to.
+    func writeNote(to chosen: VoiceDestination?) {
+        refreshDestinations()
+        guard let destination = chosen ?? destination else { return showNoDestination() }
+        guard let text = NoteComposer.compose(to: destination.label) else { return }
+        sendNote(text, to: destination)
+    }
+
+    /// Sends a typed note: one line in the outbox, which the other Mac shows as it shows a voice, without the audio.
+    func sendNote(_ text: String, to destination: VoiceDestination) {
+        guard let note = VoiceLine.noteText(text) else { return }
+        let id = VoiceHub.randomID(), at = Date()
+        do {
+            try outbox.append(to: destination.id, voice: id, .note(at: at, text: note))
+        } catch {
+            show("The note couldn't be sent. \(error.localizedDescription)")
+            return
+        }
+        let record = VoiceRecord(id: id, direction: .sent, peer: MachineRef(id: destination.id, label: destination.label),
+                                 recordedAt: at, seconds: 0, text: note, note: true)
+        do {
+            try library.add(record, audio: Data())
+        } catch {
+            log.error("Couldn't keep the sent note: \(error.localizedDescription, privacy: .public)")
+        }
+        voices = library.voices
+        let online = destinations.first { $0.id == destination.id }?.isOnline() ?? false
+        show(online ? "Note sent to \(destination.label)" : "\(destination.label) gets the note when it's back", for: 3)
     }
 
     private func begin(for destination: VoiceDestination, transcribe: Bool) {
@@ -414,6 +445,7 @@ final class VoiceSyncController: ObservableObject {
     /// Puts the voice on the clipboard as an `.m4a` file named for where and when it's from, which apps take as an
     /// attachment. The `.aac` the library keeps if converting fails.
     func copyAudio(_ record: VoiceRecord) {
+        guard !record.isNote else { return }
         let source = library.audioURL(for: record)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Ambient Voices", isDirectory: true)
         let name = Self.fileName(for: record)
@@ -440,6 +472,7 @@ final class VoiceSyncController: ObservableObject {
     }
 
     func togglePlay(_ record: VoiceRecord) {
+        guard !record.isNote else { return }
         if playing == record.id {
             stopPlaying()
             return

@@ -2,7 +2,7 @@ import Foundation
 import AmbientBase
 import AmbientContracts
 
-/// One line of a voice in the sender's outbox, which `follow` streams to the hub it's addressed to. Like a `RemoteEvent`,
+/// One line of a voice, or a whole typed note, in the sender's outbox, which `follow` streams to the hub it's addressed to. Like a `RemoteEvent`,
 /// it can't ask the hub to do anything: the most it can become is a recording in the voice library.
 public struct VoiceLine: Equatable, Sendable {
     public enum Part: Equatable, Sendable {
@@ -15,6 +15,8 @@ public struct VoiceLine: Equatable, Sendable {
         /// Recording ended, with the final transcript when there is one.
         case end(text: String?)
         case cancel
+        /// A typed note, whole on one line: when it was written, by the sender's clock, and what it says.
+        case note(at: Date, text: String)
 
         var name: String {
             switch self {
@@ -23,6 +25,7 @@ public struct VoiceLine: Equatable, Sendable {
             case .text: "text"
             case .end: "end"
             case .cancel: "cancel"
+            case .note: "note"
             }
         }
     }
@@ -64,6 +67,8 @@ public struct VoiceLine: Equatable, Sendable {
             if let text { s += #","text":"# + JSONValue.string(text).serialized() }
         case .cancel:
             break
+        case let .note(at, text):
+            s += #","ts":\#(Int64(at.timeIntervalSince1970)),"text":"# + JSONValue.string(text).serialized()
         }
         return Data((s + "}").utf8)
     }
@@ -76,6 +81,38 @@ public struct VoiceLine: Equatable, Sendable {
         return cut
     }
 
+    /// A note as it may go on a line, or arrive from one: plain text, as `Trim.plainText` leaves it, except that its line
+    /// breaks, tabs and indentation stay, since a note is often a command or a list. Lines end in no spaces, there are no
+    /// blank lines before or after it, never more than one blank line in a row, and it's under `maxText` characters and
+    /// well under the line cap. Nil when nothing's left to read.
+    public static func noteText(_ text: String) -> String? {
+        let kept = text.replacingOccurrences(of: "\r\n", with: "\n").unicodeScalars.filter { scalar in
+            switch scalar.properties.generalCategory {
+            case .control, .format, .lineSeparator, .paragraphSeparator, .privateUse, .surrogate, .unassigned:
+                return scalar == "\t" || scalar == "\n"
+            default:
+                return true
+            }
+        }
+        var thin = String.UnicodeScalarView()
+        for character in String(String.UnicodeScalarView(kept)) {
+            thin.append(contentsOf: character.unicodeScalars.prefix(Trim.maxScalarsPerCharacter))
+        }
+        var lines: [Substring] = []
+        for line in String(thin).split(separator: "\n", omittingEmptySubsequences: false) {
+            var line = line
+            while let last = line.last, last.isWhitespace { line.removeLast() }
+            if line.isEmpty, lines.last?.isEmpty ?? true { continue }
+            lines.append(line)
+        }
+        while lines.last?.isEmpty == true { lines.removeLast() }
+        var note = lines.joined(separator: "\n")
+        guard !note.isEmpty else { return nil }
+        if note.count > maxText { note = String(note.prefix(maxText - 1)) + "…" }
+        while note.utf8.count > 40_000 { note.removeLast(max(1, note.count / 10)) }
+        return note
+    }
+
     static func isID(_ s: String) -> Bool {
         s.range(of: #"\A[0-9a-f]{32}\z"#, options: .regularExpression) != nil
     }
@@ -86,7 +123,7 @@ public struct VoiceLine: Equatable, Sendable {
 enum VoiceLineDecoder {
     static let common: Set<String> = ["v", "type", "vseq", "to", "voice", "part"]
     static let extra: [String: Set<String>] = [
-        "start": ["ts"], "audio": ["n", "data"], "text": ["text"], "end": ["text"], "cancel": [],
+        "start": ["ts"], "audio": ["n", "data"], "text": ["text"], "end": ["text"], "cancel": [], "note": ["ts", "text"],
     ]
 
     static func line(from members: [JSONValue.Member]) throws(RemoteRejection) -> VoiceLine {
@@ -118,6 +155,12 @@ enum VoiceLineDecoder {
             part = .text(Trim.plainText(text, max: VoiceLine.maxText) ?? "")
         case "end":
             part = .end(text: try RemoteEventDecoder.string(fields, "text").map { Trim.plainText($0, max: VoiceLine.maxText) ?? "" })
+        case "note":
+            guard fields["ts"] != nil else { throw .missingField("ts") }
+            guard let text = try RemoteEventDecoder.string(fields, "text") else { throw .missingField("text") }
+            // A note with nothing left to read isn't one.
+            guard let plain = VoiceLine.noteText(text) else { throw .invalid("text") }
+            part = .note(at: try RemoteEventDecoder.timestamp(fields), text: plain)
         default:
             part = .cancel
         }

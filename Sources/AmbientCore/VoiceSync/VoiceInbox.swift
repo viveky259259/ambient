@@ -1,18 +1,20 @@
 import Foundation
 import AmbientContracts
 
-/// A finished voice from another Mac, ready for the library.
+/// A finished voice or a note from another Mac, ready for the library.
 public struct VoiceArrival: Equatable, Sendable {
     public let id: String
     public let machine: MachineRef
     public let recordedAt: Date
     public let seconds: Double
     public let text: String?
-    /// ADTS frames, end to end: a playable `.aac` file.
+    /// ADTS frames, end to end: a playable `.aac` file. Empty for a note.
     public let audio: Data
+    public var isNote = false
 
     public var record: VoiceRecord {
-        VoiceRecord(id: id, direction: .received, peer: machine, recordedAt: recordedAt, seconds: seconds, text: text)
+        VoiceRecord(id: id, direction: .received, peer: machine, recordedAt: recordedAt, seconds: seconds, text: text,
+                    note: isNote)
     }
 }
 
@@ -137,6 +139,12 @@ public final class VoiceInbox {
         guard !done.contains(line.voice) else { return [] }
         let id = line.voice
 
+        if case let .note(at, text) = line.part {
+            guard pending[id] == nil else { return refuse(id, "voiceRestart", now: now) }
+            done.insert(id)
+            return [.arrived(VoiceArrival(id: id, machine: machine, recordedAt: min(at, now), seconds: 0, text: text,
+                                          audio: Data(), isNote: true))]
+        }
         if case let .start(at) = line.part {
             guard pending[id] == nil else { return refuse(id, "voiceRestart", now: now) }
             guard pending.count < limits.maxInFlight else { return refuse(id, "voiceBusy", now: now) }
@@ -147,7 +155,7 @@ public final class VoiceInbox {
         guard var voice = pending[id] else { return [] }
         voice.heardAt = now
         switch line.part {
-        case .start:
+        case .start, .note:
             return []
         case let .audio(n, data):
             guard n == voice.nextChunk else { return refuse(id, "voiceOrder", now: now) }

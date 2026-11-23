@@ -1,6 +1,6 @@
 import Foundation
 
-/// The sending Mac's outbox: the voice lines `follow` streams, each to the hub it's addressed to. The app is its only
+/// The sending Mac's outbox: the voice and note lines `follow` streams, each to the hub it's addressed to. The app is its only
 /// writer. Each line is appended before `outbox.seq` names it, and `follow` reads only as far as `outbox.seq`, so it never
 /// sees half a line. Safe from any thread.
 ///
@@ -100,6 +100,9 @@ public final class VoiceOutbox: @unchecked Sendable {
             }
             switch v.part {
             case let .start(at): voices[v.voice]?.start = at
+            case let .note(at, _):
+                voices[v.voice]?.start = at
+                voices[v.voice]?.open = false
             case .end, .cancel: voices[v.voice]?.open = false
             default: break
             }

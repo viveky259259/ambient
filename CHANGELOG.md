@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Text notes**: send typed text to another Mac, as you send a voice. *Send Note to …* in the menu bar opens a
+  window to type or paste in; the other Mac shows it under the notch with *Copy Text* and keeps it with your voices.
+  Line breaks and indentation stay, so a command or a list arrives as written. A Mac that's away gets it when it's
+  back. Both Macs need this version.
 - **The Ambient speaker and the link to another Mac no longer stop after a few days.** Each time the link to a Mac
   that sleeps reconnected, Ambient left two files open, until it reached its limit: then the speaker, the link and the
   speaker driver's install (*couldn't be copied*) all failed. It now closes them as it goes.
