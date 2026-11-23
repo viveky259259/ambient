@@ -86,6 +86,12 @@ final class VoiceSyncController: ObservableObject {
     private var player: AVAudioPlayer?
     /// The note window while it's open.
     private var composer: NoteComposer?
+    /// Watches the pasteboard while the clipboard is shared.
+    private var clipboardTimer: Timer?
+    /// The pasteboard's change count last seen, so each copy is looked at once.
+    private var clipboardSeen = NSPasteboard.general.changeCount
+    private var clipboardArrivals = ClipboardShare.Arrivals()
+    private var clipboardSetting: AnyCancellable?
     private var playerDelegate: PlayerDelegate?
 
     init(paths: AmbientPaths, prefs: Preferences) {
@@ -113,6 +119,7 @@ final class VoiceSyncController: ObservableObject {
             DispatchQueue.global(qos: .utility).async { outbox.expire() }
         }
         expireTimer?.tolerance = 300
+        clipboardSetting = prefs.$clipboardShare.removeDuplicates().sink { [weak self] on in self?.shareClipboard(on) }
     }
 
     /// Quitting mid-recording: the receiving Mac stops waiting for it. A voice already sent, still waiting for its last
@@ -375,6 +382,58 @@ final class VoiceSyncController: ObservableObject {
         show((error as? VoiceRecorderError)?.message ?? error.localizedDescription)
     }
 
+    // MARK: - Clipboard
+
+    /// Starts or stops watching the pasteboard. What's on it already when sharing starts stays here.
+    private func shareClipboard(_ on: Bool) {
+        clipboardTimer?.invalidate()
+        clipboardTimer = nil
+        clipboardSeen = NSPasteboard.general.changeCount
+        guard on else { return }
+        // macOS says nothing when the pasteboard changes, so it's looked at: twice a second costs next to nothing.
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.checkClipboard() }
+        timer.tolerance = 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        clipboardTimer = timer
+    }
+
+    /// Sends a new copy to each paired Mac that's connected now. One that's away would only get it once it's stale.
+    private func checkClipboard() {
+        let board = NSPasteboard.general
+        guard board.changeCount != clipboardSeen else { return }
+        clipboardSeen = board.changeCount
+        let types = board.types?.map(\.rawValue) ?? []
+        guard ClipboardShare.shareable(types: types), let copied = board.string(forType: .string),
+              let text = VoiceLine.clipText(copied) else { return }
+        refreshDestinations()
+        let at = Date()
+        for destination in destinations where destination.isOnline(now: at) {
+            let line = VoiceLine(vseq: 1, to: destination.id, voice: VoiceHub.randomID(), part: .clip(at: at, text: text))
+            // Text that would make a line longer than the other Mac accepts stays here.
+            guard line.encoded().count < RemoteEventDecoder.maxLineBytes - 1_024 else {
+                log.notice("Copied text too long to share: \(text.count) characters")
+                return
+            }
+            do {
+                try outbox.append(to: destination.id, voice: line.voice, line.part)
+            } catch {
+                log.error("Couldn't share the clipboard: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Puts text copied on another Mac on this Mac's clipboard, marked so it isn't sent back.
+    private func receiveClipboard(_ text: String, at: Date, from machine: MachineRef) {
+        guard prefs.clipboardShare, clipboardArrivals.accept(machine.id, at: at) else { return }
+        let board = NSPasteboard.general
+        let marker = NSPasteboard.PasteboardType(ClipboardShare.marker)
+        board.declareTypes([.string, marker], owner: nil)
+        board.setString(text, forType: .string)
+        board.setData(Data(), forType: marker)
+        clipboardSeen = board.changeCount
+        log.debug("Clipboard from \(machine.id, privacy: .public): \(text.count) characters")
+    }
+
     // MARK: - Receiving
 
     /// The cursor and the voices already kept, for a new link to `machine`.
@@ -401,6 +460,8 @@ final class VoiceSyncController: ObservableObject {
                 }
             case let .ended(id):
                 incoming.removeAll { $0.id == id }
+            case let .clipboard(_, text, at):
+                receiveClipboard(text, at: at, from: machine)
             }
         }
         if !held.contains(machine.id) { try? library.setCursor(cursor, machine: machine.id) }

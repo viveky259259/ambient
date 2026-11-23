@@ -38,6 +38,9 @@ public enum VoiceInboxEvent: Equatable, Sendable {
     case arrived(VoiceArrival)
     /// Cancelled, refused, or cut off by the link. Stop showing it.
     case ended(id: String)
+    /// Text copied on the other Mac, at `at` by its clock. Whether it goes on this Mac's clipboard is `ClipboardShare`'s
+    /// call.
+    case clipboard(id: String, text: String, at: Date)
 }
 
 /// Puts one machine's voices together from their lines, as `RemoteIngest` does for events: no I/O beyond the audit log.
@@ -145,6 +148,10 @@ public final class VoiceInbox {
             return [.arrived(VoiceArrival(id: id, machine: machine, recordedAt: min(at, now), seconds: 0, text: text,
                                           audio: Data(), isNote: true))]
         }
+        if case let .clip(at, text) = line.part {
+            done.insert(id)
+            return [.clipboard(id: id, text: text, at: at)]
+        }
         if case let .start(at) = line.part {
             guard pending[id] == nil else { return refuse(id, "voiceRestart", now: now) }
             guard pending.count < limits.maxInFlight else { return refuse(id, "voiceBusy", now: now) }
@@ -155,7 +162,7 @@ public final class VoiceInbox {
         guard var voice = pending[id] else { return [] }
         voice.heardAt = now
         switch line.part {
-        case .start, .note:
+        case .start, .note, .clip:
             return []
         case let .audio(n, data):
             guard n == voice.nextChunk else { return refuse(id, "voiceOrder", now: now) }

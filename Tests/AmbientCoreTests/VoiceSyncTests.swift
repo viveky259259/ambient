@@ -706,3 +706,58 @@ private func scratch() -> AmbientPaths {
         #expect(again.record(voiceID(1)) == nil)
     }
 }
+
+@Suite struct ClipboardShareTests {
+    @Test func aCopyGoesThroughTheDecoderExactlyAsCopied() throws {
+        let copied = "  indented\n\tline two\r\nemoji 👩‍💻 and \"quotes\" \\ end  \n"
+        let sent = line(1, .clip(at: now, text: copied))
+        #expect(try decode(String(decoding: sent.encoded(), as: UTF8.self)) == sent)
+    }
+
+    @Test func onlyControlCharactersAreTakenOutAndTooMuchIsLeftOut() {
+        #expect(VoiceLine.clipText("a\u{07}b\u{0}c\td") == "abc\td")
+        #expect(VoiceLine.clipText(" \n\t ") == nil)
+        #expect(VoiceLine.clipText(String(repeating: "x", count: VoiceLine.maxClip)) != nil)
+        #expect(VoiceLine.clipText(String(repeating: "x", count: VoiceLine.maxClip + 1)) == nil, "never half a copy")
+    }
+
+    @Test func aCopyIsHandedOverAtOnceAndOnlyOnce() {
+        let box = VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor())
+        #expect(box.receive(line(1, .clip(at: now, text: "x")), now: now) == [.clipboard(id: voiceID(1), text: "x", at: now)])
+        #expect(box.cursor == 1)
+        #expect(box.receive(line(1, .clip(at: now, text: "x")), now: now) == [])
+    }
+
+    @Test func onlyPlainTextWithNoPrivateMarkIsShared() {
+        #expect(ClipboardShare.shareable(types: ["public.utf8-plain-text", "public.html"]))
+        #expect(!ClipboardShare.shareable(types: ["public.png"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", "org.nspasteboard.ConcealedType"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", "org.nspasteboard.TransientType"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", ClipboardShare.marker]), "never sent back")
+    }
+
+    @Test func onlyRecentCopiesInOrderGoOnTheClipboard() {
+        var arrivals = ClipboardShare.Arrivals()
+        func accept(_ machine: String, _ offset: TimeInterval) -> Bool {
+            arrivals.accept(machine, at: now.addingTimeInterval(offset), now: now)
+        }
+        let results = [accept("daily", -121), accept("daily", -5), accept("daily", -5), accept("daily", -10),
+                       accept("studio", -10), accept("daily", 3), accept("daily", 600)]
+        // Stale, as after a sleep; fresh; two copies in the same second; older than the last one; each Mac has its own
+        // order; a clock a little ahead; far ahead.
+        #expect(results == [false, true, true, false, true, true, false])
+    }
+
+    @Test func copiesLeaveTheOutboxAfterTenMinutesAndNotesStay() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .clip(at: now.addingTimeInterval(-700), text: "old copy"))
+        try box.append(to: hub, voice: voiceID(2), .note(at: now.addingTimeInterval(-700), text: "note"))
+        try box.append(to: hub, voice: voiceID(3), .clip(at: now.addingTimeInterval(-60), text: "new copy"))
+        box.expire(now: now)
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> String? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v.voice
+        }
+        #expect(kept == [voiceID(2), voiceID(3)])
+    }
+}

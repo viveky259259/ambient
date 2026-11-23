@@ -17,6 +17,8 @@ public struct VoiceLine: Equatable, Sendable {
         case cancel
         /// A typed note, whole on one line: when it was written, by the sender's clock, and what it says.
         case note(at: Date, text: String)
+        /// What was copied on the sender, by its clock, for this Mac's clipboard.
+        case clip(at: Date, text: String)
 
         var name: String {
             switch self {
@@ -26,6 +28,7 @@ public struct VoiceLine: Equatable, Sendable {
             case .end: "end"
             case .cancel: "cancel"
             case .note: "note"
+            case .clip: "clip"
             }
         }
     }
@@ -67,7 +70,7 @@ public struct VoiceLine: Equatable, Sendable {
             if let text { s += #","text":"# + JSONValue.string(text).serialized() }
         case .cancel:
             break
-        case let .note(at, text):
+        case let .note(at, text), let .clip(at, text):
             s += #","ts":\#(Int64(at.timeIntervalSince1970)),"text":"# + JSONValue.string(text).serialized()
         }
         return Data((s + "}").utf8)
@@ -113,6 +116,21 @@ public struct VoiceLine: Equatable, Sendable {
         return note
     }
 
+    /// Characters of copied text that go to the other Macs. More is left out rather than cut, since a clipboard that's
+    /// half of what was copied would paste the wrong thing.
+    public static let maxClip = 20_000
+
+    /// Copied text as it may go on a line: exactly as copied, but for control characters other than tabs and line breaks.
+    /// Nil when there's nothing but whitespace, or more than `maxClip` characters.
+    public static func clipText(_ text: String) -> String? {
+        let kept = text.unicodeScalars.filter { scalar in
+            scalar.properties.generalCategory != .control || scalar == "\t" || scalar == "\n" || scalar == "\r"
+        }
+        let clip = String(String.UnicodeScalarView(kept))
+        guard clip.count <= maxClip, !clip.allSatisfy(\.isWhitespace) else { return nil }
+        return clip
+    }
+
     static func isID(_ s: String) -> Bool {
         s.range(of: #"\A[0-9a-f]{32}\z"#, options: .regularExpression) != nil
     }
@@ -123,7 +141,7 @@ public struct VoiceLine: Equatable, Sendable {
 enum VoiceLineDecoder {
     static let common: Set<String> = ["v", "type", "vseq", "to", "voice", "part"]
     static let extra: [String: Set<String>] = [
-        "start": ["ts"], "audio": ["n", "data"], "text": ["text"], "end": ["text"], "cancel": [], "note": ["ts", "text"],
+        "start": ["ts"], "audio": ["n", "data"], "text": ["text"], "end": ["text"], "cancel": [], "note": ["ts", "text"], "clip": ["ts", "text"],
     ]
 
     static func line(from members: [JSONValue.Member]) throws(RemoteRejection) -> VoiceLine {
@@ -161,6 +179,11 @@ enum VoiceLineDecoder {
             // A note with nothing left to read isn't one.
             guard let plain = VoiceLine.noteText(text) else { throw .invalid("text") }
             part = .note(at: try RemoteEventDecoder.timestamp(fields), text: plain)
+        case "clip":
+            guard fields["ts"] != nil else { throw .missingField("ts") }
+            guard let text = try RemoteEventDecoder.string(fields, "text") else { throw .missingField("text") }
+            guard let clip = VoiceLine.clipText(text) else { throw .invalid("text") }
+            part = .clip(at: try RemoteEventDecoder.timestamp(fields), text: clip)
         default:
             part = .cancel
         }

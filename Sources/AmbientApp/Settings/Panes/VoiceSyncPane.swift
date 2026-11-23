@@ -79,6 +79,16 @@ struct VoiceSyncPane: View {
                     .fixedSize()
                 }
             }
+            SettingsSection(header: "Clipboard",
+                            footer: "Turn it on on each Mac that should share. Text only, and only with Macs connected now. Passwords and anything else an app marks as private stay here.") {
+                SettingsRow(title: "Share the clipboard",
+                            subtitle: "Text you copy here goes to your paired Macs, and what you copy there comes here.") {
+                    Toggle("Share the clipboard", isOn: $prefs.clipboardShare)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.small)
+                }
+            }
             SettingsSection(header: "History", footer: voice.voices.isEmpty ? nil : "Kept on this Mac until you delete them.") {
                 if voice.voices.isEmpty {
                     Text("No voices yet.")
