@@ -18,13 +18,13 @@ final class HelperRun {
         process.standardOutput = output
         process.standardError = errors
         do { try process.run() } catch { return false }
-        let process = process
+        let process = process, input = input
         // Everything it says is heard before it's known to have stopped: it has stopped once its output ends.
         Thread {
             let reader = output.fileHandleForReading
             var buffer = Data()
             while true {
-                let chunk = reader.availableData
+                let chunk = autoreleasepool { reader.availableData }
                 if chunk.isEmpty { break }
                 buffer.append(chunk)
                 while let newline = buffer.firstIndex(of: 0x0A) {
@@ -35,11 +35,19 @@ final class HelperRun {
                     DispatchQueue.main.async { onEvent(event) }
                 }
             }
+            // Closed now, not whenever the handle happens to be freed: the speaker and microphone start helpers again
+            // and again for as long as the app runs.
+            try? reader.close()
+            try? input.fileHandleForWriting.close()
             process.waitUntilExit()
             DispatchQueue.main.async(execute: onExit)
         }.start()
         // Standard error isn't read for anything but has to be drained, or a chatty helper would block on it.
-        Thread { _ = errors.fileHandleForReading.readDataToEndOfFile() }.start()
+        Thread {
+            let reader = errors.fileHandleForReading
+            autoreleasepool { _ = reader.readDataToEndOfFile() }
+            try? reader.close()
+        }.start()
         return true
     }
 

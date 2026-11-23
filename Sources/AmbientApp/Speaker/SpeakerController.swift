@@ -161,6 +161,7 @@ final class SpeakerController: ObservableObject {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 try FileManager.default.copyItem(at: bundled, to: folder.appendingPathComponent("AmbientSpeaker.driver"))
             } catch {
+                try? FileManager.default.removeItem(at: folder)
                 return "Couldn't get the Ambient speaker ready to install: \(error.localizedDescription)"
             }
             stage = folder
@@ -183,6 +184,7 @@ final class SpeakerController: ObservableObject {
         osascript.waitUntilExit()
         guard osascript.terminationStatus != 0 else { return nil }
         let message = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        try? errors.fileHandleForReading.close()
         return message.contains("-128") ? nil : "macOS didn't let Ambient \(install ? "install" : "remove") the speaker."
     }
 

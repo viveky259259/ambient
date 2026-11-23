@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **The Ambient speaker and the link to another Mac no longer stop after a few days.** Each time the link to a Mac
+  that sleeps reconnected, Ambient left two files open, until it reached its limit: then the speaker, the link and the
+  speaker driver's install (*couldn't be copied*) all failed. It now closes them as it goes.
 - **Agent history**: keep a team's finished agent chats in one place, and ask why the code is the way it is.
   `ambient history setup --store s3://bucket/prefix` (or a folder) in a repository turns it on for that repository
   only. When a Claude chat ends, Ambient stores it as one record with paths relative to the repository and credentials

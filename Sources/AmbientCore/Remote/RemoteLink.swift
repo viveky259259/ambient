@@ -154,7 +154,10 @@ public final class RemoteLink: @unchecked Sendable {
         var restarts = 0
         report(.connecting, nil)
         while !isStopped {
-            let outcome = connectOnce()
+            // This thread lives as long as the link, so its autorelease pool never drains on its own: without one per
+            // connection, each attempt's pipes stayed open until the link stopped, thousands over days of a machine
+            // that sleeps, until the app ran out of file descriptors.
+            let outcome = autoreleasepool { connectOnce() }
             if isStopped { break }
             if case .restart = outcome { restarts += 1 } else { restarts = 0 }
             switch outcome {
@@ -183,6 +186,12 @@ public final class RemoteLink: @unchecked Sendable {
         report(.stopped, nil)
     }
 
+    /// Closes the ends this process reads of pipes a child wrote to, now, rather than whenever their handles are freed.
+    /// Process closes the ends it gave the child itself.
+    static func close(_ pipes: Pipe...) {
+        for pipe in pipes { try? pipe.fileHandleForReading.close() }
+    }
+
     private func sleep(_ seconds: TimeInterval) {
         _ = wake.wait(timeout: .now() + seconds)
     }
@@ -209,6 +218,8 @@ public final class RemoteLink: @unchecked Sendable {
         do {
             try child.run()
         } catch {
+            err.fileHandleForReading.readabilityHandler = nil
+            Self.close(out, err)
             return .retry(uptime: 0)
         }
         lock.lock()
@@ -224,6 +235,7 @@ public final class RemoteLink: @unchecked Sendable {
         // short wait, not an end of file.
         _ = drained.wait(timeout: .now() + 0.5)
         err.fileHandleForReading.readabilityHandler = nil
+        Self.close(out, err)
         lock.lock()
         process = nil
         lock.unlock()
