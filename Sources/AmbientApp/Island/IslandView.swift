@@ -7,7 +7,7 @@ struct IslandView: View {
     private var size: CGSize { model.currentSize }
     private var expandedLike: Bool {
         switch model.presentation {
-        case .bloom, .expanded: true
+        case .bloom, .expanded, .speech, .permission, .voice: true
         default: false
         }
     }
@@ -26,6 +26,7 @@ struct IslandView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.presentation)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.sessions.count)
+        .animation(.spring(response: 0.42, dampingFraction: 0.8), value: model.showingAll)
         .environment(\.colorScheme, .dark)
     }
 
@@ -35,10 +36,40 @@ struct IslandView: View {
             Color.clear
         case .collapsed:
             wings
+        case .voiceIncoming:
+            if let incoming = model.voice?.incoming.first {
+                VoiceIncomingWings(incoming: incoming, notchWidth: model.geometry.notchWidth, height: model.geometry.notchHeight)
+            }
+        case .voice:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                if let voice = model.voice { VoiceCard(voice: voice) }
+            }
+            .transition(.opacity)
         case .bloom:
             VStack(spacing: 0) {
                 Color.clear.frame(height: model.geometry.notchHeight)
                 if let s = model.bloomSession { BloomCard(session: s).onTapGesture { model.onOpen(s) } }
+            }
+            .transition(.opacity)
+        case .speech:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                SpeechRow(state: model.speech, level: model.speechLevel,
+                          onStop: model.onStopSpeech, onPause: model.onPauseSpeech,
+                          onResume: model.onResumeSpeech, onUseMacVoice: model.onUseMacVoice)
+            }
+            .transition(.opacity)
+        case .permission:
+            VStack(spacing: 0) {
+                Color.clear.frame(height: model.geometry.notchHeight)
+                if let entry = model.permission {
+                    PermissionCard(entry: entry, count: model.permissionCount,
+                                   onAnswer: { model.onAnswer(entry.ask.id, $0) },
+                                   onAnswerInAgent: { model.onAnswerInAgent(entry.ask) })
+                        // A new view per prompt, so each one starts disarmed.
+                        .id(entry.ask.id)
+                }
             }
             .transition(.opacity)
         case .expanded:
@@ -85,7 +116,8 @@ private struct WingLabel: View {
         } else {
             Group {
                 switch primary.mood {
-                case .waiting: Image(systemName: "hand.raised.fill")
+                case .waiting:
+                    Image(systemName: "hand.raised.fill").accessibilityLabel(Describe.status(primary))
                 case .error: Image(systemName: "exclamationmark.triangle.fill")
                 case .working, .idle, .done:
                     TimelineView(.periodic(from: .now, by: 1)) { ctx in
@@ -102,11 +134,29 @@ private struct WingLabel: View {
     }
 }
 
-struct AgentTag: View {
-    let agent: AgentKind
+/// The machine a remote session runs on. Remote text is plain text, and a label is the user's own.
+struct MachineTag: View {
+    let session: Session
 
     var body: some View {
-        Text(agent.displayName.uppercased())
+        if let machine = Describe.machine(session) {
+            HStack(spacing: 3) {
+                Image(systemName: "network").font(.system(size: 8, weight: .semibold)).accessibilityHidden(true)
+                Text(verbatim: machine).lineLimit(1)
+            }
+            .font(.system(size: 9.5, weight: .medium))
+            .foregroundStyle(.white.opacity(0.55))
+            .accessibilityLabel("on \(machine)")
+        }
+    }
+}
+
+struct AgentTag: View {
+    let agent: AgentKind
+    let label: String
+
+    var body: some View {
+        Text(label.uppercased())
             .font(.system(size: 8.5, weight: .bold, design: .rounded))
             .tracking(0.6)
             .foregroundStyle(Palette.agent(agent).color)
@@ -129,9 +179,10 @@ private struct BloomCard: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    AgentTag(agent: session.agent)
+                    AgentTag(agent: session.agent, label: session.agentLabel)
+                    MachineTag(session: session)
                 }
-                Text(Describe.activity(session.activity))
+                Text(Describe.status(session))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.72))
                     .lineLimit(2)
@@ -155,6 +206,104 @@ private struct BloomCard: View {
     }
 }
 
+/// A permission prompt the island can answer. Its buttons arm after a moment, so a card that appears under the
+/// pointer can't be approved by a click meant for something else. Nobody answering sends it back to the agent.
+private struct PermissionCard: View {
+    let entry: PermissionQueue.Entry
+    let count: Int
+    let onAnswer: (PermissionAnswer) -> Void
+    let onAnswerInAgent: () -> Void
+    @State private var armed = false
+
+    private var ask: PermissionAsk { entry.ask }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Palette.waiting.color)
+                Text(ask.event.project ?? ask.event.agent.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                AgentTag(agent: ask.event.agent, label: ask.event.agentName ?? ask.event.agent.displayName)
+                Spacer(minLength: 8)
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    let left = max(0, Int(entry.deadline.timeIntervalSince(ctx.date).rounded(.up)))
+                    Text(count > 1 ? "1 of \(count) · \(left)s" : "\(left)s")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("wants to use \(ask.tool)")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                // Wrapped, never trimmed by the view: this is the text the user decides on.
+                if let hint = ask.hint {
+                    Text(hint)
+                        .font(.system(size: 11.5, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(PermissionAsk.maxHintLines)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Its details aren't shown here.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Palette.waiting.color)
+                }
+            }
+            HStack(spacing: 8) {
+                Button(action: onAnswerInAgent) {
+                    let app = HostActivator.appName(for: ask.event.host) ?? ask.event.agent.displayName
+                    Text(ask.showsAll ? "Answer in \(app)" : "See it all in \(app)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ask.showsAll ? .white.opacity(0.6) : Palette.waiting.color)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                CardButton(title: "Deny", prominent: false) { onAnswer(.deny) }
+                CardButton(title: "Allow once", prominent: true) { onAnswer(.allow) }
+            }
+            .disabled(!armed)
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .task(id: ask.id) {
+            armed = false
+            try? await Task.sleep(for: .milliseconds(600))
+            armed = true
+        }
+    }
+}
+
+struct CardButton: View {
+    let title: String
+    let prominent: Bool
+    let action: () -> Void
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(prominent ? .black : .white)
+                .padding(.horizontal, 14)
+                .frame(height: 26)
+                .background(Capsule().fill(prominent ? Color.white.opacity(hovered ? 1 : 0.88)
+                                                     : Color.white.opacity(hovered ? 0.22 : 0.14)))
+        }
+        .buttonStyle(.plain)
+        .opacity(enabled ? 1 : 0.45)
+        .onHover { hovered = $0 }
+    }
+}
+
 private struct ExpandedList: View {
     @ObservedObject var model: IslandViewModel
 
@@ -166,14 +315,21 @@ private struct ExpandedList: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(maxWidth: .infinity, minHeight: 52)
             }
-            ForEach(model.listed) { s in
-                SessionRow(session: s) { model.onOpen(s) }
+            if model.showingAll {
+                ScrollView(.vertical) { rows }
+                    .scrollIndicators(.never)
+            } else {
+                rows
             }
             Spacer(minLength: 0)
             HStack(spacing: 14) {
                 FooterButton(title: model.quiet ? "Resume alerts" : "Quiet 1h",
                              symbol: model.quiet ? "bell" : "bell.slash", action: model.onToggleQuiet)
                 FooterButton(title: "Mark all seen", symbol: "checkmark.circle", action: model.onAcknowledgeAll)
+                if model.hasMore {
+                    FooterButton(title: model.showingAll ? "Show fewer" : "View all \(model.sessions.count)",
+                                 symbol: model.showingAll ? "chevron.up" : "list.bullet", action: model.onToggleShowAll)
+                }
                 Spacer()
                 FooterButton(title: "Settings", symbol: "gearshape", action: model.onSettings)
             }
@@ -181,6 +337,14 @@ private struct ExpandedList: View {
             .frame(height: 40)
         }
         .padding(.top, 8)
+    }
+
+    private var rows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(model.listed) { s in
+                SessionRow(session: s) { model.onOpen(s) }
+            }
+        }
     }
 }
 
@@ -196,12 +360,13 @@ private struct SessionRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(Describe.title(session)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
-                        AgentTag(agent: session.agent)
+                        AgentTag(agent: session.agent, label: session.agentLabel)
+                        MachineTag(session: session)
                         if session.subagents > 0 {
                             Text("+\(session.subagents) agents").font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                         }
                     }
-                    Text([Describe.place(session), Describe.activity(session.activity)].compactMap { $0 }.joined(separator: " · "))
+                    Text([Describe.place(session), Describe.status(session)].compactMap { $0 }.joined(separator: " · "))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
                 }
                 Spacer(minLength: 6)

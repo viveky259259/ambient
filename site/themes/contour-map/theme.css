@@ -1,0 +1,108 @@
+/* Contour map. A surveyor's topographic sheet: pale survey paper with a 180 px grid, contour lines in a
+   sepia ink, peak triangles in the state colours, boxed legends, grid references and a scale bar. */
+:root {
+  --sepia: #8a7648;
+  --bg: #e9e6d3;
+  --bg-alt: #e1ddc6;
+  --surface: #eeebdb;
+  --surface-2: #e3dfca;
+  --ink: #2b3327;
+  --ink-2: #444c3e;
+  --rule: #2b3327;
+  --accent: #2b3327;
+  --on-accent: #e9e6d3;
+  --link: #7a3f12;
+  --band: #2b3327;
+  --band-ink: #ebe8d6;
+  --band-ink-2: #bfc2ad;
+  --band-surface: #343e2f;
+  --band-rule: #ebe8d640;
+  --waiting: #c77800;
+  --done: #2f7d3a;
+  --error: #b3261e;
+
+  --font-display: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-body: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-label: "Overpass Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Overpass Mono", ui-monospace, Menlo, monospace;
+  --display-tracking: -0.03em;
+  --display-leading: 0.98;
+  --h1-size: clamp(46px, 6vw, 88px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 25px;
+  --body-size: 18px;
+  --label-size: 12px;
+  --label-tracking: 0.12em;
+  --label-weight: 400;
+  --label-color: var(--ink-2);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--rule);
+  --texture: linear-gradient(90deg, #2b33271a 1px, transparent 1px) 0 0 / 180px 100%, linear-gradient(#2b33271a 1px, transparent 1px) 0 0 / 100% 180px;
+  --band-texture: linear-gradient(90deg, #ebe8d612 1px, transparent 1px) 0 0 / 180px 100%, linear-gradient(#ebe8d612 1px, transparent 1px) 0 0 / 100% 180px;
+  --device-edge: #4a5143;
+  --edge-strength: 0.3;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: normal; line-height: normal; }
+.alt { background-image: var(--texture); }
+
+.nav { background: var(--bg); border-bottom: 1.5px solid var(--ink); }
+.brand { font-size: 26px; font-weight: 500; letter-spacing: 0; }
+.brand img { display: none; }
+.nav-links { text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.12em; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-label); font-weight: 600; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; padding: 16px 26px; }
+.btn.small { font-size: 11.5px; min-height: 40px; }
+.dark .btn { background: var(--band-ink); color: var(--band); }
+.copy-code { background: var(--surface); }
+
+/* Hero: the words sit in a boxed title block over the survey; the peaks are beside it. */
+.hero-copy { background: #e9e6d3f2; border: 1.5px solid var(--ink); padding: 34px 36px 38px; position: relative; z-index: 1; }
+.hero-copy .lede { font-size: clamp(18px, 1.7vw, 21px); color: var(--ink-2); }
+.trust { font-style: italic; }
+.fineprint { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.02em; }
+.hero-art { aspect-ratio: 1 / 1; width: 100%; max-width: 560px; margin: 0 auto; }
+.ctr-art { width: 100%; height: auto; overflow: visible; }
+.ctr-art .now { fill: var(--state, var(--waiting)); transition: fill 0.6s var(--ease); }
+.ctr-art .lines { animation: ctr-drift 18s ease-in-out infinite alternate; }
+@keyframes ctr-drift { to { transform: translate(-6px, 4px); } }
+@media (max-width: 860px) { .hero-art { max-width: 380px; } .hero-copy { padding: 26px 22px 28px; } }
+
+/* Sections carry grid references, like squares on the sheet. */
+main { counter-reset: sq; }
+main .kicker { counter-increment: sq; }
+main .kicker::before { content: "▲ " counter(sq, upper-alpha) counter(sq) " · "; color: var(--sepia); }
+.dark .kicker::before { color: #d8c48f; }
+main > section { border-top: 1.5px solid var(--ink); }
+.section-lede { color: var(--ink-2); }
+h2 { font-weight: 400; }
+
+/* Cards are map legends: boxed, with a mono label rule. */
+.card { background: var(--surface); }
+.dark .card { background: var(--band-surface); }
+.card h3 { font-weight: 500; }
+.states .card { border-top: 1.5px solid var(--rule); position: relative; padding-top: 52px; }
+.states .card::before { content: "▲"; position: absolute; top: 22px; left: 26px; color: var(--state); font-size: 22px; line-height: 1; }
+.states .card .orb { position: absolute; top: 26px; right: 26px; margin: 0; }
+.states .card p { font-style: italic; }
+.dest li { font-size: 17px; }
+.dest .where { font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11.5px; }
+.chip { font-family: var(--font-label); text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; min-height: 44px; }
+.voice-tab { text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; min-height: 44px; }
+.voice-flow .end { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.step { border-radius: 0; background: transparent; color: var(--ink); border: 1.5px solid var(--ink); font-family: var(--font-label); }
+.stat { font-weight: 400; letter-spacing: -0.04em; color: var(--link); font-style: italic; }
+.faq summary { font-size: 21px; }
+.faq summary::after { font-family: var(--font-label); }
+.guide-list a { border: 1.5px solid var(--rule); background: var(--surface); }
+.guide-list strong { font-weight: 500; }
+
+/* The footer ends in a scale bar. */
+footer { border-top: 1.5px solid var(--ink); font-family: var(--font-label); font-size: 12px; }
+footer .wrap::before { content: ""; flex: 0 0 100%; height: 11px; margin-bottom: 6px; background: repeating-linear-gradient(90deg, var(--ink) 0 50px, transparent 50px 100px) 2px 2px / 296px 7px no-repeat, linear-gradient(var(--bg), var(--bg)) 2px 2px / 296px 7px no-repeat, linear-gradient(var(--ink), var(--ink)) 0 0 / 300px 11px no-repeat; }
+dialog { border-width: 1.5px; }

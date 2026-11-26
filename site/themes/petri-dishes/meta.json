@@ -1,0 +1,14 @@
+{
+  "name": "Petri dishes",
+  "set": "nature",
+  "inspiration": "Petri dishes on a microbiology bench, one culture per state, labelled in marker on torn lab tape",
+  "order": 44,
+  "hero": "split",
+  "fonts": [
+    { "family": "Familjen Grotesk", "axes": "wght@400;600;700" },
+    { "family": "Atkinson Hyperlegible", "axes": "wght@400;700" },
+    { "family": "Overpass Mono", "axes": "wght@400;600" },
+    { "family": "Caveat Brush", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source" }
+}

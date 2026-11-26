@@ -25,6 +25,8 @@ final class Preferences: ObservableObject {
     @Published var wallpaperOnLockScreen: Bool { didSet { defaults.set(wallpaperOnLockScreen, forKey: "wallpaperOnLockScreen") } }
     @Published var wallpaperLockMessages: Bool { didSet { defaults.set(wallpaperLockMessages, forKey: "wallpaperLockMessages") } }
     @Published var wallpaperCalendar: Bool { didSet { defaults.set(wallpaperCalendar, forKey: "wallpaperCalendar") } }
+    /// Soft task cues on the living wallpaper (off by default — like calendar / lock messages).
+    @Published var wallpaperShowBoard: Bool { didSet { defaults.set(wallpaperShowBoard, forKey: "wallpaperShowBoard") } }
     @Published var wallpaperIslandEffect: Bool { didSet { defaults.set(wallpaperIslandEffect, forKey: "wallpaperIslandEffect") } }
     @Published var wallpaperLook: String { didSet { defaults.set(wallpaperLook, forKey: "wallpaperLook") } }
     @Published var petEnabled: Bool { didSet { defaults.set(petEnabled, forKey: "petEnabled") } }
@@ -41,8 +43,86 @@ final class Preferences: ObservableObject {
         }
     }
 
-    init(defaults: UserDefaults = .standard) {
+    /// A `SpeechEngineKind` raw value; nil until the voice chooser has run.
+    @Published var speechEngine: String? { didSet { defaults.set(speechEngine, forKey: "speechEngine") } }
+    /// An `AVSpeechSynthesisVoice` identifier; empty for the system's default voice.
+    @Published var macVoice: String { didSet { defaults.set(macVoice, forKey: "macVoice") } }
+    @Published var kokoroVoice: String { didSet { defaults.set(kokoroVoice, forKey: "kokoroVoice") } }
+    /// An `OnlineProvider` raw value.
+    @Published var onlineProvider: String { didSet { defaults.set(onlineProvider, forKey: "onlineProvider") } }
+    @Published var onlineVoice: String { didSet { defaults.set(onlineVoice, forKey: "onlineVoice") } }
+    @Published var onlineModel: String { didSet { defaults.set(onlineModel, forKey: "onlineModel") } }
+    /// For `OnlineProvider.custom`: an OpenAI-compatible base URL such as http://localhost:8880/v1.
+    @Published var onlineBaseURL: String { didSet { defaults.set(onlineBaseURL, forKey: "onlineBaseURL") } }
+    /// 1 is normal speed; 0.5 to 2.
+    @Published var speechRate: Double { didSet { defaults.set(speechRate, forKey: "speechRate") } }
+    @Published var speechReadsCode: Bool { didSet { defaults.set(speechReadsCode, forKey: "speechReadsCode") } }
+    /// The Accessibility explanation has been shown once (hotkey route only).
+    @Published var speechAccessExplained: Bool { didSet { defaults.set(speechAccessExplained, forKey: "speechAccessExplained") } }
+    /// A `Shortcut.stored` value; nil for the default (⌥⎋).
+    @Published var speechShortcut: String? { didSet { defaults.set(speechShortcut, forKey: "speechShortcut") } }
+    /// The island has shown its one-time read-aloud hint, or the shortcut has been used, so no hint is needed.
+    @Published var speechHintShown: Bool { didSet { defaults.set(speechHintShown, forKey: "speechHintShown") } }
+    /// Answer Claude Code and Codex permission prompts from the island. Kept in ~/.ambient/permissions.json,
+    /// which the hooks read, rather than in UserDefaults.
+    @Published var answerPermissions: Bool { didSet { savePermissions() } }
+    /// Seconds the island waits for an answer before the agent asks in its own way.
+    @Published var permissionWait: Int { didSet { savePermissions() } }
+    private let paths: AmbientPaths
+
+    // MARK: - Task board local LLM (local-agent MCP)
+
+    @Published var taskLLMEnabled: Bool { didSet { defaults.set(taskLLMEnabled, forKey: "taskLLMEnabled") } }
+    /// Streamable HTTP MCP URL for local-agent (default LaunchAgent on this Mac).
+    @Published var taskLLMMCPURL: String { didSet { defaults.set(taskLLMMCPURL, forKey: "taskLLMMCPURL") } }
+    @Published var taskLLMModelID: String { didSet { defaults.set(taskLLMModelID, forKey: "taskLLMModelID") } }
+    /// A model folder or .gguf file on this Mac; when set it wins over the model id.
+    @Published var taskLLMModelPath: String { didSet { defaults.set(taskLLMModelPath, forKey: "taskLLMModelPath") } }
+    /// Python with mlx-lm / mlx-vlm for running a model path directly; empty to find one.
+    @Published var taskLLMPython: String { didSet { defaults.set(taskLLMPython, forKey: "taskLLMPython") } }
+    /// Opt-in: read local Claude/Codex transcript stores for richer summaries.
+    @Published var taskLLMReadTranscripts: Bool { didSet { defaults.set(taskLLMReadTranscripts, forKey: "taskLLMReadTranscripts") } }
+    @Published var taskLLMModelsVolume: String { didSet { defaults.set(taskLLMModelsVolume, forKey: "taskLLMModelsVolume") } }
+
+    // MARK: - Remote machines
+
+    /// Opt-in: the local LLM may summarize remote sessions. Off, their text never reaches it.
+    @Published var remoteSummaries: Bool { didSet { defaults.set(remoteSummaries, forKey: "remoteSummaries") } }
+
+    // MARK: - Voice sync
+
+    /// A `Shortcut.stored` value; nil for the default (⌃⌥V).
+    @Published var voiceSyncShortcut: String? { didSet { defaults.set(voiceSyncShortcut, forKey: "voiceSyncShortcut") } }
+    /// The hub id voices go to; nil for one that's connected (`VoiceDestination.preferred`).
+    @Published var voiceSyncDestination: String? { didSet { defaults.set(voiceSyncDestination, forKey: "voiceSyncDestination") } }
+    /// Seconds a received voice's Copy card stays under the notch.
+    @Published var voiceSyncCopySeconds: Int { didSet { defaults.set(voiceSyncCopySeconds, forKey: "voiceSyncCopySeconds") } }
+
+    // MARK: - Speaker
+
+    /// The paired machine the Ambient speaker plays on.
+    @Published var speakerDestination: String? { didSet { defaults.set(speakerDestination, forKey: "speakerDestination") } }
+    /// Whether it plays there, which it does again after a restart.
+    @Published var speakerOn: Bool { didSet { defaults.set(speakerOn, forKey: "speakerOn") } }
+    /// Lets other Macs play their Ambient speaker here. Their player, which runs here as this user, reads this key from
+    /// the app's defaults (scripts/speaker-pipe.swift, `receiveSetting`).
+    @Published var speakerReceive: Bool { didSet { defaults.set(speakerReceive, forKey: "speakerReceive") } }
+
+    // MARK: - Microphone
+
+    /// The paired machine whose microphone Ambient Microphone is.
+    @Published var micSource: String? { didSet { defaults.set(micSource, forKey: "micSource") } }
+    /// Whether Ambient Microphone uses it: it connects while an app here records from Ambient Microphone.
+    @Published var micUse: Bool { didSet { defaults.set(micUse, forKey: "micUse") } }
+    /// Whether other Macs can use this Mac's microphone, while Ambient runs.
+    @Published var micLend: Bool { didSet { defaults.set(micLend, forKey: "micLend") } }
+
+    init(defaults: UserDefaults = .standard, paths: AmbientPaths = .current()) {
         self.defaults = defaults
+        self.paths = paths
+        let permissions = PermissionSettings.load(paths)
+        answerPermissions = permissions.enabled
+        permissionWait = permissions.wait
         defaults.register(defaults: [
             "islandEnabled": true,
             "islandShowsWorking": true,
@@ -58,10 +138,29 @@ final class Preferences: ObservableObject {
             "wallpaperOnLockScreen": true,
             "wallpaperLockMessages": false,
             "wallpaperCalendar": false,
+            "wallpaperShowBoard": false,
             "wallpaperIslandEffect": true,
             "wallpaperLook": "timeOfDay",
             "petEnabled": false,
             "petSpecies": PetSpecies.blob.rawValue,
+            "macVoice": "",
+            "kokoroVoice": VoicePackManifest.current.defaultVoice,
+            "onlineProvider": OnlineProvider.openAI.rawValue,
+            "onlineVoice": OnlineProvider.openAI.defaultVoice,
+            "onlineModel": OnlineProvider.openAI.defaultModel,
+            "onlineBaseURL": "http://localhost:8880/v1",
+            "speechRate": 1.0,
+            "speechReadsCode": false,
+            "speechAccessExplained": false,
+            "taskLLMEnabled": false,
+            "taskLLMMCPURL": "http://127.0.0.1:5051/mcp",
+            "taskLLMModelID": "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+            "taskLLMModelPath": "",
+            "taskLLMPython": "",
+            "taskLLMReadTranscripts": false,
+            "taskLLMModelsVolume": "/Volumes/Models",
+            "remoteSummaries": false,
+            "voiceSyncCopySeconds": 60,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -78,6 +177,7 @@ final class Preferences: ObservableObject {
         wallpaperOnLockScreen = defaults.bool(forKey: "wallpaperOnLockScreen")
         wallpaperLockMessages = defaults.bool(forKey: "wallpaperLockMessages")
         wallpaperCalendar = defaults.bool(forKey: "wallpaperCalendar")
+        wallpaperShowBoard = defaults.bool(forKey: "wallpaperShowBoard")
         wallpaperIslandEffect = defaults.bool(forKey: "wallpaperIslandEffect")
         wallpaperLook = defaults.string(forKey: "wallpaperLook") ?? "timeOfDay"
         petEnabled = defaults.bool(forKey: "petEnabled")
@@ -87,6 +187,50 @@ final class Preferences: ObservableObject {
         } else {
             petOrigin = nil
         }
+        speechEngine = defaults.string(forKey: "speechEngine")
+        macVoice = defaults.string(forKey: "macVoice") ?? ""
+        kokoroVoice = defaults.string(forKey: "kokoroVoice") ?? VoicePackManifest.current.defaultVoice
+        onlineProvider = defaults.string(forKey: "onlineProvider") ?? OnlineProvider.openAI.rawValue
+        onlineVoice = defaults.string(forKey: "onlineVoice") ?? OnlineProvider.openAI.defaultVoice
+        onlineModel = defaults.string(forKey: "onlineModel") ?? OnlineProvider.openAI.defaultModel
+        onlineBaseURL = defaults.string(forKey: "onlineBaseURL") ?? "http://localhost:8880/v1"
+        speechRate = defaults.double(forKey: "speechRate")
+        speechReadsCode = defaults.bool(forKey: "speechReadsCode")
+        speechAccessExplained = defaults.bool(forKey: "speechAccessExplained")
+        speechShortcut = defaults.string(forKey: "speechShortcut")
+        speechHintShown = defaults.bool(forKey: "speechHintShown")
+        taskLLMEnabled = defaults.bool(forKey: "taskLLMEnabled")
+        taskLLMMCPURL = defaults.string(forKey: "taskLLMMCPURL") ?? "http://127.0.0.1:5051/mcp"
+        taskLLMModelID = defaults.string(forKey: "taskLLMModelID")
+            ?? "hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        taskLLMModelPath = defaults.string(forKey: "taskLLMModelPath") ?? ""
+        taskLLMPython = defaults.string(forKey: "taskLLMPython") ?? ""
+        taskLLMReadTranscripts = defaults.bool(forKey: "taskLLMReadTranscripts")
+        remoteSummaries = defaults.bool(forKey: "remoteSummaries")
+        voiceSyncShortcut = defaults.string(forKey: "voiceSyncShortcut")
+        voiceSyncDestination = defaults.string(forKey: "voiceSyncDestination")
+        voiceSyncCopySeconds = defaults.integer(forKey: "voiceSyncCopySeconds")
+        speakerDestination = defaults.string(forKey: "speakerDestination")
+        speakerOn = defaults.bool(forKey: "speakerOn")
+        speakerReceive = defaults.bool(forKey: "speakerReceive")
+        micSource = defaults.string(forKey: "micSource")
+        micUse = defaults.bool(forKey: "micUse")
+        micLend = defaults.bool(forKey: "micLend")
+        taskLLMModelsVolume = defaults.string(forKey: "taskLLMModelsVolume") ?? "/Volumes/Models"
+    }
+
+    var taskLLMConfig: TaskLLMConfig {
+        TaskLLMConfig(enabled: taskLLMEnabled, mcpURL: taskLLMMCPURL, modelID: taskLLMModelID,
+                      modelPath: taskLLMModelPath, pythonPath: taskLLMPython,
+                      readTranscripts: taskLLMReadTranscripts, modelsVolumePath: taskLLMModelsVolume)
+    }
+
+    var permissionSettings: PermissionSettings {
+        PermissionSettings(enabled: answerPermissions, wait: permissionWait)
+    }
+
+    private func savePermissions() {
+        try? permissionSettings.save(paths)
     }
 
     var isQuiet: Bool {
@@ -102,4 +246,6 @@ final class Preferences: ObservableObject {
     var sceneChoice: SceneChoice { SceneChoice(rawValue: wallpaperScene) ?? .daily }
     var sceneLook: SceneLook { SceneLook(rawValue: wallpaperLook) ?? .timeOfDay }
     var pet: PetSpecies { PetSpecies(stored: petSpecies) }
+    var speechEngineKind: SpeechEngineKind? { speechEngine.flatMap(SpeechEngineKind.init(rawValue:)) }
+    var provider: OnlineProvider { OnlineProvider(rawValue: onlineProvider) ?? .openAI }
 }

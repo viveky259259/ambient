@@ -1,0 +1,497 @@
+[
+  {
+    "id": "almanac",
+    "name": "Almanac",
+    "set": "machines",
+    "inspiration": "A nineteenth-century almanac: a sun of engraved rays, small-capital headings and a table of the four aspects",
+    "hero": "stack",
+    "off": false,
+    "order": 0
+  },
+  {
+    "id": "signal-halo",
+    "name": "Signal halo",
+    "set": "opt",
+    "inspiration": "Rings of real hook events radiating from the notch, in a quiet editorial serif on warm paper",
+    "hero": "stack",
+    "off": false,
+    "order": 1
+  },
+  {
+    "id": "night-desk",
+    "name": "Night desk",
+    "set": "opt",
+    "inspiration": "A desk late at night: a dark room, a light serif, and the notch's open island casting its state's glow",
+    "hero": "split",
+    "off": false,
+    "order": 2
+  },
+  {
+    "id": "field-manual",
+    "name": "Field manual",
+    "set": "opt",
+    "inspiration": "A technical field manual: condensed capitals, numbered sections, a ruled page and a callout drawing of the notch island",
+    "hero": "under",
+    "off": false,
+    "order": 3
+  },
+  {
+    "id": "living-sky",
+    "name": "Living sky",
+    "set": "opt",
+    "inspiration": "Dusk over a calm harbour: a setting sun, glass panels, and two boats whose wakes glow in their agents' states",
+    "hero": "under",
+    "off": false,
+    "order": 4
+  },
+  {
+    "id": "session-score",
+    "name": "Session score",
+    "set": "opt",
+    "inspiration": "A musical score of agent sessions: one lane per agent on a timeline, hatched while working, a struck note when it stops",
+    "hero": "under",
+    "off": false,
+    "order": 5
+  },
+  {
+    "id": "lighthouse",
+    "name": "Lighthouse",
+    "set": "insp",
+    "inspiration": "A lighthouse at night: the notch is the lamp, its beam sweeps the sea in the current state's colour, and the four states are a chart of lights",
+    "hero": "stack",
+    "off": false,
+    "order": 6
+  },
+  {
+    "id": "departure-board",
+    "name": "Departure board",
+    "set": "insp",
+    "inspiration": "A split-flap departures board: every agent session is a row, most urgent first, its status flipping into its state's colour",
+    "hero": "under",
+    "off": false,
+    "order": 7
+  },
+  {
+    "id": "hifi-receiver",
+    "name": "Hi-fi receiver",
+    "set": "insp",
+    "inspiration": "A quiet hi-fi receiver: a speaker grille, four state lamps, a tuning dial for the agents and a row of keys, in warm grey with one orange control",
+    "hero": "split",
+    "off": false,
+    "order": 8
+  },
+  {
+    "id": "radar-scope",
+    "name": "Radar scope",
+    "set": "insp",
+    "inspiration": "An approach-control radar scope in cyan phosphor: every agent session is a tagged blip in its state's colour under a turning sweep",
+    "hero": "split",
+    "off": false,
+    "order": 9
+  },
+  {
+    "id": "riso-zine",
+    "name": "Riso zine",
+    "set": "insp",
+    "inspiration": "A two-ink risograph zine: fluorescent pink and blue overprinted on cream, misregistered type, halftone dots and a stuck-on sticker",
+    "hero": "split",
+    "off": false,
+    "order": 10
+  },
+  {
+    "id": "herbarium",
+    "name": "Herbarium",
+    "set": "insp",
+    "inspiration": "A naturalist's herbarium: a pressed specimen taped to a mount sheet, its blooms in the four state colours, typed collection labels and pencilled notes",
+    "hero": "split",
+    "off": false,
+    "order": 11
+  },
+  {
+    "id": "jazz-sleeve",
+    "name": "Jazz sleeve",
+    "set": "insp",
+    "inspiration": "A mid-century modern jazz LP sleeve: a flat field of blue, huge condensed capitals, a level meter in the state colours, a tracklist and liner notes",
+    "hero": "split",
+    "off": false,
+    "order": 12
+  },
+  {
+    "id": "contour-map",
+    "name": "Contour map",
+    "set": "insp",
+    "inspiration": "A surveyor's topographic sheet: contour lines rising to peaks where each session runs, marked with coloured triangles, a grid, a legend and a scale bar",
+    "hero": "split",
+    "off": false,
+    "order": 13
+  },
+  {
+    "id": "rose-window",
+    "name": "Rose window",
+    "set": "insp",
+    "inspiration": "A cathedral rose window at dusk: rings of leaded stained glass in jewel blues and violets, the state colours set among them and a lit centre",
+    "hero": "stack",
+    "off": false,
+    "order": 14
+  },
+  {
+    "id": "ink-tearoom",
+    "name": "Ink tearoom",
+    "set": "insp",
+    "inspiration": "A quiet tearoom scroll: an ensō brushed in sumi ink on washi paper, a vermilion seal, wide margins and a single light where the circle opens",
+    "hero": "split",
+    "off": false,
+    "order": 15
+  },
+  {
+    "id": "brutalist-block",
+    "name": "Brutalist block",
+    "set": "culture",
+    "inspiration": "A brutalist housing block at night: board-marked concrete, heavy rules, a tower of dark windows where each session is a lit one, and a directory board by the door",
+    "hero": "split",
+    "off": false,
+    "order": 16
+  },
+  {
+    "id": "deco-elevator-dial",
+    "name": "Deco elevator dial",
+    "set": "culture",
+    "inspiration": "The floor indicator above an Art Deco lift door: a gilt half-dial with a sunburst, a needle that rests on the most urgent state, stepped setbacks and a double frame",
+    "hero": "under",
+    "off": false,
+    "order": 17
+  },
+  {
+    "id": "lantern-street",
+    "name": "Lantern street",
+    "set": "culture",
+    "inspiration": "A night-market street strung with paper lanterns: each session is a lantern you read by its colour, under a dusk sky above the rooftops",
+    "hero": "stack",
+    "off": false,
+    "order": 18
+  },
+  {
+    "id": "match-day-pitch",
+    "name": "Match day",
+    "set": "culture",
+    "inspiration": "A football pitch on match day: mown stripes, chalk lines, condensed italic numbers and the referee's cards, with every agent a player on the field",
+    "hero": "under",
+    "off": false,
+    "order": 19
+  },
+  {
+    "id": "bauhaus-forms",
+    "name": "Bauhaus forms",
+    "set": "culture",
+    "inspiration": "A Bauhaus poster: primary colours on unbleached paper, lowercase geometric type, heavy black rules and one elementary form for each state",
+    "hero": "split",
+    "off": false,
+    "order": 20
+  },
+  {
+    "id": "diner-ticket-rail",
+    "name": "Diner ticket rail",
+    "set": "culture",
+    "inspiration": "A short-order diner: the service bell on the pass, tickets on a steel rail, an awning stripe, a teal tiled wall and a checkerboard floor",
+    "hero": "split",
+    "off": false,
+    "order": 21
+  },
+  {
+    "id": "azulejo-wall",
+    "name": "Azulejo wall",
+    "set": "culture",
+    "inspiration": "A wall of painted azulejo tiles: cobalt on tin-white glaze with gold rims, read as one pattern until the eye finds the tile that differs",
+    "hero": "split",
+    "off": false,
+    "order": 22
+  },
+  {
+    "id": "stage-cue-lights",
+    "name": "Stage cue lights",
+    "set": "culture",
+    "inspiration": "A theatre at curtain-up: velvet curtains, footlights, a gilt line and the stage manager's cue lights, one beam for each state",
+    "hero": "under",
+    "off": false,
+    "order": 23
+  },
+  {
+    "id": "neon-roadside",
+    "name": "Neon roadside",
+    "set": "culture",
+    "inspiration": "A roadside motel sign at night: a brick wall, hot-pink and cyan tubes, a script wordmark and a stack of signs where the one that matters is lit",
+    "hero": "split",
+    "off": false,
+    "order": 24
+  },
+  {
+    "id": "illuminated-hours",
+    "name": "Illuminated hours",
+    "set": "culture",
+    "inspiration": "A medieval book of hours: vellum, a vermilion rubric, lapis and gold leaf, a vine in the margin, illuminated initials and arched miniatures",
+    "hero": "split",
+    "off": false,
+    "order": 25
+  },
+  {
+    "id": "signal-box",
+    "name": "Signal box",
+    "set": "machines",
+    "inspiration": "A railway signal box at night: an enamelled panel in brass frames, a signal head whose lamp shows the most urgent aspect, and a lever for each state",
+    "hero": "split",
+    "off": false,
+    "order": 26
+  },
+  {
+    "id": "switchboard",
+    "name": "Switchboard",
+    "set": "machines",
+    "inspiration": "A telephone exchange: a walnut cabinet, a jack field with brass rings and lamps, ivory designation strips and key cards, and patch cords",
+    "hero": "split",
+    "off": false,
+    "order": 27
+  },
+  {
+    "id": "till-receipt",
+    "name": "Till receipt",
+    "set": "machines",
+    "inspiration": "A shop till's printed receipt on a red counter: every session itemised with its state, the total is free",
+    "hero": "split",
+    "off": false,
+    "order": 28
+  },
+  {
+    "id": "elevator-panel",
+    "name": "Elevator panel",
+    "set": "machines",
+    "inspiration": "A lift's brushed-steel car panel: a floor dial whose needle points at the most urgent state, and lit call buttons",
+    "hero": "split",
+    "off": false,
+    "order": 29
+  },
+  {
+    "id": "road-signs",
+    "name": "Road signs",
+    "set": "machines",
+    "inspiration": "Roadside signage under an open sky: a blue direction board, white panels with black borders, and a warning shape for each state",
+    "hero": "under",
+    "off": false,
+    "order": 30
+  },
+  {
+    "id": "punch-cards",
+    "name": "Punch cards",
+    "set": "machines",
+    "inspiration": "A computer-room desk: manila punch cards with a colour bar for each state, and a green-bar printout of the job",
+    "hero": "split",
+    "off": false,
+    "order": 31
+  },
+  {
+    "id": "airmail",
+    "name": "Airmail",
+    "set": "machines",
+    "inspiration": "An airmail envelope: striped border, perforated stamps for the four states, a postmark and a typed address",
+    "hero": "split",
+    "off": false,
+    "order": 32
+  },
+  {
+    "id": "engine-telegraph",
+    "name": "Engine telegraph",
+    "set": "machines",
+    "inspiration": "A ship's engine-order telegraph on a night bridge: brass dial, ivory face, a handle that rings the order down",
+    "hero": "split",
+    "off": false,
+    "order": 33
+  },
+  {
+    "id": "test-card",
+    "name": "Test card",
+    "set": "machines",
+    "inspiration": "A broadcast test pattern: a grey grid, a black circle with a grey step wedge, and four colour bars for the four states",
+    "hero": "stack",
+    "off": false,
+    "order": 34
+  },
+  {
+    "id": "bioluminescence",
+    "name": "Bioluminescence",
+    "set": "nature",
+    "inspiration": "The midwater at night: glowing jellyfish in each state's colour, descending by urgency through marine snow",
+    "hero": "under",
+    "off": false,
+    "order": 35
+  },
+  {
+    "id": "mineral-cabinet",
+    "name": "Mineral cabinet",
+    "set": "nature",
+    "inspiration": "A museum mineral drawer: walnut dividers, faceted crystals in each state's colour and typed specimen labels",
+    "hero": "split",
+    "off": false,
+    "order": 36
+  },
+  {
+    "id": "prism",
+    "name": "Prism",
+    "set": "nature",
+    "inspiration": "An optical bench on white paper: three agents' beams focused through a lens and a slit, then split by a glass block into Ambient's four state colours",
+    "hero": "stack",
+    "off": false,
+    "order": 37
+  },
+  {
+    "id": "periodic-table",
+    "name": "Periodic table",
+    "set": "nature",
+    "inspiration": "The classroom periodic table: square cells with atomic numbers and two-letter symbols, the four states as heavy coloured elements",
+    "hero": "split",
+    "off": false,
+    "order": 38
+  },
+  {
+    "id": "barometer",
+    "name": "Barometer",
+    "set": "nature",
+    "inspiration": "A hallway aneroid barometer: an enamel dial lettered round its arc, a blued needle that swings to the current state, brass rings",
+    "hero": "split",
+    "off": false,
+    "order": 39
+  },
+  {
+    "id": "honeycomb",
+    "name": "Honeycomb",
+    "set": "nature",
+    "inspiration": "A brood frame of honeycomb: a beekeeper reads the hive by glancing at the cells, and each lit cell is a session in its state's colour",
+    "hero": "split",
+    "off": false,
+    "order": 40
+  },
+  {
+    "id": "orrery-cyanotype",
+    "name": "Orrery cyanotype",
+    "set": "nature",
+    "inspiration": "A cyanotype print of a mechanical orrery: white lines in Prussian blue on brushed paper, hand-tinted bodies, caption plates and a plate number",
+    "hero": "split",
+    "off": false,
+    "order": 41
+  },
+  {
+    "id": "iris",
+    "name": "Iris",
+    "set": "nature",
+    "inspiration": "An ophthalmic plate of an iris with four sectors of pigment, one per state, a measuring ring and dead-straight annotation leaders",
+    "hero": "split",
+    "off": false,
+    "order": 42
+  },
+  {
+    "id": "chladni",
+    "name": "Chladni figures",
+    "set": "nature",
+    "inspiration": "Chladni plates: sand on a bowed black plate settles into the figure of its note, one figure and one sand colour per state",
+    "hero": "under",
+    "off": false,
+    "order": 43
+  },
+  {
+    "id": "petri-dishes",
+    "name": "Petri dishes",
+    "set": "nature",
+    "inspiration": "Petri dishes on a microbiology bench, one culture per state, labelled in marker on torn lab tape",
+    "hero": "split",
+    "off": false,
+    "order": 44
+  },
+  {
+    "id": "loom",
+    "name": "Loom",
+    "set": "craft",
+    "inspiration": "A hand loom: each warp stripe is a session dyed in its state's colour, and the beam above shows the most urgent one",
+    "hero": "split",
+    "off": false,
+    "order": 45
+  },
+  {
+    "id": "glaze-tiles",
+    "name": "Glaze tiles",
+    "set": "craft",
+    "inspiration": "A potter's glaze test tiles on a studio shelf: bisque clay, glossy crazed glazes that pool and drip, kiln numbers and pencilled notes",
+    "hero": "under",
+    "off": false,
+    "order": 46
+  },
+  {
+    "id": "watch-dial",
+    "name": "Watch dial",
+    "set": "craft",
+    "inspiration": "A chronograph dial: brushed steel case, guilloché centre, four sub-dials and a blued hand that points to the most urgent state",
+    "hero": "split",
+    "off": false,
+    "order": 47
+  },
+  {
+    "id": "letterpress-broadside",
+    "name": "Letterpress broadside",
+    "set": "craft",
+    "inspiration": "A wood-type letterpress broadside on yellow stock: fat slab capitals, condensed caps, printer's ornaments and four inks slightly out of register",
+    "hero": "under",
+    "off": false,
+    "order": 48
+  },
+  {
+    "id": "enamel-sign",
+    "name": "Enamel sign",
+    "set": "craft",
+    "inspiration": "A vitreous enamel sign: cobalt ground, cream border, arrow plates with lamps in the four state colours and the odd chip in the enamel",
+    "hero": "split",
+    "off": false,
+    "order": 49
+  },
+  {
+    "id": "abacus",
+    "name": "Abacus",
+    "set": "craft",
+    "inspiration": "A counting frame made as a precise instrument: walnut frame, brass rods and corner plates, turned boxwood beads and an engraved scale",
+    "hero": "under",
+    "off": false,
+    "order": 50
+  },
+  {
+    "id": "chime-bars",
+    "name": "Chime bars",
+    "set": "craft",
+    "inspiration": "Tuned chime bars on a walnut frame: eight metal bars in the four state colours, brass pins and a mallet striking the one that matters",
+    "hero": "under",
+    "off": false,
+    "order": 51
+  },
+  {
+    "id": "neon-sign",
+    "name": "Neon sign",
+    "set": "craft",
+    "inspiration": "An indoor neon blade sign on a bracket against a dark brick wall: bent glass tubes, one lit in the state that matters",
+    "hero": "split",
+    "off": false,
+    "order": 52
+  },
+  {
+    "id": "zellige",
+    "name": "Zellige",
+    "set": "craft",
+    "inspiration": "A zellige arch: hand-cut glazed eight-pointed stars on plaster, a few glazed in the state colours and a keystone that takes the most urgent",
+    "hero": "split",
+    "off": false,
+    "order": 53
+  },
+  {
+    "id": "jewellers-tray",
+    "name": "Jeweller's tray",
+    "set": "craft",
+    "inspiration": "A jeweller's velvet tray: four faceted stones in gold bezels, one for each state, with hallmarks for what Ambient never does",
+    "hero": "split",
+    "off": false,
+    "order": 54
+  }
+]

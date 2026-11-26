@@ -1,0 +1,101 @@
+[
+  {
+    "sessionStarted" : {
+
+    }
+  },
+  {
+    "promptSubmitted" : {
+
+    }
+  },
+  {
+    "toolStarted" : {
+      "detail" : "Package.swift",
+      "name" : "Edit"
+    }
+  },
+  {
+    "toolStarted" : {
+      "name" : "Edit"
+    }
+  },
+  {
+    "toolFinished" : {
+      "failed" : false,
+      "name" : "Edit"
+    }
+  },
+  {
+    "toolFinished" : {
+      "failed" : true,
+      "name" : "Bash"
+    }
+  },
+  {
+    "needsInput" : {
+      "message" : "Allow Bash?",
+      "reason" : "permission"
+    }
+  },
+  {
+    "needsInput" : {
+      "reason" : "question"
+    }
+  },
+  {
+    "answered" : {
+
+    }
+  },
+  {
+    "compactStarted" : {
+
+    }
+  },
+  {
+    "compactFinished" : {
+
+    }
+  },
+  {
+    "subagentStarted" : {
+
+    }
+  },
+  {
+    "subagentFinished" : {
+
+    }
+  },
+  {
+    "turnCompleted" : {
+      "summary" : "Done"
+    }
+  },
+  {
+    "turnCompleted" : {
+
+    }
+  },
+  {
+    "turnFailed" : {
+      "message" : "Overloaded"
+    }
+  },
+  {
+    "turnFailed" : {
+
+    }
+  },
+  {
+    "sessionEnded" : {
+
+    }
+  },
+  {
+    "notice" : {
+      "message" : "Hello"
+    }
+  }
+]

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="almanac" data-hero="stack">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ambient by yaml.cafe: Claude Code &amp; Codex notifications in your Mac's notch</title>
-  <meta name="description" content="Free Mac app that shows what Claude Code, Codex and Gemini CLI are doing at the notch, in notifications and on the Dock, so you know when an agent needs you.">
+  <title>Ambient: Claude Code notifications in your Mac's notch, free</title>
+  <meta name="description" content="Free notch app that tells you when Claude Code, Codex or Gemini CLI is done or needs input: a status island, notifications with chimes and a Dock glow. Open source, no account.">
   <link rel="canonical" href="https://yaml.cafe/">
   <meta name="google-site-verification" content="eSbckVyqMAmHfEnfHkK-ggl3bdDBUUo3diFWRJXN89Y">
   <meta property="og:type" content="website">
@@ -25,7 +25,11 @@
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="alternate" type="text/markdown" href="/index.md" title="Ambient, in Markdown">
   <link rel="alternate" type="text/plain" href="/llms.txt" title="Ambient for LLMs">
-  <link rel="stylesheet" href="/styles.css">
+  <!-- The design test: every variant shares this page and themes/system.css; a theme only adds tokens, art and
+       fonts. Almanac is the default (no JavaScript, crawlers); themes/loader.js gives everyone else a variant. -->
+  <link rel="stylesheet" href="/themes/system.css">
+  <script src="/themes/loader.js"></script>
+  <noscript><link rel="stylesheet" href="/themes/almanac/fonts.css"><link rel="stylesheet" href="/themes/almanac/theme.css"></noscript>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="5071a34e-e2ce-4556-b044-90c5bd1c2ee9" data-domains="yaml.cafe" data-do-not-track="true"></script>
   <script defer src="/vendor/web-vitals-6.2.2.js"></script>
   <script defer src="/perf.js"></script>
@@ -61,10 +65,12 @@
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "macOS 14 or later",
         "processorRequirements": "Apple silicon or Intel",
-        "softwareVersion": "0.5.1",
-        "fileSize": "3.6 MB",
-        "dateModified": "2026-09-30T00:00:00+00:00",
+        "softwareVersion": "0.10.0",
+        "fileSize": "11.5 MB",
+        "dateModified": "2026-11-17T00:00:00+00:00",
         "isAccessibleForFree": true,
+        "license": "https://opensource.org/licenses/MIT",
+        "sameAs": ["https://github.com/viveky259259/ambient"],
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "featureList": [
           "Notch island showing working, needs you, done and error states",
@@ -76,8 +82,12 @@
           "A black hole or a sun at the notch when the island opens, driven by real gravity",
           "Wallpaper follows the time of day, matches macOS light or dark mode, or stays light or dark",
           "Wallpaper on every display and on the lock screen",
+          "Read aloud: hear any selected reply, with a Mac voice, Kokoro offline or your own OpenAI or ElevenLabs key",
+          "Voice sync: talk on one Mac and paste the transcript on another",
+          "Ambient Speaker: hear one Mac on another, with video waiting for the sound",
+          "Ambient Microphone: record from another Mac's microphone, on only while an app records",
           "Works with Claude Code, Codex and Gemini CLI",
-          "No accounts, no network requests, no telemetry"
+          "No accounts, no telemetry, online only when you ask"
         ],
         "publisher": { "@id": "https://yaml.cafe/#org" }
       },
@@ -86,7 +96,8 @@
         "@id": "https://yaml.cafe/#faq",
         "mainEntity": [
           { "@type": "Question", "name": "Is Ambient free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Download it, connect your agents and use every feature." } },
-          { "@type": "Question", "name": "Does it send my code or prompts anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them over a Unix socket to the app on your Mac. The app makes no network requests." } },
+          { "@type": "Question", "name": "Is Ambient open source?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The source code is on GitHub under the MIT license: https://github.com/viveky259259/ambient" } },
+          { "@type": "Question", "name": "Does it send my code or prompts anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them over a Unix socket to the app on your Mac. Ambient goes online only when you ask it to, and machines you pair reach your Mac over your own ssh." } },
           { "@type": "Question", "name": "Will it slow my agent down?", "acceptedAnswer": { "@type": "Answer", "text": "No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped." } },
           { "@type": "Question", "name": "How is Ambient different from Claude Code's built-in notifications?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent." } },
           { "@type": "Question", "name": "Does it work with tmux, iTerm2, VS Code and Cursor?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors." } },
@@ -95,14 +106,20 @@
           { "@type": "Question", "name": "Does the living wallpaper replace my wallpaper?", "acceptedAnswer": { "@type": "Answer", "text": "No. It's off until you turn it on in Settings › Wallpaper, and it's drawn above your own wallpaper and below your desktop icons. Turn it off and your wallpaper is simply there. On the lock screen, Ambient sets the scene as your wallpaper while the Mac is locked, under macOS's own password field and login options, and puts your wallpaper back when you unlock." } },
           { "@type": "Question", "name": "Which Macs does it run on?", "acceptedAnswer": { "@type": "Answer", "text": "macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar." } },
           { "@type": "Question", "name": "Do I need to sign up to download it?", "acceptedAnswer": { "@type": "Answer", "text": "No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional." } },
-          { "@type": "Question", "name": "How do I ask for a feature?", "acceptedAnswer": { "@type": "Answer", "text": "Suggest it on the feature requests board at yaml.cafe/requests, or vote for someone else's idea there. No account needed. In the app, choose Suggest a Feature… from the menu bar menu." } }
+          { "@type": "Question", "name": "How do I ask for a feature?", "acceptedAnswer": { "@type": "Answer", "text": "Suggest it on the feature requests board at yaml.cafe/requests, or vote for someone else's idea there. No account needed. In the app, choose Suggest a Feature… from the menu bar menu." } },
+          { "@type": "Question", "name": "How do I get notified when Claude Code is done or needs input?", "acceptedAnswer": { "@type": "Answer", "text": "Install Ambient and click Connect All. From then on, a notification and a soft chime arrive the moment a turn ends or Claude asks for permission or a question, the island turns green or amber, and a click takes you to that session. Without Ambient, Claude Code's Stop and Notification hooks can post a desktop alert or play a sound; the Claude Code notifications guide compares every option." } },
+          { "@type": "Question", "name": "Can Ambient read Claude Code's answer aloud?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Select part of a reply in the Claude app, Codex or your terminal and press Option-Escape, or choose Read Selection Aloud from the menu bar. Ambient reads it with a Mac voice, with Kokoro running offline on your Mac after a one-time download, or with OpenAI or ElevenLabs using your own key. Markdown, paths and code blocks are turned into something worth hearing, and the island shows pause, continue and stop." } },
+          { "@type": "Question", "name": "Is Ambient a free alternative to Vibe Island or a Dynamic Island app for MacBook?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient is a free, open-source notch app for coding agents: it shows each Claude Code, Codex and Gemini CLI session at the notch, with notifications, a menu bar list and a Dock glow, and runs on MacBooks with a notch and on other Macs, where the island sits at the top of the menu bar. The Vibe Island alternatives guide compares twelve notch apps." } },
+          { "@type": "Question", "name": "Which coding agents does Ambient support?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code in the terminal, in editors and in the Claude desktop app; Codex in the CLI and the Codex app; Gemini CLI; Antigravity; Cursor; and, in beta, GitHub Copilot CLI and OpenCode. Any other agent or script can drive it with the ambient emit command." } },
+          { "@type": "Question", "name": "Can I use one Mac's speakers or microphone on another?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ambient Speaker adds an output called Ambient: what plays to it plays on another Mac you've paired, and video here waits for the sound. Ambient Microphone adds an input: apps here that record from it hear the other Mac's microphone, which is on only while they record. Each Mac decides in its own Settings whether others may play sound on it or use its microphone, and the sound goes straight between your Macs, set up over your own ssh." } },
+          { "@type": "Question", "name": "Can Ambient follow Claude Code running on another machine?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Run ambient remote add NAME to follow agents on a server, a dev box or another Mac over your own ssh, with no account or relay. Their sessions appear beside the local ones, and a remote machine can only send display data to your Mac." } }
         ]
       }
     ]
   }
   </script>
 </head>
-<body data-dmg="/downloads/Ambient-0.5.1.dmg">
+<body data-dmg="/downloads/Ambient-0.10.0.dmg">
 
 <div class="edge-glow top" aria-hidden="true"></div>
 <div class="edge-glow bottom" aria-hidden="true"></div>
@@ -111,24 +128,29 @@
   <div class="wrap">
     <a class="brand" href="/"><img src="/assets/icon-256.png" alt="">Ambient</a>
     <div class="nav-links">
-      <a href="#return">Click to return</a>
-      <a href="#island">Island</a>
-      <a href="#alerts">Alerts</a>
-      <a href="#dock">Dock glow</a>
-      <a href="#wallpaper">Wallpaper</a>
+      <a class="wide" href="#return">Click to return</a>
+      <a class="wide" href="#island">Island</a>
+      <a class="wide" href="#alerts">Alerts</a>
+      <a class="wide" href="#dock">Dock glow</a>
+      <a class="wide" href="#wallpaper">Wallpaper</a>
+      <a class="wide" href="#voice">Voice</a>
       <a href="#faq">FAQ</a>
       <a href="/guides/">Guides</a>
       <a href="/requests/">Requests</a>
+      <a href="https://github.com/viveky259259/ambient">GitHub</a>
     </div>
     <button class="btn small desktop-only" data-download="nav">Download</button>
     <button class="btn small mobile-only hidden" data-copy-link="nav">Copy link</button>
   </div>
 </nav>
 
-<header class="hero center" id="top">
-  <div class="wrap">
-    <h1>Your Mac, aware of your coding agents.</h1>
-    <p class="lede">Ambient is a free Mac app that turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-art" id="motif" aria-hidden="true"></div>
+    <div class="hero-copy">
+    <p class="kicker" data-copy="kicker">A free Mac app for coding agents</p>
+    <h1 data-copy="h1">Your Mac, aware of your coding agents.</h1>
+    <p class="lede" data-copy="lede">Ambient is a free Mac app that turns what Claude Code, Codex and Gemini CLI are doing into calm signals at the notch, in notifications and along the Dock. Stop babysitting terminals. Never miss the moment an agent needs you.</p>
     <div class="cta-row desktop-only">
       <button class="btn" data-download="hero">Download for Mac</button>
       <a class="link-btn" href="#return">See how it works ›</a>
@@ -137,9 +159,39 @@
       <button class="btn" id="mobile-copy-hero">Copy link for your Mac</button>
       <a class="link-btn" href="#return">See how it works ›</a>
     </div>
-    <p class="fineprint desktop-only">Free · Version 0.5.1 · macOS 14 or later · Apple silicon and Intel · 3.6&nbsp;MB</p>
+    <p class="trust desktop-only">Open source (MIT) · No account · No telemetry · Notarized by Apple</p>
+    <p class="fineprint desktop-only">Free · Version 0.10.0 · macOS 14 or later · Apple silicon and Intel · 11.5&nbsp;MB</p>
+    <p class="fineprint desktop-only">Or with Homebrew: <button class="copy-code" data-copy-text="brew install --cask viveky259259/tap/ambient" data-copy-place="hero" aria-label="Copy the Homebrew command"><code>brew install --cask viveky259259/tap/ambient</code><span aria-live="polite">Copy</span></button></p>
     <p class="fineprint mobile-only hidden">Ambient is a Mac app. Save this link and open it on your Mac.</p>
+    </div>
+  </div>
+</header>
 
+<main>
+<section class="alt" id="return">
+  <div class="wrap split">
+    <div>
+      <p class="kicker">Click to return</p>
+      <h2>Click. You're back where the agent runs.</h2>
+      <p class="body">A notification, an island row or a menu row takes you to the exact place the agent is working — not just the app.</p>
+      <p class="body">From a terminal, <code>ambient open</code> jumps to the session that needs you most.</p>
+    </div>
+    <ul class="dest">
+      <li><span class="dot" style="background: var(--claude)"></span>Claude desktop app<span class="where">the exact chat</span></li>
+      <li><span class="dot" style="background: var(--codex)"></span>Codex app<span class="where">the exact thread</span></li>
+      <li><span class="dot" style="background: #86868b"></span>Terminal and iTerm2<span class="where">the exact tab</span></li>
+      <li><span class="dot" style="background: #86868b"></span>tmux and cmux<span class="where">the exact pane</span></li>
+      <li><span class="dot" style="background: var(--gemini)"></span>VS Code, Cursor and others<span class="where">the project's window</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="center" id="island">
+  <div class="wrap">
+    <p class="kicker">The island</p>
+    <h2>Glance. Don't babysit.</h2>
+    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open into macOS glass for a few seconds. Hover to see every session.</p>
+    <div class="demo">
     <div class="macbook" aria-hidden="true">
       <div class="lid">
         <div class="display">
@@ -171,31 +223,7 @@
     </div>
     <p class="island-caption"><span class="dot"></span><span id="island-caption">Claude is working on api-server</span></p>
     <p class="visually-hidden">An animation of Ambient on a MacBook: a coral orb at the notch while Claude works, an amber card when it needs permission, a green check when it's done.</p>
-  </div>
-</header>
-
-<main>
-<section class="alt" id="return">
-  <div class="wrap split">
-    <div>
-      <h2>Click. You're back where the agent runs.</h2>
-      <p class="body">A notification, an island row or a menu row takes you to the exact place the agent is working — not just the app.</p>
-      <p class="body">From a terminal, <code>ambient open</code> jumps to the session that needs you most.</p>
     </div>
-    <ul class="dest">
-      <li><span class="dot" style="background: var(--claude)"></span>Claude desktop app<span class="where">the exact chat</span></li>
-      <li><span class="dot" style="background: var(--codex)"></span>Codex app<span class="where">the exact thread</span></li>
-      <li><span class="dot" style="background: #86868b"></span>Terminal and iTerm2<span class="where">the exact tab</span></li>
-      <li><span class="dot" style="background: #86868b"></span>tmux and cmux<span class="where">the exact pane</span></li>
-      <li><span class="dot" style="background: var(--gemini)"></span>VS Code, Cursor and others<span class="where">the project's window</span></li>
-    </ul>
-  </div>
-</section>
-
-<section class="center" id="island">
-  <div class="wrap">
-    <h2>Glance. Don't babysit.</h2>
-    <p class="section-lede">A black pill grows out of the notch and says what your agents are doing in one color. When something happens it blooms open into macOS glass for a few seconds. Hover to see every session.</p>
     <div class="grid states">
       <div class="card" style="--state: var(--claude)"><span class="orb breathe"></span><h3>Working</h3><p>An orb in the agent's color breathes while it thinks and runs tools.</p></div>
       <div class="card" style="--state: var(--waiting)"><span class="orb pulse"></span><h3>Needs you</h3><p>An amber pulse when an agent is waiting for permission or an answer.</p></div>
@@ -215,6 +243,7 @@
       </div>
     </div>
     <div>
+      <p class="kicker">Alerts</p>
       <h2>Alerts only when it matters.</h2>
       <p class="body">Banners and soft two-note chimes for the moments that need you: a question, a finished turn, a failure. One sound per state, so you know which without looking.</p>
       <p class="body">Ambient stays quiet while you're already in the app running the agent, skips short turns, and withdraws a banner once you've answered.</p>
@@ -224,6 +253,7 @@
 
 <section class="dark center" id="dock">
   <div class="wrap">
+    <p class="kicker">Dock glow</p>
     <h2>Even the Dock knows.</h2>
     <p class="section-lede">Light rises along the Dock in the color of what your agents are doing — visible from across the room, invisible to your work.</p>
     <div class="dock-stage" id="dock-stage" aria-hidden="true">
@@ -249,6 +279,7 @@
 
 <section class="dark center" id="wallpaper">
   <div class="wrap">
+    <p class="kicker">Living wallpaper</p>
     <h2>Your wallpaper, alive with your agents.</h2>
     <p class="section-lede">Turn your desktop into a scene that follows the time of day, where every session lives as a star, a boat, a plant or a planet, glowing in the color of what it's doing. Open the island and the wallpaper answers.</p>
     <div class="scene-demo" id="scene-demo">
@@ -285,20 +316,86 @@
   </div>
 </section>
 
+<section class="alt center" id="voice">
+  <div class="wrap">
+    <p class="kicker">Voice and sound</p>
+    <h2>Hear it. Say it. On any of your Macs.</h2>
+    <p class="section-lede">Listen to an answer instead of reading it, and let your voice and your sound follow you from one Mac to another. Here's what each feels like.</p>
+    <div class="voice" id="voice-tabs">
+      <div class="voice-tablist" role="tablist" aria-label="Voice and sound features"><button class="voice-tab" role="tab" id="tab-voice-read" aria-controls="voice-read" aria-selected="true">Read aloud</button><button class="voice-tab" role="tab" id="tab-voice-sync" aria-controls="voice-sync" aria-selected="false">Voice sync</button><button class="voice-tab" role="tab" id="tab-voice-speaker" aria-controls="voice-speaker" aria-selected="false">Speaker</button><button class="voice-tab" role="tab" id="tab-voice-mic" aria-controls="voice-mic" aria-selected="false">Microphone</button></div>
+      <div class="voice-panel split" id="voice-read" role="tabpanel" aria-labelledby="tab-voice-read" style="--state: var(--claude)">
+        <div>
+          <h3>Lean back. The answer comes to you.</h3>
+          <p class="body">A long reply stops being a wall of text. You stretch, look out of the window, and still take it all in.</p>
+          <ol class="voice-steps"><li>Select part of a reply in Claude, Codex or your terminal.</li><li>Press <kbd>⌥⎋</kbd>.</li><li>Pause from the island, the <kbd>⏯</kbd> key or your AirPods.</li></ol>
+          <p class="voice-note">Markdown, paths and code blocks are turned into something worth hearing. Use a Mac voice, Kokoro offline on your Mac, or OpenAI or ElevenLabs with your own key.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">A reply you selected</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">You, listening</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-sync" role="tabpanel" aria-labelledby="tab-voice-sync" style="--state: var(--waiting)">
+        <div>
+          <h3>Say it here. Paste it over there.</h3>
+          <p class="body">The thought is on your desktop before you've walked back to it. No typing it twice, and no message to yourself.</p>
+          <ol class="voice-steps"><li>Press <kbd>⌃⌥V</kbd> on your laptop and talk.</li><li>Press it again when you're done.</li><li>On your desktop, a card offers Copy Text, Copy Audio and Play.</li></ol>
+          <p class="voice-note">Your words are transcribed on your Mac, never on a server, and travel over your own ssh.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your laptop</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Your desktop</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-speaker" role="tabpanel" aria-labelledby="tab-voice-speaker" style="--state: var(--done)">
+        <div>
+          <h3>One pair of headphones for both Macs.</h3>
+          <p class="body">Your desktop's sound arrives in the headphones you already have on. Nothing to unplug or pair again, and video waits for its sound, so lips still match.</p>
+          <ol class="voice-steps"><li>On one Mac, choose <strong>Ambient</strong> as the sound output.</li><li>What plays there plays on the other Mac.</li><li><kbd>⏯</kbd> on the other Mac plays and pauses it.</li></ol>
+          <p class="voice-note">A Mac plays another Mac's sound only when its own Settings allow it.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your desktop</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Your laptop's headphones</span>
+        </div>
+      </div>
+      <div class="voice-panel split" id="voice-mic" role="tabpanel" aria-labelledby="tab-voice-mic" style="--state: var(--gemini)">
+        <div>
+          <h3>Your best microphone, on every Mac.</h3>
+          <p class="body">You dictate to a desktop that has no microphone, with the laptop beside you. It feels like a microphone that was always there.</p>
+          <ol class="voice-steps"><li>On one Mac, turn on <strong>Lend this Mac's microphone</strong>.</li><li>On the other, choose <strong>Ambient Microphone</strong> as the input.</li><li>Talk.</li></ol>
+          <p class="voice-note">The microphone is on only while an app records, and macOS shows its orange dot the whole time it is.</p>
+        </div>
+        <div class="voice-flow" aria-hidden="true">
+          <span class="end">Your laptop's microphone</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="end">Apps on your desktop</span>
+        </div>
+      </div>
+    </div>
+    <p class="voice-where">All four are in Settings › Voice &amp; Sound. Voice sync, the speaker and the microphone work between Macs you've <a href="#faq">paired over your own ssh</a>.</p>
+  </div>
+</section>
+
 <section class="center agents">
   <div class="wrap">
+    <p class="kicker">Agents</p>
     <h2>Works with the agents you use.</h2>
     <p class="section-lede">One click connects each agent. Ambient adds background hooks that run in about 15 ms, never slow your agent down, back up every file they touch, and remove only their own entries.</p>
     <div class="grid">
-      <div class="card alt-card" style="--state: var(--claude); background: var(--paper-2)"><span class="orb breathe"></span><h3>Claude Code</h3><p>Terminal, editors and the Claude desktop app.</p></div>
-      <div class="card" style="--state: var(--codex); background: var(--paper-2)"><span class="orb breathe"></span><h3>Codex</h3><p>The CLI and the Codex app.</p></div>
-      <div class="card" style="--state: var(--gemini); background: var(--paper-2)"><span class="orb breathe"></span><h3>Gemini CLI</h3><p>Every session, in any terminal.</p></div>
+      <div class="card" style="--state: var(--claude)"><span class="orb breathe"></span><h3>Claude Code</h3><p>Terminal, editors and the Claude desktop app.</p></div>
+      <div class="card" style="--state: var(--codex)"><span class="orb breathe"></span><h3>Codex</h3><p>The CLI and the Codex app.</p></div>
+      <div class="card" style="--state: var(--gemini)"><span class="orb breathe"></span><h3>Gemini CLI</h3><p>Every session, in any terminal.</p></div>
     </div>
   </div>
 </section>
 
 <section class="alt center" id="how">
   <div class="wrap">
+    <p class="kicker">How it works</p>
     <h2>How it works.</h2>
     <p class="section-lede">Ambient listens to the hooks each agent already offers. Nothing wraps your agent, and nothing watches your screen.</p>
     <ol class="grid steps">
@@ -311,18 +408,21 @@
 
 <section class="center" id="private">
   <div class="wrap">
-    <p class="stat grad">0 bytes</p>
+    <p class="kicker">Privacy</p>
+    <p class="stat">0 bytes</p>
     <h2>leave your Mac.</h2>
-    <p class="section-lede">Private by design: no accounts, no network, no telemetry. Events travel over a private socket on your Mac and stay there.</p>
+    <p class="section-lede">Private by design: no accounts, no telemetry, online only when you ask. Events travel over a private socket on your Mac and stay there.</p>
   </div>
 </section>
 
 <section class="alt center" id="faq">
   <div class="wrap">
+    <p class="kicker">Questions</p>
     <h2>Questions.</h2>
     <div class="faq">
       <details><summary>Is Ambient free?</summary><p>Yes. Download it, connect your agents and use every feature.</p></details>
-      <details><summary>Does it send my code or prompts anywhere?</summary><p>No. Each hook reduces an event to a few short fields — agent, state, project name, a trimmed message — and sends them over a Unix socket to the app on your Mac. The app makes no network requests.</p></details>
+      <details><summary>Is Ambient open source?</summary><p>Yes. The <a href="https://github.com/viveky259259/ambient">source code is on GitHub</a> under the MIT license.</p></details>
+      <details><summary>Does it send my code or prompts anywhere?</summary><p>No. Each hook reduces an event to a few short fields — agent, state, project name, a trimmed message — and sends them over a Unix socket to the app on your Mac. Ambient goes online only when you ask it to, and machines you pair reach your Mac over your own ssh.</p></details>
       <details><summary>Will it slow my agent down?</summary><p>No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped.</p></details>
       <details><summary>How is Ambient different from Claude Code's built-in notifications?</summary><p>Claude Code can post a desktop notification in Ghostty, Kitty and iTerm2, or ring the terminal bell elsewhere. Ambient adds a live status for every session of every agent at once, in any terminal or editor. A click takes you back to the exact tab, pane or chat, and Ambient stays quiet while you're already looking at the agent. <a href="/guides/claude-code-notifications-mac/">Compare every option</a>.</p></details>
       <details><summary>Does it work with tmux, iTerm2, VS Code and Cursor?</summary><p>Yes. Ambient shows the status of an agent in any terminal or editor on your Mac, and in the Claude and Codex desktop apps. A click returns you to the exact tab in Terminal and iTerm2, the exact pane in tmux and cmux, and the project's window in VS Code, Cursor and other editors.</p></details>
@@ -332,16 +432,46 @@
       <details><summary>Which Macs does it run on?</summary><p>macOS 14 or later, on Apple silicon and Intel. It's designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.</p></details>
       <details><summary>Do I need to sign up to download it?</summary><p>No. The download starts right away. If you want an email when a new version ships, you can leave your address after downloading; that's optional. See the <a href="/privacy.html">privacy notice</a>.</p></details>
       <details><summary>How do I ask for a feature?</summary><p>Suggest it on the <a href="/requests/">feature requests board</a>, or vote for someone else's idea there. No account needed. In the app, choose <strong>Suggest a Feature…</strong> from the menu bar menu.</p></details>
+      <details><summary>How do I get notified when Claude Code is done or needs input?</summary><p>Install Ambient and click Connect All. From then on, a notification and a soft chime arrive the moment a turn ends or Claude asks for permission or a question, the island turns green or amber, and a click takes you to that session. Without Ambient, Claude Code's Stop and Notification hooks can post a desktop alert or play a sound; the <a href="/guides/claude-code-notifications-mac/">Claude Code notifications guide</a> compares every option.</p></details>
+      <details><summary>Can Ambient read Claude Code's answer aloud?</summary><p>Yes. Select part of a reply in the Claude app, Codex or your terminal and press <kbd>⌥⎋</kbd>, or choose <strong>Read Selection Aloud</strong> from the menu bar. Ambient reads it with a Mac voice, with Kokoro running offline on your Mac after a one-time download, or with OpenAI or ElevenLabs using your own key. Markdown, paths and code blocks are turned into something worth hearing, and the island shows pause, continue and stop.</p></details>
+      <details><summary>Is Ambient a free alternative to Vibe Island or a Dynamic Island app for MacBook?</summary><p>Yes. Ambient is a free, open-source notch app for coding agents: it shows each Claude Code, Codex and Gemini CLI session at the notch, with notifications, a menu bar list and a Dock glow, and runs on MacBooks with a notch and on other Macs, where the island sits at the top of the menu bar. The <a href="/guides/vibe-island-alternatives-mac/">Vibe Island alternatives guide</a> compares twelve notch apps.</p></details>
+      <details><summary>Which coding agents does Ambient support?</summary><p>Claude Code in the terminal, in editors and in the Claude desktop app; Codex in the CLI and the Codex app; Gemini CLI; Antigravity; Cursor; and, in beta, GitHub Copilot CLI and OpenCode. Any other agent or script can drive it with <code>ambient emit</code>.</p></details>
+      <details><summary>Can I use one Mac's speakers or microphone on another?</summary><p>Yes. <strong>Ambient Speaker</strong> adds an output called Ambient: what plays to it plays on another Mac you've paired, and video here waits for the sound. <strong>Ambient Microphone</strong> adds an input: apps here that record from it hear the other Mac's microphone, which is on only while they record. Each Mac decides in its own Settings › Voice &amp; Sound whether others may play sound on it or use its microphone, and the sound goes straight between your Macs, set up over your own ssh.</p></details>
+      <details><summary>Can Ambient follow Claude Code running on another machine?</summary><p>Yes. Run <code>ambient remote add NAME</code> to follow agents on a server, a dev box or another Mac over your own ssh, with no account or relay. Their sessions appear beside the local ones, and a remote machine can only send display data to your Mac.</p></details>
     </div>
   </div>
 </section>
 
-<section class="dark center">
+<section class="center" id="guides">
   <div class="wrap">
-    <img src="/assets/icon-256.png" alt="" style="width: 96px; height: 96px; margin: 0 auto 24px; border-radius: 22px">
+    <p class="kicker">Guides</p>
+    <h2>Guides.</h2>
+    <p class="section-lede">How to get notified when Claude Code, Codex or Gemini CLI finishes or needs you, with or without Ambient.</p>
+    <ul class="guide-list">
+      <li><a href="/guides/claude-code-notifications-mac/"><strong>Claude Code notifications on Mac</strong><span>Built-in alerts in Ghostty, Kitty and iTerm2, the terminal bell, Notification and Stop hooks.</span></a></li>
+      <li><a href="/guides/claude-code-notifications-not-working/"><strong>Claude Code notifications not working</strong><span>Timing, your terminal, iTerm2 alerts, macOS permissions, tmux and silent osascript hooks.</span></a></li>
+      <li><a href="/guides/claude-code-sound-when-done/"><strong>Claude Code sound when done</strong><span>A Stop hook with afplay, a different sound for permission requests, and the terminal bell.</span></a></li>
+      <li><a href="/guides/claude-code-permission-notification/"><strong>Claude Code permission notifications</strong><span>Why the built-in alert waits six seconds, and the PermissionRequest hook that doesn't.</span></a></li>
+      <li><a href="/guides/multiple-claude-code-sessions-mac/"><strong>Multiple Claude Code sessions on Mac</strong><span>Worktrees, agent view and background sessions, and seeing which one needs you.</span></a></li>
+      <li><a href="/guides/claude-code-tmux-notifications/"><strong>Claude Code notifications in tmux</strong><span>allow-passthrough, the bell flag, a hook that messages tmux, and Shift+Enter.</span></a></li>
+      <li><a href="/guides/codex-notifications-mac/"><strong>Codex notifications on Mac</strong><span>TUI notifications, the notify program, and Codex hooks for approvals.</span></a></li>
+      <li><a href="/guides/gemini-cli-notifications-mac/"><strong>Gemini CLI notifications on Mac</strong><span>enableNotifications, and AfterAgent and Notification hooks.</span></a></li>
+      <li><a href="/guides/opencode-copilot-cli-notifications-mac/"><strong>OpenCode and Copilot CLI notifications on Mac</strong><span>OpenCode's attention settings and a plugin, Copilot CLI's agentStop and notification hooks, and Ambient.</span></a></li>
+      <li><a href="/guides/claude-code-text-to-speech/"><strong>Claude Code text to speech</strong><span>A Stop hook that pipes each reply to say, a spoken permission prompt, and Ambient's Read Aloud.</span></a></li>
+      <li><a href="/guides/claude-code-notifications-on-phone/"><strong>Claude Code notifications on your phone</strong><span>A hook that posts to ntfy or Pushover, and following agents on another machine over ssh.</span></a></li>
+      <li><a href="/guides/vibe-island-alternatives-mac/"><strong>Vibe Island alternatives for Mac</strong><span>Twelve notch apps by price, agents, approvals, tmux and Intel support.</span></a></li>
+    </ul>
+    <p class="guides-more"><a href="/guides/">All 15 guides ›</a></p>
+  </div>
+</section>
+
+<section class="dark center closing">
+  <div class="wrap">
+    <img src="/assets/icon-256.png" alt="">
     <h2>Let your agents work.<br>Ambient will tell you when.</h2>
     <p class="section-lede">Free for macOS 14 and later.</p>
     <button class="btn desktop-only" data-download="closing">Download for Mac</button>
+    <p class="fineprint desktop-only">Or <code>brew install --cask viveky259259/tap/ambient</code> · <a href="https://github.com/viveky259259/ambient" data-umami-event="Star on GitHub" data-umami-event-from="home-closing">Star on GitHub</a></p>
     <button class="btn mobile-only hidden" data-copy-link="closing">Copy link for your Mac</button>
   </div>
 </section>
@@ -352,6 +482,7 @@
     <span>© 2026 yaml.cafe</span>
     <a href="/guides/">Guides</a>
     <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
     <a href="/contact/">Contact</a>
     <a href="/privacy.html">Privacy</a>
     <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>
@@ -364,7 +495,7 @@
     <img class="icon" src="/assets/icon-256.png" alt="">
     <h2 id="sheet-title">Your download has started.</h2>
     <p class="note">Open the disk image and drag Ambient to Applications. Then open Ambient and click <strong>Connect All</strong>.</p>
-    <p class="legal">Didn't start? <a id="download-again" href="/downloads/Ambient-0.5.1.dmg" download data-umami-event="Download again">Download again</a></p>
+    <p class="legal">Didn't start? <a id="download-again" href="/downloads/Ambient-0.10.0.dmg" download data-umami-event="Download again">Download again</a></p>
     <form class="updates" name="waitlist" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field" novalidate>
       <input type="hidden" name="form-name" value="waitlist">
       <input type="hidden" name="ref" id="wl-ref">

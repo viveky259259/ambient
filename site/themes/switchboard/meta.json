@@ -1,0 +1,13 @@
+{
+  "name": "Switchboard",
+  "set": "machines",
+  "inspiration": "A telephone exchange: a walnut cabinet, a jack field with brass rings and lamps, ivory designation strips and key cards, and patch cords",
+  "order": 27,
+  "hero": "split",
+  "fonts": [
+    { "family": "DM Serif Display", "axes": "ital@0;1" },
+    { "family": "Karla", "axes": "wght@400;600;700" },
+    { "family": "Courier Prime", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "A free, native macOS app", "h1": "Your agents are calling. Ambient puts you through." }
+}

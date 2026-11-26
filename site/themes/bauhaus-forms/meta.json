@@ -1,0 +1,13 @@
+{
+  "name": "Bauhaus forms",
+  "set": "culture",
+  "inspiration": "A Bauhaus poster: primary colours on unbleached paper, lowercase geometric type, heavy black rules and one elementary form for each state",
+  "order": 20,
+  "hero": "split",
+  "fonts": [
+    { "family": "Jost", "axes": "wght@500;700;800" },
+    { "family": "Hanken Grotesk", "axes": "wght@400;600" },
+    { "family": "Space Mono", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · Claude Code / Codex / Gemini CLI", "h1": "One color at the notch." }
+}

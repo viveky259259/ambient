@@ -1,0 +1,183 @@
+import Foundation
+import AmbientBase
+import AmbientContracts
+
+extension RemoteEvent {
+    /// This event without what `level` keeps on the machine. The hub's half of redaction: the shim applies a level to
+    /// what it spools from then on, and this covers what was already there.
+    func redacted(to level: RemoteRedaction) -> RemoteEvent {
+        let names = level != .metadata
+        return RemoteEvent(v: v, seq: seq, id: id, ts: ts, agent: agent, session: session, kind: kind, project: project,
+                           tool: names ? tool : nil, title: names ? title : nil, reason: reason,
+                           message: level == .full ? message : nil)
+    }
+}
+
+/// Why a remote line was dropped. `code` is what the audit log records: never any of the line's content.
+public enum RemoteRejection: Error, Equatable, Sendable, CustomStringConvertible {
+    case tooLong(bytes: Int)
+    case notJSON
+    case notAnObject
+    /// Nested deeper than a flat object allows; checked before parsing, so a hostile line can't exhaust the stack.
+    case tooDeep
+    case duplicateField(String)
+    case unknownField(String)
+    case missingField(String)
+    case wrongType(String)
+    case unsupportedVersion(Int)
+    case invalid(String)
+
+    public var code: String {
+        switch self {
+        case .tooLong: "tooLong"
+        case .notJSON: "notJSON"
+        case .notAnObject: "notAnObject"
+        case .tooDeep: "tooDeep"
+        case .duplicateField: "duplicateField"
+        case .unknownField: "unknownField"
+        case .missingField: "missingField"
+        case .wrongType: "wrongType"
+        case .unsupportedVersion: "unsupportedVersion"
+        case .invalid: "invalid"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case let .tooLong(bytes): "line is \(bytes) bytes"
+        case .notJSON: "not JSON"
+        case .notAnObject: "not a JSON object"
+        case .tooDeep: "nested too deeply"
+        case let .duplicateField(f): "duplicate field \(f)"
+        // The one key not from our own allowlist. Pairing prints this, so it can't go out as the machine wrote it.
+        case let .unknownField(f): "unknown field \(Trim.plainText(f, max: 40) ?? "")"
+        case let .missingField(f): "missing field \(f)"
+        case let .wrongType(f): "wrong type for \(f)"
+        case let .unsupportedVersion(v): "protocol version \(v)"
+        case let .invalid(f): "invalid \(f)"
+        }
+    }
+}
+
+/// The strict decoder for remote spool lines (ER-7, ER-34): an allowlist of flat fields with types and caps,
+/// states from an enum, a versioned `v`, and a 64 KB line cap. Anything else rejects the whole line.
+public enum RemoteEventDecoder {
+    public static let maxLineBytes = 64 * 1024
+
+    /// Caps for text fields. Longer free text is cut; longer identifiers reject the line.
+    public enum Caps {
+        public static let session = 128
+        public static let project = 64
+        public static let tool = 64
+        public static let title = 80
+        public static let message = 160
+    }
+
+    static let allowed: Set<String> = ["v", "seq", "id", "ts", "agent", "session", "kind", "project", "tool", "title",
+                                       "reason", "message"]
+    static let required = ["v", "seq", "id", "ts", "agent", "session", "kind"]
+    static let reasons: Set<String> = ["permission", "question"]
+
+    public static func decode(_ line: Data) throws(RemoteRejection) -> RemoteEvent {
+        try event(from: try flatFields(try members(of: line), allowed: allowed))
+    }
+
+    /// The top-level members of a line, after the checks every remote line goes through first.
+    static func members(of line: Data) throws(RemoteRejection) -> [JSONValue.Member] {
+        guard line.count <= maxLineBytes else { throw .tooLong(bytes: line.count) }
+        guard nesting(of: line) <= 2 else { throw .tooDeep }
+        let root: JSONValue
+        do { root = try JSONValue.parse(line) } catch { throw .notJSON }
+        guard case let .object(members) = root else { throw .notAnObject }
+        return members
+    }
+
+    static func flatFields(_ members: [JSONValue.Member], allowed: Set<String>) throws(RemoteRejection) -> [String: JSONValue] {
+        var fields: [String: JSONValue] = [:]
+        for m in members {
+            guard allowed.contains(m.key) else { throw .unknownField(m.key) }
+            guard fields[m.key] == nil else { throw .duplicateField(m.key) }
+            switch m.value {
+            case .object, .array: throw .wrongType(m.key)
+            default: fields[m.key] = m.value
+            }
+        }
+        return fields
+    }
+
+    static func event(from fields: [String: JSONValue]) throws(RemoteRejection) -> RemoteEvent {
+        for key in required where fields[key] == nil || fields[key] == .null { throw .missingField(key) }
+
+        let v = try integer(fields, "v", in: 0...Int64(Int32.max))
+        guard RemoteEvent.supportedVersions.contains(Int(v)) else { throw .unsupportedVersion(Int(v)) }
+        let seq = try integer(fields, "seq", in: 1...(1 << 53))
+        guard let id = try string(fields, "id"), id.range(of: #"\A[0-9a-f]{32}\z"#, options: .regularExpression) != nil
+        else { throw .invalid("id") }
+        let ts = try timestamp(fields)
+        guard let agentName = try string(fields, "agent"), let agent = AgentKind(rawValue: agentName) else {
+            throw .invalid("agent")
+        }
+        guard let session = try string(fields, "session"),
+              session.range(of: #"\A[A-Za-z0-9._:@-]{1,128}\z"#, options: .regularExpression) != nil
+        else { throw .invalid("session") }
+        guard let kindName = try string(fields, "kind"), let kind = RemoteEvent.Kind(rawValue: kindName) else {
+            throw .invalid("kind")
+        }
+        let reason = try string(fields, "reason")
+        if let reason, !reasons.contains(reason) { throw .invalid("reason") }
+
+        return RemoteEvent(v: Int(v), seq: seq, id: id, ts: ts, agent: agent, session: session, kind: kind,
+                           project: try text(fields, "project", max: Caps.project),
+                           tool: try text(fields, "tool", max: Caps.tool),
+                           title: try text(fields, "title", max: Caps.title),
+                           reason: reason,
+                           message: try text(fields, "message", max: Caps.message))
+    }
+
+    /// The deepest bracket nesting outside strings. A valid line is one flat object: depth 1.
+    static func nesting(of line: Data) -> Int {
+        var depth = 0, deepest = 0, inString = false, escaped = false
+        for byte in line {
+            if inString {
+                if escaped { escaped = false } else if byte == UInt8(ascii: "\\") { escaped = true }
+                else if byte == UInt8(ascii: "\"") { inString = false }
+                continue
+            }
+            switch byte {
+            case UInt8(ascii: "\""): inString = true
+            case UInt8(ascii: "{"), UInt8(ascii: "["):
+                depth += 1
+                deepest = max(deepest, depth)
+            case UInt8(ascii: "}"), UInt8(ascii: "]"): depth -= 1
+            default: break
+            }
+        }
+        return deepest
+    }
+
+    static func string(_ fields: [String: JSONValue], _ key: String) throws(RemoteRejection) -> String? {
+        switch fields[key] {
+        case nil, .null?: return nil
+        case let .string(s)?: return s
+        default: throw .wrongType(key)
+        }
+    }
+
+    private static func text(_ fields: [String: JSONValue], _ key: String, max: Int) throws(RemoteRejection) -> String? {
+        try string(fields, key).flatMap { Trim.plainText($0, max: max) }
+    }
+
+    static func integer(_ fields: [String: JSONValue], _ key: String,
+                        in range: ClosedRange<Int64>) throws(RemoteRejection) -> Int64 {
+        guard case let .number(raw)? = fields[key] else { throw .wrongType(key) }
+        guard let n = Int64(raw), range.contains(n) else { throw .invalid(key) }
+        return n
+    }
+
+    static func timestamp(_ fields: [String: JSONValue]) throws(RemoteRejection) -> Date {
+        guard case let .number(raw)? = fields["ts"] else { throw .wrongType("ts") }
+        // Unix seconds up to the year 5138; a remote clock that's merely wrong is handled by the hub.
+        guard let seconds = Double(raw), seconds.isFinite, seconds >= 0, seconds < 1e11 else { throw .invalid("ts") }
+        return Date(timeIntervalSince1970: seconds)
+    }
+}

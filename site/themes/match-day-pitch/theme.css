@@ -1,0 +1,128 @@
+/* Match day. A pitch at kick-off: mown green stripes, chalk lines, a chalk team-sheet band, condensed italic
+   type and the referee's cards. Every section starts on a halfway line with its centre circle. */
+:root {
+  --bg: #0e2a1c;
+  --bg-alt: #113222;
+  --surface: #12382540;
+  --surface-2: #0a2015;
+  --ink: #f3f2e7;
+  --ink-2: #d2e2c8;
+  --rule: rgba(243, 242, 231, 0.55);
+  --accent: #f3f2e7;
+  --on-accent: #0e2a1c;
+  --link: #ffd257;
+  --band: #f3f2e7;
+  --band-ink: #0e2a1c;
+  --band-ink-2: #2c533b;
+  --band-surface: #e7e5d4;
+  --band-rule: rgba(14, 42, 28, 0.35);
+  --hero-bg: #0e2a1c;
+  --hero-ink: #f3f2e7;
+  --hero-ink-2: #d2e2c8;
+  --waiting: #ffb627;
+  --done: #2fd06c;
+  --error: #ef3a2c;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-style: italic;
+  --display-transform: uppercase;
+  --display-tracking: -0.005em;
+  --display-leading: 0.9;
+  --h1-size: clamp(56px, 9.4vw, 136px);
+  --h2-size: clamp(42px, 5.6vw, 76px);
+  --h3-size: 32px;
+  --body-size: 18px;
+  --label-size: 13px;
+  --label-tracking: 0.14em;
+  --label-weight: 600;
+  --label-color: #bfe3a0;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --texture: repeating-linear-gradient(90deg, transparent 0 120px, rgba(255, 255, 255, 0.035) 120px 240px);
+  --band-texture: none;
+  --device-edge: #6f8f78;
+  --edge-strength: 0.4;
+}
+
+/* The MacBook's screen is a .display, which the shared type rules style as a heading: keep it a picture of macOS. */
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+.nav { background: #f3f2e7; border-bottom: 0; --ink: #0e2a1c; --ink-2: #2c533b; --accent: #0e2a1c; --on-accent: #f3f2e7; }
+.brand { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 32px; letter-spacing: 0.01em; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-display); font-weight: 600; font-size: 17px; text-transform: uppercase; letter-spacing: 0.06em; gap: 18px; }
+.nav-links a { color: #0e2a1c; }
+
+/* Buttons: a chalk block, slanted like a kit number. The slant is on a backing layer so the words stay upright. */
+.btn { position: relative; isolation: isolate; background: transparent; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; padding: 10px 34px; }
+.btn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: skewX(-10deg); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.3); }
+.btn.small { font-size: 18px; min-height: 44px; padding: 6px 20px; }
+.btn.small::before { box-shadow: none; }
+.dark { --accent: #0e2a1c; --on-accent: #f3f2e7; }
+.sheet .inline .btn { font-size: 19px; padding: 8px 18px; }
+.chip, .voice-tab { min-height: 44px; font-weight: 600; }
+.copy-code { background: transparent; border: 2px solid var(--rule); }
+
+/* Hero */
+.hero { padding-top: 56px; }
+.hero .kicker { color: #bfe3a0; }
+.hero h1 { margin-bottom: 20px; }
+.hero-copy .lede { color: #eeeede; }
+.hero-art { width: 100%; aspect-ratio: 1200 / 600; min-height: 0; margin-top: 8px; }
+.mdp-pitch { width: 100%; }
+.mdp-pitch .live { fill: var(--state, #d97757); transition: fill 0.8s var(--ease); }
+.mdp-pitch .ring { stroke: var(--state, #d97757); transition: stroke 0.8s var(--ease); transform-box: fill-box; transform-origin: center; animation: mdp-ring 2.4s ease-in-out infinite; }
+@keyframes mdp-ring { 0%, 100% { opacity: 0.25; transform: scale(0.85); } 50% { opacity: 0.8; transform: scale(1.1); } }
+@media (max-width: 640px) { .mdp-pitch .lbl { display: none; } }
+.trust { font-family: var(--font-display); font-weight: 600; font-size: 20px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Every section opens on a halfway line with its centre circle. */
+main > section { border-top: 3px solid rgba(243, 242, 231, 0.6); }
+main > section::after { content: ""; position: absolute; left: 50%; top: -1.5px; width: 132px; height: 132px; transform: translate(-50%, -50%); border: 3px solid rgba(243, 242, 231, 0.6); border-radius: 50%; pointer-events: none; }
+main > section.dark { border-top-color: #0e2a1c; }
+main > section.dark::after { border-color: #0e2a1c; }
+.alt { background-image: repeating-linear-gradient(0deg, transparent 0 90px, rgba(255, 255, 255, 0.03) 90px 180px); }
+@media (max-width: 760px) { main > section::after { width: 84px; height: 84px; } }
+
+h2 { text-wrap: balance; }
+.section-lede, p.body { color: var(--ink-2); }
+.card { background: rgba(255, 255, 255, 0.035); border: 2px solid var(--rule); position: relative; }
+.dark .card { background: var(--band-surface); border-color: var(--band-rule); }
+.card h3 { text-transform: uppercase; font-style: italic; }
+
+/* The four states are the referee's cards. */
+.states .card { border-top: 2px solid var(--rule); padding-right: 92px; }
+.states .card::after { content: ""; position: absolute; top: 24px; right: 26px; width: 44px; height: 62px; border-radius: 6px; background: var(--state); transform: rotate(-6deg); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35); }
+.states .card:nth-child(even)::after { transform: rotate(5deg); }
+.states .card h3 { font-size: 40px; }
+.agents .card { border-bottom: 6px solid var(--state); }
+
+.dest { background: transparent; border: 2px solid var(--rule); }
+.dest li { border-top: 2px solid rgba(243, 242, 231, 0.25); font-weight: 500; }
+.dest .where { color: #bfe3a0; }
+.wallpaper { border: 2px solid var(--rule); }
+.step { background: #f3f2e7; color: #0e2a1c; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 22px; border-radius: 0; transform: skewX(-10deg); }
+.stat { color: var(--ink); font-style: italic; text-transform: uppercase; }
+.faq summary { font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 24px; letter-spacing: 0.01em; }
+.faq summary::after { color: #bfe3a0; }
+.guide-list a { background: transparent; border: 2px solid var(--rule); }
+.guide-list a:hover { border-color: #f3f2e7; }
+.guide-list strong { font-style: italic; text-transform: uppercase; font-size: 24px; line-height: 1.05; }
+.voice-panel { background: rgba(0, 0, 0, 0.15); border: 2px solid var(--rule); }
+.voice-panel h3 { font-style: italic; text-transform: uppercase; }
+.voice-tablist { background: transparent; }
+.voice-tab[aria-selected="true"] { background: #f3f2e7; color: #0e2a1c; }
+.voice-flow .end { background: var(--bg); }
+.closing h2 { font-size: clamp(40px, 5.4vw, 74px); }
+footer { border-top: 3px solid rgba(243, 242, 231, 0.6); font-family: var(--font-label); font-size: 12px; }
+footer a { color: #f3f2e7; }
+dialog { border: 3px solid #f3f2e7; }
+dialog .error { color: #ff9d8f; }
+.field input { background: #0a2015; border: 2px solid var(--rule); }

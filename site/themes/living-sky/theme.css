@@ -1,0 +1,97 @@
+/* Living sky: the page is dusk. The hero is a sky that sets into a harbour (a sunset over water, unlike the
+   starry wallpaper demo further down); below it, night-blue sections and frosted-glass panels. */
+:root {
+  --bg: #141a33;
+  --bg-alt: #19203f;
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --ink: #ffffff;
+  --ink-2: #c9cbe0;
+  --rule: rgba(255, 255, 255, 0.18);
+  --accent: #ffffff;
+  --on-accent: #1a1f45;
+  --link: #ffd9a8;
+  --band: #0d1226;
+  --band-ink: #ffffff;
+  --band-ink-2: #c3c6dc;
+  --band-surface: rgba(255, 255, 255, 0.06);
+  --band-rule: rgba(255, 255, 255, 0.16);
+  --hero-bg: linear-gradient(180deg, #141a3c 0%, #2b2f6b 34%, #5b4485 58%, #a9607f 76%, #e88f72 90%, #f3b07a 100%);
+  --hero-ink: #ffffff;
+  --hero-ink-2: #f1eef8;
+
+  --font-display: "Bricolage Grotesque", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Bricolage Grotesque", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "DM Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 300;
+  --display-tracking: -0.05em;
+  --display-leading: 0.94;
+  --h1-size: clamp(52px, 9vw, 132px);
+  --h2-size: clamp(38px, 5vw, 64px);
+  --h3-size: 26px;
+  --label-size: 12px;
+  --label-tracking: 0.14em;
+  --label-color: #c9cbe0;
+
+  --radius: 28px;
+  --radius-sm: 12px;
+  --radius-btn: 999px;
+  --border: 1px solid var(--rule);
+  --texture: radial-gradient(1200px 500px at 50% 0, #2b2f6b55, transparent 70%);
+  --band-texture: radial-gradient(900px 400px at 50% 0, #6a4a8c33, transparent 70%);
+  --device-edge: #4a4f7a;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+body { background-attachment: fixed; }
+
+.nav { background: color-mix(in srgb, #141a3c 70%, transparent); border-bottom-color: rgba(255, 255, 255, 0.12); }
+.brand { font-weight: 500; font-size: 26px; letter-spacing: -0.03em; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 15px; letter-spacing: 0; }
+.nav-links a { color: #e4e3f0; }
+.btn { font-family: var(--font-body); font-size: 18px; font-weight: 500; letter-spacing: 0; padding: 17px 36px; }
+.btn.small { background: rgba(255, 255, 255, 0.14); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); font-size: 14px; min-height: 40px; padding: 9px 20px; backdrop-filter: blur(18px); }
+.chip, .voice-tab { border-radius: 999px; font-family: var(--font-body); font-size: 15px; }
+
+/* Hero: words over the sky, the harbour under them, running to the page's edges. */
+.hero { padding-bottom: 0; }
+.hero .kicker { color: #e9e6f7; }
+html[data-theme] .hero-copy .lede { text-shadow: 0 1px 20px #141a3c88; }
+.trust { color: #fff; }
+.fineprint { font-family: var(--font-mono); font-size: 13px; color: #fff; }
+.copy-code { border-radius: 999px; background: rgba(20, 26, 60, 0.35); border-color: rgba(255, 255, 255, 0.35); padding-left: 14px; }
+html[data-theme] .hero-grid { gap: 24px; }
+html[data-theme] .hero-art { order: 2; width: 100vw; margin: 0 calc(50% - 50vw); height: clamp(220px, 26vw, 380px); min-height: 0; }
+.hero-art .ls-sea { position: absolute; inset: 0; width: 100%; height: 100%; display: block; max-width: none !important; }
+.ls-sun { fill: #fff3d6; filter: drop-shadow(0 0 40px #ffd9a0); animation: ls-glow 7s ease-in-out infinite; }
+@keyframes ls-glow { 50% { opacity: 0.9; } }
+.ls-boat { animation: ls-bob 5s ease-in-out infinite; transform-box: fill-box; }
+.ls-boat.b2 { animation-delay: -2.4s; }
+@keyframes ls-bob { 50% { transform: translateY(3px) rotate(-1.5deg); } }
+.ls-state { fill: var(--state, var(--claude)); transition: fill 0.8s var(--ease); }
+.ls-state-stop { stop-color: var(--state, var(--claude)); transition: stop-color 0.8s var(--ease); }
+.ls-lab { font: 13px var(--font-mono); letter-spacing: 0.1em; fill: #fff; text-transform: uppercase; }
+.hero { isolation: isolate; }
+.hero::before { content: ""; position: absolute; left: 50%; top: -260px; width: 520px; height: 520px; transform: translateX(-50%); border-radius: 50%; border: 1px solid #ffffff2e; box-shadow: 0 0 0 70px #ffffff08, 0 0 0 150px #ffffff05; pointer-events: none; z-index: -1; }
+
+/* Sections: glass panels on night blue. */
+.card, .dest, .voice-panel, .guide-list a { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+.card h3 { font-weight: 500; letter-spacing: -0.02em; }
+.states .card { border-top: 1px solid var(--rule); position: relative; overflow: hidden; }
+.states .card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: linear-gradient(90deg, transparent, var(--state), transparent); }
+.states .card h3 { font-weight: 300; font-size: 40px; letter-spacing: -0.04em; }
+.kicker { font-weight: 400; }
+.dark .kicker { color: #ffd9a8; }
+.dest .where { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+.step { background: #fff; color: #1a1f45; font-family: var(--font-mono); }
+.stat { color: #ffd9a8; font-weight: 300; letter-spacing: -0.05em; }
+.faq summary { font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
+.guide-list a { border-radius: 22px; }
+.guide-list strong { font-weight: 500; letter-spacing: -0.02em; }
+.voice-flow { border-radius: 22px; }
+footer { background: #0d1226; font-family: var(--font-mono); font-size: 12px; }
+dialog { background: #19203f; border-radius: 28px; }
+.field input { background: rgba(255, 255, 255, 0.08); }
+.error { color: #ff9a92; }

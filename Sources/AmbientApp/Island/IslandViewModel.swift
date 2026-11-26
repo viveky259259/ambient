@@ -9,6 +9,14 @@ final class IslandViewModel: ObservableObject {
         case collapsed
         /// Announcing a transition of one session.
         case bloom(String)
+        /// Reading a selection aloud, or why it couldn't.
+        case speech
+        /// A permission prompt to answer, by its id.
+        case permission(String)
+        /// A voice being recorded here for another Mac, one that just arrived, or a note about either.
+        case voice
+        /// Another Mac is recording a voice for this one: shown in the wings.
+        case voiceIncoming
         /// Hovered: every session.
         case expanded
     }
@@ -17,17 +25,37 @@ final class IslandViewModel: ObservableObject {
     @Published var sessions: [Session] = []
     @Published var geometry: IslandGeometry
     @Published var quiet = false
+    /// Expanded, list every session rather than the first few.
+    @Published var showingAll = false
+    @Published var speech: SpeechState = .idle
+    @Published var speechLevel: Float = 0
+    /// The permission prompt on show, and how many are waiting in all.
+    @Published var permission: PermissionQueue.Entry?
+    @Published var permissionCount = 0
+    /// Voice sync, for the voice card and the incoming wings. None in the Settings preview.
+    let voice: VoiceSyncController?
 
     var onOpen: (Session) -> Void = { _ in }
+    var onStopSpeech: () -> Void = {}
+    var onPauseSpeech: () -> Void = {}
+    var onResumeSpeech: () -> Void = {}
+    var onUseMacVoice: () -> Void = {}
     var onAcknowledgeAll: () -> Void = {}
     var onToggleQuiet: () -> Void = {}
     var onSettings: () -> Void = {}
+    var onToggleShowAll: () -> Void = {}
+    var onAnswer: (String, PermissionAnswer) -> Void = { _, _ in }
+    /// Go to the agent and answer there.
+    var onAnswerInAgent: (PermissionAsk) -> Void = { _ in }
 
     static let wing: CGFloat = 42
     static let maxRows = 5
+    /// Showing every session, the island grows to this many rows and scrolls the rest.
+    static let maxAllRows = 10
 
-    init(geometry: IslandGeometry) {
+    init(geometry: IslandGeometry, voice: VoiceSyncController? = nil) {
         self.geometry = geometry
+        self.voice = voice
     }
 
     var primary: Session? { IslandPolicy.primary(sessions) }
@@ -37,8 +65,11 @@ final class IslandViewModel: ObservableObject {
         return sessions.first { $0.id == id }
     }
 
-    /// Sessions worth listing when expanded: everything but long-idle noise.
-    var listed: [Session] { Array(sessions.prefix(Self.maxRows)) }
+    /// Sessions listed when expanded: the first few, or every one.
+    var listed: [Session] { showingAll ? sessions : Array(sessions.prefix(Self.maxRows)) }
+
+    /// Whether the expanded list leaves sessions out, so it offers to show them all.
+    var hasMore: Bool { sessions.count > Self.maxRows }
 
     func size(for p: Presentation) -> CGSize {
         let h = geometry.notchHeight
@@ -47,8 +78,14 @@ final class IslandViewModel: ObservableObject {
         case .hidden: return CGSize(width: geometry.notchWidth, height: h)
         case .collapsed: return CGSize(width: collapsed, height: h)
         case .bloom: return CGSize(width: max(collapsed, 400), height: h + 74)
+        case .speech: return CGSize(width: max(collapsed, 360), height: h + 48)
+        case .voice: return CGSize(width: max(collapsed, 440), height: h + (voice.map(VoiceCard.height(for:)) ?? 52))
+        case .voiceIncoming: return CGSize(width: collapsed, height: h)
+        case .permission:
+            let hintLines = permission?.ask.hintLines ?? 1
+            return CGSize(width: max(collapsed, 440), height: h + 100 + CGFloat(hintLines) * 15)
         case .expanded:
-            let rows = CGFloat(max(1, listed.count))
+            let rows = CGFloat(min(max(1, listed.count), Self.maxAllRows))
             return CGSize(width: max(collapsed, 440), height: h + 12 + rows * 52 + 44)
         }
     }

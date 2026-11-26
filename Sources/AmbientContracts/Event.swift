@@ -1,0 +1,127 @@
+import Foundation
+
+/// A coding agent that Ambient can follow.
+public enum AgentKind: String, Codable, CaseIterable, Sendable {
+    case claude, codex, gemini, antigravity, cursor, copilot, opencode
+    /// Any other agent or script, driving Ambient through `ambient emit --session` or `ambient hook custom`.
+    case custom
+
+    public var displayName: String {
+        switch self {
+        case .claude: "Claude"
+        case .codex: "Codex"
+        case .gemini: "Gemini"
+        case .antigravity: "Antigravity"
+        case .cursor: "Cursor"
+        case .copilot: "Copilot"
+        case .opencode: "OpenCode"
+        case .custom: "Agent"
+        }
+    }
+
+    /// The agents Ambient connects by installing hooks; custom agents connect themselves.
+    public static let hooked: [AgentKind] = allCases.filter { $0 != .custom }
+
+    /// Connected from the agent's documented hooks, but not yet run against the agent itself.
+    public var isBeta: Bool {
+        switch self {
+        case .copilot: true
+        case .claude, .codex, .gemini, .antigravity, .cursor, .opencode, .custom: false
+        }
+    }
+}
+
+/// What happened in an agent session, normalized across agents.
+public enum EventKind: Codable, Equatable, Sendable {
+    case sessionStarted
+    case promptSubmitted
+    case toolStarted(name: String, detail: String?)
+    case toolFinished(name: String, failed: Bool)
+    /// The agent is blocked on the user: a permission prompt, a question, an elicitation. `reason` names a `Need`, and
+    /// `message` is the detail: the command, the file, the question.
+    case needsInput(reason: String, message: String?)
+    /// The user answered the prompt in the agent, which carries on. Only agents that say so send it (OpenCode);
+    /// for the rest, the next tool or turn event ends the wait.
+    case answered
+    case compactStarted
+    case compactFinished
+    case subagentStarted
+    case subagentFinished
+    case turnCompleted(summary: String?)
+    case turnFailed(message: String?)
+    case sessionEnded
+    /// Informational; doesn't change the session's activity.
+    case notice(message: String)
+}
+
+/// Where the agent is running, so Ambient can bring the user back to it.
+public struct HostInfo: Codable, Equatable, Sendable {
+    /// Bundle id of the GUI app the agent runs in (Terminal, iTerm, VS Code, Claude…).
+    public var bundleId: String?
+    /// `TERM_PROGRAM`, when the agent runs in a terminal.
+    public var termProgram: String?
+    /// The hook's parent process chain, nearest first. Used to find the host app when `bundleId` is unknown.
+    public var pids: [Int32]
+    /// The agent process itself. When it's gone, so is the session.
+    public var agentPid: Int32?
+    /// True when the agent runs as `codex app-server`, behind Codex's app or an editor, and not `codex exec`.
+    public var appServer: Bool?
+
+    // Return addresses: enough to bring the user back to the exact chat, tab or pane.
+
+    /// The agent's controlling terminal, e.g. "/dev/ttys004".
+    public var tty: String?
+    /// Claude desktop's id for a Code session (`CLAUDE_CODE_HOST_SESSION_ID`).
+    public var hostSessionId: String?
+    public var tmuxSocket: String?
+    public var tmuxPane: String?
+    public var cmuxWorkspace: String?
+    public var cmuxSurface: String?
+    public var cmuxSocket: String?
+
+    public init(bundleId: String? = nil, termProgram: String? = nil, pids: [Int32] = [], agentPid: Int32? = nil,
+                appServer: Bool? = nil, tty: String? = nil, hostSessionId: String? = nil, tmuxSocket: String? = nil,
+                tmuxPane: String? = nil, cmuxWorkspace: String? = nil, cmuxSurface: String? = nil, cmuxSocket: String? = nil) {
+        self.bundleId = bundleId
+        self.termProgram = termProgram
+        self.pids = pids
+        self.agentPid = agentPid
+        self.appServer = appServer
+        self.tty = tty
+        self.hostSessionId = hostSessionId
+        self.tmuxSocket = tmuxSocket
+        self.tmuxPane = tmuxPane
+        self.cmuxWorkspace = cmuxWorkspace
+        self.cmuxSurface = cmuxSurface
+        self.cmuxSocket = cmuxSocket
+    }
+}
+
+public struct AgentEvent: Codable, Equatable, Sendable {
+    public var agent: AgentKind
+    public var sessionId: String
+    public var cwd: String?
+    public var kind: EventKind
+    public var timestamp: Date
+    public var host: HostInfo?
+    /// A custom agent's own name, e.g. "Aider".
+    public var agentName: String?
+
+    public init(agent: AgentKind, sessionId: String, cwd: String?, kind: EventKind,
+                timestamp: Date = Date(), host: HostInfo? = nil, agentName: String? = nil) {
+        self.agent = agent
+        self.sessionId = sessionId
+        self.cwd = cwd
+        self.kind = kind
+        self.timestamp = timestamp
+        self.host = host
+        self.agentName = agentName
+    }
+
+    /// The project the session works in: the last component of its working directory.
+    public var project: String? {
+        guard let cwd, !cwd.isEmpty else { return nil }
+        let name = URL(fileURLWithPath: cwd).lastPathComponent
+        return name.isEmpty || name == "/" ? nil : name
+    }
+}

@@ -13,13 +13,25 @@ struct Commands {
         case "install": return install(rest)
         case "uninstall": return uninstall(rest)
         case "status": return status(rest)
-        case "doctor": return doctor()
+        case "doctor": return doctor(rest)
         case "emit": return emit(rest)
         case "demo": return demo()
         case "ack": return ack()
         case "open": return open(rest)
+        case "tasks": return tasks(rest)
+        case "task": return task(rest)
+        case "remote": return remote(rest)
         case "link": return link() ? 0 : 1
+        case "memory": return memory(rest)
+        case "history": return HistoryCommand(paths: paths).run(rest)
+        case "mcp":
+            let send: (WireMessage) -> WireMessage? = { request($0) }
+            return MCPServer(request: send, memory: MemoryClient(paths: paths, request: send)).run()
         case "version", "--version", "-v": print("ambient \(AmbientVersion.current)"); return 0
+        // Undocumented, for scripts/fetch-voice-pack.sh: the offline voice's model files, one "path url sha256" per line.
+        case "voice-files":
+            for f in VoicePackManifest.current.files { print("\(f.path) \(f.url.absoluteString) \(f.sha256)") }
+            return 0
         case "help", "--help", "-h": return usage()
         default:
             out.error("Unknown command '\(command)'.")
@@ -32,12 +44,42 @@ struct Commands {
         \(out.bold("ambient")) \(AmbientVersion.current) — ambient desktop status for coding agents
 
         \(out.bold("Usage"))
-          ambient install [claude|codex|gemini ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
-          ambient uninstall [claude|codex|gemini ...] [--dry-run] Remove Ambient's hooks, leaving others alone
+          ambient install [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run]   Add Ambient's hooks (default: every agent found)
+          ambient uninstall [claude|codex|gemini|antigravity|cursor|copilot|opencode ...] [--dry-run] Remove Ambient's hooks, leaving others alone
           ambient status [--json]                                 Show the sessions Ambient is tracking
-          ambient doctor                                          Check the app, the hooks and the connection
+          ambient tasks [--json]                                  Show the agent task board
+          ambient task upsert --title TEXT [--id ID] [--status STATUS] [--project NAME] [--session SID]
+                                                                  Create or update a board task (STATUS: backlog|inProgress|blocked|done|cancelled)
+          ambient task open ID                                    Jump to a task's linked session
+          ambient task skill-bootstrap                            Once: learn a local skill pack via Anthropic (Keychain), then local LLM uses it
+          ambient task skill-status                               Show whether ~/.ambient/task-skill.json is present
+          ambient task model [PATH|--clear] [--python PATH] [--enable|--disable]
+                                                                  Show or set the board's local model: an MLX or Hugging Face
+                                                                  folder, or a .gguf file (default: the gateway model id)
+          ambient memory [list] [--global|--project] [--in FOLDER] [--json]
+                                                                  What agents have shared in working memory here and globally
+          ambient memory get KEY [--global|--project] [--in FOLDER]
+                                                                  Print a shared entry's text, or a shared file's path
+          ambient memory set KEY [VALUE|--file PATH] [--description TEXT] [--global] [--ttl MINUTES] [--in FOLDER]
+                                                                  Share text (VALUE, or standard input) or a file with other agents
+          ambient memory rm KEY [--global|--project] [--in FOLDER]
+                                                                  Remove a shared entry
+          ambient mcp                                             Run as an MCP server (stdio) so agents can share working memory,
+                                                                  set the board's model and ask the team's chat history:
+                                                                  claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+        \(HistoryCommand.usage)
+          ambient remote add NAME [--host HOST] [--label TEXT] [--redaction metadata|standard|full]
+                 [--agents claude,codex] [--accept-new-identity] [-- TRANSPORT COMMAND...]
+                                                                  Follow agents on another machine over your own ssh
+          ambient remote remove NAME [--uninstall]                Stop following it; --uninstall also clears the machine
+          ambient remote purge NAME                               Delete everything from it on this Mac
+          ambient remote list                                     Show paired machines
+          ambient doctor [--remote NAME]                          Check the app, the hooks and the connection, or one machine
           ambient emit <working|waiting|done|error|idle>          Send a demo event
-                 [--agent claude|codex|gemini] [--project NAME] [--message TEXT]
+                 [--agent claude|codex|gemini|antigravity|cursor|copilot|opencode] [--project NAME] [--message TEXT]
+          ambient emit <start|working|waiting|done|error|end> --session ID
+                 [--agent NAME] [--cwd PATH] [--tool NAME] [--detail TEXT] [--message TEXT]
+                                                                  Drive Ambient from any agent or script
           ambient demo                                            Walk through every state
           ambient open [PROJECT|SESSION]                          Jump to a session's chat, tab or window (default: the most urgent)
           ambient ack                                             Mark every finished session as seen
@@ -52,11 +94,11 @@ struct Commands {
 
     private func agents(from args: [String]) -> [AgentKind]? {
         let names = args.filter { !$0.hasPrefix("--") }
-        if names.isEmpty || names == ["all"] { return AgentKind.allCases }
+        if names.isEmpty || names == ["all"] { return AgentKind.hooked }
         var result: [AgentKind] = []
         for name in names {
-            guard let agent = AgentKind(rawValue: name.lowercased()) else {
-                out.error("Unknown agent '\(name)'. Use claude, codex or gemini.")
+            guard let agent = AgentKind(rawValue: name.lowercased()), agent != .custom else {
+                out.error("Unknown agent '\(name)'. Use \(AgentKind.hooked.map(\.rawValue).joined(separator: ", ")).")
                 return nil
             }
             result.append(agent)
@@ -141,9 +183,16 @@ struct Commands {
 
     // MARK: - Status
 
+    /// Waits longer than the 2 seconds the app gives its main thread, so a busy app isn't taken for a closed one, and
+    /// for the board's model, as long as the app takes to work out how it runs it.
     private func request(_ message: WireMessage) -> WireMessage? {
+        let timeout: TimeInterval
+        switch message {
+        case .taskModelRequest, .setTaskModel: timeout = 30
+        default: timeout = 3
+        }
         guard let data = try? Wire.encode(message),
-              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: 1, expectReply: true),
+              let reply = try? UnixSocket.send(data, to: paths.socket.path, timeout: timeout, expectReply: true),
               !reply.isEmpty else { return nil }
         return try? Wire.decode(reply)
     }
@@ -166,15 +215,18 @@ struct Commands {
         for s in sessions {
             let clock = Describe.clock(s, now: now) ?? ""
             let title = Trim.truncate(Describe.title(s), max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
-            let agent = s.agent.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
-            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(Describe.activity(s.activity))  \(out.dim(clock))")
+            let agent = s.agent.rawValue.padding(toLength: 11, withPad: " ", startingAt: 0)
+            let machine = Describe.machine(s).map { "\(out.dim("on " + $0))  " } ?? ""
+            print("  \(out.mood(s.mood, "●")) \(agent) \(title) \(machine)\(Describe.status(s))  \(out.dim(clock))")
         }
         return 0
     }
 
     private func open(_ args: [String]) -> Int32 {
         let query = args.first { !$0.hasPrefix("--") }
-        guard case let .opened(id)? = request(.open(query: query)) else {
+        // Another Mac's board, opening a chat that runs here.
+        let from = args.first { $0.hasPrefix("--from=") }.flatMap { RemoteOpen.decodedName(String($0.dropFirst(7))) }
+        guard case let .opened(id)? = request(.open(query: query, from: from)) else {
             out.error("Ambient isn't running. Open Ambient.app, then try again.")
             return 1
         }
@@ -193,9 +245,307 @@ struct Commands {
         return 0
     }
 
+    // MARK: - Tasks
+
+    private func tasks(_ args: [String]) -> Int32 {
+        guard case let .tasks(list)? = request(.listTasks) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        if args.contains("--json") {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.dateEncodingStrategy = .iso8601
+            if let data = try? encoder.encode(list) { print(String(decoding: data, as: UTF8.self)) }
+            return 0
+        }
+        if list.isEmpty {
+            print("\(out.bold("Board")) · no tasks")
+            return 0
+        }
+        print("\(out.bold("Board")) · \(list.count) task\(list.count == 1 ? "" : "s")")
+        for t in list {
+            let status = t.status.rawValue.padding(toLength: 10, withPad: " ", startingAt: 0)
+            let project = (t.project ?? "—").padding(toLength: 16, withPad: " ", startingAt: 0)
+            let agents = t.agents.map(\.rawValue).joined(separator: ",")
+            print("  \(status) \(project) \(Trim.truncate(t.title, max: 40))  \(out.dim(agents.isEmpty ? "—" : agents))  \(out.dim(t.id))")
+        }
+        return 0
+    }
+
+    private func task(_ args: [String]) -> Int32 {
+        guard let sub = args.first else {
+            out.error("Usage: ambient task upsert … | ambient task open ID | ambient task model [PATH] | ambient task skill-bootstrap")
+            return 64
+        }
+        let rest = Array(args.dropFirst())
+        switch sub {
+        case "upsert": return taskUpsert(rest)
+        case "open":
+            guard let id = rest.first else {
+                out.error("Usage: ambient task open ID")
+                return 64
+            }
+            guard case let .opened(session)? = request(.openTask(id)) else {
+                out.error("Ambient isn't running.")
+                return 1
+            }
+            guard session != nil else {
+                out.error("No chat to open for task '\(id)'.")
+                return 1
+            }
+            return 0
+        case "skill-bootstrap": return taskSkillBootstrap(rest)
+        case "skill-status": return taskSkillStatus()
+        case "model": return taskModel(rest)
+        default:
+            out.error("Unknown task command '\(sub)'. Use upsert, open, model, skill-bootstrap or skill-status.")
+            return 64
+        }
+    }
+
+    /// One-shot Anthropic learn → writes `~/.ambient/task-skill.json`. Live board stays on local MCP.
+    private func taskSkillBootstrap(_ args: [String]) -> Int32 {
+        if args.contains("--help") || args.contains("-h") {
+            print("""
+            ambient task skill-bootstrap
+
+            Reads Anthropic from the login Keychain (service \(SecretStore.service), account anthropic)
+            or ANTHROPIC_API_KEY, generates a few-shot skill pack, writes \(tilde(paths.taskSkill.path)) (0600).
+            The Board local LLM loads that file; cloud is not used at runtime.
+            """)
+            return 0
+        }
+        guard SecretStore.hasKey(for: .anthropic) else {
+            out.error("No Anthropic key in Keychain or ANTHROPIC_API_KEY. Stash it first, then re-run.")
+            out.note("security add-generic-password -s \(SecretStore.service) -a anthropic -w")
+            return 1
+        }
+        out.line("•", "Bootstrapping local task skill pack (Anthropic once)…")
+        do {
+            let pack = try TaskSkillBootstrap.runSync(paths: paths)
+            out.success("Wrote \(tilde(paths.taskSkill.path)) · \(pack.examples.count) examples · source \(pack.source)")
+            out.note("Enable Settings › Board › Summarize tasks with local LLM. Runtime stays on local-agent MCP.")
+            return 0
+        } catch {
+            out.error(error.localizedDescription)
+            return 1
+        }
+    }
+
+    private func taskSkillStatus() -> Int32 {
+        if TaskSkillStore.exists(paths: paths) {
+            let pack = TaskSkillStore.load(paths: paths)
+            out.success("Skill pack: \(tilde(paths.taskSkill.path))")
+            out.note("source=\(pack.source) examples=\(pack.examples.count) hints=\(pack.hints.count)")
+            return 0
+        }
+        out.warn("No \(tilde(paths.taskSkill.path)) yet — using bundled seed. Run ambient task skill-bootstrap once.")
+        return 0
+    }
+
+    /// `path` with `~` expanded and made absolute against the current directory, since the app runs from elsewhere.
+    /// Symlinks stay as they are: a venv's python finds its packages through its own path. Empty stays empty.
+    static func absolute(_ path: String) -> String {
+        let trimmed = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        guard !trimmed.isEmpty else { return "" }
+        return URL(fileURLWithPath: trimmed).standardizedFileURL.path
+    }
+
+    static let taskModelUsage = "Usage: ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]"
+
+    /// What `ambient task model` was asked: the change, and whether to print JSON. Nil for a usage error.
+    static func parseTaskModel(_ args: [String]) -> (change: TaskModelChange, json: Bool)? {
+        var change = TaskModelChange(), json = false
+        var rest = args[...]
+        while let arg = rest.popFirst() {
+            switch arg {
+            case "--clear": change.modelPath = ""
+            case "--enable": change.enabled = true
+            case "--disable": change.enabled = false
+            case "--json": json = true
+            case "--python":
+                guard let python = rest.popFirst() else { return nil }
+                change.pythonPath = absolute(python)
+            default:
+                guard !arg.hasPrefix("--"), change.modelPath == nil else { return nil }
+                change.modelPath = arg
+            }
+        }
+        return (change, json)
+    }
+
+    /// Why the app shouldn't get `change`, or nil when it can.
+    static func problem(with change: TaskModelChange) -> String? {
+        if let path = change.modelPath, let problem = LocalModelPath.problem(with: path) { return problem }
+        if let python = change.pythonPath, !python.isEmpty, !LocalRuntimes.isExecutable(python) {
+            return "No executable Python at \(python). Nothing changed."
+        }
+        return nil
+    }
+
+    /// Shows the board's model, or points it at a model folder or `.gguf` file first.
+    private func taskModel(_ args: [String]) -> Int32 {
+        if args.contains("--help") || args.contains("-h") { print(Self.taskModelUsage); return 0 }
+        guard let parsed = Self.parseTaskModel(args) else { out.error(Self.taskModelUsage); return 64 }
+        let change = parsed.change
+        if let problem = Self.problem(with: change) {
+            out.error(problem)
+            return 1
+        }
+        let message: WireMessage = change == TaskModelChange() ? .taskModelRequest : .setTaskModel(change)
+        let reply = request(message)
+        guard let report = MCPServer.report(from: reply) else {
+            out.error(MCPServer.noConfig(reply, changing: message != .taskModelRequest))
+            return 1
+        }
+        if parsed.json {
+            print(MCPServer.render(report))
+            return 0
+        }
+        print(out.bold("Board model"))
+        for field in report.fields {
+            print("  \(field.key.padding(toLength: 14, withPad: " ", startingAt: 0)) \(field.key == "status" && report.resolution.route == nil ? out.dim(field.value) : field.value)")
+        }
+        return 0
+    }
+
+    private func taskUpsert(_ args: [String]) -> Int32 {
+        func option(_ name: String) -> String? {
+            guard let i = args.firstIndex(of: name), args.indices.contains(i + 1) else { return nil }
+            return args[i + 1]
+        }
+        guard let title = option("--title"), !title.isEmpty else {
+            out.error("Usage: ambient task upsert --title TEXT [--id ID] [--status STATUS] [--project NAME] [--session SID]")
+            return 64
+        }
+        let statusName = option("--status") ?? "backlog"
+        guard let status = TaskStatus(rawValue: statusName) else {
+            out.error("Unknown status '\(statusName)'. Use backlog, inProgress, blocked, done or cancelled.")
+            return 64
+        }
+        var draft = AgentTask(id: option("--id") ?? AgentTask.makeID(), title: title, status: status,
+                              project: option("--project"), manual: true)
+        if let sid = option("--session") {
+            draft.sessionIds = [sid]
+            draft.lastSessionId = sid
+        }
+        guard case let .upsertTaskResult(saved)? = request(.upsertTask(draft)) else {
+            out.error("Ambient isn't running. Open Ambient.app, then try again.")
+            return 1
+        }
+        out.success("Task \(saved.id): \(saved.status.rawValue) — \(saved.title)")
+        return 0
+    }
+
+    // MARK: - Memory
+
+    private func memory(_ args: [String]) -> Int32 {
+        let usage = "Usage: ambient memory [list|get KEY|set KEY [VALUE|--file PATH]|rm KEY] [--global|--project] [--in FOLDER]"
+        var positional: [String] = []
+        var scope: String?, folder: String?, file: String?, description: String?, ttl: Int?
+        var json = false
+        var rest = args[...]
+        while let arg = rest.popFirst() {
+            switch arg {
+            case "--global": scope = "global"
+            case "--project": scope = "project"
+            case "--json": json = true
+            case "--in", "--file", "--description", "--ttl":
+                guard let value = rest.popFirst() else { out.error(usage); return 64 }
+                switch arg {
+                case "--in": folder = value
+                case "--file": file = value
+                case "--description": description = value
+                default:
+                    guard let minutes = Int(value) else { out.error("--ttl takes minutes, e.g. --ttl 60."); return 64 }
+                    ttl = minutes
+                }
+            case "--help", "-h": print(usage); return 0
+            default:
+                guard !arg.hasPrefix("--") || arg == "-" else { out.error(usage); return 64 }
+                positional.append(arg)
+            }
+        }
+        let client = MemoryClient(paths: paths, request: { request($0) })
+        let sub = positional.first ?? "list"
+        let key = positional.dropFirst().first
+        guard sub == "set" || positional.count <= 2 else { out.error(usage); return 64 }
+        let reply: MemoryReply
+        switch (sub, key) {
+        case ("list", _), ("ls", _):
+            reply = client.list(scope: scope, folder: folder)
+        case let ("get", key?):
+            reply = client.read(key: key, scope: scope, folder: folder)
+        case let ("rm", key?), let ("forget", key?):
+            reply = client.forget(key: key, scope: scope, folder: folder)
+        case let ("set", key?):
+            guard positional.count <= (file == nil ? 3 : 2) else {
+                out.error("Give the value as one argument, in quotes, or a file, not both.")
+                return 64
+            }
+            var value = positional.dropFirst(2).first
+            if file == nil, value == nil || value == "-" {
+                value = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+            }
+            // A path typed in a shell means the shell's folder, whatever --in says.
+            reply = client.write(key: key, value: file == nil ? value : nil, filePath: file.map(Self.absolute),
+                                 description: description, scope: scope, ttlMinutes: ttl, untilSessionEnds: false,
+                                 folder: folder)
+        default:
+            out.error(usage)
+            return 64
+        }
+
+        let now = Date()
+        switch reply {
+        case let .failed(message):
+            out.error(message)
+            return 1
+        case let .entry(entry) where sub == "get" && !json:
+            // Raw, so it can be piped or redirected: the text itself, or the shared file's path.
+            if let value = entry.value { print(value, terminator: value.hasSuffix("\n") ? "" : "\n") }
+            else if let blob = entry.file { print(MemoryBlobStore(root: paths.memoryBlobs).url(for: blob).path) }
+            return 0
+        case let .entry(entry), let .forgotten(entry):
+            if json { printJSON(client.fields(entry, now: now)); return 0 }
+            let verb = sub == "set" ? "Shared" : "Forgot"
+            out.success("\(verb) \(entry.key) (\(entry.scope == .global ? "global" : entry.scope.label))")
+            if sub == "set", let expires = entry.expiresAt {
+                out.note("Expires \(expires.formatted(date: .abbreviated, time: .shortened)).")
+            }
+            return 0
+        case let .entries(entries):
+            if json { printJSON(["entries": entries.map { client.fields($0, now: now) }]); return 0 }
+            let project = client.project(folder)
+            print("\(out.bold("Memory")) · \(MemoryScope.project(project).label) · \(entries.count) entr\(entries.count == 1 ? "y" : "ies")")
+            for e in entries {
+                let key = Trim.truncate(e.key, max: 28).padding(toLength: 28, withPad: " ", startingAt: 0)
+                let scope = (e.scope == .global ? "global" : "project").padding(toLength: 8, withPad: " ", startingAt: 0)
+                let kind = e.file.map { "file \($0.name)" } ?? ByteCountFormatter.string(fromByteCount: Int64(e.size), countStyle: .file)
+                let by = "\(e.author?.label ?? "—"), \(MemoryClient.age(e.updatedAt, now: now))"
+                print("  \(key) \(scope) \(Trim.truncate(e.description ?? kind, max: 48))  \(out.dim(by))")
+            }
+            return 0
+        }
+    }
+
+    private func printJSON(_ object: Any) {
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        else { return }
+        print(String(decoding: data, as: UTF8.self))
+    }
+
     // MARK: - Doctor
 
-    private func doctor() -> Int32 {
+    private func doctor(_ args: [String]) -> Int32 {
+        if args.first == "--remote" {
+            guard args.count == 2 else {
+                out.error("Usage: ambient doctor --remote NAME")
+                return 64
+            }
+            return doctorRemote(args[1])
+        }
         var problems = 0
         print(out.bold("Ambient doctor"))
 
@@ -221,7 +571,8 @@ struct Commands {
         }
 
         let installer = HookInstaller(paths: paths)
-        let states = AgentKind.allCases.map { ($0, installer.status($0)) }
+        let states = AgentKind.hooked.map { ($0, installer.status($0)) }
+        let connected = AgentRecord.load(paths)?.connected ?? []
         if !states.contains(where: { $0.1 == .installed || $0.1 == .partial }) {
             problems += 1
             out.error("No agent is connected — run `ambient install`")
@@ -235,17 +586,211 @@ struct Commands {
             case .partial:
                 problems += 1
                 out.warn("\(name): hooks are incomplete or outdated — run `ambient install \(agent.rawValue)`")
+            case .notInstalled where connected.contains(agent):
+                // Connected through Ambient, then removed: usually an agent update rewrote its settings.
+                problems += 1
+                out.error("\(name): its hooks were removed since you connected it — run `ambient install \(agent.rawValue)`")
             case .notInstalled:
                 out.warn("\(name): hooks not installed — run `ambient install \(agent.rawValue)`")
             case .agentMissing:
                 out.skip("\(name): not found")
             case let .unreadable(reason):
                 problems += 1
-                out.error("\(name): can't read \(tilde(installer.configURL(agent).path)): \(reason)")
+                out.error("\(name): can't read \(tilde(installer.configURL(agent)?.path ?? "")): \(reason)")
             }
         }
 
+        let permissions = installer.permissions
+        if permissions.enabled {
+            out.line("•", "Permission prompts: the island answers for Claude Code and Codex, waiting \(permissions.wait)s before the agent asks")
+        }
+
         print(problems == 0 ? out.dim("Everything looks good.") : out.dim("\(problems) problem\(problems == 1 ? "" : "s") found."))
+        return problems == 0 ? 0 : 1
+    }
+
+    // MARK: - Remote
+
+    private func remote(_ args: [String]) -> Int32 {
+        guard let sub = args.first else {
+            out.error("Usage: ambient remote add|remove|purge|list")
+            return 64
+        }
+        let rest = Array(args.dropFirst())
+        switch sub {
+        case "add": return remoteAdd(rest)
+        case "remove": return remoteRemove(rest)
+        case "purge": return remotePurge(rest)
+        case "list": return remoteList()
+        default:
+            out.error("Unknown remote command '\(sub)'. Use add, remove, purge or list.")
+            return 64
+        }
+    }
+
+    private func machines() -> [Machine] { MachineFile.load(from: paths.machinesFile) }
+
+    private func remoteAdd(_ args: [String]) -> Int32 {
+        let split = args.firstIndex(of: "--")
+        let own = split.map { Array(args[..<$0]) } ?? args
+        let command = split.map { Array(args[($0 + 1)...]) } ?? []
+        guard let name = own.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [--agents claude,codex] [-- TRANSPORT...]")
+            return 64
+        }
+        guard Machine.isValidID(name) else {
+            out.error(RemotePairing.Failure.invalidID(name).description)
+            return 64
+        }
+        var redaction: RemoteRedaction?
+        if let level = option("--redaction", in: own) {
+            guard let parsed = RemoteRedaction(rawValue: level) else {
+                out.error("Redaction is metadata, standard or full.")
+                return 64
+            }
+            redaction = parsed
+        }
+        guard let shimURL = RemoteShim.bundledURL(), let shim = try? RemoteShim(url: shimURL) else {
+            out.error("Can't find ambient-remote in the app. Run this from an installed Ambient.app.")
+            return 1
+        }
+        let host = option("--host", in: own) ?? name
+        guard Machine.isValidHost(host) else {
+            out.error("'\(host)' isn't a host name. For ssh options, use `-- ssh ... HOST`.")
+            return 64
+        }
+        let transport = command.isEmpty ? Machine.defaultTransport(host: host) : command
+        let request = RemotePairing.Request(
+            id: name, label: option("--label", in: own), transport: transport, redaction: redaction,
+            agents: option("--agents", in: own)?.split(separator: ",").map(String.init) ?? [],
+            acceptNewIdentity: own.contains("--accept-new-identity"))
+
+        out.line("•", "Pairing \(name) over \(transport.joined(separator: " "))…")
+        var list = machines()
+        let outcome: RemotePairing.Outcome
+        do {
+            outcome = try RemotePairing.pair(request, shim: shim, existing: list.first { $0.id == name }, audit: paths.remoteAudit)
+        } catch {
+            out.error(error.description)
+            return 1
+        }
+        list.removeAll { $0.id == name }
+        list.append(outcome.machine)
+        do { try MachineFile.save(list, to: paths.machinesFile) } catch {
+            out.error("Couldn't save \(tilde(paths.machinesFile.path)): \(error.localizedDescription)")
+            return 1
+        }
+        out.success("Copied ambient-remote \(shim.version); checksum verified")
+        for line in outcome.installLines { out.note(line) }
+        out.success("Paired \(outcome.machine.label) · level \(outcome.status.hello.level.rawValue)")
+        out.note("Identity \(outcome.machine.fingerprint)")
+        if outcome.needsManualStep { out.warn("One agent's hooks need adding by hand; see above.") }
+        if outcome.status.codex == .installed {
+            out.note("Codex asks you to trust new hooks: run /hooks in Codex on that machine once.")
+        }
+        if !UnixSocketServer.isListening(paths.socket.path) { out.note("Open Ambient.app to start following it.") }
+        return 0
+    }
+
+    private func remoteRemove(_ args: [String]) -> Int32 {
+        guard let name = args.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote remove NAME [--uninstall]")
+            return 64
+        }
+        var list = machines()
+        guard let machine = list.first(where: { $0.id == name }) else {
+            out.error("No paired machine is called '\(name)'. Try `ambient remote list`.")
+            return 1
+        }
+        var failed = false
+        if args.contains("--uninstall") {
+            switch RemoteShim.bundledURL().flatMap({ try? RemoteShim(url: $0) }).map({ RemotePairing.uninstall(machine, shim: $0) }) {
+            case .removed?:
+                out.success("Removed the hooks, spool and shim from \(name)")
+            case .needsManualStep?:
+                out.warn("Removed the spool and shim from \(name). It has no python3, so its hooks stay in the agent's config for you to remove by hand. They do nothing now.")
+            case let .differentMachine(identity)?:
+                failed = true
+                out.warn("\(name)'s transport reaches another machine (\(identity)), so that one was left alone. Unpairing it anyway.")
+            case let .failed(reason)?:
+                failed = true
+                out.warn("Couldn't clear \(name), so unpairing it anyway: \(reason)")
+            case nil:
+                failed = true
+                out.warn("Can't find ambient-remote in the app to check who \(name) is, so unpairing it without clearing it.")
+            }
+        }
+        list.removeAll { $0.id == name }
+        do {
+            try MachineFile.save(list, to: paths.machinesFile)
+            try RemotePurge.removeSessions(machine: name, paths: paths)
+        } catch {
+            out.error("Couldn't update \(tilde(paths.remoteDir.path)): \(error.localizedDescription)")
+            return 1
+        }
+        paths.remoteAudit.append(.init(action: .unpaired, machine: name))
+        out.success("Removed \(name). Its sessions and cursor are gone from this Mac.")
+        return failed ? 1 : 0
+    }
+
+    private func remotePurge(_ args: [String]) -> Int32 {
+        guard let name = args.first, !name.hasPrefix("--") else {
+            out.error("Usage: ambient remote purge NAME")
+            return 64
+        }
+        guard Machine.isValidID(name) else {
+            out.error("'\(name)' isn't a valid machine name.")
+            return 64
+        }
+        var list = machines()
+        let wasPaired = list.contains { $0.id == name }
+        list.removeAll { $0.id == name }
+        do {
+            if wasPaired { try MachineFile.save(list, to: paths.machinesFile) }
+            try RemotePurge.scrub(machine: name, paths: paths)
+        } catch {
+            out.error("Couldn't purge \(name): \(error.localizedDescription)")
+            return 1
+        }
+        paths.remoteAudit.append(.init(action: .purged, machine: name))
+        out.success("Deleted everything from \(name) on this Mac: sessions, cursor, board tasks and today's moments.")
+        out.note("The audit log keeps that it happened, and holds no event content.")
+        return 0
+    }
+
+    private func remoteList() -> Int32 {
+        let list = machines()
+        guard !list.isEmpty else {
+            print("No paired machines. Add one with `ambient remote add NAME`.")
+            return 0
+        }
+        let cursors = StateFile.loadCursors(from: paths.stateFile)
+        for m in list {
+            let id = m.id.padding(toLength: 16, withPad: " ", startingAt: 0)
+            let seq = cursors[m.id].map { "seq \($0.seq)" } ?? "no events yet"
+            print("  \(id) \(out.dim(m.label == m.id ? "" : m.label + "  "))\(m.transport.joined(separator: " "))  \(out.dim(seq))")
+            print("  \(String(repeating: " ", count: 16)) \(out.dim(m.fingerprint))")
+        }
+        return 0
+    }
+
+    private func doctorRemote(_ name: String) -> Int32 {
+        guard let machine = machines().first(where: { $0.id == name }) else {
+            out.error("No paired machine is called '\(name)'. Try `ambient remote list`.")
+            return 1
+        }
+        print(out.bold("Ambient doctor · \(name)"))
+        let shim = RemoteShim.bundledURL().flatMap { try? RemoteShim(url: $0) }
+        let checks = RemoteDoctor.check(machine, shim: shim, cursor: StateFile.loadCursors(from: paths.stateFile)[name])
+        for check in checks {
+            switch check.level {
+            case .ok: out.success(check.text)
+            case .warn: out.warn(check.text)
+            case .fail: out.error(check.text)
+            }
+        }
+        let problems = checks.filter { $0.level == .fail }.count
+        print(problems == 0 ? out.dim("Nothing is stopping this machine.") : out.dim("\(problems) problem\(problems == 1 ? "" : "s") found."))
         return problems == 0 ? 0 : 1
     }
 
@@ -267,6 +812,7 @@ struct Commands {
     }
 
     private func emit(_ args: [String]) -> Int32 {
+        if let session = option("--session", in: args) { return emitReal(args, session: session) }
         guard let name = args.first, let mood = Demo.mood(named: name) else {
             out.error("Usage: ambient emit <working|waiting|done|error|idle> [--agent A] [--project P] [--message M]")
             return 64
@@ -276,6 +822,25 @@ struct Commands {
         let events = Demo.events(for: mood, agent: agent, project: project, message: option("--message", in: args),
                                  host: HostCapture.current())
         return send(events) ? 0 : 1
+    }
+
+    /// A real session's event from any agent or script, through the same adapter as `ambient hook custom`.
+    /// The return address is wherever the command runs: its terminal tab, tmux pane or app.
+    private func emitReal(_ args: [String], session: String) -> Int32 {
+        guard let event = args.first, CustomAdapter.events.contains(event) else {
+            out.error("Usage: ambient emit <\(CustomAdapter.events.joined(separator: "|"))> --session ID [--agent NAME] [--cwd PATH] [--tool NAME] [--detail TEXT] [--message TEXT]")
+            return 64
+        }
+        var payload: [String: Any] = ["session_id": session, "event": event,
+                                      "cwd": option("--cwd", in: args) ?? FileManager.default.currentDirectoryPath]
+        for (flag, key) in [("--agent", "agent"), ("--tool", "tool"), ("--detail", "detail"), ("--message", "message"), ("--reason", "reason")] {
+            if let value = option(flag, in: args) { payload[key] = value }
+        }
+        guard let e = AdapterRegistry.event(agent: .custom, payload: HookPayload(payload), eventHint: nil, host: HostCapture.current()) else {
+            out.error("That event has no effect.")
+            return 64
+        }
+        return send([e]) ? 0 : 1
     }
 
     private func demo() -> Int32 {

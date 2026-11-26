@@ -1,18 +1,53 @@
 # Ambient
 
-**Your Mac, aware of your coding agents.**
+**Your Mac, aware of your coding agents.** Website and download: [yaml.cafe](https://yaml.cafe/)
 
-Ambient turns what Claude Code, Codex and Gemini CLI are doing into calm, glanceable signals on your
+![Three agent sessions at the notch. One stops, and the notch says "Approve a command · rm -rf build".](docs/assets/ambient-loop.gif)
+
+*An illustration of the island, not a screen recording.*
+
+```bash
+brew install --cask viveky259259/tap/ambient
+```
+
+Or [download the disk image](https://yaml.cafe/?ref=github) (11.5 MB, signed and notarized by Apple), open Ambient
+and click **Connect All**. Free, MIT, macOS 14 or later, Apple silicon and Intel.
+
+**What Ambient can and can't do on your Mac**
+
+- It listens to the hooks each agent already offers. It doesn't wrap your agent, read your screen or see your files.
+- A hook sends a few short fields (agent, state, project name, a trimmed message) over a Unix socket on your Mac.
+  Your prompts and tool output are never stored. [Privacy](#privacy)
+- No account and no telemetry. It goes online only when you ask it to, for an optional voice.
+- It never answers a permission prompt for you. Answering from the notch is off until you turn it on, and then only
+  *Allow once* or *Deny*. [How that works](#answer-permission-prompts-from-the-island)
+- `ambient uninstall` removes only Ambient's hooks. [What it changes on your system](#what-ambient-changes-on-your-system)
+
+Ambient is a free, open source (MIT) macOS notch app for AI coding agents. It shows when an agent is working, needs you, has finished or hit an error, and one click takes you back to the exact terminal tab, tmux pane or chat.
+
+Ambient turns what Claude Code, Codex, Gemini CLI, Antigravity, Cursor, Copilot CLI and OpenCode (or any agent or
+script you point at it) are doing into calm, glanceable signals on your
 desktop, so you can stop babysitting terminals and still never miss the moment an agent needs you.
 
 - **Notch island** — a black pill that grows out of the notch. A coral orb breathes while Claude works,
   an amber pulse means *it needs you*, green means *done*, red means *it hit an error*. When something
-  happens it blooms open for a few seconds; hover to see every session; click to jump back to it.
+  happens it blooms open for a few seconds, and when an agent needs you it says what for, in one line:
+  *Approve a command · rm -rf build*, *Review a change · Session.swift*, *Answer a question*. Hover to see your
+  latest sessions, or *View all* for every one; click to jump back to it.
 - **Desktop pet** — an optional pixel-art blob, crab or cat that you drag anywhere. It types while your agent works,
   waves when it needs you, cheers when it's done and sleeps when nothing needs you, with a speech bubble saying what's
   going on and a pip per session underneath. Hover it for your sessions, click it for a quick look at all of them,
   click a session to jump to it. Works with or without the notch island; turn it
-  on in Settings › Desktop Pet.
+  on in Settings › Appearance › Pet.
+- **Read aloud** — select part of a reply in Claude, Codex or your terminal and press ⌥⎋ (or Read Selection Aloud in the menu bar, or, in apps that support it, the app's menu ›
+  Services › Speak with Ambient): Ambient reads it to you, with markdown, paths and code blocks turned into something
+  worth hearing. Use a Mac voice, Kokoro running offline on your Mac (a one-time download), or OpenAI, ElevenLabs or
+  your own server with your key. The island shows it speaking, with pause, continue and stop; the keyboard's ⏯ key
+  and AirPods or other headphones pause and continue it too. Set it up in Settings › Voice & Sound.
+- **Ambient speaker** — hear one Mac on another: pick *Ambient* as the output, and what plays there plays on the Mac
+  you chose, while video waits for the sound. See [Ambient speaker](#ambient-speaker).
+- **Ambient Microphone** — use one Mac's microphone on another: pick *Ambient Microphone* as the input, and apps
+  hear the Mac you chose. See [Ambient Microphone](#ambient-microphone).
 - **Click to return** — a notification, an island row or a menu row takes you to the exact place the
   agent runs: the chat in Claude's desktop app, the thread in Codex's app, the Terminal or iTerm2 tab,
   the tmux or cmux pane, or the editor window for the project.
@@ -27,18 +62,20 @@ desktop, so you can stop babysitting terminals and still never miss the moment a
   session lives as a star, a boat, a plant or a planet glowing in the color of what it's doing. Around them: today's story (agent
   time, tools, turns, how often they needed you), the latest moments, the clock and your next event. On the
   desktop of every display, and on the lock screen while you're away. Light by day and dark at night, or set it to match macOS
-  or stay light or dark. Off until you turn it on in Settings › Wallpaper.
+  or stay light or dark. Off until you turn it on in Settings › Appearance › Wallpaper.
 - **When you open the island, the wallpaper answers** — in Sky, Harbor and Garden the notch collapses into a
   black hole: your agents lift off as light and swing into orbits while loose dust falls in, then drift home
   when it closes. In Solar System the notch lights up as the sun and the six most urgent planets orbit it; the
   rest fall into the sun until it closes. Real gravity drives both. They follow Reduce Motion, stay off in Low
-  Power Mode, and the black hole can be turned off in Settings › Wallpaper.
+  Power Mode, and the black hole can be turned off in Settings › Appearance › Wallpaper.
 
-Everything stays on your Mac. No accounts, no network, no telemetry.
+Everything stays on your Mac and on the machines you connect yourself, over your own ssh. No accounts and no telemetry. Ambient goes online only when you ask it to: the one-time
+offline voice download, and the text you select when you choose an online voice.
 
 ## Install
 
-1. Download `Ambient-<version>.dmg` from [Releases](../../releases), open it and drag **Ambient** to Applications.
+1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag **Ambient** to Applications.
+   Or install it with Homebrew: `brew install --cask viveky259259/tap/ambient`.
 2. Open Ambient. Settings opens on **Welcome**: click **Connect All** to hook up every agent it found
    (or connect them one at a time under **Agents**).
 3. Click **Play Demo** to see every state, then **Get Started**.
@@ -52,6 +89,100 @@ Or from a terminal, once the app has run once:
 
 **Codex** asks you to trust new hooks: run `/hooks` inside Codex once and approve Ambient's.
 
+### Supported agents
+
+| Agent | How Ambient connects | What Ambient sees |
+| --- | --- | --- |
+| Claude Code (terminal, editors, Claude desktop app) | Hooks in `~/.claude/settings.json` | Everything, including *needs you* |
+| Codex (CLI and the Codex app) | Hooks in `~/.codex/hooks.json`, after you approve them with `/hooks` | Everything, including *needs you* |
+| Gemini CLI | Hooks in `~/.gemini/settings.json` | Everything, including *needs you* |
+| Antigravity | A hook set in `~/.gemini/config/hooks.json` | Prompts, tools, finished or failed turns. Never *needs you*: Antigravity has no permission hook. Tested with the `agy` CLI |
+| Cursor, the editor's agent | Hooks in `~/.cursor/hooks.json` | Prompts, tools as they finish (including shell/file/MCP after-hooks), finished turns, compaction. Never *needs you*, see below |
+| GitHub Copilot CLI (beta) | Its own hook file, `~/.copilot/hooks/ambient.json` | Prompts, tools, *needs you* for permission prompts and questions, subagents, errors, compaction |
+| OpenCode 1.4 or later, including 2 | A plugin, `~/.config/opencode/plugins/ambient.js` | Everything, including *needs you* for permission requests and questions, and its subagents' prompts on the parent session. OpenCode 2 runs plugins in its background service, so clicking one of its sessions can't bring back its terminal |
+| Anything else | [`ambient emit` or `ambient hook custom`](#any-other-agent) | Whatever it reports |
+
+*Beta* connections follow each agent's documented hooks but haven't yet been run against the agent itself.
+
+Cursor reads the reply of a before-tool hook as a permission decision, so Ambient registers none: it only
+uses hooks that can't block or approve anything (`postToolUse`, `afterShellExecution`, `afterFileEdit`,
+`afterMCPExecution`, and lifecycle hooks). Tools show up as Cursor finishes them, and Cursor's permission
+prompts don't reach Ambient. The `cursor-agent` CLI fires only some of Cursor's hooks so far.
+
+**Task board** — Settings › Board (or *Task Board…* in the menu bar) groups sessions into local tasks by
+project and title. Needs-you sessions land in *Blocked*. Turn on **Summarize tasks with local LLM** to call
+this Mac's local-agent MCP gateway at `http://127.0.0.1:5051/mcp` (LaunchAgent `com.local-agent.mcp`;
+see `local-agents/docs/local-model-mcp.md`). Default model: `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit`
+under `/Volumes/Models` (run `models-on` after plugging in the SSD). Transcript reading is a separate
+opt-in; cloud-tagged models are refused. Optional one-shot `ambient task skill-bootstrap` learns a few-shot
+pack into `~/.ambient/task-skill.json` using Anthropic from the login Keychain, then the live path stays
+local-only. If the gateway or disk is missing, the board keeps metadata heuristics and shows a calm status.
+`ambient tasks` / `ambient task upsert` / `ambient task open` talk to the same board. Click a card to open its chat, even
+after its session ends, and search the board by title, summary, project, folder, agent or machine. A task the agents
+made leaves the board three days after its last session ends; tasks you add yourself stay.
+
+**Model path** — instead of a gateway model id, point the board at a model on disk: Settings › Board › *Model &
+gateway options* › **Choose…**, `ambient task model PATH`, or an agent through `ambient mcp`. Ambient looks at
+the files to decide how to run it:
+
+| You choose | Ambient runs it |
+| --- | --- |
+| A path local-agent already serves (its `list_models` shows that path) | Through the gateway, by that model's id, so its queue and adapters apply |
+| An MLX or Hugging Face folder (`config.json` + safetensors) | Directly with **mlx-lm** |
+| The same with a `vision_config` (Qwen-VL, Qwen3.5 and similar) | Directly with **mlx-vlm**, text only |
+| A Hugging Face cache folder (`models--org--name`) | Its pinned snapshot, as above |
+| A `.gguf` file, or a folder of them | Directly with **llama.cpp** (`llama-completion` or `llama-cli`), one chat turn with the model's own template |
+| Speech, transcription, image or video weights | Refused: they can't write a summary |
+
+Direct runs are offline (`HF_HUB_OFFLINE`), one model at a time, and ask reasoning models (Qwen3 and later) not to
+think first. An MLX model stays loaded for two minutes after a summary, so a busy board reads the weights once, and
+gets the prompt on standard input. llama.cpp reads it from a temporary file that only you can read (`0600`), deleted
+when the run ends, or by a later run once it's ten minutes old if Ambient quit or crashed first. Quitting Ambient stops the model. Ambient
+uses **Python for MLX** if you set one, otherwise the Python local-agent uses for MLX, otherwise a `python3` that can
+import the package (`/usr/bin/python3` only when the developer tools are installed, since without them it offers
+to install them). `ambient task model` and `get_task_model` say how the app would run the model, with its own
+`PATH`. To let Claude Code or Codex read and set the board's model, add Ambient as an MCP server:
+
+```bash
+claude mcp add ambient -- ~/.ambient/bin/ambient mcp
+```
+
+It offers `get_task_model` and `set_task_model_path` (path, optional `enable`), and needs Ambient running. **Python
+for MLX** can't be set this way, since Ambient runs that program: use Settings or `ambient task model --python`.
+Ambient also refuses model folders that declare their own Python code (`model_file` in `config.json`), and direct
+runs stop with an error if a model tries to load custom code (`auto_map`).
+
+**Working memory** — the same MCP server lets your agents share data with each other: Claude Code leaves the API
+contract it worked out, Codex picks it up in the next tab; one agent shares a build log or a fixture file, another reads
+it. Add `~/.ambient/bin/ambient mcp` as a stdio MCP server to each agent that should take part, as above for Claude
+Code.
+
+| Tool | Does |
+| --- | --- |
+| `memory_write` | Shares text or JSON (up to 32 KB) under a key, e.g. `api-schema` or `tests/failing`. Writing a key again replaces it |
+| `memory_write_file` | Shares a file (up to 50 MB): Ambient keeps a read-only copy, so the agent that reads it can't change it for the others |
+| `memory_read` | Returns the text, or the path of the file's copy, with who shared it and when |
+| `memory_list` | What's shared, newest first, without the values |
+| `memory_forget` | Removes an entry |
+
+An entry is shared with the agents working in the same project, git worktrees included, or with every agent when
+written with `scope: "global"`; `project` reads or writes another project's. It lasts 7 days unless written again,
+for `ttl_minutes` (up to 30 days), or, with `until_session_ends`, until the agent session that wrote it ends — Ambient
+knows which session is asking from the agent process that started `ambient mcp`. When an agent starts the server, its
+instructions list what's already shared for the project, so the agent knows to look. Agents without MCP, and you, use
+`ambient memory`:
+
+```bash
+ambient memory set failing-tests "TaskStoreTests.persistRoundTrip" --description "Still red after the fix"
+ambient memory set build-log --file build.log
+ambient memory                    # what's shared here and globally
+ambient memory get failing-tests  # the text, or the shared file's path
+ambient memory rm failing-tests
+```
+
+Aider, Amp and other agents without command hooks can drive Ambient themselves; see
+[Any other agent](#any-other-agent).
+
 Requirements: macOS 14 or later. Designed for notched MacBooks; on other displays the island sits at the
 top center of the menu bar.
 
@@ -62,16 +193,57 @@ agent hook ──▶ ambient hook <agent> ──▶ ~/.ambient/ambient.sock ─�
 ```
 
 Ambient registers a hook for each lifecycle event of your agents (prompt submitted, tool started and
-finished, permission requested, turn finished or failed, compaction, subagents, session start and end).
+finished, permission requested, turn finished or failed, compaction, subagents, session start and end), or
+for OpenCode, which has no command hooks, a small plugin that does the same.
 The hook runs the bundled `ambient` command, which reads the event, reduces it to a few short fields,
 sends one line over a private Unix socket, and exits — in about 15 ms, always with success, and in the
-background for Claude Code and Codex, so it never slows your agent down. If Ambient isn't running,
+background for Claude Code and Codex, so it never slows your agent down (the one exception is the opt-in
+[permission hook](#answer-permission-prompts-from-the-island)). If Ambient isn't running,
 the event is simply dropped.
 
 The app folds events into a state per session and picks the most urgent across all of them:
 **needs you** › **error** › **done** › **working** › **idle**. A finished session stays green until you
 look at it — switch to its terminal or editor, or click it — and then settles. Sessions whose agent
 process exits disappear on their own.
+
+### Answer permission prompts from the island
+
+Off unless you turn it on in **Settings › Alerts › Permission prompts**. For Claude Code and Codex, a tool request then opens a
+card at the notch with the agent, the project and what it wants to run (the command, file or host), and two
+buttons: **Allow once** and **Deny**. Allow covers that one call; it never adds a rule.
+
+- **Ambient never answers for you.** If you don't answer within the wait you choose (20 seconds by default), the
+  prompt goes back to the agent, which asks you as usual. The same happens when the agent's app is already in
+  front, when the island is off, and when the agent moves on (you answered in its own window, say).
+- **The agent waits too.** In a terminal, Claude Code and Codex show their own prompt only after the island hands
+  it back, so a prompt you ignore arrives up to that many seconds later. In Claude's desktop app and editors,
+  the island and the app's own dialog race, and whichever you answer first wins.
+- **Nothing hidden.** The card wraps what it shows rather than trim it. A command over 80 characters is cut, and MCP
+  tools show no details at all, and in both cases the card says so and offers to take you to the agent to read it.
+- **One at a time, none lost.** Several prompts queue in order, each with its own time limit, and the card says
+  how many are waiting.
+- **No stray clicks.** The buttons ignore clicks for the first moment the card is on screen, so a card that
+  appears under your pointer can't be approved by a click meant for something else.
+- Only this hook ever makes an agent wait: with the setting on, Ambient installs the permission hook in the
+  foreground. Codex asks you to approve the changed hook once with `/hooks`. Every other hook stays in the
+  background. Other agents aren't affected: their permission prompts stay in their own windows.
+
+### Keeping hooks working
+
+Agents change: an update can rewrite their settings or the shape of their hooks. Ambient re-checks every
+connected agent's hooks when it starts, every ten minutes, and as soon as an agent's executable or settings
+file changes. Out-of-date hooks are rewritten on the spot (with the usual backup). What it can't fix shows in
+the menu bar, which gets a **!** and an item with a one-click fix:
+
+- **Hooks were removed** — you connected the agent, but its hooks are gone. *Reconnect* puts them back.
+- **Can't read the settings** — the file isn't valid JSON; *Show File* opens it in Finder. Ambient never
+  overwrites a file it can't read.
+- **Hooks stopped firing** — a session has been busy in a terminal for two minutes, started after its hooks
+  were in place, yet not one hook reached Ambient. For Codex that usually means its hooks await approval
+  (`/hooks`); otherwise restart the session, since agents read their hooks when they start.
+
+`ambient doctor` runs the same checks from a terminal, except for hooks that stopped firing: only the running app
+sees those.
 
 ### Click to return
 
@@ -96,19 +268,80 @@ does the same from a terminal or a hotkey; without a project it opens the sessio
 | `~/.claude/settings.json` | One hook group per Claude Code event, all running `~/.ambient/bin/ambient hook claude` |
 | `~/.codex/hooks.json` | The same for Codex |
 | `~/.gemini/settings.json` | The same for Gemini CLI (hooks named `ambient`) |
-| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper |
+| `~/.gemini/config/hooks.json` | A hook set named `ambient` for Antigravity, one hook per event running `~/.ambient/bin/ambient hook antigravity <event>`. Antigravity has no permission event, so its sessions never show *needs you* |
+| `~/.cursor/hooks.json` | One entry per Cursor event, running `~/.ambient/bin/ambient hook cursor`, next to your own (and `"version": 1` if the file is new) |
+| `~/.copilot/hooks/ambient.json` | A hook file of Ambient's own for Copilot CLI, one entry per event running `~/.ambient/bin/ambient hook copilot <event>`; removed on uninstall |
+| `~/.config/opencode/plugins/ambient.js` | A plugin of Ambient's own for OpenCode that starts `~/.ambient/bin/ambient hook opencode` for each event without waiting for it; removed on uninstall |
+| `~/.ambient/` | The socket, a link to the bundled CLI, config backups, saved session state, today's story for the living wallpaper, `agents.json` (which agents you connected), `permissions.json` (the island's permission setting), what agents share through working memory (`memory.json`, and copies of shared files in `memory/`), and, once you set up agent history, `history.json` (which repositories, and where) and `history/` (this Mac's index of the stored chats) |
 | `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist` | Only with the lock screen option on: while the Mac is locked the scene is set as your wallpaper, so macOS's own lock-screen controls stay on top, and on unlock the store is put back from a backup in `~/.ambient/backups/` |
 
 Every edit keeps your other hooks and settings byte-for-byte, follows symlinked dotfiles, preserves file
 permissions, and writes a backup to `~/.ambient/backups/` first. `ambient uninstall` removes only
 Ambient's entries.
 
+### Any other agent
+
+Anything that can run a command can drive the island: another agent, a build script, a long job. Give each
+session an id and send its state as it changes:
+
+```bash
+ambient emit start   --session nightly --agent Build
+ambient emit working --session nightly --tool make --detail "make release"
+make release && ambient emit done  --session nightly --message "Release built" \
+             || ambient emit error --session nightly --message "make failed"
+```
+
+Or pipe one JSON object per event to `ambient hook custom`, the way agent hooks do:
+
+```bash
+echo '{"session_id":"nightly","event":"done","agent":"Build","message":"Release built"}' | ambient hook custom
+```
+
+| Field (`emit` flag) | Meaning |
+| --- | --- |
+| `session_id` (`--session`) | Required. Any id up to 128 characters, stable for the session |
+| `event` (first argument) | `start`, `working`, `waiting`, `done`, `error`, or `end` (`idle` means `end`) |
+| `agent` (`--agent`) | The name shown on the island, up to 24 characters. Default: *Agent* |
+| `cwd` (`--cwd`) | The project folder; the island shows its name. `emit` uses the current folder |
+| `tool`, `detail` (`--tool`, `--detail`) | With `working`: what it's running, e.g. `make` and `make release` |
+| `message` (`--message`) | With `waiting`, `done` or `error`: up to 160 characters for the island and the banner |
+| `reason` (`--reason`) | With `waiting`, what you're asked to do: `command`, `edit`, `web`, `access`, `plan`, `permission` (any other tool) or `question` (the default). The island leads with it: *Approve a command*, *Review a change* |
+
+The return address is wherever the command runs: clicking the session brings back that terminal tab, tmux
+pane or app, and the session disappears once the process that ran the command exits (the nearest one that
+isn't a shell). Fields may be added to this interface but are never renamed or removed.
+
+For example, Aider can say when it's waiting for you:
+
+```bash
+aider --notifications --notifications-command 'ambient emit done --session "aider-$PPID" --agent Aider --message "Aider is waiting for you"'
+```
+
 ### Privacy
+
+This covers agents on your Mac. Agents on other machines have [their own section](#remote-agents).
 
 Only these fields ever leave the hook process, and only to the local socket: the agent, session id,
 working directory, event kind, tool name, the return address above, an 80-character hint (a command's first words, a file name, a
 host), a 160-character summary of the agent's final message or permission prompt, and which app the agent
 runs in. Your prompts and tool output are never read beyond that and never stored.
+
+[Agent history](#agent-history) is the one exception, and only where you turn it on: for a repository you set up
+with `ambient history setup`, a finished chat is read from the agent's own transcript and stored in the place you
+named, with credentials blanked. No other chat is read.
+
+Working memory holds only what an agent chooses to share through `ambient mcp`, or you share with `ambient memory`, in
+`~/.ambient/memory.json` and `~/.ambient/memory/`, readable only by your user. Every agent you've given `ambient mcp`
+can read it, so Ambient refuses text that looks like an API token or a private key, `.env` files, key and credential
+files, and anything in `~/.ssh`, `~/.aws` or `~/.gnupg`. Entries expire, a week by default, and their file copies go
+with them. Agents are told that entries are data other agents wrote, not instructions. It never leaves your Mac.
+
+To notice hooks that stopped firing, Ambient looks once a minute at the processes on your Mac that are agent
+sessions in a terminal (Claude Code, Codex, `agy`): their process id, executable path, start time, CPU time used
+and whether a terminal is attached. Nothing else about them, never their arguments, environment or output, and
+only to compare with the hooks it has heard from. To notice updates it checks each agent's executable path, size and
+modification date, and keeps those in memory only. `~/.ambient/agents.json` keeps which agents you connected. None
+of it leaves your Mac.
 
 The living wallpaper keeps today's counts and a timeline of what happened, where and when, in
 `~/.ambient/day.json` — never prompts, summaries or commands — and starts fresh at midnight. On the lock
@@ -117,20 +350,311 @@ timed event today, and only after you allow Calendar access. On the lock screen 
 wallpaper while the Mac is locked, so the password field and login options always stay on top. (An experimental
 live layer drawn above the lock screen with a private macOS window API is off: it can cover those controls.)
 
+Reading aloud uses only the text you select, and only when you press the shortcut or choose Speak with Ambient. The shortcut reads the selection through Accessibility, which you allow once; Ambient uses it for nothing else. With
+a Mac voice or the offline model it never leaves your Mac. With an online voice, each selection is sent to the service
+you chose, with your key, which is kept in your login Keychain. The offline model (Kokoro-82M, about 330 MB, and a
+small helper) downloads only when you click Download, from Hugging Face and this repository's releases, and every file
+is checked against a hash built into Ambient before it's used.
+
+### Performance
+
+Ambient costs next to nothing when nothing happens. Measured on an Apple M5 Max (macOS 27.0.1, the code after Ambient
+0.7.0) with `scripts/measure-perf.sh`, which runs a separate copy of the app for 45 seconds per case; CPU is percent
+of one core, energy impact is macOS's own figure (as in Activity Monitor). Other work kept every core busy during this
+run, so a quiet Mac may read a little differently:
+
+| Case | CPU, average | CPU, peak | Energy impact | Memory |
+| --- | --- | --- | --- | --- |
+| Island only, nothing happening | 0.1% | 0.2% | 0.0 | 22 MB |
+| Island only, agents working (an event every 2 s) | 0.5% | 0.6% | 0.4 | 24 MB |
+| Island and Dock glow, agents working | 0.6% | 0.7% | 0.5 | 24 MB |
+| Island and living wallpaper, nothing happening | 0.0% | 0.1% | 0.0 | 41 MB |
+| Island and desktop pet, nothing happening | 0.2% | 0.5% | 0.1 | 23 MB |
+| Everything on, agents working | 1.9% | 2.4% | 1.8 | 53 MB |
+
+The task board adds to that as it grows. `scripts/measure-perf.sh --board 4193` measures a made-up board the size and
+shape of a real one of 4,193 tasks, with an event every two seconds, on the same Mac with macOS 27.0.1:
+
+| Case | CPU, average | CPU, peak | Energy impact | Memory |
+| --- | --- | --- | --- | --- |
+| No window open | 2.3% | 2.5% | 2.2 | 36 MB |
+| Settings › Board open | 2.7% | 3.3% | 2.5 | 55 MB |
+| Settings closed after showing Board | 2.0% | 2.4% | 1.8 | 53 MB |
+| Task Board window open | 2.9% | 3.4% | 2.8 | 48 MB |
+
+Settings › Board shows each column's latest eight cards; the Task Board window shows them all, drawing only the
+ones on screen. Finished tasks leave after three days, so a board holds about that many days of work.
+
+What these numbers leave out: the living wallpaper pauses where windows cover it, so the figure above is for a
+mostly covered desktop, as while you work; a bare desktop costs more. Memory with everything on moves with what the
+wallpaper has drawn: an earlier run of the same case read 241 MB. The Dock glow was measured without Accessibility
+access (its edge-line mode). The black hole or sun when the island opens wasn't measured; it runs only while the
+island is open and stops in Low Power Mode. Run `scripts/measure-perf.sh` to measure your Mac; it changes nothing in
+the Ambient you use, and nothing it measures leaves your Mac.
+
+## Remote agents
+
+Coding agents run on devboxes, cloud VMs and the Mac mini in the closet too. Pair a machine, and its sessions show up
+on your Mac beside the local ones, labeled with the machine's name, in the island, menu bar, pet, notifications and
+board.
+
+```bash
+ambient remote add devbox                 # ssh devbox, with your own ~/.ssh/config
+```
+
+That copies a small shell script, `ambient-remote`, from inside the app to `~/.ambient/bin` on the machine, checks its
+SHA-256 there, adds background hooks for Claude Code and Codex, and pins the machine's identity. It needs no account,
+no server, no root, no daemon and no sshd changes. Use `--host HOST` when the ssh name differs, `--redaction metadata|standard|full` to choose how much text leaves the machine, and
+`-- COMMAND...` for any other way in. Anything that runs a command on the machine works, with the command as its last
+argument:
+
+```bash
+ambient remote add build --label "Build box" -- ssh -J bastion build.internal
+```
+
+**How it works.** Hooks on the machine only append to a private spool file. Your Mac dials out over your transport and
+runs `ambient-remote follow`, which streams the spool back as JSON lines. Nothing is sent the other way, and your Mac
+opens no port. If it sleeps or loses the network, events wait in the spool and arrive on reconnect, and a prompt that
+waited longer than 10 minutes shows as *missed*, without a chime. While a machine can't be reached its sessions show
+as *unknown* rather than working forever. Links reconnect by themselves, and the menu bar and Settings › Agents › Other Machines show
+how each one is doing. The `ssh` command Ambient builds forwards nothing, so nothing on the machine can use your ssh
+agent or ports through the link, whatever your config says for that host. A command you give after `--` runs as you
+wrote it.
+
+**What it can do.** A remote machine can only send display data. It can't reach the app's socket, run anything, or
+touch a window, tab, tmux pane or process on your Mac. Clicking a remote session in the island or menu marks it as seen,
+since there's nothing local to open. Clicking its card on the board opens its chat *on that machine*: your Mac runs
+`ambient open <session> --from=<this Mac's name>` there over the same transport (the name percent-encoded, so it can't
+end a quote), and that machine's Ambient brings
+the chat forward and shows a notification saying which Mac asked. That needs the Ambient app on the machine, not just
+the shim, and it's the only command your Mac sends one. It adds no power, since the transport can run anything there
+already; the session id came from that machine, so it's checked before it's put in the command, and nothing the
+machine prints is shown. Remote events go through their own strict decoder,
+and if a machine's identity changes the link stops until you pair it again. Ambient can't answer or approve anything
+on the remote machine.
+
+That display data can be false. A machine that's been taken over, or an agent on it that's been talked into it, can show
+you made-up states and text and alert you about them. Each machine is limited to 50 events a second, 1,000 sessions and
+5,000 board tasks, so it can only slow itself down. Its identity is something it reports, so the check catches a
+re-pointed alias or a rebuilt machine, not one that's lying. Pairing again and `remove --uninstall` check it first, and
+leave a different machine as it was.
+
+**What leaves the machine.** Redaction happens there, before anything is written to the spool:
+
+| | `metadata` | `standard` (default) | `full` |
+|---|---|---|---|
+| Agent, session id, event id, state, time | ✓ | ✓ | ✓ |
+| Project: the folder's name, never its path | ✓ | ✓ | ✓ |
+| Whether a prompt is a permission request or a question | ✓ | ✓ | ✓ |
+| Tool names | | ✓ | ✓ |
+| The session's title in its agent | | ✓ | ✓ |
+| Up to 160 characters of the agent's final message, a permission prompt or an error | | | ✓ |
+
+Your prompts, tool input and output, commands, file paths and session transcripts are never sent as such at any level,
+but at `full` an agent's final message can quote any of them. Neither are the agent's process id, terminal or tmux pane,
+which `follow` uses on the machine to tell when the agent has exited. Lines already in the spool when you tighten a
+level still cross your transport, and your Mac drops what the new level doesn't allow as they arrive. A voice you record
+is different: you send it on purpose, with any transcript, at any level (see [Voice sync](#voice-sync)).
+
+**Where it's kept.** On the machine, in `~/.ambient/spool` (folder `0700`, files `0600`), capped at 5 MB and 24 hours;
+set `spool_max_bytes` and `spool_max_age` in `~/.ambient/remote.conf` to change that. The limits are enforced whenever
+the shim runs, since it has no daemon. On your Mac, remote sessions live with local ones in `~/.ambient/state.json`, on
+the board in `~/.ambient/tasks.json`, where a machine's tasks stay until three days after their last session ends, until you purge it, or until its
+oldest make way past 5,000,
+and in the day log with no titles or projects. `~/.ambient/remote/audit.jsonl` records
+pairing, unpairing, fingerprint changes, link changes and rejected lines, and never any event content.
+
+**Where it goes.** Text from a remote machine stays on your Mac. It's never sent to an online voice, to `ambient task
+skill-bootstrap` or to any address but your Mac's own, and the local LLM summarizes remote sessions only if you turn
+that on in Settings › Agents › Other Machines. Your transport is the only thing that touches the network.
+
+```bash
+ambient remote list                       # Paired machines
+ambient doctor --remote devbox            # Transport, shim version and checksum, spool, hooks, cursor
+ambient remote remove devbox --uninstall  # Unpair, and clear the hooks, spool and shim, if it's still that machine
+ambient remote purge devbox               # Delete everything from it on this Mac
+```
+
+The shim is plain POSIX `sh` you can read at [`Resources/ambient-remote`](Resources/ambient-remote). Hooks and streaming
+need only `awk` and coreutils. `ambient remote add` uses `python3` on the machine to edit agent config files safely,
+and prints the hooks to add by hand if it isn't there. On Codex, run `/hooks` on the machine once to approve the new
+hooks. The design and threat model are in
+[the spec](docs/superpowers/specs/2026-10-28-remote-agents-design.md).
+
+## Voice sync
+
+Talk on one Mac and paste on another. Press **⌃⌥V** on your laptop, say what you want an agent on your desktop to do,
+and press it again. The desktop's notch shows a waveform while you speak. When you stop, a card offers **Copy Text**,
+**Copy Audio** and **Play** for a minute. Nothing to accept or decline.
+
+Voices ride the remote-agents link, so it's set up the same way: on the Mac that should *receive*, pair the one that
+*sends*.
+
+```bash
+ambient remote add laptop                 # on the desktop; the laptop needs Remote Login on
+```
+
+The laptop then lists the desktop under Settings › Voice & Sound › Voice Sync, and its shortcut records for it. Pairing goes one way;
+to send back, pair the desktop from the laptop too.
+
+**How it works.** The sending Mac transcribes on the Mac itself (Apple's on-device recognizer, never a server) and
+encodes AAC as it records. Where it can't transcribe your language on the device, or you don't allow speech recognition,
+the voice goes as audio only. It writes half-second chunks and any transcript so far to
+`~/.ambient/voice-sync/outbox.jsonl`. The receiving Mac's `follow` streams the lines addressed to it, checking five
+times a second while you record and reading only what's new since the last line it sent, so the voice is already
+complete when you stop. A Mac that's asleep gets it when it's back, for up to a day. Each outbox has a random epoch, so
+if that folder is made anew while the other Mac is away (say you deleted it), the other Mac starts its voices over
+instead of skipping the first ones, and keeps none twice. There's no server, relay or account, and no port opens on
+either Mac.
+
+**Where it's kept.** Both Macs keep every voice, sent and received, in `~/.ambient/voice-sync` (`library.json` and
+`audio/`, `0600`) until you delete it in Settings › Voice & Sound › Voice Sync. `ambient remote purge` also deletes the voices a
+machine sent. A received transcript goes to the clipboard only when you click Copy, and is never read aloud, sent
+online or summarized. The design is in [the spec](docs/superpowers/specs/2026-11-03-voice-sync-design.md).
+
+## Ambient speaker
+
+Hear your desktop on your laptop. Settings › Voice & Sound › Ambient Speaker installs a speaker called *Ambient* (macOS
+asks for your password, and the sound stops for a moment). Choose a Mac, turn on **Play this Mac's sound there**, and
+pick Ambient as the output, in Sound settings or in the app that plays. ⏯ on the other Mac, from its keyboard,
+headphones or Control Center, plays and pauses here. The other Mac plays only if its own Settings say so: **Play sound
+from other Macs**, which is off at first.
+
+It plays on a Mac this one has paired, reached by plain ssh, so pair the Mac you want to play on from the one that
+plays. That Mac needs Remote Login on, and its firewall has to let UDP in.
+
+```bash
+ambient remote add laptop                 # on the desktop, to play its sound on the laptop
+```
+
+**How it works.** The speaker is a Core Audio driver (`/Library/Audio/Plug-Ins/HAL/AmbientSpeaker.driver`) whose
+hidden input, *Ambient Loopback*, gives back exactly what plays to it. The app records that input and sends it as it
+is, 48 kHz stereo, about 3 Mbit/s, over UDP to the address ssh reaches the other Mac at; ssh only starts and stops the
+player there and carries ⏯ back. The player places each packet by its sample time, asks again for any that don't come,
+and holds as much as the network needs, from 30 ms to a second, so a stall costs a gap rather than a growing delay. The
+speaker reports how late the other Mac plays as its latency, so a video here waits for its sound; when that changes by
+30 ms or more, the speaker restarts for a moment (about 90 ms of silence) so a player that's already playing follows
+it. Nothing is saved, and there's no server, relay or account.
+
+## Ambient Microphone
+
+Talk into your laptop and have your desktop hear it. Settings › Voice & Sound › Ambient Microphone adds an input called
+*Ambient Microphone*, with the same driver as the speaker. Choose a Mac, turn on **Use its microphone here**, and pick
+Ambient Microphone as the input, in Sound settings or in the app that records. The other Mac lends its microphone only
+if its own Settings say so: **Lend this Mac's microphone**, which is off at first, and only while Ambient runs there.
+Either Mac can lend and use, and the Mac you use it from has to have paired the other, reached by plain ssh.
+
+**How it works.** The other Mac's microphone is on only while an app here records from Ambient Microphone: Ambient
+watches for that, connects over the pairing's ssh, and lets go once no app records. macOS doesn't let a process that
+ssh starts record the microphone, so the Mac that lends it records it in its own Ambient, which serves it on a socket
+in `~/.ambient/speaker` that only you can reach, and ssh carries it from there. The sound comes as the speaker's does,
+48 kHz stereo, and plays to the driver's hidden *Ambient Microphone Feed*, which Ambient Microphone gives back. It's
+held 60 ms, more after the network stalls, up to half a second.
+
+## Agent history
+
+A coding agent's chat holds what git doesn't: why a file changed, what was tried first, how it was checked. Ambient
+can keep a team's finished chats in one place and answer from them.
+
+```bash
+cd your-repo
+ambient history setup --store s3://your-bucket/agent-history   # or a folder: --store /Volumes/Team/history
+ambient history why Sources/AmbientCore/TaskStore.swift        # the chats and commits behind a file
+ambient history why Sources/AmbientCore/TaskStore.swift:120    # …or behind one line
+ambient history ask "why do finished tasks leave the board after three days?"
+```
+
+It is off until you run `setup` in a repository, and it only ever stores chats that started in a repository you set
+up, which is known by its `origin` remote (`owner/name` on GitHub, with the host in front anywhere else). A chat is
+stored whole: if it also worked on files outside that repository, what it did there is in the record too. Today it reads Claude Code's chats; other agents' aren't read yet.
+
+**What gets stored, and when.** A chat is stored once it is over: when its session ends or its agent exits, or after
+its transcript has been still for 24 hours. If it picks up again later, it is stored again in the same place. Chats
+that finished before you ran `setup` stay on your Mac unless you ask (`ambient history capture --due --since 30`).
+Each chat becomes three files under `<repo>/sessions/<date>/<agent>-<session>/`:
+
+| File | What it is |
+|---|---|
+| `chat.json` | The whole chat in one shape for every agent: what was said, the agent's thinking, each tool call with its command or diff, and the start and end of each tool's output. Paths are relative to the repository |
+| `cards.json` | One card per request: what was asked, what was done, why, what was rejected, how it was checked, the files changed and the commits that carry them |
+| `page.html` | The chat as a page to read, with removed lines in red and added lines in green |
+
+Before anything is written, credentials are blanked and your home folder is written as `~`: API keys and tokens
+in their known shapes, private keys, authorization headers, passwords in URLs and after `curl -u`, `NAME_TOKEN=…`
+assignments, and config or JSON fields named like a credential. That is a net, not a guarantee: a secret in a
+shape Ambient doesn't know would be stored, so keep the store private.
+
+**How a chat is tied to the code.** Git is the record of what happened and the chat is the explanation. An edit made
+with the agent's edit tool is stored as its exact diff, unless the tool said it failed. A commit is a chat's when it
+was made while one of the chat's `git commit` commands ran and it also looks like the chat's: its message is in the
+command, it holds a file the chat changed, or it is a merge the chat ran. A file named by a shell command counts as
+changed by it only if the command could have written it (it edits in place, or the file is where its output goes)
+and git agrees: the file was committed between the command and ten minutes after the chat ended, or still differs
+from `HEAD` in that checkout when the chat is stored. What the chat's files still differ from `HEAD` by is stored
+too, checkout by checkout, so work that was never committed isn't lost.
+
+**Asking.** `ambient history why FILE` needs no model: it lists the requests that changed the file, newest first,
+each with its commit, then the commits no stored chat explains. `ambient history ask` answers in words. With a
+Claude API key (`ANTHROPIC_API_KEY`, or the one in Ambient's Keychain item) a small model (`claude-haiku-5-5`) writes
+the cards when a chat is stored and answers from them; only when the cards don't settle a question does a stronger
+one (`claude-opus-5-5`) read the chats themselves. Without a key, cards are taken from the chat's own words and
+`ask` shows the cards it found. `"useModel": false` in `~/.ambient/history.json` turns the model off.
+
+Agents can ask too: `ambient mcp` adds `history_why`, `history_search` and `history_read`, so an agent that is
+debugging can look up why a line is the way it is before changing it.
+
+**Links on pull requests.** With an S3 store and a repository on GitHub, Ambient leaves one comment on each pull
+request that holds a chat's commits, with a line per chat linking to its page in the AWS console. The line gives the
+chat's date, its agent and how many requests changed code, and nothing the chat said: not its title, not who ran
+it. The link shows nothing to anyone without access to the bucket. `--no-links` at setup turns this off.
+`ambient history open SESSION` builds the same page on your Mac from the stored chat and opens it.
+
+S3 is reached through the `aws` command with your own sign-in (`aws login` or `aws sso login`); Ambient holds no AWS
+keys. Each Mac keeps its own index of the cards in `~/.ambient/history/`, built from the store, so a question is
+answered locally: the store is listed at most every ten minutes, and only the cards of new or changed chats are
+fetched. If the store can't be reached, questions are answered from what was fetched before.
+
 ## Command line
 
 ```
-ambient install [claude|codex|gemini …] [--dry-run]    Add Ambient's hooks (default: every agent found)
-ambient uninstall [claude|codex|gemini …] [--dry-run]  Remove them, leaving everything else alone
+ambient install [AGENT …] [--dry-run]                  Add Ambient's hooks (default: every agent found)
+ambient uninstall [AGENT …] [--dry-run]                Remove them, leaving everything else alone
 ambient status [--json]                                The sessions Ambient is tracking
-ambient doctor                                         Check the app, the hooks and the connection
+ambient tasks [--json]                                 The agent task board
+ambient task upsert --title TEXT […]                   Create or update a board task
+ambient task open ID                                   Jump to a task's linked session
+ambient task model [PATH|--clear] [--python PATH] [--enable|--disable] [--json]
+                                                       Show or set the board's local model (a folder or .gguf file)
+ambient memory [list|get KEY|set KEY [VALUE|--file PATH]|rm KEY] [--global] [--in FOLDER]
+                                                       What agents share through working memory, or share something
+ambient mcp                                            MCP server (stdio): working memory, get_task_model / set_task_model_path,
+                                                       history_why / history_search / history_read
+ambient history setup --store s3://BUCKET[/PREFIX]|FOLDER [--region R] [--profile NAME] [--no-links]
+                                                       Keep this repository's finished agent chats in a store
+ambient history status                                 What is set up, and what is waiting to be stored
+ambient history capture [--session ID|--transcript PATH|--due [--since DAYS]] [--dry-run] [--no-links] [--no-model]
+                                                       Store a finished chat now (the app does this itself)
+ambient history sync                                   Fetch the team's new chats into this Mac's index
+ambient history why PATH[:LINE] [--all] [--json]       The chats and commits behind a file, or one line of it
+ambient history ask "QUESTION" [--file PATH] [--deep] [--json] [--no-model]
+                                                       Answer a question from the stored chats
+ambient history show SESSION [FROM-TO]                 Print a stored chat, or some of its events
+ambient history open SESSION                           Open a stored chat's page in the browser
+ambient history eval FILE [--answers]                  Score retrieval (and answers) on a set of questions
+ambient remote add NAME [--host HOST] [--label TEXT] [--redaction LEVEL] [-- COMMAND…]   Follow agents on another machine
+ambient remote remove NAME [--uninstall]               Stop following it; --uninstall also clears the machine
+ambient remote purge NAME                              Delete everything from it on this Mac
+ambient remote list                                    Show paired machines
+ambient doctor [--remote NAME]                         Check the app, the hooks and the connection, or one machine
 ambient emit <working|waiting|done|error|idle>         Send a demo event (--agent, --project, --message)
+ambient emit <start|working|waiting|done|error|end> --session ID   Drive a session from any agent or script
 ambient demo                                           Walk through every state
 ambient open [PROJECT|SESSION]                         Jump to a session's chat, tab or window (default: most urgent)
 ambient ack                                            Mark every finished session as seen
 ```
 
-Add `~/.ambient/bin` to your `PATH` to use it anywhere. Set `AMBIENT_DEBUG=1` in an agent's environment to
+`AGENT` is `claude`, `codex`, `gemini`, `antigravity`, `cursor`, `copilot` or `opencode`. Add `~/.ambient/bin`
+to your `PATH` to use it anywhere. Set `AMBIENT_DEBUG=1` in an agent's environment to
 log every hook to `~/.ambient/logs/hook.log`.
 
 ## Troubleshooting
@@ -142,7 +666,7 @@ log every hook to `~/.ambient/logs/hook.log`.
   the threshold in settings (20 seconds by default).
 - **The Dock glow is only a line along the edge** — that's the no-permission mode (and what an
   auto-hiding Dock looks like). Enable *Light up behind the Dock's glass* to grant Accessibility access.
-- **The living wallpaper isn't on the lock screen** — Settings › Wallpaper says whether it's shown as your
+- **The living wallpaper isn't on the lock screen** — Settings › Appearance › Wallpaper says whether it's shown as your
   wallpaper while locked, or not available on this Mac. If Ambient ever quits while the Mac is locked, it
   puts your wallpaper back the next time it opens; *Restore my wallpaper* shows in Settings until it has.
 - **Uninstall** — `ambient uninstall`, quit Ambient from the menu bar, delete the app and `~/.ambient`.
@@ -158,14 +682,16 @@ scripts/release.sh              # universal, Developer ID signed, notarized DMG 
 `build-app.sh` signs ad-hoc by default, and macOS ties Accessibility access to the signature, so after a
 rebuild you may need `tccutil reset Accessibility com.viveky259259.Ambient`.
 
-Ad-hoc builds are dev builds: they add **Settings › Performance**, which shows what Ambient costs the Mac over the
+Ad-hoc builds are dev builds: they add **Settings › General › Performance**, which shows what Ambient costs the Mac over the
 last hour or day (CPU, memory, wallpaper and notch-effect frame rate, hook event delays) and copies or saves a
 report. It's measured locally and kept in memory. Developer ID–signed release builds leave it out, and measure
 nothing.
 
 | Path | Purpose |
 | --- | --- |
-| `Sources/AmbientCore` | Everything testable: event model, agent adapters, session reducer, policies, wire format, socket, order-preserving JSON, hook installer |
+| `Sources/AmbientBase` | Utilities with no Ambient vocabulary: order-preserving JSON, the Unix socket, paths, text trimming, the Keychain |
+| `Sources/AmbientContracts` | The vocabulary every module shares: events, sessions, tasks, needs, remote events and cursors, the day's log |
+| `Sources/AmbientCore` | Everything else that's testable: agent adapters, session reducer, policies, wire format, hook installer, remote machines, voice |
 | `Sources/ambient` | The CLI, including the hot `hook` path |
 | `Sources/AmbientApp` | The app: socket server, island, notifications and chimes, menu bar, Dock glow, living wallpaper, setup |
 | `scripts/` | App bundle, icon rendering, release |

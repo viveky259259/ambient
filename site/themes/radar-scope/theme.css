@@ -1,0 +1,96 @@
+/* Radar scope: a dark console in cyan phosphor (not green, so green keeps meaning "done"). Range rings and a
+   turning sweep in the hero, tagged blips in their state's colour, flight strips for the states below. */
+:root {
+  --bg: #021216;
+  --bg-alt: #04191e;
+  --surface: #06222a;
+  --surface-2: #082a33;
+  --ink: #d4f6fa;
+  --ink-2: #9cc9d0;
+  --rule: #164650;
+  --accent: #6fe3f0;
+  --on-accent: #021216;
+  --link: #8deaf5;
+  --band: #010c0f;
+  --band-ink: #d4f6fa;
+  --band-ink-2: #9cc9d0;
+  --band-surface: #05181d;
+  --band-rule: #164650;
+  --rs-phos: #6fe3f0;
+
+  --font-display: "B612", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-body: "B612", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "B612 Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "B612 Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.03em;
+  --display-leading: 1;
+  --h1-size: clamp(44px, 6vw, 86px);
+  --h2-size: clamp(34px, 4.4vw, 56px);
+  --h3-size: 24px;
+  --body-size: 16.5px;
+  --label-size: 12px;
+  --label-tracking: 0.1em;
+  --label-color: #6fe3f0;
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-btn: 0;
+  --border: 1px solid var(--rule);
+  --texture: repeating-linear-gradient(#6fe3f006 0 1px, transparent 1px 3px);
+  --band-texture: repeating-linear-gradient(#6fe3f005 0 1px, transparent 1px 3px), radial-gradient(800px 400px at 50% 50%, #0a2a3022, transparent);
+  --device-edge: #1d4a54;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+.alt { background-image: var(--texture); }
+
+.nav { background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid #1d4a54; }
+.brand { font-family: var(--font-body); font-weight: 700; font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+.brand img { display: none; }
+.nav-links { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+.nav-links a { color: #8fd8e2; }
+.btn { font-family: var(--font-mono); font-size: 14px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; padding: 16px 28px; border: 1.5px solid var(--accent); box-shadow: 0 0 24px -6px #6fe3f088; }
+.btn.small { font-size: 12px; min-height: 40px; padding: 8px 14px; background: transparent; color: var(--accent); box-shadow: none; }
+.chip, .voice-tab { font-family: var(--font-mono); text-transform: uppercase; font-size: 12px; letter-spacing: 0.08em; }
+
+/* Hero: words left, the scope right (first on a phone). Set here as well as by meta.json's "split". */
+html[data-theme] .hero-grid { grid-template-columns: 0.95fr 1.05fr; text-align: left; gap: 48px; }
+html[data-theme] .hero-art { order: 2; aspect-ratio: 1; min-height: 0; max-width: 580px; width: 100%; justify-self: center; }
+html[data-theme] .hero-copy .lede { margin-left: 0; font-size: 19px; color: var(--ink-2); max-width: 480px; }
+html[data-theme] .hero .cta-row { justify-content: flex-start; }
+.hero h1 { color: #e6fdff; }
+.hero .kicker { color: var(--rs-phos); }
+.trust { font-size: 14px; }
+.fineprint { font-family: var(--font-mono); font-size: 12px; }
+@media (max-width: 860px) { html[data-theme] .hero-grid { grid-template-columns: 1fr; } html[data-theme] .hero-art { order: -1; } }
+.rs-scope { position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 1.5px solid #2f7f8a; background: radial-gradient(circle, #0a2a30, #021216 72%); }
+.rs-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 210deg, transparent 0 290deg, #6fe3f004 300deg, #6fe3f02e 359deg, #c7f8ffaa 360deg); animation: rs-turn 6s linear infinite; }
+@keyframes rs-turn { to { transform: rotate(360deg); } }
+.rs-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rs-scope text { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; }
+.rs-blip { animation: rs-ping 6s linear infinite; }
+@keyframes rs-ping { 0%, 100% { opacity: 1; } 60% { opacity: 0.45; } }
+.rs-cur { fill: var(--state, var(--waiting)); transition: fill 0.6s var(--ease); }
+
+/* Sections: console panels and flight strips. */
+.kicker { font-family: var(--font-mono); }
+.card { background: var(--surface); }
+.states .card { border-top: 1px solid var(--rule); border-left: 8px solid var(--state); }
+.states .card h3 { font-size: 28px; color: #e6fdff; }
+.card h3 { color: #e6fdff; }
+.dark .kicker { color: var(--rs-phos); }
+.dest .where { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; color: #8fd8e2; }
+.step { border-radius: 0; background: transparent; color: var(--rs-phos); border: 1.5px solid var(--rs-phos); font-family: var(--font-mono); }
+.stat { color: var(--rs-phos); text-shadow: 0 0 30px #6fe3f066; }
+.faq summary { font-size: 19px; font-weight: 400; }
+.faq summary::after { color: var(--rs-phos); }
+.guide-list a:hover { border-color: var(--rs-phos); }
+.voice-steps li::before { color: #021216; }
+footer { font-family: var(--font-mono); font-size: 12px; }
+dialog { background: #04191e; }
+.field input { background: #021216; }
+.error { color: #ff8f86; }
+.copy-code { border-color: #1d4a54; }
+
+@media (prefers-reduced-motion: reduce) { .rs-sweep { animation: none; transform: rotate(40deg); } }

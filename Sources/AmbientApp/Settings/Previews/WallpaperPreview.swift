@@ -41,7 +41,7 @@ struct WallpaperPreview: View {
             return s
         }
         return [
-            session("a", .claude, "api-server", .waiting(reason: "permission", message: "Bash: rm -rf build"), tools: 12),
+            session("a", .claude, "api-server", .waiting(reason: Need.command.rawValue, message: "rm -rf build"), tools: 12),
             session("b", .codex, "web", .tool(name: "Bash", detail: "npm test"), tools: 48),
             session("c", .gemini, "docs", .done(summary: "Docs rebuilt"), tools: 20),
         ]

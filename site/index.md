@@ -12,7 +12,7 @@ Coding agents work for minutes at a time, then stop to ask a question, wait for 
 - **Back in one click.** A notification, an island row or a menu row opens the exact place the agent runs, not just the app.
 - **Alerts only when they matter.** Banners and soft chimes for a question, a finished turn or a failure, and silence while you're already looking at the agent.
 - **Every agent in one place.** Claude Code, Codex and Gemini CLI, in any terminal or editor and in the Claude and Codex desktop apps, sorted most urgent first.
-- **Private by design.** No accounts, no network requests, no telemetry. Events never leave your Mac.
+- **Private by design.** No accounts and no telemetry, and Ambient goes online only when you ask it to. Events stay on your Mac and on the machines you connect yourself, over your own ssh.
 - **Made for the Mac.** A notch island in macOS glass, a Dock glow, a menu bar list and a living wallpaper. Designed for MacBooks with a notch; on other displays the island sits at the top center of the menu bar.
 
 ## What you see
@@ -54,6 +54,13 @@ Light rises along the Dock in the color of what your agents are doing: visible f
 
 Off until you turn it on in Settings › Wallpaper. Your desktop becomes a scene that follows the time of day (Sky, Harbor, Garden or Solar System, or a new one each day) where every session lives as a star, a boat, a plant or a planet in the color of its state, with the clock, your next calendar event (read on your Mac) and the day's story. Open the island and a black hole forms at the notch, or the Solar System's sun lights up, and the agents orbit it. It follows the time of day, matches macOS light or dark mode, or stays light or dark, and shows on every display and on the lock screen. Your own wallpaper is untouched.
 
+### Voice and sound
+
+- **Read aloud.** Lean back and hear the answer: select part of a reply, press ⌥⎋, and Ambient reads it to you.
+- **Voice sync.** Say it on one Mac and paste it on another: press ⌃⌥V, talk, and the transcript is waiting on your desktop.
+- **Ambient Speaker.** One pair of headphones for both Macs: what plays to *Ambient* on one Mac plays on the other.
+- **Ambient Microphone.** Your best microphone on every Mac: apps on one Mac record from another Mac's microphone, which is on only while they record.
+
 ## Works with the agents you use
 
 | Agent | Where |
@@ -76,11 +83,11 @@ agent hook ──▶ ambient hook <agent> ──▶ ~/.ambient/ambient.sock ─�
 
 ## Privacy
 
-Ambient collects nothing. It has no accounts, makes no network requests and sends no telemetry. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them to the app on your Mac. Your prompts and tool output are never stored.
+Ambient collects nothing. It has no accounts and sends no telemetry, and it goes online only when you ask it to. Each hook reduces an event to a few short fields (agent, state, project name, a trimmed message) and sends them to the app on your Mac. Your prompts and tool output are never stored.
 
 ## Install
 
-1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag Ambient to Applications.
+1. Download Ambient from [yaml.cafe](https://yaml.cafe/), open the disk image and drag Ambient to Applications. Or install it with Homebrew: `brew install --cask viveky259259/tap/ambient`.
 2. Open Ambient and click **Connect All**.
 3. For Codex, type `/hooks` in Codex once and approve Ambient's hooks. Restart agent sessions that were already open.
 
@@ -112,26 +119,40 @@ Step-by-step guides for each agent's own options:
 - [Multiple Claude Code sessions on Mac](https://yaml.cafe/guides/multiple-claude-code-sessions-mac/)
 - [Claude Code notifications in tmux](https://yaml.cafe/guides/claude-code-tmux-notifications/)
 - [Claude Code notification apps compared](https://yaml.cafe/guides/claude-code-notification-apps-mac/)
+- [Vibe Island alternatives for Mac](https://yaml.cafe/guides/vibe-island-alternatives-mac/)
 
 ## Questions
 
 **Is Ambient free?** Yes, every feature. No account, no sign-up to download.
 
+**Is Ambient open source?** Yes. The [source code is on GitHub](https://github.com/viveky259259/ambient) under the MIT license.
+
 **Will it slow my agent down?** No. Hooks finish in about 15 ms, run in the background for Claude Code and Codex, and always exit successfully. If Ambient isn't running, events are simply dropped.
 
 **Which Macs does it run on?** macOS 14 or later, on Apple silicon and Intel.
 
-**Does it work over SSH?** Ambient needs the agent to run on the same Mac; hooks on a remote machine can't reach it.
+**Can I use one Mac's speakers or microphone on another?** Yes. Ambient Speaker adds an output called *Ambient*: what plays to it plays on another Mac you've paired, and video here waits for the sound. Ambient Microphone adds an input: apps here that record from it hear the other Mac's microphone, which is on only while they record. Each Mac decides in its own Settings › Voice & Sound whether others may use its speakers or microphone.
+
+**Does it work over SSH?** Yes. Pair a machine with `ambient remote add`, and its agents show up on your Mac beside the local ones, over your own ssh. A remote machine can only send display data, so clicking one of its sessions marks it as seen, and Ambient can't answer or approve anything there.
 
 **How do I remove it?** Run `ambient uninstall` (your other settings stay exactly as they were), quit Ambient, and delete the app and `~/.ambient`.
 
 **How do I ask for a feature?** Suggest it or vote on the [feature requests board](https://yaml.cafe/requests/), or choose **Suggest a Feature…** from Ambient's menu bar menu.
+
+**How do I get notified when Claude Code is done or needs input?** Install Ambient and click Connect All. A notification and a soft chime arrive the moment a turn ends or Claude asks for permission or a question, the island turns green or amber, and a click takes you to that session. Without Ambient, Claude Code's Stop and Notification hooks can post a desktop alert or play a sound; see [Claude Code notifications on Mac](https://yaml.cafe/guides/claude-code-notifications-mac/).
+
+**Can Ambient read Claude Code's answer aloud?** Yes. Select part of a reply in the Claude app, Codex or your terminal and press ⌥⎋, or choose **Read Selection Aloud** from the menu bar. Ambient reads it with a Mac voice, with Kokoro running offline on your Mac after a one-time download, or with OpenAI or ElevenLabs using your own key.
+
+**Is Ambient a free alternative to Vibe Island or a Dynamic Island app for MacBook?** Yes. It's a free, open-source notch app for coding agents, and it also runs on Macs without a notch, where the island sits at the top of the menu bar. See [Vibe Island alternatives for Mac](https://yaml.cafe/guides/vibe-island-alternatives-mac/).
+
+**Which coding agents does Ambient support?** Claude Code (terminal, editors and the Claude desktop app), Codex (CLI and the Codex app), Gemini CLI, Antigravity, Cursor, and in beta GitHub Copilot CLI and OpenCode. Any other agent or script can drive it with `ambient emit`.
 
 ## More
 
 - [yaml.cafe](https://yaml.cafe/): download and the full page
 - [llms.txt](https://yaml.cafe/llms.txt): key facts, and when Ambient is and isn't a fit
 - [Feature requests](https://yaml.cafe/requests/)
+- [Source code on GitHub](https://github.com/viveky259259/ambient) (MIT license)
 - [Privacy](https://yaml.cafe/privacy.html) · [Contact](https://yaml.cafe/contact/)
 
 Made by yaml.cafe. Claude, Codex and Gemini are trademarks of their owners; Ambient isn't affiliated with Anthropic, OpenAI or Google.

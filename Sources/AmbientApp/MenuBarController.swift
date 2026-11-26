@@ -6,16 +6,35 @@ import Combine
 final class MenuBarController: NSObject, NSMenuDelegate {
     private let model: AppModel
     private let prefs: Preferences
+    private let speech: SpeechController
+    private let shortcuts: ShortcutCenter
+    private let hookDoctor: HookDoctor
+    private let voice: VoiceSyncController
+    private let voiceShortcuts: ShortcutCenter
+    /// The problems listed in the open menu, so a click knows which one it fixes.
+    private var listedProblems: [HookProblem] = []
+    private let onReadSelection: () -> Void
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var cancellables: Set<AnyCancellable> = []
     private let onSettings: () -> Void
     private let onDemo: () -> Void
+    private let onOpenBoard: () -> Void
 
-    init(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void) {
+    init(model: AppModel, prefs: Preferences, speech: SpeechController, shortcuts: ShortcutCenter, hookDoctor: HookDoctor,
+         voice: VoiceSyncController, voiceShortcuts: ShortcutCenter,
+         onReadSelection: @escaping () -> Void, onSettings: @escaping () -> Void, onDemo: @escaping () -> Void,
+         onOpenBoard: @escaping () -> Void) {
         self.model = model
         self.prefs = prefs
+        self.speech = speech
+        self.shortcuts = shortcuts
+        self.hookDoctor = hookDoctor
+        self.voice = voice
+        self.voiceShortcuts = voiceShortcuts
+        self.onReadSelection = onReadSelection
         self.onSettings = onSettings
         self.onDemo = onDemo
+        self.onOpenBoard = onOpenBoard
         super.init()
     }
 
@@ -28,18 +47,54 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             .combineLatest(prefs.$quietUntil)
             .sink { [weak self] _, _ in self?.updateIcon() }
             .store(in: &cancellables)
+        // @Published delivers before the value is stored; read it a turn later.
+        speech.$state
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
+            .store(in: &cancellables)
+        hookDoctor.$problems
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
+            .store(in: &cancellables)
+        voice.$outgoing
+            .map { $0 != nil }
+            .removeDuplicates()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.updateIcon() } }
+            .store(in: &cancellables)
         updateIcon()
     }
 
     private func updateIcon() {
         guard let button = item.button else { return }
+        if let outgoing = voice.outgoing {
+            button.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Recording a voice for \(outgoing.destination.label)")
+            button.title = ""
+            return
+        }
+        switch speech.state {
+        case .preparing, .speaking:
+            button.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Ambient is reading aloud")
+            button.title = ""
+            return
+        case .paused:
+            button.image = NSImage(systemSymbolName: "pause.circle", accessibilityDescription: "Ambient's reading is paused")
+            button.title = ""
+            return
+        case .failed:
+            button.image = NSImage(systemSymbolName: "speaker.slash", accessibilityDescription: "Ambient couldn't read aloud")
+            button.title = ""
+            return
+        case .idle, .hint:
+            break
+        }
         let mood = model.mood
         let primary = IslandPolicy.primary(model.sessions)
         button.image = Self.icon(mood: mood, color: primary?.moodTint.nsColor, quiet: prefs.isQuiet)
         let waiting = model.sessions.filter { $0.mood == .waiting }.count
-        button.title = waiting > 1 ? " \(waiting)" : ""
+        let problem = hookDoctor.problems.first
+        // A broken connection is worth a mark until it's fixed: it means missing every event from that agent.
+        button.title = (waiting > 1 ? " \(waiting)" : "") + (problem == nil ? "" : " !")
         button.imagePosition = .imageLeading
-        button.setAccessibilityLabel("Ambient: \(Describe.mood(mood))")
+        button.toolTip = problem.map { "Ambient: \($0.summary)" } ?? "Ambient"
+        button.setAccessibilityLabel("Ambient: \(problem?.summary ?? Describe.mood(mood))")
     }
 
     /// A ring when idle (template, so it follows the menu bar), a colored orb otherwise.
@@ -76,6 +131,35 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        switch speech.state {
+        case .preparing, .speaking, .paused:
+            if speech.state == .paused {
+                menu.addItem(item("Continue Speaking", #selector(resumeSpeaking)))
+            } else if speech.state == .speaking {
+                menu.addItem(item("Pause Speaking", #selector(pauseSpeaking)))
+            }
+            menu.addItem(item("Stop Speaking", #selector(stopSpeaking)))
+            menu.addItem(.separator())
+        case .failed(let message, let offerMacVoice):
+            menu.addItem(NSMenuItem(title: message, action: nil, keyEquivalent: ""))
+            if offerMacVoice { menu.addItem(item("Use Mac Voice", #selector(useMacVoice))) }
+            menu.addItem(.separator())
+        case .idle, .hint:
+            break
+        }
+        listedProblems = hookDoctor.problems
+        for (index, problem) in listedProblems.enumerated() {
+            let fix: String = switch problem {
+            case .removed: "Reconnect"
+            case .unreadable: "Show File"
+            case .silent: "Fix…"
+            }
+            let row = item("\(problem.summary) — \(fix)", #selector(fixProblem(_:)))
+            row.representedObject = index
+            row.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Problem")
+            menu.addItem(row)
+        }
+        if !listedProblems.isEmpty { menu.addItem(.separator()) }
         let sessions = model.sessions
         let header = sessions.isEmpty ? "No agent sessions" : "\(sessions.count) session\(sessions.count == 1 ? "" : "s") · \(Describe.mood(model.mood))"
         menu.addItem(NSMenuItem(title: header, action: nil, keyEquivalent: ""))
@@ -86,16 +170,27 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let row = NSMenuItem(title: "", action: #selector(openSession(_:)), keyEquivalent: "")
             row.target = self
             row.representedObject = s.id
-            let meta = [s.agent.displayName, Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
+            let meta = [s.agentLabel, Describe.machine(s), Describe.place(s), Describe.clock(s, now: now), Describe.took(s)].compactMap { $0 }.joined(separator: " · ")
             let text = NSMutableAttributedString(string: Trim.truncate(Describe.title(s), max: 48), attributes: [.font: NSFont.menuFont(ofSize: 13)])
             text.append(NSAttributedString(string: "  \(meta)\n",
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
-            text.append(NSAttributedString(string: Trim.truncate(Describe.activity(s.activity), max: 60),
+            text.append(NSAttributedString(string: Trim.truncate(Describe.status(s), max: 60),
                                            attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
             row.attributedTitle = text
             row.image = Self.dot(s.tint.nsColor, dim: s.mood == .idle)
             if let app = HostActivator.appName(for: s.host) { row.toolTip = "Open \(app)" }
             menu.addItem(row)
+        }
+
+        if !model.remoteLinks.isEmpty {
+            menu.addItem(.separator())
+            for link in model.remoteLinks {
+                let row = NSMenuItem(title: "\(link.machine.label) · \(link.summary)", action: #selector(settings), keyEquivalent: "")
+                row.target = self
+                row.image = Self.dot(link.health == .connected ? Palette.done.nsColor : Palette.idle.nsColor, dim: false)
+                row.toolTip = link.health.detail
+                menu.addItem(row)
+            }
         }
 
         menu.addItem(.separator())
@@ -117,14 +212,72 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             quiet.submenu = sub
             menu.addItem(quiet)
         }
+        menu.addItem(readSelectionItem())
+        voiceItems().forEach(menu.addItem)
         let pet = item("Show Desktop Pet", #selector(togglePet))
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
         menu.addItem(item("Play Demo", #selector(demo)))
+        let boardCount = model.tasks.filter { $0.status == .blocked || $0.status == .inProgress }.count
+        let boardTitle = boardCount == 0 ? "Task Board…" : "Task Board (\(boardCount))…"
+        menu.addItem(item(boardTitle, #selector(openBoard)))
         menu.addItem(.separator())
         menu.addItem(item("Suggest a Feature…", #selector(suggestFeature)))
         menu.addItem(item("Settings…", #selector(settings), key: ","))
         menu.addItem(item("Quit Ambient", #selector(quit), key: "q"))
+    }
+
+    /// Reads the selection in the app you were in (a status menu doesn't take focus from it), and shows the shortcut
+    /// beside it so it's easy to learn.
+    private func readSelectionItem() -> NSMenuItem {
+        shortcutItem("Read Selection Aloud", #selector(readSelection), shortcuts.shortcut)
+    }
+
+    /// Record a voice for the default Mac, or for any of them; or, while recording, send or cancel it.
+    private func voiceItems() -> [NSMenuItem] {
+        if voice.outgoing != nil {
+            return [shortcutItem("Send Voice", #selector(sendVoice), voiceShortcuts.shortcut), item("Cancel Voice", #selector(cancelVoice))]
+        }
+        guard let main = voice.destination else {
+            return [shortcutItem("Record a Voice", #selector(recordVoice(_:)), voiceShortcuts.shortcut)]
+        }
+        let record = shortcutItem("Record Voice for \(main.label)", #selector(recordVoice(_:)), voiceShortcuts.shortcut)
+        record.representedObject = main.id
+        guard voice.destinations.count > 1 else { return [record] }
+        let others = NSMenuItem(title: "Record Voice For", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for d in voice.destinations {
+            let i = item(d.isOnline() ? d.label : "\(d.label) (away)", #selector(recordVoice(_:)))
+            i.representedObject = d.id
+            i.state = d.id == main.id ? .on : .off
+            sub.addItem(i)
+        }
+        others.submenu = sub
+        return [record, others]
+    }
+
+    private func shortcutItem(_ title: String, _ action: Selector, _ shortcut: Shortcut) -> NSMenuItem {
+        let i = item(title, action)
+        if let key = Self.keyEquivalent(shortcut) {
+            i.keyEquivalent = key
+            var mask: NSEvent.ModifierFlags = []
+            if shortcut.modifiers.contains(.control) { mask.insert(.control) }
+            if shortcut.modifiers.contains(.option) { mask.insert(.option) }
+            if shortcut.modifiers.contains(.shift) { mask.insert(.shift) }
+            if shortcut.modifiers.contains(.command) { mask.insert(.command) }
+            i.keyEquivalentModifierMask = mask
+        } else {
+            i.title += "  \(shortcut.display)"
+        }
+        return i
+    }
+
+    private static func keyEquivalent(_ s: Shortcut) -> String? {
+        if s.keyCode == 53 { return "\u{1b}" }
+        if let n = Int(s.key.dropFirst()), s.key.hasPrefix("F"), (1...20).contains(n) {
+            return String(UnicodeScalar(UInt16(NSF1FunctionKey + n - 1)).map(Character.init) ?? " ")
+        }
+        return s.key.count == 1 ? s.key.lowercased() : nil
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -152,12 +305,35 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         model.open(s)
     }
 
+    @objc private func fixProblem(_ sender: NSMenuItem) {
+        guard let index = sender.representedObject as? Int, listedProblems.indices.contains(index) else { return }
+        let problem = listedProblems[index]
+        guard let advice = hookDoctor.fix(problem) else { return }
+        let alert = NSAlert()
+        alert.messageText = problem.summary
+        alert.informativeText = advice + " `ambient doctor` checks the whole chain."
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
     @objc private func acknowledgeAll() { model.acknowledgeAll() }
     @objc private func resume() { model.setQuiet(for: nil) }
     @objc private func quietFor(_ sender: NSMenuItem) { model.setQuiet(for: sender.representedObject as? TimeInterval) }
     @objc private func togglePet() { prefs.petEnabled.toggle() }
     @objc private func demo() { onDemo() }
+    @objc private func openBoard() { onOpenBoard() }
     @objc private func suggestFeature() { NSWorkspace.shared.open(FeatureRequests.url()) }
     @objc private func settings() { onSettings() }
     @objc private func quit() { NSApp.terminate(nil) }
+    @objc private func stopSpeaking() { speech.stop() }
+    @objc private func pauseSpeaking() { speech.pause(from: "menu bar") }
+    @objc private func resumeSpeaking() { speech.resume(from: "menu bar") }
+    @objc private func useMacVoice() { speech.useMacVoice() }
+    @objc private func readSelection() { onReadSelection() }
+    @objc private func sendVoice() { voice.send() }
+    @objc private func cancelVoice() { voice.cancel() }
+    @objc private func recordVoice(_ sender: NSMenuItem) {
+        let id = sender.representedObject as? String
+        voice.record(to: voice.destinations.first { $0.id == id })
+    }
 }

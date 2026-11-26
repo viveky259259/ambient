@@ -2,6 +2,227 @@
 
 ## Unreleased
 
+- **Agent history**: keep a team's finished agent chats in one place, and ask why the code is the way it is.
+  `ambient history setup --store s3://bucket/prefix` (or a folder) in a repository turns it on for that repository
+  only. When a Claude chat ends, Ambient stores it as one record with paths relative to the repository and credentials
+  blanked, a card per request (what was asked, done, why, rejected and checked), and a page to read with changes in
+  red and green. `ambient history why FILE[:LINE]` lists the requests and commits behind a file with no model;
+  `ambient history ask "…"` answers in words, from the cards with `claude-haiku-5-5` and from the chats themselves
+  with `claude-opus-5-5` only when the cards fall short. Agents get the same lookups through `ambient mcp`
+  (`history_why`, `history_search`, `history_read`), and each pull request gets one comment linking the chats behind
+  its commits. Other agents' chats aren't read yet.
+
+## 0.10.0 — 2026-11-17
+
+- **Ambient Microphone**: use one Mac's microphone on another. Settings › Voice & Sound › Ambient Microphone adds an
+  input called *Ambient Microphone*: choose a paired Mac, and apps here that record from it hear that Mac's
+  microphone. The other Mac's microphone is on only while an app here records, and that Mac lends it only when its
+  own Settings say so (*Lend this Mac's microphone*), while Ambient runs there. It works either way round, and it
+  comes with the Ambient speaker's driver, so a Mac that has the speaker updates the driver once.
+- **The microphone indicator no longer stays on while the Ambient speaker streams**: it records what plays to
+  *Ambient* only while something does, and for 5 seconds after, instead of the whole time.
+- **The Ambient speaker's player stops when its sender is gone**, even if the ssh connection was lost without
+  closing, as when the other Mac sleeps or changes networks. Before, those players kept running on the other Mac.
+
+## 0.9.0 — 2026-11-17
+
+- **Ambient speaker**: hear one Mac on another. Settings › Voice & Sound › Ambient Speaker installs a speaker called
+  *Ambient*; choose a paired Mac and what plays to Ambient plays there, over UDP, about 380 ms behind on a laptop's
+  Bluetooth headphones across the internet. Video on this Mac waits for the sound, and ⏯ on the other Mac plays and
+  pauses here. A Mac plays another's sound only when its own Settings allow it.
+- **Settings has seven panes instead of thirteen**: Welcome, Agents (This Mac, Other Machines), Board, Alerts,
+  Appearance (Notch, Pet, Dock, Wallpaper), Voice & Sound (Read Aloud, Voice Sync, Ambient Speaker) and General.
+  Settings opens where you left it, on the tab a pane became. Explanations are shorter, and ssh commands,
+  fingerprints and config paths fold away under Details. Answering permission prompts moved from the notch's pane to
+  Alerts, which calls its sounds Chimes. Permission buttons read the same everywhere, status text is easier to read in
+  light mode, and VoiceOver reads each switch's explanation.
+- **The task board no longer piles up.** It kept every task forever, and one board reached 4,193 tasks, which every
+  agent event re-sorted and re-saved. A task the agents made now leaves the board three days after
+  its last session ends, and tasks you add yourself stay. The 5,000-task limit per machine now covers this Mac too.
+  A summary that came back after its session ended used to put the task back in *In progress*, where it stayed: 1,030
+  of that board's tasks were stuck like that, and they all counted in the menu's *Task Board (n)*. They're settled when
+  Ambient starts, and so are tasks whose sessions ended while Ambient was closed.
+- **Search the task board**, in the Board window and in Settings › Board. Every word you type has to appear in a
+  task's title, summary, project, folder, agent, machine or column, in any order, ignoring case and accents. A search
+  reaches past the cards a column shows, and Escape clears it.
+- **A card from another Mac opens its chat on that Mac.** Clicking one used to only mark it as seen. Now your Mac
+  asks the other one's Ambient, over the transport you paired it with, to bring the chat forward, by session id: the
+  exact Claude chat or Codex thread, or the project's window. That Mac shows a notification, *Opened from Mac
+  Studio*, so whoever is in front of it knows why. The card says *Opening on Daily…*, then *Opened on Daily*, or why
+  it couldn't: that Mac is unreachable, has no Ambient app (a devbox with only the shim), isn't running Ambient, or no
+  longer has the chat. It works for sessions that have ended too, once both Macs have this version; one from before
+  it still opens running sessions and ignores who asked.
+- **A board card opens its chat after the session ends.** Clicking one used to do nothing once Ambient had let go of
+  its session, which is most of the board. A task now remembers where its last chat was: Claude's desktop app reopens
+  that chat, Codex's app its thread, and a terminal or editor raises the project's window. Only what's still true
+  after the agent exits is kept, never a terminal, pane or process that could be someone else's by then. Tasks from
+  another machine stay as they were, and tasks from before this version can't open until a session touches them again.
+- **Alerts say what the agent needs**: a waiting session leads with what you're asked to do, in one line, on the
+  island, in the menu, on the wallpaper and in the notification: *Approve a command · rm -rf build*, *Review a
+  change · Session.swift*, *Allow web access · docs.swift.org*, *Review a plan*, *Answer a question · Ship it
+  today?*, *Approve a tool · github · create_pr*. It comes from the tool each agent asks about and what it would do,
+  for Claude Code, Codex, Gemini CLI (from its confirmation details), Copilot CLI and OpenCode. Claude's
+  notification of a prompt its permission hook already described no longer replaces the command with its own
+  sentence. A remote machine still sends only *permission* or *question*, which any hub reads, but `ambient-remote`
+  1.0.7 adds the tool's name at the default Standard level, so its prompts lead with the same line as local ones,
+  *Approve a command* or *Review a change*, but never with the command or file; only Metadata leaves them at
+  *Approve a tool*. A machine shows *update available* until you pair it again with `ambient remote add`.
+  `ambient emit waiting --reason` takes `command`, `edit`, `web`, `access`, `plan`, `permission` or `question`. The
+  island no longer offers Allow and Deny for Claude's AskUserQuestion, which only Claude can answer.
+- **OpenCode is no longer beta, and works with OpenCode 2**, whose new plugin API couldn't load Ambient's plugin, so
+  Ambient saw nothing of it. Update the plugin in Settings › Agents or with `ambient install opencode`. One file now
+  serves OpenCode 1.4 and later. Tested live with OpenCode 2.2.6: events reach Ambient within 20 ms. OpenCode 2 runs
+  plugins in a background service that every project shares, so each project's copy passes on only its own sessions,
+  and a session keeps no return address: the service's surroundings are those of whatever first started it, not
+  the terminal you're in. On both versions:
+  - a failed turn shows as failed: OpenCode goes idle after an error, which used to turn it into *done*;
+  - a permission request says what it's for (OpenCode stopped sending the title the old plugin showed);
+  - its question tool needs you, and an answered prompt or question goes back to working at once;
+  - a subagent's prompts show on the session that started it, and a shell command typed in the TUI starts a run;
+  - each event carries OpenCode's time, so a tool and its prompt can't swap places on their way to the app;
+  - edits show their file;
+  - and the plugin hands Ambient only the command, file, URL or query, never a file's contents or a diff.
+- **Fix**: Settings › Board drew every card on a long-lived board and redrew them all on every agent event, and kept
+  doing so after Settings closed, so a board of thousands of tasks held the main thread at 100% and requests to the
+  app (`ambient mcp`, `ambient memory`) timed out. Settings now shows each column's latest eight cards, with a link to
+  the rest in the Task Board window, and lets its views go when it closes. In both boards a card redraws only when its
+  task or session changes. `scripts/measure-perf.sh --board TASKS` measures the board with each window open.
+- **Voice sync** (Settings › Voice & Sound › Voice Sync): press ⌃⌥V on one Mac, speak, and press it again. The voice streams to your
+  other Mac as you talk, over the same ssh link as remote agents, with a transcript made on the sending Mac only. Where
+  that Mac can't transcribe your language on the device, or you don't allow speech recognition, the voice goes as audio
+  only. While you speak, the other Mac's notch shows a waveform; when you stop, it offers Copy Text, Copy Audio and Play
+  for a minute (30 seconds to 5 minutes in Settings). A Mac that's away gets the voice when it's back, for up to a day.
+  Both Macs keep every voice until you delete it. To receive from a Mac, pair it with `ambient remote add`; it needs
+  Remote Login on. `ambient-remote` 1.0.6 streams voices for a hub that asks with `--hub`, and older hubs see nothing
+  new. It reads only what the outbox has gained since the last line it sent, and each outbox has a random epoch, so a
+  Mac that comes back to an outbox made anew starts it over instead of skipping its first voices. The menu bar's
+  *Record Voice for…* does the same as the shortcut.
+- **Fix**: a voice's transcript kept only what came after the last pause, so Copy Text on the other Mac copied the
+  last few words: a 64-second voice arrived as 7 characters. The speech recognizer starts its transcript over after
+  each pause, and now every stretch is kept, one after the other.
+- **Task board model**: an MLX model you point the board at stays loaded for two minutes between summaries, instead
+  of being read from disk for every one (Qwen3.5-9B: 21 seconds for the first summary, half a second for the next).
+  Changing the model cancels summaries still waiting for the old one, and quitting Ambient stops the model. GGUF chat
+  models get their own chat template (llama.cpp's single-turn `-st`, which `llama-completion` and the newer chat-only
+  `llama-cli` both take, instead of `-no-cnv`).
+  `ambient task model` and `get_task_model` report how the app runs the model, not how the CLI's `PATH` would.
+- **Fix**: a run whose runtime left a child process holding its output reported a timeout instead of its error or
+  answer; a model from an older local-agent with no `kind` was refused; on a Mac without the developer tools,
+  `/usr/bin/python3` could keep offering to install them; a Python without the runtime was started again on every
+  30-second status check; `ambient task model --python` accepted a folder; a model path of only spaces showed as set
+  in Settings while the board used the model id; `ambient mcp` answered JSON-RPC batches with a parse error; and a
+  llama.cpp prompt file could outlive a crash.
+- **Fix**: working memory no longer waits on the main thread, so it answers while the UI is busy. With the main thread
+  held for 8 seconds, `ambient memory set` took 0.03 s, where it used to fail after 2 s with "didn't answer in time"
+  though the write still landed. A write or forget that does time out now says it may still go through.
+- **Fix**: a client that gave up before Ambient got to it, while the app was stopped or busy, no longer ends the app:
+  replying to it raised SIGPIPE.
+- **For developers**: the first two libraries split out of `AmbientCore` are their own products. `AmbientBase` holds
+  utilities (JSON, the Unix socket, paths, text trimming, the Keychain), and `AmbientContracts` the types every
+  module shares (events, sessions, tasks, needs, remote events). `AmbientCore` still re-exports both, so code that
+  imports it builds unchanged. Golden-file tests now pin every format Ambient saves or sends: `state.json`,
+  `tasks.json`, `day.json`, the CLI's socket messages, and the lines `ambient-remote` writes. Nothing changes for
+  people using the app.
+
+## 0.8.0 — 2026-11-03
+
+0.7.0 was tagged but never had a download, so this release also brings everything listed under 0.7.0 below.
+
+- **Homebrew cask**: `scripts/update-cask.sh` writes the cask for a published release into the tap, with the checksum
+  from the GitHub release, and the cask downloads from yaml.cafe with `?ref=brew` so Homebrew installs are counted on
+  their own.
+- **Answer permission prompts from the island** (off by default; Settings › Island): Claude Code and Codex tool
+  requests open a card at the notch with the agent, the project and the command, file or host, and *Allow once*
+  or *Deny*. Ambient never answers for you: a prompt you don't answer within the wait you choose (20 seconds by
+  default), or one you'd rather answer in the agent's own app, goes back to the agent, which asks as usual.
+  Several prompts queue in order, and the buttons ignore clicks for the first moment so a card that appears under
+  the pointer can't be approved by accident. Only the permission hook waits, and only with the setting on;
+  Codex asks you to approve the changed hook once with `/hooks`.
+- **Hooks that keep working**: Ambient re-checks each connected agent's hooks at launch, every ten minutes, and as
+  soon as the agent updates or its settings change, and rewrites out-of-date hooks with the usual backup. What it
+  can't fix gets a **!** in the menu bar and a one-click fix: hooks an update removed (*Reconnect*), settings it
+  can't read (*Show File*), and a terminal session that's been busy for two minutes without a single hook reaching
+  Ambient (for Codex, usually hooks awaiting `/hooks` approval). `ambient doctor` reports removed hooks too.
+- **Task board: model path.** Point the board's local LLM at a model folder or `.gguf` file instead of a gateway
+  model id (Settings › Board › *Model & gateway options* › **Choose…**, or `ambient task model PATH`). Ambient
+  reads the files to pick the runtime: a path local-agent already serves runs through the gateway by its id; other
+  MLX / Hugging Face folders run directly with mlx-lm, vision checkpoints with mlx-vlm, Hugging Face cache folders
+  from their pinned snapshot, and GGUF with llama.cpp. Speech, image and video models are refused, and so are folders that declare their own Python code (`model_file`). Direct runs are
+  offline, one at a time, keep the prompt off the command line, stop if a model tries to load custom code, and turn off
+  reasoning models' thinking so the reply is the JSON. Replies that still carry `<think>` blocks are cleaned before parsing. Optional **Python for MLX**;
+  otherwise Ambient reuses local-agent's MLX Python or finds one.
+- **`ambient mcp`**: an MCP server over stdio with `get_task_model` and `set_task_model_path`, so agents can see and
+  change the board's model (`claude mcp add ambient -- ~/.ambient/bin/ambient mcp`).
+- **Working memory**: agents share data with each other through `ambient mcp` — `memory_write` (text or JSON under a
+  key), `memory_write_file` (a read-only copy of a file), `memory_read`, `memory_list` and `memory_forget`. Entries
+  belong to a project (its git worktrees included) or are global, last 7 days by default, and can end with the session
+  that wrote them; Ambient tells which session is asking from the agent process. The server's instructions list what's
+  already shared for the project. `ambient memory` does the same from a terminal. Secrets, `.env` and key files, and
+  `~/.ssh`, `~/.aws` and `~/.gnupg` are refused. Kept in `~/.ambient/memory.json` and `~/.ambient/memory/`.
+- **Fix**: the task board kept re-rendering every card on every agent event, even after you closed it, which could
+  take a whole CPU core with a long-lived board. Closing it now frees it, and only the cards on screen are drawn:
+  with 1,626 tasks, 97% of a core and 590 MB became 1.6% and 90 MB.
+- **Fix**: the Codex app's hidden turns, which suggest your next prompt after each turn, no longer show up as extra
+  sessions finished with JSON like `{"suggestion":"…"}`.
+- **Performance, measured**: the README now lists what Ambient costs, feature by feature: 0.1% CPU with the island
+  alone when nothing happens, 0.5% while agents work, 1.9% with everything on (Apple M5 Max). `scripts/measure-perf.sh`
+  reproduces the numbers on any Mac with a separate copy of the app, leaving yours and its settings alone.
+- **Remote agents**: follow Claude Code and Codex on your other machines from this Mac, over your own `ssh` or any
+  other transport, with no accounts, no relay and no open ports. `ambient remote add NAME` copies a small POSIX `sh`
+  shim from the app, checks its SHA-256, installs hooks and pins the machine's identity; `remove`, `purge`, `list` and
+  `ambient doctor --remote NAME` look after it, and Settings › Remote shows each link. Sessions carry their machine's
+  label in the island, menu bar, pet, notifications and board. Redaction (`metadata`, `standard` by default, or `full`)
+  happens on the machine; remote text never reaches online voices or any non-loopback address. Remote events go
+  through their own strict decoder and can't touch the app's socket, focus routes or pid checks. Events wait in a
+  bounded spool while your Mac sleeps; old prompts show as *missed* with no chime, and sessions on an unreachable
+  machine show as *unknown*. A local audit log records what happened, with no event content.
+
+## 0.7.0 — 2026-10-23
+
+- **Task board**: Settings › Board and a dedicated **Task Board** window (menu *Task Board…*) show a local Kanban of
+  agent work — backlog, in progress, blocked, done — grouped from session metadata (project, titles, same-day
+  sessions; needs-you → blocked). Optional **local LLM** summaries via the local-agent MCP gateway
+  (`http://127.0.0.1:5051/mcp` only — non-loopback URLs refused; default model
+  `hf:mlx-community/Qwen2.5-0.5B-Instruct-4bit` on `/Volumes/Models`). LLM options collapse by default in Settings.
+  Transcript reading is opt-in; cloud-tagged models are blocked; heuristics remain the fallback when the gateway or
+  SSD is unavailable. Optional **wallpaper board cues** (Settings › Wallpaper / Board; off by default) draw soft
+  title + status chips on the living wallpaper when tasks are blocked or in progress. Persist to
+  `~/.ambient/tasks.json`. Optional one-shot `ambient task skill-bootstrap` writes a few-shot skill pack to
+  `~/.ambient/task-skill.json` (Anthropic from Keychain only; never the live path). CLI: `ambient tasks`,
+  `ambient task upsert`, `ambient task open`, `ambient task skill-bootstrap`, `ambient task skill-status`.
+- **Cursor (first-class)**: no longer beta. Installs after-the-fact tool hooks (`afterShellExecution`,
+  `afterFileEdit`, `afterMCPExecution`) so the island shows tools while Cursor works; still never uses
+  permission-style hooks. Click-to-return prefers the Cursor editor window for the project.
+- **More agents (beta)**: connect **GitHub Copilot CLI** and **OpenCode** in Settings › Agents or with
+  `ambient install`, and `ambient doctor` checks each one. They're marked beta until they've run against the
+  real agents; Settings › Agents and the README say what each one shows.
+- **Antigravity**: checked against a real `agy` 1.4 session: sessions, prompts, tools and finished turns all arrive.
+  Turns that end with reasons spelled in capitals (as agy sends them) are now read correctly. Copilot CLI gets a hook file of Ambient's own
+  (`~/.copilot/hooks/ambient.json`), OpenCode a small plugin (`~/.config/opencode/plugins/ambient.js`), and both
+  show *needs you* for permission prompts. Cursor's hooks go next to yours in `~/.cursor/hooks.json`; Ambient uses
+  only hooks that can't block or approve anything, so Cursor sessions show tools as they finish and never show
+  *needs you*.
+- **Any other agent**: `ambient emit <start|working|waiting|done|error|end> --session ID [--agent NAME]` and
+  `ambient hook custom` (one JSON object per event) let any agent or script drive the island, with its own name,
+  a return address to the terminal it runs in, and a session that ends with its process. The README documents
+  the fields, with an example for Aider.
+- **Read aloud**: select part of a reply in Claude, Codex or a terminal and press ⌥⎋ (Option-Escape; change it in Settings › Voice), or choose Services › Speak
+  with Ambient, to hear it. Markdown symbols are dropped, links read by their label, long paths shortened and code
+  blocks summarized (or read out, if you prefer). The first time, Ambient asks which voice to use: a Mac voice, the
+  offline Kokoro model (a one-time download, Apple silicon and macOS 15 or later), or an online voice from OpenAI,
+  ElevenLabs or your own server with your key. The island, menu bar and pet show it speaking with pause, continue
+  and stop (the keyboard's ⏯ key and AirPods or headphones work too), and say why if it can't. Change it any time
+  in Settings › Voice.
+- **Antigravity**: connect Google Antigravity in Settings › Agents (or `ambient install antigravity`). Ambient adds a
+  hook set named `ambient` to `~/.gemini/config/hooks.json` and follows each conversation through prompts, tool calls
+  and finished or failed turns. Antigravity has no permission hook, so its sessions never show *needs you*.
+- **View all**: with more than five sessions, the hovered island offers *View all*, which lists every session and
+  scrolls past ten.
+- **Fix**: `ambient status` and `ambient open` no longer say Ambient isn't running when it tracks many sessions. The
+  app cut off any reply longer than 8 KB.
+
+## 0.6.0 — 2026-10-10
+
 - **Desktop pet**: an optional pixel-art companion (a blob, a crab or a cat) that you drag anywhere on your desktop.
   It acts out your most urgent agent session: typing while it works, waving with a "!" when it needs you, cheering
   when it's done, sweating when it fails, and sleeping when nothing needs you. Its speech bubble says what that

@@ -1,0 +1,13 @@
+{
+  "name": "Loom",
+  "set": "craft",
+  "inspiration": "A hand loom: each warp stripe is a session dyed in its state's colour, and the beam above shows the most urgent one",
+  "order": 45,
+  "hero": "split",
+  "fonts": [
+    { "family": "Syne", "axes": "wght@700;800" },
+    { "family": "Jost", "axes": "wght@400;500;600" },
+    { "family": "DM Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Free native macOS app", "h1": "Every agent, woven into one colour." }
+}

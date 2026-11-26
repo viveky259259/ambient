@@ -19,7 +19,7 @@ while (( $# )); do
   shift
 done
 
-VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientCore/Version.swift)
+VERSION=$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/AmbientBase/Version.swift)
 BUILD_NUMBER=${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}
 
 ARCH_FLAGS=()
@@ -33,19 +33,39 @@ swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --product ambient
 # Where SwiftPM puts products differs between single- and multi-arch builds and between versions.
 BIN=$(swift build -c release "${ARCH_FLAGS[@]}" "${DEV_FLAGS[@]}" --show-bin-path)
 
+# The Ambient speaker: its driver (tested, built and signed by its own script), which Settings installs, and the
+# stream that plays it on another Mac, which runs as a helper and copies itself there. Each is built again only when
+# what it's built from changed.
+scripts/build-speaker.sh --sign "$SIGN_ID" --if-needed
+SPEAKER_ARCHS=(arm64)
+(( UNIVERSAL )) && SPEAKER_ARCHS=(arm64 x86_64)
+SPEAKER_SLICES=()
+for arch in $SPEAKER_ARCHS; do
+  if [[ ! "build/ambient-speaker-$arch" -nt scripts/speaker-pipe.swift ]]; then
+    xcrun swiftc -O -swift-version 5 -target "$arch-apple-macos14" -o "build/ambient-speaker-$arch" scripts/speaker-pipe.swift
+  fi
+  SPEAKER_SLICES+=("build/ambient-speaker-$arch")
+done
+lipo -create "${SPEAKER_SLICES[@]}" -output build/ambient-speaker
+
 # Assemble and sign in a staging folder, then swap it in. build/Ambient.app may be running, and its
 # CLI is what agent hooks execute (~/.ambient/bin/ambient); signing code while it executes fails
 # with "Input/output error", so in-use files are never written — they're replaced.
 DEST=build/Ambient.app
 APP=build/.stage/Ambient.app
 rm -rf build/.stage
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$APP/Contents/Resources" "$APP/Contents/PlugIns"
 cp "$BIN/AmbientApp" "$APP/Contents/MacOS/Ambient"
 cp "$BIN/ambient" "$APP/Contents/Helpers/ambient"
+cp build/ambient-speaker "$APP/Contents/Helpers/ambient-speaker"
+cp -R build/AmbientSpeaker.driver "$APP/Contents/PlugIns/"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$APP/Contents/Info.plist"
 cp LICENSE "$APP/Contents/Resources/LICENSE" 2>/dev/null || true
+# Copied to remote machines over the user's own transport; sealed by the app's signature, never downloaded.
+cp Resources/ambient-remote "$APP/Contents/Resources/ambient-remote"
+chmod 755 "$APP/Contents/Resources/ambient-remote"
 
 # The icon is drawn by code; re-render only when the script changes.
 ICNS=build/AppIcon.icns
@@ -61,10 +81,13 @@ if [[ ! -f $ICNS || scripts/make-icon.swift -nt $ICNS ]]; then
 fi
 cp "$ICNS" "$APP/Contents/Resources/AppIcon.icns"
 
-# Sign inside-out: the helper, then the app. Hardened runtime and a timestamp for real identities.
+# Sign inside-out: the helpers, then the app (the driver is signed already). Hardened runtime and a timestamp for real
+# identities.
 SIGN_FLAGS=(--force --sign "$SIGN_ID")
 if [[ $SIGN_ID != "-" ]]; then SIGN_FLAGS+=(--options runtime --timestamp); fi
 codesign "${SIGN_FLAGS[@]}" --identifier com.viveky259259.Ambient.cli "$APP/Contents/Helpers/ambient"
+codesign "${SIGN_FLAGS[@]}" --identifier com.viveky259259.Ambient.speaker-stream \
+  --entitlements Resources/AmbientSpeaker.entitlements "$APP/Contents/Helpers/ambient-speaker"
 codesign "${SIGN_FLAGS[@]}" --entitlements Resources/Ambient.entitlements "$APP"
 codesign --verify --strict "$APP"
 rm -rf "$DEST"

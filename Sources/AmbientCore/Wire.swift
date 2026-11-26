@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 /// Messages between the `ambient` CLI and the app: one JSON object per line, one message per connection.
 public enum WireMessage: Codable, Equatable, Sendable {
@@ -6,12 +7,35 @@ public enum WireMessage: Codable, Equatable, Sendable {
     case statusRequest
     case status(sessions: [Session], mood: Mood)
     case acknowledgeAll
-    /// Take the user to a session: by project, id or id prefix; nil for the most urgent one.
-    case open(query: String?)
+    /// Take the user to a session: by project, id or id prefix; nil for the most urgent one. `from` names the Mac that
+    /// asked, when it's another one: the app says so in a notification.
+    case open(query: String?, from: String? = nil)
     /// Reply to `open`: the session that was opened, or nil if nothing matched.
     case opened(sessionID: String?)
+    case listTasks
+    case tasks([AgentTask])
+    case upsertTask(AgentTask)
+    case upsertTaskResult(AgentTask)
+    /// Open the most urgent linked session for a task id.
+    case openTask(String)
+    /// The board's local-LLM settings; the reply is `taskModelReport`.
+    case taskModelRequest
+    /// Change them (`ambient task model`, `ambient mcp`); the reply is `taskModelReport` with the result.
+    case setTaskModel(TaskModelChange)
+    /// The settings and how the app runs that model.
+    case taskModelReport(TaskModelReport)
+    /// The settings alone, when the app couldn't work out in time how it runs the model.
+    case taskModel(TaskLLMConfig)
+    /// Reply when the app didn't get to a task-model request in time; a change may still apply.
+    case taskModelTimedOut
+    /// Shared working memory (`ambient memory`, `ambient mcp`); the reply is `memoryReply`.
+    case memory(MemoryRequest)
+    case memoryReply(MemoryReply)
     case ping
     case pong(version: String)
+    /// A permission prompt the island may answer; the hook waits for `permissionAnswer`.
+    case permissionRequest(PermissionAsk)
+    case permissionAnswer(PermissionAnswer)
 }
 
 public enum Wire {

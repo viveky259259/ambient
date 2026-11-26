@@ -17,7 +17,8 @@
 
   // MARK: - Hero island
 
-  const hero = document.querySelector(".hero");
+  // The demo's state colour also reaches the theme's hero art through --state on <html> (see themes/README.md).
+  const hero = document.querySelector(".demo") || document.querySelector(".hero");
   const island = document.getElementById("island-demo");
   if (hero && island) {
     const el = (id) => document.getElementById(id);
@@ -38,6 +39,8 @@
       paintEdge();
       hero.style.setProperty("--state", s.color);
       hero.style.setProperty("--glow", s.color);
+      document.documentElement.style.setProperty("--state", s.color);
+      document.documentElement.dataset.mood = s.mood;
       island.classList.toggle("open", s.open);
       el("island-caption").textContent = s.caption;
       if (s.open) {
@@ -93,6 +96,40 @@
     }, { threshold: 0.5 }).observe(stage);
   }
 
+  // MARK: - Voice tabs
+  // Without this script every panel shows, one under the other. With it they become tabs: click or tap, the arrow
+  // keys, Home and End. A link to a panel (#voice-sync) opens on that tab.
+
+  const voice = document.getElementById("voice-tabs");
+  if (voice) {
+    const tabs = Array.from(voice.querySelectorAll('[role="tab"]'));
+    const show = (tab, focus) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      });
+      if (focus) tab.focus();
+    };
+    voice.classList.add("tabs-on");
+    const linked = tabs.find((t) => "#" + t.getAttribute("aria-controls") === location.hash);
+    show(linked || tabs[0], false);
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => show(tab, false));
+      tab.addEventListener("keydown", (event) => {
+        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[event.key];
+        if (to === undefined) return;
+        event.preventDefault();
+        show(tabs[(to + tabs.length) % tabs.length], true);
+      });
+    });
+    window.addEventListener("hashchange", () => {
+      const tab = tabs.find((t) => "#" + t.getAttribute("aria-controls") === location.hash);
+      if (tab) show(tab, false);
+    });
+  }
+
   // MARK: - Mobile detection
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -119,6 +156,16 @@
     track("Copy link", { place, ref: store.get("ambient-ref") || "none" });
   };
 
+  // The Homebrew command: one click copies it.
+  document.querySelectorAll("[data-copy-text]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const label = b.querySelector("span");
+      try { await navigator.clipboard.writeText(b.dataset.copyText); label.textContent = "Copied"; }
+      catch { label.textContent = "Press ⌘C"; getSelection().selectAllChildren(b.querySelector("code")); }
+      track("Copy brew", { place: b.dataset.copyPlace || "page", ref: store.get("ambient-ref") || "none" });
+      setTimeout(() => { label.textContent = "Copy"; }, 2000);
+    });
+  });
   document.querySelectorAll("[data-copy-link]").forEach((b) => {
     b.addEventListener("click", () => copyLink(b, b.dataset.copyLink));
   });
@@ -143,7 +190,17 @@
   const startDownload = () => {
     const a = document.createElement("a");
     const ref = store.get("ambient-ref");
-    a.href = ref ? `${dmg}?ref=${encodeURIComponent(ref)}` : dmg;
+    const url = (params) => { const q = new URLSearchParams(params); return q.toString() ? `${dmg}?${q}` : dmg; };
+    const plain = url(ref ? { ref } : {});
+    // The design this visitor was shown (themes/loader.js) goes with their first download only, so a design's
+    // rate is the share of its visitors who downloaded, not how many times they clicked.
+    const ab = window.AmbientAB;
+    const once = ab && ab.counted ? `${ab.round}:${ab.variant}` : "";
+    const first = once && store.get("ambient-variant-downloaded") !== once;
+    a.href = first ? url({ ...(ref ? { ref } : {}), v: ab.variant }) : plain;
+    if (first) store.set("ambient-variant-downloaded", once);
+    const again = document.getElementById("download-again");
+    if (again) again.href = plain;
     a.download = "";
     document.body.appendChild(a);
     a.click();
@@ -160,7 +217,7 @@
   const track = (name, data) => { try { window.umami?.track(name, data); } catch { /* ignore */ } };
 
   const open = (e) => {
-    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none" });
+    track("Download", { place: e.currentTarget.dataset.download || "page", ref: store.get("ambient-ref") || "none", variant: (window.AmbientAB && window.AmbientAB.counted && window.AmbientAB.variant) || "none" });
     startDownload();
     if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
   };

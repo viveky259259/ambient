@@ -22,14 +22,40 @@ public struct HookPayload: @unchecked Sendable {
         }
     }
 
+    /// The strings in an array, skipping anything else.
+    public func strings(_ key: String) -> [String] {
+        (raw[key] as? [Any])?.compactMap { $0 as? String } ?? []
+    }
+
+    /// The objects in an array, skipping anything else.
+    public func objects(_ key: String) -> [HookPayload] {
+        (raw[key] as? [Any])?.compactMap { ($0 as? [String: Any]).map(HookPayload.init) } ?? []
+    }
+
+    /// A number, but not a boolean.
+    public func number(_ key: String) -> Double? {
+        guard let n = raw[key] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+        return n.doubleValue
+    }
+
     public func object(_ key: String) -> HookPayload? {
         (raw[key] as? [String: Any]).map(HookPayload.init)
+    }
+
+    /// An object, or a string holding one as JSON.
+    public func objectOrJSON(_ key: String) -> HookPayload? {
+        object(key) ?? string(key).flatMap { HookPayload(json: Data($0.utf8)) }
     }
 
     /// True when the key holds a value other than null.
     public func has(_ key: String) -> Bool {
         guard let v = raw[key] else { return false }
         return !(v is NSNull)
+    }
+
+    /// True when the key is present and holds null.
+    public func isNull(_ key: String) -> Bool {
+        raw[key] is NSNull
     }
 
     /// The first non-blank string among `keys`.

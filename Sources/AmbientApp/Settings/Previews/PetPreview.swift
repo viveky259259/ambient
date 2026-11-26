@@ -57,7 +57,7 @@ struct PetPreview: View {
         switch pose {
         case .sleeping: return nil
         case .working: s.activity = .tool(name: "Bash", detail: "npm test")
-        case .waiting: s.activity = .waiting(reason: "permission", message: "Bash: rm -rf build")
+        case .waiting: s.activity = .waiting(reason: Need.command.rawValue, message: "rm -rf build")
         case .done:
             s.activity = .done(summary: "All 42 tests pass.")
             s.turnEndedAt = now

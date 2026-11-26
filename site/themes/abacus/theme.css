@@ -1,0 +1,121 @@
+/* Abacus. A counting frame made as an instrument: oiled walnut, brass rods, corner plates and screws, turned
+   boxwood beads, an engraved scale. Ivory ledger paper, Spectral numerals and Plex Mono for the graduations. */
+:root {
+  --bg: #f1ebdd;
+  --bg-alt: #e6dec9;
+  --surface: #f8f4ea;
+  --surface-2: #ece5d4;
+  --ink: #1f1a14;
+  --ink-2: #4b4136;
+  --rule: rgba(31, 26, 20, 0.22);
+  --accent: #3b2416;
+  --on-accent: #f4ead2;
+  --link: #6b3f1f;
+  --band: #2a1b12;
+  --band-ink: #f1e8d6;
+  --band-ink-2: #cdbca3;
+  --band-surface: #3a271b;
+  --band-rule: rgba(241, 232, 214, 0.18);
+  --ab-brass: #b08d4a;
+  --claude: #c66a4a;
+  --gemini: #3f6fb8;
+  --waiting: #d49516;
+  --done: #3c8a5a;
+  --error: #b8432f;
+
+  --font-display: Spectral, "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.015em;
+  --display-leading: 1.02;
+  --h1-size: clamp(48px, 7.6vw, 112px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 26px;
+  --body-size: 17px;
+  --label-size: 12px;
+  --label-tracking: 0.18em;
+  --label-weight: 500;
+  --label-color: #6b3f1f;
+
+  --radius: 3px;
+  --radius-sm: 2px;
+  --radius-btn: 3px;
+  --border: 1px solid var(--rule);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 1px 2px rgba(31, 26, 20, 0.1);
+  --btn-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 0 #1c100a, 0 6px 14px rgba(31, 26, 20, 0.22);
+  --texture: repeating-linear-gradient(0deg, rgba(107, 63, 31, 0.04) 0 1px, transparent 1px 28px);
+  --band-texture: repeating-linear-gradient(1.2deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 11px), repeating-linear-gradient(-0.6deg, rgba(255, 210, 160, 0.04) 0 1px, transparent 1px 23px);
+  --ab-screws: radial-gradient(circle at 50% 50%, #8a6a32 0 1.2px, #e8cf8e 1.6px 3px, #8a6a32 3.4px 4px, transparent 4.5px);
+  --device-edge: #5a3a24;
+  --edge-strength: 0.32;
+}
+
+.macbook .display { letter-spacing: normal; }
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid var(--ink); }
+.brand { font-weight: 600; font-size: 25px; }
+.nav-links { font-size: 12px; letter-spacing: 0.06em; }
+.nav-links a { color: var(--ink); }
+.btn { font-family: var(--font-body); font-size: 16px; font-weight: 600; letter-spacing: 0.02em; background: linear-gradient(180deg, #4e311e, #2f1c11); border: 1px solid #1c100a; }
+.btn.small { font-size: 13px; }
+.link-btn { color: var(--link); font-weight: 500; }
+.fineprint { font-family: var(--font-label); font-size: 12.5px; }
+.copy-code { background: var(--surface); }
+.trust { font-weight: 500; }
+
+/* Hero: centred words, then the frame. */
+.hero h1 { font-weight: 500; }
+.hero .kicker { display: inline-block; border: 1px solid var(--ink); padding: 7px 14px; color: var(--ink); }
+.hero-art { width: 100%; max-width: 1160px; margin: 8px auto 0; aspect-ratio: 1200 / 640; }
+.hero-art svg { width: 100%; height: 100%; }
+.ab-ptr { opacity: 0; transition: opacity 0.5s var(--ease); }
+html:not([data-mood]) .ab-ptr.waiting, html[data-mood="working"] .ab-ptr.working, html[data-mood="waiting"] .ab-ptr.waiting,
+html[data-mood="done"] .ab-ptr.done, html[data-mood="error"] .ab-ptr.error { opacity: 1; }
+
+/* Each section opens on an engraved scale: a rule with graduations every 10 and every 50. */
+main > section::before {
+  content: ""; position: absolute; left: 50%; top: 0; width: min(1120px, 100%); transform: translateX(-50%); height: 12px;
+  background: linear-gradient(var(--ink), var(--ink)) 0 0 / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 50px) 0 0 / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 10px) 0 0 / 100% 6px no-repeat;
+  opacity: 0.55;
+}
+main > section.dark::before { filter: invert(1); opacity: 0.3; }
+
+/* Cards are ivory plates with four brass screws. */
+.card, .dest, .voice-panel, .guide-list a {
+  background-color: var(--surface);
+  background-image: var(--ab-screws), var(--ab-screws), var(--ab-screws), var(--ab-screws);
+  background-size: 10px 10px; background-repeat: no-repeat;
+  background-position: 8px 8px, calc(100% - 8px) 8px, 8px calc(100% - 8px), calc(100% - 8px) calc(100% - 8px);
+}
+.dark .card { background-color: var(--band-surface); }
+.card h3 { font-weight: 600; }
+/* State cards carry a brass rod with one turned bead in the state's stain. */
+.states .card { border-top: 0; padding-top: 70px; position: relative; }
+.states .card::before { content: ""; position: absolute; left: 22px; right: 22px; top: 32px; height: 4px; border-radius: 2px; background: linear-gradient(#f3e2b0, #b08d4a 50%, #6e5526); }
+.states .card::after { content: ""; position: absolute; left: 34px; top: 16px; width: 54px; height: 36px; clip-path: polygon(0 50%, 26% 0, 74% 0, 100% 50%, 74% 100%, 26% 100%); background: linear-gradient(180deg, color-mix(in srgb, var(--state) 45%, #fff) 0, var(--state) 38%, color-mix(in srgb, var(--state) 70%, #000) 100%); }
+.states .card .orb { position: absolute; right: 24px; top: 24px; }
+.states .card h3 { font-size: 30px; }
+.agents .card .orb { box-shadow: 0 0 0 4px var(--surface), 0 0 0 5px var(--ab-brass); }
+
+.dest li { font-size: 15.5px; }
+.dest .where { font-size: 12px; letter-spacing: 0.06em; color: var(--link); }
+.dark .dest .where { color: #e1c48a; }
+.step { border-radius: 0; width: 46px; height: 30px; clip-path: polygon(0 50%, 26% 0, 74% 0, 100% 50%, 74% 100%, 26% 100%); background: linear-gradient(180deg, #ecd6ae, #c49a62 45%, #8b6436); color: var(--ink); font-weight: 500; }
+.stat { color: var(--accent); font-weight: 400; font-variant-numeric: tabular-nums; }
+.faq summary { font-size: 22px; font-weight: 500; }
+.faq summary::after { font-family: var(--font-label); color: var(--link); }
+.guide-list strong { font-weight: 600; }
+.guide-list a:hover { border-color: var(--ab-brass); }
+.voice-tab { font-size: 13px; }
+.voice-tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.chip { font-size: 13px; min-height: 44px; }
+.dark .kicker { color: #e1c48a; }
+.dark .btn { background: linear-gradient(180deg, #f3e2b0, #b08d4a); color: #1f1a14; border-color: #6e5526; }
+.closing img { box-shadow: 0 0 0 1px var(--ab-brass), 0 0 0 6px var(--band-surface), 0 0 0 7px var(--ab-brass); }
+footer { font-family: var(--font-label); font-size: 12px; border-top: 1px solid var(--ink); }
+dialog { border: 1px solid var(--ink); box-shadow: 0 0 0 6px #3b2416, 0 0 0 7px var(--ab-brass), 0 30px 80px rgba(0, 0, 0, 0.35); }
+.hero, .alt { background-image: var(--texture); }
+.chip, .voice-tab { min-height: 44px; }

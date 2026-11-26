@@ -1,0 +1,128 @@
+/* Glaze tiles. A potter's test tiles on a studio shelf: bisque clay, glossy glazes that pool, drip and craze,
+   kiln numbers in typewriter and notes in pencil. Every card is a fired tile; the state cards are dipped. */
+:root {
+  --bg: #d9d1c1;
+  --bg-alt: #cdc3af;
+  --surface: #efe9dc;
+  --surface-2: #e3dbca;
+  --ink: #2a1c14;
+  --ink-2: #4f3b2c;
+  --rule: rgba(42, 28, 20, 0.3);
+  --accent: #2a1c14;
+  --on-accent: #f4efe4;
+  --link: #7a3a1c;
+  --band: #2c1f17;
+  --band-ink: #f1ebdf;
+  --band-ink-2: #d2c4ad;
+  --band-surface: #3c2b20;
+  --band-rule: rgba(241, 235, 223, 0.2);
+  --gemini: #3f77c4;
+  --waiting: #e0a22c;
+  --done: #2f9058;
+  --error: #b5342c;
+
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --font-body: Karla, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Courier Prime", "Courier New", monospace;
+  --font-mono: "Courier Prime", "Courier New", monospace;
+  --display-weight: 500;
+  --display-tracking: -0.03em;
+  --display-leading: 0.92;
+  --h1-size: clamp(58px, 10.4vw, 156px);
+  --h2-size: clamp(42px, 5.6vw, 76px);
+  --h3-size: 32px;
+  --body-size: 17.5px;
+  --label-size: 13px;
+  --label-tracking: 0.14em;
+  --label-weight: 700;
+  --label-color: #5b3a25;
+
+  --radius: 13px 9px 15px 8px / 9px 14px 8px 13px;
+  --radius-sm: 6px;
+  --radius-btn: 999px 999px 999px 6px;
+  --border: 1px solid rgba(42, 28, 20, 0.22);
+  --card-shadow: 0 3px 0 rgba(42, 28, 20, 0.2), 10px 12px 22px rgba(42, 28, 20, 0.14);
+  --btn-shadow: 0 3px 0 rgba(42, 28, 20, 0.35);
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .12 0 0 0 0 .06 0 0 0 7 -4.3'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='.45'/%3E%3C/svg%3E");
+  --band-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 6 -4.4'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='.18'/%3E%3C/svg%3E");
+  --gt-craze: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.32' stroke-width='.7'%3E%3Cpath d='M0 40l30 6 22-16 38 8 30-16 60 8M30 46l-4 44 34 20-2 40 22 30M90 38l10 42 40 12 10 38 30-4M60 110l40-30M0 120l26-30M140 92l30-22 10 4M120 22l8-22M58 150l52 10 40-30M0 170l40-10 18-10'/%3E%3C/g%3E%3C/svg%3E");
+  --device-edge: #6b4a30;
+  --edge-strength: 0.35;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid rgba(42, 28, 20, 0.35); }
+.brand { font-style: italic; font-weight: 600; font-size: 32px; letter-spacing: -0.01em; }
+.nav-links { font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: 0; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-body); font-size: 17px; font-weight: 700; letter-spacing: 0; padding: 15px 30px; }
+.btn.small { font-size: 14px; padding: 8px 18px; }
+.link-btn { font-weight: 700; color: var(--link); }
+.copy-code { background: var(--surface); }
+
+/* Hero: the words over the shelf of tiles; on a wide screen the headline sits left and the rest to its right. */
+.hero { padding-bottom: 40px; }
+.hero-art { width: 100%; max-width: 1180px; margin: 0 auto; aspect-ratio: 1200 / 540; }
+.hero-art svg { width: 100%; height: 100%; }
+.hero h1 { font-weight: 500; }
+.hero-copy .lede { color: var(--ink); }
+.trust { font-family: Caveat, "Bradley Hand", cursive; font-size: 25px; line-height: 1.15; color: #5b3a25; transform: rotate(-1deg); }
+@media (min-width: 980px) {
+  .hero-grid { text-align: left !important; }
+  .hero-copy { display: grid; grid-template-columns: 1.45fr 1fr; column-gap: 64px; align-items: start; }
+  .hero-copy > * { grid-column: 2; }
+  .hero-copy .kicker { grid-column: 1 / -1; }
+  .hero-copy h1 { grid-column: 1; grid-row: 2 / span 7; margin: 0; }
+  .hero-copy .lede { margin: 6px 0 26px !important; font-size: 20px; }
+  .hero .cta-row { justify-content: flex-start !important; }
+}
+.gt-tile { transition: transform 0.6s var(--ease); transform-box: fill-box; transform-origin: 50% 100%; }
+html[data-mood="working"] .gt-tile.t1, html[data-mood="waiting"] .gt-tile.t2,
+html[data-mood="done"] .gt-tile.t3, html[data-mood="error"] .gt-tile.t4 { transform: translateY(-14px); }
+
+/* Fired tiles: slip-glazed, glossy, faintly crazed, with uneven corners. */
+.card, .dest, .voice-panel, .guide-list a, dialog {
+  background-color: var(--surface);
+  background-image: linear-gradient(112deg, transparent 4%, rgba(255, 255, 255, 0.5) 6%, rgba(255, 255, 255, 0.5) 7.5%, transparent 9.5%, transparent 14%, rgba(255, 255, 255, 0.35) 15%, transparent 16.5%), var(--gt-craze);
+}
+.card:nth-child(2n) { border-radius: 9px 15px 10px 14px / 14px 9px 15px 10px; }
+.card:nth-child(3n) { border-radius: 16px 10px 12px 9px / 10px 16px 9px 13px; }
+.dark .card { background-color: var(--band-surface); }
+.card h3 { font-weight: 600; }
+
+/* The state cards are dipped: a glaze band that pools darker and drips. */
+.states .card { position: relative; overflow: hidden; border-top: 0; padding-top: 32px; }
+.states .card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 104px;
+  background: linear-gradient(104deg, transparent 8%, rgba(255, 255, 255, 0.45) 10%, rgba(255, 255, 255, 0.45) 12%, transparent 14%), var(--gt-craze),
+    linear-gradient(180deg, color-mix(in srgb, var(--state) 55%, #fff) 0, var(--state) 18%, var(--state) 62%, color-mix(in srgb, var(--state) 62%, #000) 100%);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0H260V60C260 80 244 80 240 94C236 106 222 104 220 86C218 70 200 68 194 80C188 96 176 108 166 92C158 78 146 70 136 76C126 84 128 100 114 98C100 96 106 74 92 70C80 66 74 80 70 92C64 106 48 104 46 88C44 74 28 66 20 76C12 86 0 84 0 70Z'/%3E%3C/svg%3E") 0 0 / 100% 100%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0H260V60C260 80 244 80 240 94C236 106 222 104 220 86C218 70 200 68 194 80C188 96 176 108 166 92C158 78 146 70 136 76C126 84 128 100 114 98C100 96 106 74 92 70C80 66 74 80 70 92C64 106 48 104 46 88C44 74 28 66 20 76C12 86 0 84 0 70Z'/%3E%3C/svg%3E") 0 0 / 100% 100%;
+}
+.states .card::after { content: ""; position: absolute; top: 22px; right: 22px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 2px 3px rgba(42, 28, 20, 0.45); }
+.states .card .orb { position: relative; z-index: 1; margin-bottom: 86px; box-shadow: 0 0 0 4px var(--surface), 0 0 12px rgba(0, 0, 0, 0.3); }
+.states .card h3 { font-size: 40px; }
+
+.dest li { border-top-color: rgba(42, 28, 20, 0.16); }
+.dest .where { font-family: Caveat, "Bradley Hand", cursive; font-size: 21px; color: #5b3a25; }
+.dark .dest .where { color: var(--band-ink-2); }
+.step { background: radial-gradient(circle at 34% 30%, #e7a27c 0, #7a3a1c 55%, #4a200d 100%); color: #fbeee2; font-family: var(--font-label); box-shadow: 0 2px 0 rgba(42, 28, 20, 0.35); }
+.stat { font-style: italic; color: #7a3a1c; }
+.faq summary { font-size: 27px; font-weight: 600; }
+.guide-list strong { font-size: 25px; font-weight: 600; }
+.voice-tab[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+.voice-flow { border-radius: var(--radius); }
+.wallpaper, .dock-stage, .scene-demo { border-radius: 12px; }
+
+/* Sections end on a wooden shelf, as the tiles do. */
+main > section.alt { box-shadow: inset 0 14px 0 #6f4e36, inset 0 17px 0 rgba(255, 255, 255, 0.14), inset 0 30px 22px -14px rgba(42, 28, 20, 0.3); }
+.dark .kicker { color: #e7b48f; }
+.dark .btn { background: #efe9dc; color: #2a1c14; }
+.closing h2 { font-style: italic; }
+footer { font-family: var(--font-label); border-top: 1px solid rgba(42, 28, 20, 0.4); }
+footer a { color: var(--ink); }
+dialog { border-radius: 16px 11px 18px 10px / 11px 16px 10px 18px; }
+.field input { border-radius: 8px; }
+.macbook .display { letter-spacing: normal; }
+.hero, .alt { background-image: var(--texture); }
+.chip, .voice-tab { min-height: 44px; }

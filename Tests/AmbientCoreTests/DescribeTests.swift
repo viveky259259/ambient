@@ -7,8 +7,11 @@ import Testing
         #expect(Describe.activity(.thinking) == "Thinking")
         #expect(Describe.activity(.tool(name: "Bash", detail: "npm test")) == "Bash · npm test")
         #expect(Describe.activity(.tool(name: "mcp__linear__get_issue", detail: nil)) == "linear · get_issue")
-        #expect(Describe.activity(.waiting(reason: "permission", message: "Bash: rm -rf build")) == "Needs permission · Bash: rm -rf build")
-        #expect(Describe.activity(.waiting(reason: "question", message: nil)) == "Has a question")
+        #expect(Describe.activity(.waiting(reason: "command", message: "rm -rf build")) == "Approve a command · rm -rf build")
+        #expect(Describe.activity(.waiting(reason: "edit", message: "Session.swift")) == "Review a change · Session.swift")
+        #expect(Describe.activity(.waiting(reason: "question", message: nil)) == "Answer a question")
+        // What older versions and remote machines saved.
+        #expect(Describe.activity(.waiting(reason: "permission", message: "Bash: rm -rf build")) == "Approve a tool · Bash: rm -rf build")
         #expect(Describe.activity(.done(summary: "Fixed it")) == "Done · Fixed it")
         #expect(Describe.activity(.done(summary: nil)) == "Done")
         #expect(Describe.activity(.error(message: "Rate limited")) == "Failed · Rate limited")
@@ -18,8 +21,23 @@ import Testing
 
     @Test func shortActivityForTightSpaces() {
         #expect(Describe.shortActivity(.tool(name: "run_shell_command", detail: "ls")) == "Shell")
-        #expect(Describe.shortActivity(.waiting(reason: "permission", message: "x")) == "Needs you")
+        #expect(Describe.shortActivity(.waiting(reason: "permission", message: "x")) == "Approve tool")
+        #expect(Describe.shortActivity(.waiting(reason: "command", message: "x")) == "Approve command")
         #expect(Describe.shortActivity(.done(summary: "x")) == "Done")
+    }
+
+    /// Every way of waiting says what the user has to do, in one line, even with nothing else to go on.
+    @Test func everyWaitHasAOneLineReason() {
+        for reason in Need.allCases.map(\.rawValue) + ["permission", "question", "", "something new"] {
+            for message in [nil, "rm -rf build"] {
+                let activity = Activity.waiting(reason: reason, message: message)
+                let line = Describe.activity(activity)
+                #expect(line.hasPrefix(Need(reason: reason).headline))
+                #expect(!line.contains("\n"))
+                #expect(!Describe.shortActivity(activity).isEmpty)
+            }
+        }
+        #expect(Need(reason: "something new") == .question)
     }
 
     @Test func durations() {

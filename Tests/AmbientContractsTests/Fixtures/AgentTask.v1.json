@@ -1,0 +1,42 @@
+[
+  {
+    "agents" : [
+      "claude",
+      "codex"
+    ],
+    "createdAt" : 784900000,
+    "cwd" : "/Users/me/ambient",
+    "id" : "task-1",
+    "lastSessionId" : "claude:s-1",
+    "machine" : {
+      "id" : "a1b2c3d4",
+      "label" : "Studio"
+    },
+    "manual" : false,
+    "project" : "ambient",
+    "sessionIds" : [
+      "claude:s-1"
+    ],
+    "status" : "inProgress",
+    "summarizedAt" : 784900090,
+    "summary" : "Golden files",
+    "summarySource" : "localLLM",
+    "title" : "Write fixtures",
+    "updatedAt" : 784900300
+  },
+  {
+    "agents" : [
+
+    ],
+    "createdAt" : 784900000,
+    "id" : "task-2",
+    "manual" : false,
+    "sessionIds" : [
+
+    ],
+    "status" : "backlog",
+    "summarySource" : "heuristic",
+    "title" : "Plan phase 2",
+    "updatedAt" : 784900000
+  }
+]

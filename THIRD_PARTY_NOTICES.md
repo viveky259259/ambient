@@ -29,3 +29,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Offline voice (downloaded separately)
+
+The offline voice is not part of Ambient itself. When you choose it, Ambient downloads the `ambient-voice` helper and
+the Kokoro model. The helper's zip carries each library's full license under `licenses/`.
+
+| Component | Used for | License | Copyright |
+| --- | --- | --- | --- |
+| [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), MLX weights via [prince-canuma/Kokoro-82M](https://huggingface.co/prince-canuma/Kokoro-82M) | The voice model and voices | Apache-2.0 | hexgrad |
+| [kokoro-ios](https://github.com/mlalma/kokoro-ios) | Running Kokoro with MLX in Swift | MIT | © 2025 Lassi Maksimainen |
+| [MisakiSwift](https://github.com/mlalma/MisakiSwift) | Turning text into phonemes (no espeak) | Apache-2.0 | Lassi Maksimainen |
+| [MLXUtilsLibrary](https://github.com/mlalma/MLXUtilsLibrary) | Model file loading | Apache-2.0 | Lassi Maksimainen |
+| [MLX Swift](https://github.com/ml-explore/mlx-swift) and [MLX](https://github.com/ml-explore/mlx) | Running the model on Apple silicon | MIT | © 2023 ml-explore, © 2023 Apple Inc. |
+| [Swift Numerics](https://github.com/apple/swift-numerics) | Math for MLX | Apache-2.0 | Apple Inc. |
+| [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) | Reading model archives | MIT | © 2017–2026 Thomas Zoechling |
+
+Apache-2.0 text: https://www.apache.org/licenses/LICENSE-2.0

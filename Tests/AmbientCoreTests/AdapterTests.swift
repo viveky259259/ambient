@@ -14,6 +14,11 @@ private func gemini(_ json: String) -> EventKind? {
     AdapterRegistry.event(agent: .gemini, payload: payload(json), eventHint: nil)?.kind
 }
 
+/// Antigravity's payloads don't name the event; the hook command passes it.
+private func antigravity(_ event: String, _ json: String) -> EventKind? {
+    AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: event)?.kind
+}
+
 @Suite struct ClaudeAdapterTests {
     @Test func sessionStart() {
         #expect(claude(#"{"session_id":"a","hook_event_name":"SessionStart","source":"startup"}"#) == .sessionStarted)
@@ -63,12 +68,13 @@ private func gemini(_ json: String) -> EventKind? {
 
     @Test func permissionRequestNeedsInput() {
         let kind = claude(#"{"session_id":"a","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf build"}}"#)
-        #expect(kind == .needsInput(reason: "permission", message: "Bash: rm -rf build"))
+        #expect(kind == .needsInput(reason: "command", message: "rm -rf build"))
     }
 
     @Test func permissionNotificationNeedsInput() {
         let kind = claude(#"{"session_id":"a","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"}"#)
-        #expect(kind == .needsInput(reason: "permission", message: "Claude needs your permission to use Bash"))
+        // The tool says what it needs; the rest of Claude's sentence adds nothing.
+        #expect(kind == .needsInput(reason: "command", message: nil))
     }
 
     @Test func elicitationNeedsInput() {
@@ -141,6 +147,81 @@ private func gemini(_ json: String) -> EventKind? {
         #expect(AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil)?.kind
                 == .toolStarted(name: "apply_patch", detail: "parser.rs"))
     }
+
+    // Shaped like the payloads Codex Desktop 26.1013 sent: a turn ends in a saved thread, then the app
+    // forks an unsaved one to predict the next prompt.
+    private static let rollout = "/Users/me/.codex/sessions/2026/10/18/rollout-2026-10-18T03-54-23-01a14bf7-596a-7523-a9db-e5fe30f2e5c8.jsonl"
+    private static let realStop = #"{"session_id":"01a14bf7-596a-7523-a9db-e5fe30f2e5c8","turn_id":"01a14bfc-32bd-7531-bd03-7cb378539d76","transcript_path":"\#(rollout)","cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"Using **internal storage** for the model cache.\n\nThe benchmark is downloading."}"#
+    private static let suggestionThread = [
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","source":"fork"}"#,
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","turn_id":"01a14c04-a2c6-7633-a390-6b536c980c8b","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"UserPromptSubmit","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","prompt":"Predict the user's next message.\n\nReturn only JSON matching this schema: {\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"suggestion\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"required\":[\"suggestion\"],\"additionalProperties\":false}."}"#,
+        #"{"session_id":"01a14c04-a2b1-77e3-bfd7-3c12bb48e9c9","turn_id":"01a14c04-a2c6-7633-a390-6b536c980c8b","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"{\"suggestion\":\"Has the download finished? Show me the clip when it's ready.\"}"}"#,
+    ]
+
+    private func codex(_ json: String, host: HostInfo? = HostInfo(appServer: true)) -> AgentEvent? {
+        AdapterRegistry.event(agent: .codex, payload: payload(json), eventHint: nil, host: host)
+    }
+
+    @Test func realTurnKeepsItsSummary() {
+        #expect(codex(Self.realStop)?.kind
+                == .turnCompleted(summary: "Using **internal storage** for the model cache. The benchmark is downloading."))
+    }
+
+    @Test func suggestionThreadIsIgnored() {
+        for json in Self.suggestionThread { #expect(codex(json) == nil) }
+        let empty = #"{"session_id":"01a14beb-53d4-7d21-bbeb-4a5ce843b3d8","turn_id":"t","transcript_path":null,"cwd":"/Users/me/src/agents","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"default","stop_hook_active":false,"last_assistant_message":"{\"suggestions\":[]}"}"#
+        #expect(codex(empty) == nil)
+    }
+
+    private static let suggestionEnd = #"{"session_id":"01a14be7-7fce-77a1-aea0-1b954fa0a392","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionEnd","reason":"other"}"#
+
+    @Test func suggestionThreadEndStillClearsItsRow() {
+        #expect(codex(Self.suggestionEnd)?.kind == .sessionEnded)
+    }
+
+    // Codex ends each hidden thread minutes later, when Ambient has never seen it.
+    @Test func endOfAnUnseenSuggestionThreadLeavesNoRowOrTask() throws {
+        let store = SessionStore(), tasks = TaskStore()
+        let change = try #require(codex(Self.suggestionEnd).flatMap { store.apply($0) })
+        #expect(store.sessions.isEmpty)
+        #expect(tasks.observe(change) == nil)
+        #expect(tasks.tasks.isEmpty)
+    }
+
+    @Test func forksPeopleMakeAreKept() {
+        let start = #"{"session_id":"01a14c10-0000-7000-8000-000000000001","transcript_path":"/Users/me/.codex/sessions/2026/10/18/rollout-x.jsonl","cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"default","source":"fork"}"#
+        #expect(codex(start)?.kind == .sessionStarted)
+    }
+
+    // A run started with `codex exec --ephemeral` saves nothing either, but it isn't under the app server.
+    @Test func ephemeralExecRunsAreKept() {
+        let exec = HostInfo(agentPid: 8)
+        let session = "01a14c20-0000-7000-8000-000000000002"
+        let start = #"{"session_id":"\#(session)","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"SessionStart","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","source":"startup"}"#
+        let stop = #"{"session_id":"\#(session)","turn_id":"t","transcript_path":null,"cwd":"/Users/me/src/studio","hook_event_name":"Stop","model":"gpt-6.1-sol","permission_mode":"bypassPermissions","stop_hook_active":false,"last_assistant_message":"The benchmark passed."}"#
+        #expect(codex(start, host: exec)?.kind == .sessionStarted)
+        #expect(codex(stop, host: exec)?.kind == .turnCompleted(summary: "The benchmark passed."))
+    }
+
+    // Unreadable arguments leave the host unknown, and an event is only dropped when it's known to be hidden.
+    @Test func anUnknownHostKeepsItsEvents() {
+        #expect(codex(Self.suggestionThread[0], host: nil)?.kind == .sessionStarted)
+    }
+
+    @Test func suggestionTurnsAddNoRows() {
+        let store = SessionStore()
+        for json in [Self.realStop] + Self.suggestionThread {
+            if let e = codex(json) { store.apply(e) }
+        }
+        #expect(store.sessions.map(\.id) == ["codex:01a14bf7-596a-7523-a9db-e5fe30f2e5c8"])
+        #expect(store.sessions.first?.activity
+                == .done(summary: "Using **internal storage** for the model cache. The benchmark is downloading."))
+    }
+
+    @Test func claudeIgnoresTranscriptPath() {
+        #expect(claude(#"{"session_id":"a","transcript_path":null,"hook_event_name":"Stop","last_assistant_message":"Done"}"#)
+                == .turnCompleted(summary: "Done"))
+    }
 }
 
 @Suite struct GeminiAdapterTests {
@@ -173,11 +254,321 @@ private func gemini(_ json: String) -> EventKind? {
     }
 }
 
+@Suite struct AntigravityAdapterTests {
+    @Test func sessionIsTheConversationAndProjectTheFirstWorkspace() {
+        let json = #"{"conversationId":"0b1c-22","workspacePaths":["/src/app","/src/lib"],"modelName":"gemini-3-pro"}"#
+        let event = AdapterRegistry.event(agent: .antigravity, payload: payload(json), eventHint: "SessionStart")
+        #expect(event?.sessionId == "0b1c-22")
+        #expect(event?.cwd == "/src/app")
+        #expect(event?.kind == .sessionStarted)
+    }
+
+    @Test func withoutAConversationThereIsNoEvent() {
+        #expect(antigravity("SessionStart", #"{"session_id":"a"}"#) == nil)
+    }
+
+    @Test func onlyTheFirstModelCallOfATurnIsAPrompt() {
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":0,"initialNumSteps":4}"#) == .promptSubmitted)
+        #expect(antigravity("PreInvocation", #"{"conversationId":"a","invocationNum":3,"initialNumSteps":4}"#) == nil)
+        #expect(antigravity("PostInvocation", #"{"conversationId":"a","invocationNum":0}"#) == nil)
+    }
+
+    @Test func tools() {
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{"CommandLine":"npm test","Cwd":"/src/app"}},"stepIdx":2}"#)
+                == .toolStarted(name: "run_command", detail: "npm test"))
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"name":"view_file","args":{"AbsolutePath":"/src/app/main.swift"}}}"#)
+                == .toolStarted(name: "view_file", detail: "main.swift"))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":""}"#)
+                == .toolFinished(name: "run_command", failed: false))
+        #expect(antigravity("PostToolUse", #"{"conversationId":"a","toolCall":{"name":"run_command","args":{}},"error":"exit status 1"}"#)
+                == .toolFinished(name: "run_command", failed: true))
+    }
+
+    @Test func stop() {
+        #expect(antigravity("Stop", #"{"conversationId":"a","executionNum":1,"terminationReason":"model_stop","fullyIdle":true}"#)
+                == .turnCompleted(summary: nil))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"error","error":"Quota exceeded"}"#)
+                == .turnFailed(message: "Quota exceeded"))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"max_steps_exceeded"}"#)
+                == .turnFailed(message: "Reached its step limit"))
+    }
+
+    /// Payloads as agy 1.4.1 sent them, trimmed of paths.
+    @Test func realAgyPayloads() {
+        let tool = #"{"artifactDirectoryPath":"/b","conversationId":"63d70cb9","modelName":"gemini-3.8-flash-medium","stepIdx":2,"toolCall":{"args":{"AbsolutePath":"/w/notes.txt","toolAction":"Reading notes.txt","toolSummary":"Read notes file"},"name":"view_file"},"transcriptPath":"/t","workspacePaths":["/w"]}"#
+        #expect(antigravity("PreToolUse", tool) == .toolStarted(name: "view_file", detail: "notes.txt"))
+        #expect(antigravity("PreToolUse", #"{"conversationId":"a","toolCall":{"args":{"toolAction":"Searching the web"},"name":"search_web"}}"#)
+                == .toolStarted(name: "search_web", detail: "Searching the web"))
+        let stop = #"{"conversationId":"d5ffbc7b","error":"","executionNum":0,"fullyIdle":true,"terminationReason":"NO_TOOL_CALL","workspacePaths":["/w"]}"#
+        #expect(antigravity("Stop", stop) == .turnCompleted(summary: nil))
+        #expect(antigravity("Stop", #"{"conversationId":"a","terminationReason":"MAX_STEPS_EXCEEDED"}"#) == .turnFailed(message: "Reached its step limit"))
+    }
+
+    @Test func repliesWithADecisionWhereOneIsRequired() {
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PreToolUse") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "Stop") == #"{"decision":"allow"}"# + "\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: "PostToolUse") == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .antigravity, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .gemini, event: nil) == "{}\n")
+        #expect(AdapterRegistry.reply(agent: .claude, event: "Stop") == nil)
+    }
+}
+
+private func event(_ agent: AgentKind, _ json: String, hint: String? = nil) -> AgentEvent? {
+    AdapterRegistry.event(agent: agent, payload: payload(json), eventHint: hint)
+}
+
+@Suite struct CursorAdapterTests {
+    @Test func sessionIsTheConversationAndProjectTheFirstWorkspaceRoot() {
+        let e = event(.cursor, #"{"conversation_id":"c-1","generation_id":"g","hook_event_name":"beforeSubmitPrompt","workspace_roots":["/src/web"],"prompt":"secret"}"#)
+        #expect(e?.sessionId == "c-1")
+        #expect(e?.cwd == "/src/web")
+        #expect(e?.kind == .promptSubmitted)
+    }
+
+    @Test func toolsShowAsWorkingWhenTheyFinish() {
+        // After-the-fact hooks map to toolStarted so the island keeps showing the last tool until stop.
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUse","tool_name":"Shell","tool_input":{"command":"ls"}}"#)?.kind
+                == .toolStarted(name: "Shell", detail: "ls"))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterShellExecution","command":"npm test"}"#)?.kind
+                == .toolStarted(name: "npm test", detail: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"afterFileEdit","file_path":"/src/web/App.swift"}"#)?.kind
+                == .toolStarted(name: "Edit", detail: "App.swift"))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"postToolUseFailure","tool_name":"Shell","failure_type":"error"}"#)?.kind
+                == .toolFinished(name: "Shell", failed: true))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"subagentStart"}"#)?.kind == .subagentStarted)
+    }
+
+    @Test func stopAndSession() {
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"stop","status":"completed","loop_count":0}"#)?.kind == .turnCompleted(summary: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"stop","status":"error"}"#)?.kind == .turnFailed(message: nil))
+        #expect(event(.cursor, #"{"conversation_id":"c","session_id":"c","hook_event_name":"sessionStart"}"#)?.kind == .sessionStarted)
+        #expect(event(.cursor, #"{"conversation_id":"c","hook_event_name":"sessionEnd","reason":"window_close"}"#)?.kind == .sessionEnded)
+    }
+
+    @Test func neverRepliesSoItNeverDecidesAnything() {
+        #expect(AdapterRegistry.reply(agent: .cursor, event: "beforeSubmitPrompt") == nil)
+    }
+
+    @Test func payloadAgentFieldDoesNotRelabelCursorAsCodex() {
+        // Cursor must not share CustomAdapter / ClaudeAdapter naming: ignore payload "agent".
+        let e = event(.cursor, #"{"conversation_id":"c","hook_event_name":"beforeSubmitPrompt","agent":"Codex","model":"codex"}"#)
+        #expect(e?.agent == .cursor)
+        #expect(e?.agentName == nil)
+        var session = Session(agent: .cursor, sessionId: "c", at: Date())
+        session.agentName = e?.agentName
+        #expect(session.agentLabel == "Cursor")
+    }
+}
+
+@Suite struct CopilotAdapterTests {
+    @Test func toolArgsMayBeAJSONString() {
+        let kind = event(.copilot, #"{"sessionId":"s","timestamp":1704614600000,"cwd":"/src/app","toolName":"bash","toolArgs":"{\"command\":\"npm test\"}"}"#, hint: "preToolUse")?.kind
+        #expect(kind == .toolStarted(name: "bash", detail: "npm test"))
+        let object = event(.copilot, #"{"sessionId":"s","toolName":"view","toolArgs":{"path":"/src/app/main.ts"}}"#, hint: "preToolUse")?.kind
+        #expect(object == .toolStarted(name: "view", detail: "main.ts"))
+    }
+
+    @Test func lifecycle() {
+        let start = event(.copilot, #"{"sessionId":"s","cwd":"/src/app","source":"new"}"#, hint: "sessionStart")
+        #expect(start?.kind == .sessionStarted)
+        #expect(start?.cwd == "/src/app")
+        #expect(event(.copilot, #"{"sessionId":"s","prompt":"secret"}"#, hint: "userPromptSubmitted")?.kind == .promptSubmitted)
+        #expect(event(.copilot, #"{"sessionId":"s","stopReason":"end_turn"}"#, hint: "agentStop")?.kind == .turnCompleted(summary: nil))
+        #expect(event(.copilot, #"{"sessionId":"s","toolName":"bash","error":"exit 1"}"#, hint: "postToolUseFailure")?.kind
+                == .toolFinished(name: "bash", failed: true))
+        #expect(event(.copilot, #"{"sessionId":"s","reason":"user_exit"}"#, hint: "sessionEnd")?.kind == .sessionEnded)
+    }
+
+    @Test func permissionPromptsNeedYouAndIdleRemindersDont() {
+        // The payload names the event in PascalCase; the command passes camelCase.
+        #expect(event(.copilot, #"{"sessionId":"s","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Allow bash?"}"#, hint: "notification")?.kind
+                == .needsInput(reason: "permission", message: "Allow bash?"))
+        #expect(event(.copilot, #"{"sessionId":"s","hook_event_name":"Notification","notification_type":"agent_idle","message":"Idle"}"#, hint: "notification") == nil)
+    }
+
+    @Test func onlyUnrecoverableErrorsFailTheTurn() {
+        #expect(event(.copilot, #"{"sessionId":"s","error":{"message":"Rate limited","name":"E"},"recoverable":false}"#, hint: "errorOccurred")?.kind
+                == .turnFailed(message: "Rate limited"))
+        #expect(event(.copilot, #"{"sessionId":"s","error":{"message":"Retrying"},"recoverable":true}"#, hint: "errorOccurred")?.kind
+                == .notice(message: "Retrying"))
+    }
+}
+
+@Suite struct OpenCodeAdapterTests {
+    private func kind(_ json: String) -> EventKind? { event(.opencode, json)?.kind }
+
+    @Test func itsPluginSpeaksClaudesFormat() {
+        let e = event(.opencode, #"{"session_id":"ses_1","hook_event_name":"PreToolUse","cwd":"/src/app","tool_name":"bash","tool_input":{"command":"bun test"}}"#)
+        #expect(e?.agent == .opencode)
+        #expect(e?.kind == .toolStarted(name: "bash", detail: "bun test"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"StopFailure","error_message":"Invalid API key"}"#) == .turnFailed(message: "Invalid API key"))
+    }
+
+    @Test func itsToolsNameFilesInCamelCase() {
+        #expect(kind(#"{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"edit","tool_input":{"filePath":"/src/app/Sources/Need.swift"}}"#)
+                == .toolStarted(name: "edit", detail: "Need.swift"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"apply_patch","tool_input":{"patchText":"*** Update File: a.ts\n*** Add File: b.ts"}}"#)
+                == .toolStarted(name: "apply_patch", detail: "a.ts +1 more"))
+    }
+
+    /// OpenCode asks by permission, and each one says what it needs.
+    @Test func permissionsSayWhatTheyNeed() {
+        func ask(_ fields: String) -> EventKind? { kind(#"{"session_id":"s","hook_event_name":"Permission","#.appending(fields).appending("}")) }
+        #expect(ask(#""permission":"bash","patterns":["bun test *"],"metadata":{"command":"bun test"}"#)
+                == .needsInput(reason: "command", message: "bun test"))
+        #expect(ask(#""permission":"edit","patterns":["src/a.ts","src/b.ts"],"metadata":{"filepath":"src/a.ts, src/b.ts"}"#)
+                == .needsInput(reason: "edit", message: "a.ts +1 more"))
+        #expect(ask(#""permission":"edit","patterns":[],"metadata":{"filepath":"/src/app/README.md"}"#)
+                == .needsInput(reason: "edit", message: "README.md"))
+        #expect(ask(#""permission":"webfetch","patterns":["https://docs.example.com/a"],"metadata":{"url":"https://docs.example.com/a"}"#)
+                == .needsInput(reason: "web", message: "docs.example.com"))
+        #expect(ask(#""permission":"websearch","patterns":["swift testing"],"metadata":{"query":"swift testing"}"#)
+                == .needsInput(reason: "web", message: "swift testing"))
+        #expect(ask(#""permission":"external_directory","patterns":["/etc/*"],"metadata":{"filepath":"/etc/hosts","parentDir":"/etc"}"#)
+                == .needsInput(reason: "access", message: "/etc"))
+        // The same call three times over is asked about as the call.
+        #expect(ask(#""permission":"doom_loop","patterns":["bash"],"metadata":{"tool":"bash","input":{"command":"ls"}}"#)
+                == .needsInput(reason: "command", message: "ls"))
+        // Read says nothing in metadata: its pattern is the file.
+        #expect(ask(#""permission":"read","patterns":["secrets/.env"],"metadata":{}"#)
+                == .needsInput(reason: "permission", message: "Read: .env"))
+        // OpenCode 2 sends the command, or the page, as the only pattern.
+        #expect(ask(#""permission":"shell","patterns":["rm -rf build"]"#) == .needsInput(reason: "command", message: "rm -rf build"))
+        #expect(ask(#""permission":"webfetch","patterns":["https://docs.example.com/a/b"],"metadata":{}"#)
+                == .needsInput(reason: "web", message: "docs.example.com"))
+        #expect(ask(#""permission":"github_create_pr","patterns":["*"],"metadata":{}"#)
+                == .needsInput(reason: "permission", message: "github_create_pr"))
+        #expect(ask(#""permission":"task","patterns":["general"],"metadata":{"description":"Find the flaky test","subagent_type":"general"}"#)
+                == .needsInput(reason: "permission", message: "Task: Find the flaky test"))
+    }
+
+    /// OpenCode 2's background service kept the environment of whatever started it, which says nothing of the session.
+    @Test func eventsFromTheBackgroundServiceKeepNoReturnAddress() {
+        let captured = HostInfo(bundleId: "com.anthropic.claudefordesktop", termProgram: "iTerm.app", pids: [87479],
+                                agentPid: 87479, tty: "/dev/ttys004", hostSessionId: "local_1", tmuxPane: "%3")
+        func host(_ json: String) -> HostInfo? {
+            AdapterRegistry.event(agent: .opencode, payload: payload(json), eventHint: nil, host: captured)?.host
+        }
+        #expect(host(#"{"session_id":"s","hook_event_name":"Stop","service":true}"#) == HostInfo(pids: [87479], agentPid: 87479))
+        #expect(host(#"{"session_id":"s","hook_event_name":"Stop"}"#) == captured)
+    }
+
+    @Test func questionsAndAnswers() {
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[{"question":"Which database?","header":"DB"}]}"#)
+                == .needsInput(reason: "question", message: "Which database?"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[{"question":"","header":"DB"},{"question":"Two?"}]}"#)
+                == .needsInput(reason: "question", message: "DB (+1 more)"))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Question","questions":[]}"#) == .needsInput(reason: "question", message: nil))
+        #expect(kind(#"{"session_id":"s","hook_event_name":"Answered"}"#) == .answered)
+    }
+
+    /// Each event goes to its own process, so the plugin's clock orders them, unless it's far from the hook's.
+    @Test func eventsCarryOpenCodesTime() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func at(_ ts: Double) -> Date? {
+            AdapterRegistry.event(agent: .opencode, payload: HookPayload(json: Data(#"{"session_id":"s","hook_event_name":"Stop","ts":\#(ts)}"#.utf8))!,
+                                  eventHint: nil, now: now)?.timestamp
+        }
+        #expect(at(1_799_999_999_500) == Date(timeIntervalSince1970: 1_799_999_999.5))
+        #expect(at(1_700_000_000_000) == now)
+        #expect(event(.claude, #"{"session_id":"s","hook_event_name":"Stop","ts":1}"#)?.timestamp.timeIntervalSince1970 ?? 0 > 1_000)
+    }
+}
+
+/// Every agent's prompts say what they need.
+@Suite struct WaitingReasonTests {
+    @Test func claudesPermissionRequests() {
+        func ask(_ tool: String, _ input: String) -> EventKind? {
+            claude(#"{"session_id":"a","hook_event_name":"PermissionRequest","tool_name":"\#(tool)","tool_input":\#(input)}"#)
+        }
+        #expect(ask("Edit", #"{"file_path":"/src/app/Sources/Session.swift","old_string":"a","new_string":"b"}"#)
+                == .needsInput(reason: "edit", message: "Session.swift"))
+        #expect(ask("Write", #"{"file_path":"/src/app/notes.md","content":"secret"}"#) == .needsInput(reason: "edit", message: "notes.md"))
+        #expect(ask("WebFetch", #"{"url":"https://docs.swift.org/x","prompt":"summarize"}"#) == .needsInput(reason: "web", message: "docs.swift.org"))
+        #expect(ask("AskUserQuestion", #"{"questions":[{"question":"Ship it today?","header":"Ship","options":[]}]}"#)
+                == .needsInput(reason: "question", message: "Ship it today?"))
+        #expect(ask("ExitPlanMode", ###"{"plan":"## Add OpenCode support\n\n1. Plugin"}"###) == .needsInput(reason: "plan", message: "Add OpenCode support"))
+        #expect(ask("mcp__github__create_pr", #"{"title":"x"}"#) == .needsInput(reason: "permission", message: "github · create_pr"))
+        #expect(ask("Read", #"{"file_path":"/Users/me/.ssh/config"}"#) == .needsInput(reason: "permission", message: "Read: config"))
+    }
+
+    @Test func notificationsNamingATool() {
+        func notice(_ message: String) -> EventKind? {
+            claude(#"{"session_id":"a","hook_event_name":"Notification","notification_type":"permission_prompt","message":"\#(message)"}"#)
+        }
+        #expect(notice("Claude needs your permission to use Write") == .needsInput(reason: "edit", message: nil))
+        #expect(notice("Claude needs your permission to use Fetch") == .needsInput(reason: "web", message: nil))
+        #expect(notice("Claude needs your permission to use linear - get_issue (MCP)")
+                == .needsInput(reason: "permission", message: "linear - get_issue (MCP)"))
+        #expect(notice("Something new is waiting") == .needsInput(reason: "permission", message: "Something new is waiting"))
+    }
+
+    @Test func codexPatches() {
+        let kind = event(.codex, #"{"session_id":"c","hook_event_name":"PermissionRequest","tool_name":"apply_patch","tool_input":{"input":"*** Begin Patch\n*** Update File: src/main.rs\n*** End Patch"}}"#)?.kind
+        #expect(kind == .needsInput(reason: "edit", message: "main.rs"))
+    }
+
+    @Test func geminiDescribesItsConfirmation() {
+        func ask(_ details: String) -> EventKind? {
+            gemini(#"{"session_id":"g","hook_event_name":"Notification","notification_type":"ToolPermission","message":"Tool requires confirmation","details":\#(details)}"#)
+        }
+        #expect(ask(#"{"type":"exec","title":"Shell","command":"npm   install","rootCommand":"npm"}"#) == .needsInput(reason: "command", message: "npm install"))
+        #expect(ask(#"{"type":"edit","title":"Edit","fileName":"app.ts","filePath":"/src/app.ts","fileDiff":"..."}"#) == .needsInput(reason: "edit", message: "app.ts"))
+        #expect(ask(#"{"type":"mcp","title":"MCP","serverName":"github","toolName":"create_pr"}"#) == .needsInput(reason: "permission", message: "github · create_pr"))
+        #expect(ask(#"{"type":"info","title":"Fetch","prompt":"read it","urls":["https://example.com/a"]}"#) == .needsInput(reason: "web", message: "example.com"))
+        #expect(ask(#"{"type":"something_new","title":"Do the thing"}"#) == .needsInput(reason: "permission", message: "Do the thing"))
+    }
+
+    @Test func customAgentsNameTheirNeed() {
+        func kind(_ json: String) -> EventKind? { event(.custom, json)?.kind }
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"command","message":"make deploy"}"#) == .needsInput(reason: "command", message: "make deploy"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"Edit"}"#) == .needsInput(reason: "edit", message: nil))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"dance"}"#) == .needsInput(reason: "question", message: nil))
+    }
+}
+
+@Suite struct CustomAdapterTests {
+    @Test func everyEvent() {
+        func kind(_ json: String) -> EventKind? { event(.custom, json)?.kind }
+        #expect(kind(#"{"session_id":"b","event":"start"}"#) == .sessionStarted)
+        #expect(kind(#"{"session_id":"b","event":"working"}"#) == .promptSubmitted)
+        #expect(kind(#"{"session_id":"b","event":"working","tool":"pytest","detail":"tests/  unit"}"#) == .toolStarted(name: "pytest", detail: "tests/ unit"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","message":"Apply the edit?"}"#) == .needsInput(reason: "question", message: "Apply the edit?"))
+        #expect(kind(#"{"session_id":"b","event":"waiting","reason":"permission"}"#) == .needsInput(reason: "permission", message: nil))
+        #expect(kind(#"{"session_id":"b","event":"done","message":"Shipped"}"#) == .turnCompleted(summary: "Shipped"))
+        #expect(kind(#"{"session_id":"b","event":"error","message":"Build failed"}"#) == .turnFailed(message: "Build failed"))
+        #expect(kind(#"{"session_id":"b","event":"end"}"#) == .sessionEnded)
+        #expect(kind(#"{"session_id":"b","event":"idle"}"#) == .sessionEnded)
+        #expect(kind(#"{"session_id":"b","event":"dance"}"#) == nil)
+        #expect(kind(#"{"event":"done"}"#) == nil)
+    }
+
+    @Test func theAgentNamesItselfBriefly() {
+        let e = event(.custom, #"{"session_id":"b","event":"working","agent":"Aider","cwd":"/src/cli"}"#)
+        #expect(e?.agentName == "Aider")
+        #expect(e?.cwd == "/src/cli")
+        let long = event(.custom, #"{"session_id":"b","event":"working","agent":"\#(String(repeating: "x", count: 60))"}"#)
+        #expect((long?.agentName?.count ?? 0) <= 24)
+    }
+
+    @Test func theEventCanComeFromTheCommandInstead() {
+        #expect(event(.custom, #"{"session_id":"b"}"#, hint: "done")?.kind == .turnCompleted(summary: nil))
+    }
+
+    @Test func longSessionIdsAreCut() {
+        let e = event(.custom, #"{"session_id":"\#(String(repeating: "s", count: 500))","event":"start"}"#)
+        #expect((e?.sessionId.count ?? 0) <= 128)
+    }
+}
+
 @Suite struct ToolNameTests {
     @Test func displayNames() {
         #expect(ToolNames.display("Bash") == "Bash")
         #expect(ToolNames.display("mcp__github__create_pull_request") == "github · create_pull_request")
         #expect(ToolNames.display("run_shell_command") == "Shell")
+        #expect(ToolNames.display("replace_file_content") == "Edit")
+        #expect(ToolNames.display("bash") == "Shell")
         #expect(ToolNames.display("apply_patch") == "Patch")
         #expect(ToolNames.display("replace") == "Edit")
     }

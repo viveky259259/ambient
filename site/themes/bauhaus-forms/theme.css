@@ -1,0 +1,130 @@
+/* Bauhaus forms. Primary colours on unbleached paper, heavy black rules, a lowercase geometric sans and the four
+   elementary forms: circle (working), triangle (needs you), square (done), cross (error). */
+:root {
+  --bg: #efe8d8;
+  --bg-alt: #e5dbc5;
+  --surface: #f7f2e6;
+  --surface-2: #e5dbc5;
+  --ink: #151515;
+  --ink-2: #3b3833;
+  --rule: #151515;
+  --accent: #151515;
+  --on-accent: #efe8d8;
+  --link: #2a4ba8;
+  --band: #151515;
+  --band-ink: #efe8d8;
+  --band-ink-2: #cbc3b2;
+  --band-surface: #232220;
+  --band-rule: rgba(239, 232, 216, 0.3);
+  --waiting: #f0a513;
+  --done: #2f8f57;
+  --error: #d0392b;
+
+  --font-display: "Jost", "Futura", "Avenir Next", "Helvetica Neue", sans-serif;
+  --font-body: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Space Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Space Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-transform: lowercase;
+  --display-tracking: -0.035em;
+  --display-leading: 0.92;
+  --h1-size: clamp(60px, 9.6vw, 148px);
+  --h2-size: clamp(44px, 5.8vw, 80px);
+  --h3-size: 34px;
+  --body-size: 18px;
+  --label-size: 12.5px;
+  --label-tracking: 0.14em;
+  --label-weight: 400;
+  --label-color: #151515;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 3px solid var(--rule);
+  --device-edge: #151515;
+  --edge-strength: 0.4;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+/* A black bar down the left edge, as on a Bauhaus poster, with a yellow circle and a red square at its foot. */
+@media (min-width: 1300px) {
+  body::before { content: ""; position: fixed; left: 0; top: 0; bottom: 0; width: 64px; z-index: 21; pointer-events: none;
+    background: radial-gradient(circle at 32px calc(100% - 112px), #f0b323 14px, transparent 15px), linear-gradient(#d0392b, #d0392b) 18px calc(100% - 62px) / 28px 28px no-repeat, #151515; }
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 3px solid #151515; --accent: #d0392b; --on-accent: #ffffff; }
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: 0.02em; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-display); font-weight: 500; font-size: 18px; text-transform: lowercase; letter-spacing: 0.02em; }
+.nav-links a { color: #151515; }
+.nav-links a:hover { color: #d0392b; }
+
+/* Buttons: a black slab with a yellow circle set in front of the words. */
+.btn { font-family: var(--font-display); font-weight: 700; font-size: 22px; text-transform: lowercase; letter-spacing: 0.02em; padding: 14px 32px 14px 26px; gap: 14px; }
+.btn::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #f0b323; flex: none; }
+.btn.small { font-size: 17px; min-height: 44px; padding: 6px 18px; }
+.btn.small::before, .sheet .btn::before { content: none; }
+.dark { --accent: #efe8d8; --on-accent: #151515; }
+.sheet .inline .btn { font-size: 17px; padding: 8px 16px; }
+.chip, .voice-tab { min-height: 44px; }
+.copy-code { background: transparent; border: 2px solid #151515; }
+
+/* Hero */
+.hero .kicker { color: #151515; }
+.hero h1 { letter-spacing: -0.04em; font-size: clamp(60px, 8.4vw, 128px); }
+.hero-copy .lede { color: #2b2925; }
+.hero-art { width: 100%; max-width: min(560px, 82vw); aspect-ratio: 1; margin: 0 auto; }
+.bhf-forms { width: 100%; }
+.bhf-forms .orb { fill: var(--state, #f0a513); transition: fill 0.8s var(--ease); }
+.bhf-forms .sun { transform-box: fill-box; transform-origin: center; animation: bhf-breathe 6s ease-in-out infinite; }
+@keyframes bhf-breathe { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.02); } }
+.trust { font-family: var(--font-label); font-size: 13.5px; }
+
+/* Sections: a heavy black rule, and each kicker opens with one of the three forms. */
+main > section { border-top: 6px solid #151515; }
+main .kicker { display: flex; align-items: center; gap: 12px; }
+.center .kicker { justify-content: center; }
+main .kicker::before { content: ""; width: 16px; height: 16px; flex: none; background: #2a4ba8; border-radius: 50%; }
+main > section:nth-of-type(3n + 2) .kicker::before { border-radius: 0; background: #d0392b; }
+main > section:nth-of-type(3n) .kicker::before { border-radius: 0; background: #f0b323; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+
+.card { background: var(--surface); border: 3px solid var(--rule); }
+.dark .card { background: var(--band-surface); }
+.card h3 { text-transform: lowercase; letter-spacing: -0.02em; }
+
+/* The four states as the four forms. */
+.states { counter-reset: form; }
+.states .card { border-top: 3px solid var(--rule); position: relative; counter-increment: form; padding-top: 168px; }
+.states .card::before { content: ""; position: absolute; left: 26px; top: 30px; width: 112px; height: 112px; background: var(--state); border-radius: 50%; }
+.states .card:nth-child(2)::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.states .card:nth-child(3)::before { border-radius: 0; background: radial-gradient(#151515 0 0) center / 30px 30px no-repeat, radial-gradient(var(--bg) 0 0) center / 64px 64px no-repeat, var(--state); }
+.states .card:nth-child(4)::before { border-radius: 0; clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
+.states .card::after { content: counter(form, decimal-leading-zero); position: absolute; right: 22px; top: 22px; font-family: var(--font-label); font-size: 13px; letter-spacing: 0.14em; }
+.states .card .orb { position: absolute; left: 82px; top: 86px; translate: -50% -50%; margin: 0; z-index: 1; box-shadow: 0 0 0 3px #151515; }
+.states .card:nth-child(2) .orb { top: 104px; }
+.states .card h3 { font-size: 42px; }
+.agents .card { border-top: 12px solid var(--state); }
+
+.dest { border: 3px solid #151515; background: var(--surface); }
+.dest li { border-top: 2px solid #151515; }
+.dest .where { color: #3b3833; }
+.wallpaper { border: 3px solid #151515; }
+.step { border-radius: 50%; background: #2a4ba8; color: #ffffff; font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+.steps li:nth-child(2) .step { border-radius: 0; background: #d0392b; }
+.steps li:nth-child(3) .step { border-radius: 0; background: #f0b323; color: #151515; }
+.stat { color: #2a4ba8; font-weight: 800; letter-spacing: -0.04em; }
+.faq summary { font-weight: 700; font-size: 22px; text-transform: lowercase; }
+.faq details { border-top: 3px solid #151515; }
+.faq details:last-child { border-bottom: 3px solid #151515; }
+.faq summary::after { color: #d0392b; font-weight: 700; }
+.guide-list a { border: 3px solid #151515; background: var(--surface); }
+.guide-list a:hover { border-color: #2a4ba8; }
+.guide-list strong { font-weight: 700; text-transform: lowercase; font-size: 23px; }
+.voice-panel { border: 3px solid #151515; }
+.voice-panel h3 { text-transform: lowercase; }
+.voice-tablist { border: 3px solid #151515; }
+.voice-flow .end { border: 2px solid #151515; }
+footer { border-top: 6px solid #151515; font-family: var(--font-label); font-size: 12px; }
+dialog { border: 4px solid #151515; }
+dialog .error { color: #b3261e; }

@@ -1,0 +1,125 @@
+/* Illuminated hours. A book of hours: vellum, iron-gall ink, a vermilion rubric, lapis and gold leaf, a vine
+   climbing the margin, illuminated initials, and arched miniatures for the four hours of an agent. */
+:root {
+  --bg: #eadcbb;
+  --bg-alt: #e2d1a9;
+  --surface: #f2e7cc;
+  --surface-2: #e6d6b2;
+  --ink: #2a1c10;
+  --ink-2: #4c3823;
+  --rule: #2a1c10;
+  --accent: #a82a1a;
+  --on-accent: #f8ecd0;
+  --link: #8f2215;
+  --band: #1d377e;
+  --band-ink: #f6ead0;
+  --band-ink-2: #dcd6e8;
+  --band-surface: #22408f;
+  --band-rule: rgba(241, 210, 122, 0.5);
+  --waiting: #e59a12;
+  --done: #3f9a5c;
+  --error: #c8321f;
+
+  --font-display: "IM Fell DW Pica", "Iowan Old Style", Georgia, serif;
+  --font-body: "EB Garamond", "Iowan Old Style", Garamond, Georgia, serif;
+  --font-label: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.005em;
+  --display-leading: 1.04;
+  --h1-size: clamp(50px, 7vw, 104px);
+  --h2-size: clamp(38px, 5vw, 64px);
+  --h3-size: 32px;
+  --body-size: 20px;
+  --label-size: 20px;
+  --label-tracking: 0.06em;
+  --label-transform: none;
+  --label-weight: 400;
+  --label-color: #a82a1a;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --texture: radial-gradient(500px 400px at 12% 14%, rgba(255, 250, 230, 0.55), transparent 70%), radial-gradient(800px 600px at 92% 70%, rgba(160, 120, 60, 0.16), transparent 70%);
+  --band-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Ccircle cx='4' cy='4' r='1.3' fill='%23f1d27a' opacity='.7'/%3E%3Ccircle cx='21' cy='21' r='.9' fill='%23f1d27a' opacity='.6'/%3E%3C/svg%3E");
+  --device-edge: #b08326;
+  --edge-strength: 0.35;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+/* A vine climbs the left margin when the screen has room for one. */
+@media (min-width: 1340px) {
+  body::before { content: ""; position: fixed; left: 14px; top: 0; bottom: 0; width: 84px; z-index: 21; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='136'%3E%3Cpath d='M42 0 C70 34 70 102 42 136' fill='none' stroke='%233d5a2a' stroke-width='3'/%3E%3Cpath d='M42 136 C14 102 14 34 42 0' fill='none' stroke='%233d5a2a' stroke-width='3' opacity='.0'/%3E%3Cellipse cx='70' cy='40' rx='14' ry='5' fill='%234f7a36' transform='rotate(-30 70 40)'/%3E%3Cellipse cx='36' cy='96' rx='14' ry='5' fill='%234f7a36' transform='rotate(30 36 96)'/%3E%3Cpath d='M60 68 Q40 60 22 52' fill='none' stroke='%233d5a2a' stroke-width='1.5'/%3E%3Cg fill='%23a82a1a'%3E%3Ccircle cx='22' cy='45' r='5'/%3E%3Ccircle cx='29' cy='50' r='5'/%3E%3Ccircle cx='26' cy='58' r='5'/%3E%3Ccircle cx='17' cy='58' r='5'/%3E%3Ccircle cx='15' cy='50' r='5'/%3E%3C/g%3E%3Ccircle cx='22' cy='52' r='3.5' fill='%23f1d27a' stroke='%232a1c10' stroke-width='.8'/%3E%3Ccircle cx='64' cy='120' r='4.5' fill='%23b08326' stroke='%232a1c10'/%3E%3C/svg%3E") 0 0 / 84px 136px repeat-y; }
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 2px solid #2a1c10; box-shadow: 0 4px 0 -2px #b08326; }
+.brand { font-family: "UnifrakturMaguntia", "Old English Text MT", serif; font-size: 34px; color: #2a1c10; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-label); font-size: 16.5px; letter-spacing: 0.01em; gap: 16px; }
+.nav-links a { color: #2a1c10; }
+.nav-links a:hover { color: #a82a1a; }
+
+/* Buttons: vermilion with a gold fillet inside, and a fleuron. */
+.btn { font-family: var(--font-label); font-weight: 400; font-size: 24px; letter-spacing: 0.05em; padding: 10px 32px 12px; border: 2px solid #2a1c10; box-shadow: inset 0 0 0 3px #a82a1a, inset 0 0 0 4px #f1d27a; }
+.btn::before { content: "❧"; font-family: var(--font-body); }
+.btn.small { font-size: 18px; min-height: 44px; padding: 6px 16px 8px; }
+.btn.small::before, .sheet .btn::before, .scene-controls .btn::before { content: none; }
+.dark .btn { border-color: #f1d27a; }
+.sheet .inline .btn { font-size: 18px; padding: 8px 16px; }
+.chip, .voice-tab { min-height: 44px; font-family: var(--font-label); font-size: 17px; }
+.copy-code { background: transparent; border: 1px solid #2a1c10; }
+
+/* Hero: the first letter of the heading is an illuminated initial. */
+.hero h1::first-letter, .closing h2::first-letter { font-family: "UnifrakturMaguntia", "Old English Text MT", serif; float: left; font-size: 1.62em; line-height: 0.92; color: #f1d27a; background: #22408f; border: 4px solid #b08326; outline: 2px solid #2a1c10; padding: 0.1em 0.14em 0.04em; margin: 0.08em 0.16em 0 0; text-shadow: 3px 3px 0 #2a1c10; }
+.closing h2::first-letter { float: none; font-size: 1.2em; padding: 0 0.1em; margin-right: 0.08em; }
+.hero .kicker { color: #a82a1a; }
+.hero-copy .lede { color: #2a1c10; font-size: clamp(20px, 2vw, 25px); }
+.hero-art { width: 100%; max-width: min(380px, 70vw); aspect-ratio: 300 / 380; margin: 0 auto; }
+.ilh-mini { width: 100%; }
+.ilh-mini .orb { fill: var(--state, #a797ff); transition: fill 0.8s var(--ease); }
+.ilh-mini .rays { transform-box: fill-box; transform-origin: center; animation: ilh-turn 120s linear infinite; }
+@keyframes ilh-turn { to { transform: rotate(360deg); } }
+.trust { font-family: var(--font-display); font-style: italic; font-size: 21px; }
+.fineprint { font-family: var(--font-mono); font-size: 13.5px; }
+
+/* Rubrics: section headings open with a blackletter capital in vermilion, under a ruled and gilded line. */
+main > section { border-top: 2px solid #2a1c10; box-shadow: inset 0 5px 0 -1px #b08326; }
+main > section::before { content: "❦"; position: absolute; top: -17px; left: 50%; transform: translateX(-50%); padding: 0 14px; font-family: var(--font-body); font-size: 22px; line-height: 30px; color: #a82a1a; background: var(--bg); }
+main > section.alt::before { background: var(--bg-alt); }
+main > section.dark::before { background: var(--band); color: #f1d27a; }
+main h2::first-letter, .card h3::first-letter, .faq summary::first-letter { font-family: "UnifrakturMaguntia", "Old English Text MT", serif; color: #a82a1a; }
+.dark h2::first-letter, .dark .card h3::first-letter { color: #f1d27a; }
+.dark .kicker { color: #f1d27a; }
+
+.card { background: var(--surface); border: 2px solid #2a1c10; outline: 1px solid #b08326; outline-offset: -7px; }
+.dark .card { background: var(--band-surface); border-color: #f1d27a; outline-color: #f1d27a; }
+
+/* The four hours: an arched miniature heads each state. */
+.states .card { border-top: 2px solid #2a1c10; padding-top: 22px; }
+.states .card::before { content: ""; display: block; height: 150px; margin: 0 0 18px; border-radius: 110px 110px 0 0; border: 4px solid #b08326; outline: 2px solid #2a1c10;
+  background: radial-gradient(circle at 50% 58%, var(--state) 0 28px, #f1d27a 29px 33px, transparent 34px), radial-gradient(ellipse 80% 30% at 50% 108%, #3d7436 0 60%, transparent 61%), radial-gradient(#f1d27a 1px, transparent 1.6px) 0 0 / 20px 20px, #1d377e; }
+.states .card h3 { font-size: 34px; }
+.agents .card { border-top: 6px solid var(--state); }
+
+.dest { background: var(--surface); border: 2px solid #2a1c10; }
+.dest li { border-top: 1px solid #b08326; }
+.dest .where { font-family: var(--font-display); font-style: italic; font-size: 17px; color: #4c3823; }
+.wallpaper { border: 4px solid #b08326; outline: 2px solid #2a1c10; }
+.step { background: #22408f; color: #f1d27a; border: 3px solid #b08326; font-family: "UnifrakturMaguntia", serif; font-size: 20px; width: 42px; height: 42px; }
+.stat { color: #a82a1a; font-style: italic; }
+.faq summary { font-size: 23px; }
+.faq details { border-top: 1px solid #2a1c10; }
+.faq details:last-child { border-bottom: 1px solid #2a1c10; }
+.faq summary::after { color: #a82a1a; font-family: var(--font-body); }
+.guide-list a { background: var(--surface); border: 2px solid #2a1c10; }
+.guide-list a:hover { border-color: #a82a1a; }
+.guide-list strong { font-size: 22px; }
+.voice-panel { border: 2px solid #2a1c10; outline: 1px solid #b08326; outline-offset: -8px; }
+.voice-tablist { border: 2px solid #2a1c10; }
+.voice-tab[aria-selected="true"] { background: #a82a1a; color: #f8ecd0; }
+.voice-flow .end { border: 1px solid #2a1c10; font-family: var(--font-label); }
+footer { border-top: 2px solid #2a1c10; box-shadow: inset 0 5px 0 -1px #b08326; font-family: var(--font-body); font-size: 15px; }
+dialog { border: 5px double #b08326; }

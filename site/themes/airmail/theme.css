@@ -1,0 +1,153 @@
+/* Airmail: the page is an envelope with the red and navy striped border; cards are perforated stamps, lists are
+   typed address lines, and the dark bands are navy airmail labels. Rozha One for headings, Figtree for prose,
+   Special Elite for the typewriter. No real postal service's marks. */
+:root {
+  --bg: #f3efe3;
+  --bg-alt: #ebe5d4;
+  --surface: #fffdf6;
+  --surface-2: #f6f1e4;
+  --ink: #1d2233;
+  --ink-2: #444b63;
+  --rule: rgba(29, 34, 51, 0.45);
+  --accent: #1b2f6b;
+  --on-accent: #ffffff;
+  --link: #1b2f6b;
+  --band: #1b2f6b;
+  --band-ink: #f3efe3;
+  --band-ink-2: #c9cfe6;
+  --band-surface: #fffdf6;
+  --band-rule: rgba(243, 239, 227, 0.35);
+  --hero-bg: transparent;
+  --claude: #d97757;
+  --waiting: #f0a81c;
+  --done: #1e8f5b;
+  --error: #c9302c;
+
+  --font-display: "Rozha One", "Iowan Old Style", Georgia, serif;
+  --font-body: "Figtree", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Special Elite", "Courier New", ui-monospace, monospace;
+  --font-mono: "Special Elite", "Courier New", ui-monospace, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.005em;
+  --display-leading: 1.02;
+  --h1-size: clamp(46px, 6.2vw, 88px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 28px;
+  --body-size: 17.5px;
+  --label-size: 15px;
+  --label-tracking: 0.1em;
+  --label-weight: 400;
+  --label-color: #b02824;
+
+  --radius: 0;
+  --radius-sm: 2px;
+  --radius-btn: 4px;
+  --border: 1.5px solid var(--rule);
+  --texture: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1.2px) 0 0 / 6px 6px;
+  --band-texture: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.2px) 0 0 / 6px 6px;
+  --device-edge: #3a4566;
+  --edge-strength: 0.3;
+  --am-stripes: repeating-linear-gradient(-45deg, #c9302c 0 20px, #f3efe3 20px 40px, #1b2f6b 40px 60px, #f3efe3 60px 80px);
+  /* Perforations: a row of holes along every edge of a stamp. */
+  --am-perf: radial-gradient(circle at 50% 50%, transparent 5px, #000 5.5px) -9px -9px / 18px 18px,
+    linear-gradient(#000 0 0) center / calc(100% - 18px) calc(100% - 18px) no-repeat;
+}
+
+/* The envelope's striped border runs round the window. */
+body::before { content: ""; position: fixed; inset: 0; border: 14px solid transparent; border-image: var(--am-stripes) 14; pointer-events: none; z-index: 30; }
+@media (max-width: 760px) { body::before { border-width: 7px; } }
+h1, h2 { color: #1b2f6b; }
+.dark h1, .dark h2 { color: #f3efe3; }
+
+.nav { background: color-mix(in srgb, #f3efe3 92%, transparent); border-bottom: 1.5px solid rgba(29, 34, 51, 0.25); }
+.nav .wrap { height: 70px; }
+.brand { font-family: var(--font-display); font-size: 30px; color: #1b2f6b; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-label); font-size: 15px; letter-spacing: 0; }
+.nav-links a { color: #1d2233; }
+.nav-links a:hover { color: #b02824; }
+
+/* Buttons: a navy airmail label with a white hairline. */
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: 0.01em; padding: 12px 30px 10px; box-shadow: inset 0 0 0 3px #1b2f6b, inset 0 0 0 5px #fff; }
+.btn.small { font-family: var(--font-label); font-size: 15px; min-height: 44px; padding: 8px 16px 6px; }
+.dark .btn { background: #f3efe3; color: #1b2f6b; box-shadow: inset 0 0 0 3px #f3efe3, inset 0 0 0 5px #1b2f6b; }
+
+/* Hero */
+.hero { padding-top: 56px; }
+.hero h1 { margin-bottom: 26px; }
+.hero-copy .lede { font-weight: 500; color: #1d2233; }
+.trust { font-family: var(--font-label); font-size: 16px; }
+.fineprint { font-family: var(--font-label); font-size: 14px; color: #444b63; }
+.copy-code { background: #fffdf6; border: 1.5px dashed #1d2233; }
+.copy-code span { color: #b02824; }
+.hero-art { width: min(580px, 100%); margin: 0 auto; aspect-ratio: 600 / 700; }
+.am { width: 100%; height: auto; overflow: visible; }
+.am text { font-family: var(--font-label); }
+.am .nm { font-family: var(--font-display); font-size: 34px; }
+.am .ds { font-family: var(--font-body); font-weight: 700; font-size: 14.5px; }
+.am .pm { transition: transform 0.9s var(--ease); }
+@media (max-width: 860px) { .hero-art { width: min(420px, 94%); } }
+
+/* Sections: a strip of airmail stripes between them. */
+main > section { border-top: 0; }
+main > section.dark { border-top: 10px solid transparent; border-image: var(--am-stripes) 10; border-bottom: 10px solid transparent; }
+.section-lede, p.body { font-weight: 500; }
+
+/* Stamps */
+.card, .guide-list a { background: #fffdf6; border: 0; padding: 36px 32px; -webkit-mask: var(--am-perf); mask: var(--am-perf); filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.18)); }
+.guide-list a { padding: 30px 28px; }
+.card h3, .guide-list strong { font-family: var(--font-display); color: #1b2f6b; }
+.dark .card { --ink: #1d2233; --ink-2: #444b63; color: #1d2233; }
+.card p { font-size: 16px; }
+/* The four states are coloured stamps inside a white perforated margin. */
+.states .card { --tone: color-mix(in srgb, var(--state) 72%, #000); border: 0; background: linear-gradient(var(--tone), var(--tone)) center / calc(100% - 30px) calc(100% - 30px) no-repeat, repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.1) 0 2px, transparent 2px 5px) center / calc(100% - 30px) calc(100% - 30px) no-repeat, #fffdf6; padding: 34px 32px; color: #fff; }
+.states .card:nth-child(2) { --tone: var(--state); color: #1d2233; }
+.states .card h3 { color: inherit; font-size: 32px; }
+.states .card p { color: inherit; font-weight: 500; }
+.states .card .orb { width: 46px; height: 46px; background: #fffdf6; box-shadow: 0 0 0 3px var(--tone), 0 0 0 5px #fffdf6; }
+.states .card .orb::after { color: var(--tone); font-size: 22px; line-height: 46px; }
+.states .card:nth-child(2) .orb { background: #1d2233; box-shadow: 0 0 0 4px var(--tone), 0 0 0 6px #1d2233; }
+.states .card:nth-child(1) .orb, .states .card:nth-child(2) .orb { background: radial-gradient(circle, currentColor 0 30%, transparent 32% 48%, currentColor 50% 58%, transparent 60%); box-shadow: none; }
+
+/* Address lines */
+.dest { background: transparent; border: 0; box-shadow: none; }
+.dest li { font-family: var(--font-label); font-size: 20px; border-top: 0; border-bottom: 1.5px solid rgba(29, 34, 51, 0.45); padding: 20px 4px 8px; }
+.dest .where { font-family: var(--font-label); font-size: 15px; color: #444b63; }
+.step { background: #b02824; color: #fff; font-family: var(--font-display); font-size: 18px; border-radius: 50%; box-shadow: 0 0 0 3px #f3efe3, 0 0 0 5px #b02824; }
+.stat { color: #1b2f6b; }
+
+/* Questions as a typed form. */
+.faq details { border-top: 0; border-bottom: 1.5px solid rgba(29, 34, 51, 0.45); }
+.faq details:last-child { border-bottom: 1.5px solid rgba(29, 34, 51, 0.45); }
+.faq summary { font-family: var(--font-label); font-size: 19px; }
+.faq summary::after { color: #b02824; }
+
+.voice.tabs-on .voice-tablist { background: #fffdf6; border: 1.5px solid #1d2233; }
+.voice-tab { font-family: var(--font-label); font-size: 15px; color: #1d2233; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: #1b2f6b; color: #fff; }
+.voice-panel { background: #fffdf6; border: 1.5px solid rgba(29, 34, 51, 0.35); box-shadow: 8px 8px 0 rgba(27, 47, 107, 0.12); }
+.voice-panel h3 { color: #1b2f6b; }
+.voice-flow { border-radius: 0; border: 2px dashed rgba(29, 34, 51, 0.35); }
+.voice-flow .end { font-family: var(--font-label); background: #fffdf6; }
+.chip { font-family: var(--font-label); font-size: 15px; min-height: 44px; }
+.wallpaper { border: 0; -webkit-mask: var(--am-perf); mask: var(--am-perf); padding: 36px; }
+
+/* Closing: a postmark ring round the icon. */
+.closing img { box-shadow: 0 0 0 10px #1b2f6b, 0 0 0 12px #f3efe3, 0 0 0 14px #1b2f6b; }
+
+footer { border-top: 0; font-family: var(--font-label); font-size: 14px; padding-bottom: 50px; }
+
+dialog { border: 0; background: #fffdf6; background-image: none; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); }
+dialog::before { content: ""; position: absolute; inset: 0; border: 10px solid transparent; border-image: var(--am-stripes) 10; pointer-events: none; }
+.sheet { padding: 40px 36px 34px; }
+.field input { border: 0; border-bottom: 1.5px solid #1d2233; background: transparent; border-radius: 0; font-family: var(--font-label); }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+@media (max-width: 760px) {
+  .dest li { font-size: 17px; }
+  .btn { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) { .am .pm { transition: none; } }
+.hero .kicker { color: #b02824; }

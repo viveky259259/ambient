@@ -75,6 +75,18 @@ struct PetView: View {
                 PetSessionList(model: model)
             } else if model.peekPinned {
                 PetPeekList(model: model)
+            } else if model.speaking {
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.wave.2.fill").accessibilityHidden(true)
+                    Text(model.speechState == .paused ? "Paused" : "Reading aloud")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer(minLength: 4)
+                    LevelMeter(level: model.speechState == .speaking ? model.speechLevel : 0)
+                    SpeechControls(state: model.speechState, onStop: model.onStopSpeech,
+                                   onPause: model.onPauseSpeech, onResume: model.onResumeSpeech)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
             } else if let s = model.primary {
                 PetBubble(session: s, badge: model.badge, urgentBadge: model.badge?.hasSuffix("needs you") == true)
                     .contentShape(Rectangle())
@@ -93,7 +105,7 @@ struct PetView: View {
     private var accessibilityLabel: String {
         guard let s = model.primary else { return "Ambient pet, asleep. No agent needs you." }
         let lead = model.summary.map { "Ambient pet. \($0). Most urgent" } ?? "Ambient pet, \(Describe.mood(s.mood))"
-        return "\(lead): \(Describe.title(s)), \(Describe.activity(s.activity))"
+        return "\(lead): \(Describe.title(s)), \(Describe.status(s))"
     }
 }
 
@@ -124,7 +136,7 @@ struct PetBubble: View {
                             .background(Capsule().fill(urgentBadge ? Palette.waiting.color.opacity(0.24) : .white.opacity(0.14)))
                     }
                 }
-                Text(Describe.activity(session.activity))
+                Text(Describe.status(session))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
@@ -321,9 +333,10 @@ private struct PetSessionRow: View {
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    AgentTag(agent: session.agent)
+                    AgentTag(agent: session.agent, label: session.agentLabel)
+                    MachineTag(session: session)
                 }
-                Text(Describe.activity(session.activity))
+                Text(Describe.status(session))
                     .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
             }
             Spacer(minLength: 6)

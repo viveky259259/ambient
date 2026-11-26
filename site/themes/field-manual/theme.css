@@ -1,0 +1,124 @@
+/* Field manual: a ruled technical page. Condensed heavy capitals, a typewriter mono for specifications, numbered
+   sections and a signal orange used only as a marker; the hero is Fig. 1, a callout drawing of the island. */
+:root {
+  --bg: #efede6;
+  --bg-alt: #e7e4da;
+  --surface: #f7f5ef;
+  --surface-2: #e9e6dc;
+  --ink: #161614;
+  --ink-2: #46443e;
+  --rule: #161614;
+  --accent: #161614;
+  --on-accent: #efede6;
+  --link: #161614;
+  --band: #161614;
+  --band-ink: #efede6;
+  --band-ink-2: #bcb9b0;
+  --band-surface: #22221f;
+  --band-rule: #55534c;
+  --fm-orange: #ff4f1a;
+
+  --font-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 800;
+  --display-transform: uppercase;
+  --display-tracking: -0.015em;
+  --display-leading: 0.86;
+  --h1-size: clamp(56px, 8.4vw, 124px);
+  --h2-size: clamp(44px, 6.2vw, 88px);
+  --h3-size: 30px;
+  --body-size: 17px;
+  --label-size: 12px;
+  --label-tracking: 0.08em;
+  --label-color: var(--ink);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 1.5px solid var(--rule);
+  --texture: linear-gradient(to right, #16161412 1px, transparent 1px) 0 0 / 110px 100%;
+  --band-texture: linear-gradient(to right, #ffffff0d 1px, transparent 1px) 0 0 / 110px 100%;
+  --device-edge: #161614;
+  --edge-strength: 0.35;
+}
+h1, h2, h3, .faq summary, .guide-list strong, .stat { font-stretch: 68%; }
+h3 { text-transform: uppercase; font-stretch: 75%; letter-spacing: 0; }
+.alt { background-image: var(--texture); }
+
+.nav { background: var(--bg); border-bottom: 1.5px solid var(--ink); }
+.nav .wrap { height: 52px; }
+.brand { font-family: var(--font-mono); font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.nav-links a { color: var(--ink); }
+.btn { font-family: var(--font-mono); font-size: 15px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 16px 28px; }
+.btn::after { content: "→"; }
+.btn.small { background: var(--fm-orange); color: #161614; min-height: 40px; font-size: 13px; padding: 8px 14px; }
+.btn.small::after { content: "↓"; }
+.scene-controls .btn::after, .sheet .btn::after { content: none; }
+.chip, .voice-tab { font-family: var(--font-mono); text-transform: uppercase; font-size: 13px; letter-spacing: 0.06em; }
+.chip { border: 1.5px solid var(--ink); }
+
+/* Hero: the abstract beside the headline, Fig. 1 under both. Set here as well as by meta.json's "under". */
+.hero { padding-top: 64px; }
+html[data-theme] .hero-grid { text-align: left; gap: 56px; }
+html[data-theme] .hero-art { order: 2; aspect-ratio: 1320 / 520; min-height: 0; }
+.hero-copy { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 7%; align-items: start; }
+.hero-copy > * { grid-column: 2; }
+.hero-copy h1 { grid-column: 1; grid-row: 1 / span 9; margin: 0; }
+.hero .kicker::before { content: "§0 — "; color: #a8360a; }
+html[data-theme] .hero-copy .lede { margin: 0 0 30px; font-size: 21px; color: var(--ink); max-width: 460px; }
+html[data-theme] .hero .cta-row { justify-content: flex-start; }
+.trust { font-family: var(--font-mono); font-size: 13px; line-height: 1.8; }
+.fineprint { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
+.copy-code { background: transparent; border: 1.5px solid var(--ink); }
+@media (max-width: 860px) {
+  .hero-copy { grid-template-columns: 1fr; }
+  .hero-copy > *, .hero-copy h1 { grid-column: 1; grid-row: auto; }
+  .hero-copy h1 { margin: 0 0 24px; }
+  html[data-theme] .hero-art { aspect-ratio: auto; height: 300px; }
+}
+.hero-art .fm-fig { width: 100%; height: 100%; display: block; border: 1.5px solid var(--ink); background: #f7f5ef; }
+.fm-fig text { font-family: var(--font-mono); fill: var(--ink); }
+.fm-fig .st { fill: var(--state, var(--waiting)); transition: fill 0.6s var(--ease); }
+
+/* Sections are numbered like a manual's. */
+main { counter-reset: sec; }
+main .kicker { counter-increment: sec; }
+main .kicker::before { content: "§" counter(sec) " — "; color: #a8360a; }
+.dark .kicker::before { color: var(--fm-orange); }
+.dark .kicker { color: var(--band-ink); }
+main > section { border-top: 1.5px solid var(--ink); }
+.section-lede { color: var(--ink); }
+.card { background: var(--surface); }
+.dark .card { background: var(--band-surface); }
+.states { grid-template-columns: 1fr; gap: 0; border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.states .card { display: grid; grid-template-columns: 90px 300px 1fr; align-items: center; min-height: 0; padding: 22px 0; background: transparent; border: 0; border-top: 1px solid #16161433; }
+.states .card:first-child { border-top: 0; }
+.states .card .orb, .states .card .orb.big { width: 44px; height: 22px; border-radius: 0; margin: 0; box-shadow: none; animation: none; }
+.states .card h3 { font-size: 36px; margin: 0; }
+.states .card p { font-size: 17px; color: var(--ink); }
+@media (max-width: 760px) {
+  .states .card { grid-template-columns: 64px 1fr; row-gap: 8px; }
+  .states .card p { grid-column: 2; }
+}
+.agents .card .orb { border-radius: 0; box-shadow: none; }
+.dest li { font-size: 17px; }
+.dest .where { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.step { border-radius: 0; background: var(--ink); color: var(--bg); font-family: var(--font-mono); }
+.stat { color: #a8360a; font-weight: 800; text-transform: uppercase; }
+.faq summary { font-family: var(--font-body); font-stretch: 100%; font-weight: 600; font-size: 19px; }
+.faq summary::after { font-family: var(--font-mono); color: var(--ink); }
+.guide-list strong { font-weight: 800; text-transform: uppercase; font-size: 24px; line-height: 1; }
+.voice-steps li::before { border-radius: 0; color: #161614; }
+footer { border-top: 1.5px solid var(--ink); font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+dialog { border: 1.5px solid var(--ink); }
+.sheet h2 { font-size: 40px; }
+
+/* The MacBook screen is class="display", which picks up the display type role; keep the picture of the app as it is. */
+.macbook .display { text-transform: none; letter-spacing: normal; font-stretch: 100%; font-weight: 400; font-style: normal; line-height: normal; }
+
+/* Dark bands: the ink button would vanish on the band, so it turns over. */
+.dark .btn { background: var(--band-ink); color: var(--band); }

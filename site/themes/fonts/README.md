@@ -1,0 +1,85 @@
+# Theme fonts
+
+Latin subsets of these families, copied from Google Fonts by `scripts/build-themes.mjs`. Each is free to use and redistribute under the SIL Open Font License 1.1 or the Apache License 2.0; the licence and authors of each are on its page at https://fonts.google.com/specimen/<Family+Name>.
+
+- Anonymous Pro
+- Anton
+- Archivo
+- Archivo Black
+- Archivo Narrow
+- Atkinson Hyperlegible
+- Azeret Mono
+- B612
+- B612 Mono
+- Barlow
+- Barlow Condensed
+- Big Shoulders Display
+- Bodoni Moda
+- Bowlby One
+- Bricolage Grotesque
+- Caveat
+- Caveat Brush
+- Cormorant Garamond
+- Courier Prime
+- Crimson Pro
+- Cutive Mono
+- DM Mono
+- DM Sans
+- DM Serif Display
+- EB Garamond
+- Familjen Grotesk
+- Figtree
+- Fira Code
+- Fraunces
+- Geist
+- Geist Mono
+- Hanken Grotesk
+- IBM Plex Mono
+- IM Fell DW Pica
+- IM Fell English
+- IM Fell English SC
+- Inconsolata
+- Instrument Sans
+- Instrument Serif
+- Inter Tight
+- Italiana
+- JetBrains Mono
+- Josefin Sans
+- Jost
+- Karla
+- Libre Caslon Display
+- Libre Caslon Text
+- Libre Franklin
+- Manrope
+- Marcellus
+- Marcellus SC
+- Martian Mono
+- Mulish
+- Newsreader
+- Old Standard TT
+- Outfit
+- Overpass
+- Overpass Mono
+- Playfair Display
+- Poiret One
+- Public Sans
+- Rozha One
+- Saira Condensed
+- Share Tech Mono
+- Shippori Mincho
+- Six Caps
+- Sora
+- Space Grotesk
+- Space Mono
+- Special Elite
+- Spectral
+- Spline Sans Mono
+- Syne
+- Tilt Neon
+- Ultra
+- Unbounded
+- UnifrakturMaguntia
+- Work Sans
+- Yellowtail
+- Young Serif
+- Zen Kaku Gothic New

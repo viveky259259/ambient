@@ -1,0 +1,13 @@
+{
+  "name": "Elevator panel",
+  "set": "machines",
+  "inspiration": "A lift's brushed-steel car panel: a floor dial whose needle points at the most urgent state, and lit call buttons",
+  "order": 29,
+  "hero": "split",
+  "fonts": [
+    { "family": "Josefin Sans", "axes": "wght@300;600;700" },
+    { "family": "Crimson Pro", "axes": "ital,wght@0,400;0,600;1,400" },
+    { "family": "Share Tech Mono", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "A free, native macOS app", "h1": "Know which floor your agents are on." }
+}

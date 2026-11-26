@@ -12,7 +12,7 @@ struct IslandGeometry: Equatable {
     let centerX: CGFloat
 
     /// The panel is big enough for the largest presentation and never resizes.
-    static let panelSize = CGSize(width: 560, height: 420)
+    static let panelSize = CGSize(width: 560, height: 640)
 
     var panelFrame: CGRect {
         CGRect(x: centerX - Self.panelSize.width / 2, y: screenFrame.maxY - Self.panelSize.height,

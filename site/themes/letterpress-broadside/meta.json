@@ -1,0 +1,15 @@
+{
+  "name": "Letterpress broadside",
+  "set": "craft",
+  "inspiration": "A wood-type letterpress broadside on yellow stock: fat slab capitals, condensed caps, printer's ornaments and four inks slightly out of register",
+  "order": 48,
+  "hero": "under",
+  "fonts": [
+    { "family": "Ultra", "axes": "wght@400" },
+    { "family": "Six Caps", "axes": "wght@400" },
+    { "family": "Playfair Display", "axes": "ital,wght@1,800;1,900" },
+    { "family": "Old Standard TT", "axes": "ital,wght@0,400;0,700;1,400" },
+    { "family": "Cutive Mono", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "❦ A free, native macOS app for coding agents ❦", "h1": "Glance, don't babysit." }
+}

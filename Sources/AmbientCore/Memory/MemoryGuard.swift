@@ -1,0 +1,81 @@
+import Foundation
+
+/// Keeps secrets out of shared memory: whatever one agent shares, every agent on the Mac can read.
+public enum MemoryGuard {
+    private static let secretNames: Set<String> = [
+        ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials", "credentials.json",
+        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
+    ]
+    private static let secretExtensions: Set<String> = ["pem", "key", "p12", "pfx", "keychain", "keychain-db"]
+    /// `.env.example` and the like are templates, meant to be shared.
+    private static let envTemplates: Set<String> = ["example", "sample", "template", "dist"]
+    /// Lowercase: APFS doesn't care how a folder is spelled.
+    private static let secretFolders = ["/.ssh/", "/.aws/", "/.gnupg/", "/library/keychains/"]
+
+    /// Why this text shouldn't be shared, or nil.
+    public static func problem(withText text: String) -> String? {
+        guard let secret = SecretPatterns.firstMatch(in: text) else { return nil }
+        return "That looks like it contains \(secret.what). Every agent on this Mac can read shared memory, so Ambient "
+            + "doesn't share secrets. Leave it out, or say where the agent can find it instead."
+    }
+
+    /// Why the file at `path` shouldn't be shared, judged by its name and folder, or nil.
+    public static func problem(withFilePath path: String) -> String? {
+        let name = (path as NSString).lastPathComponent.lowercased()
+        let ext = (name as NSString).pathExtension
+        let isEnv = name == ".env" || ext == "env" || (name.hasPrefix(".env.") && !envTemplates.contains(ext))
+        let what: String
+        if isEnv || secretNames.contains(name) || secretExtensions.contains(ext) {
+            what = name
+        } else if let folder = secretFolders.first(where: { path.lowercased().contains($0) }) {
+            what = "Anything in \(folder == "/library/keychains/" ? "your keychains folder" : "~\(folder.dropLast())")"
+        } else {
+            return nil
+        }
+        return "\(what) usually holds secrets, and every agent on this Mac can read shared memory, so Ambient "
+            + "doesn't share it."
+    }
+}
+
+/// The folder a project's shared memory belongs to.
+public enum MemoryProject {
+    /// A path as an agent gave it, with `~` expanded and made absolute against `folder`, where it works. Not against
+    /// the project's root: from a worktree, that's another checkout, with other files.
+    public static func path(_ path: String, in folder: String) -> String {
+        let expanded = (path.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: expanded, relativeTo: URL(fileURLWithPath: folder, isDirectory: true))
+            .standardizedFileURL.path
+    }
+
+    /// The repository's root for a folder inside it, with git worktrees mapped to the main checkout so they share
+    /// memory. Outside a repository, the folder itself.
+    public static func root(for folder: String, fileManager: FileManager = .default) -> String {
+        let start = URL(fileURLWithPath: (folder as NSString).expandingTildeInPath).standardizedFileURL
+            .resolvingSymlinksInPath().path
+        var dir = start
+        while true {
+            let git = (dir as NSString).appendingPathComponent(".git")
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: git, isDirectory: &isDirectory) {
+                if isDirectory.boolValue { return dir }
+                // A worktree's .git is a file: "gitdir: /repo/.git/worktrees/<name>", or relative to the worktree.
+                if let text = try? String(contentsOfFile: git, encoding: .utf8),
+                   let line = text.split(separator: "\n").first(where: { $0.hasPrefix("gitdir:") }) {
+                    let gitdir = line.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces)
+                    if let range = gitdir.range(of: "/worktrees/", options: .backwards) {
+                        let common = URL(fileURLWithPath: String(gitdir[..<range.lowerBound]), relativeTo: URL(fileURLWithPath: dir))
+                            .standardizedFileURL.resolvingSymlinksInPath()
+                        // A bare repository is its own root: /repo/.git's root is /repo, /repo.git's is itself.
+                        return (common.lastPathComponent == ".git" ? common.deletingLastPathComponent() : common).path
+                    }
+                }
+                return dir
+            }
+            // Paths, not URLs: on older macOS, URL's deletingLastPathComponent() turns "/" into "/..", so a
+            // folder outside any repository would be walked up forever.
+            let parent = (dir as NSString).deletingLastPathComponent
+            if parent == dir || parent.isEmpty { return start }
+            dir = parent
+        }
+    }
+}

@@ -1,0 +1,117 @@
+/* Azulejo wall. Glazed tin-white tiles painted in cobalt with a gold rim, a tiled strip down the left edge with a
+   gold border, a classical display face, and cobalt bands patterned like a tiled wall. */
+:root {
+  --bg: #f7f3e8;
+  --bg-alt: #eee7d4;
+  --surface: #fbf9f1;
+  --surface-2: #efe9d8;
+  --ink: #14254f;
+  --ink-2: #33416b;
+  --rule: #14254f;
+  --accent: #1e4aa8;
+  --on-accent: #ffffff;
+  --link: #1e4aa8;
+  --band: #14254f;
+  --band-ink: #f7f3e8;
+  --band-ink-2: #d3daee;
+  --band-surface: #1b3066;
+  --band-rule: rgba(247, 243, 232, 0.3);
+  --waiting: #f0a513;
+  --done: #2a9a5a;
+  --error: #d83a2b;
+
+  --font-display: "Marcellus", "Optima", "Palatino", Georgia, serif;
+  --font-body: "Mulish", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Fira Code", ui-monospace, Menlo, monospace;
+  --font-mono: "Fira Code", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.005em;
+  --display-leading: 1.05;
+  --h1-size: clamp(46px, 6.4vw, 92px);
+  --h2-size: clamp(36px, 4.6vw, 60px);
+  --h3-size: 28px;
+  --body-size: 18px;
+  --label-size: 12.5px;
+  --label-tracking: 0.12em;
+  --label-weight: 500;
+  --label-color: #855900;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 3px solid var(--rule);
+  --card-shadow: 6px 6px 0 rgba(20, 37, 79, 0.2);
+  --texture: radial-gradient(700px 460px at 80% 6%, rgba(224, 165, 38, 0.1), transparent 70%);
+  --band-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='%231a2f63'%3E%3Ccircle r='30'/%3E%3Ccircle cx='80' r='30'/%3E%3Ccircle cy='80' r='30'/%3E%3Ccircle cx='80' cy='80' r='30'/%3E%3Crect x='26' y='26' width='28' height='28' transform='rotate(45 40 40)'/%3E%3C/g%3E%3Cg fill='%2314254f'%3E%3Ccircle r='17'/%3E%3Ccircle cx='80' r='17'/%3E%3Ccircle cy='80' r='17'/%3E%3Ccircle cx='80' cy='80' r='17'/%3E%3C/g%3E%3C/svg%3E");
+  --device-edge: #14254f;
+  --edge-strength: 0.4;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+
+/* A column of painted tiles down the left edge, with a gold border, on screens wide enough to spare it. */
+@media (min-width: 1340px) {
+  body::before { content: ""; position: fixed; left: 0; top: 0; bottom: 0; width: 80px; z-index: 21; pointer-events: none; border-right: 4px solid #14254f; box-shadow: 4px 0 0 #e0a526, 8px 0 0 #14254f;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23fbf9f1' stroke='%23cfd3dc' stroke-width='1.5'/%3E%3Cg fill='%231e4aa8'%3E%3Ccircle r='30'/%3E%3Ccircle cx='80' r='30'/%3E%3Ccircle cy='80' r='30'/%3E%3Ccircle cx='80' cy='80' r='30'/%3E%3C/g%3E%3Cg fill='%23fbf9f1'%3E%3Ccircle r='17'/%3E%3Ccircle cx='80' r='17'/%3E%3Ccircle cy='80' r='17'/%3E%3Ccircle cx='80' cy='80' r='17'/%3E%3C/g%3E%3Cg fill='%23e0a526'%3E%3Ccircle r='8'/%3E%3Ccircle cx='80' r='8'/%3E%3Ccircle cy='80' r='8'/%3E%3Ccircle cx='80' cy='80' r='8'/%3E%3C/g%3E%3Cg fill='%231e4aa8'%3E%3Crect x='26' y='26' width='28' height='28' transform='rotate(45 40 40)'/%3E%3Crect x='26' y='26' width='28' height='28'/%3E%3C/g%3E%3Ccircle cx='40' cy='40' r='8' fill='%23fbf9f1'/%3E%3C/svg%3E") 0 0 / 80px 80px; }
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 3px solid #14254f; box-shadow: 0 3px 0 #e0a526; --accent: #14254f; }
+.brand { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.14em; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-weight: 600; font-size: 15px; letter-spacing: 0; }
+.nav-links a { color: #14254f; }
+.nav-links a:hover { color: #1e4aa8; }
+
+/* Buttons: a cobalt tile, a navy rim and a gold outline. */
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 0.06em; border: 3px solid #14254f; outline: 3px solid #e0a526; outline-offset: 3px; padding: 14px 32px; margin: 6px; }
+.btn.small { font-size: 16px; min-height: 44px; padding: 6px 18px; outline-width: 2px; outline-offset: 2px; margin: 4px; }
+.dark { --accent: #e0a526; --on-accent: #14254f; }
+.dark .btn { border-color: #f7f3e8; outline-color: #f7f3e8; }
+.sheet .inline .btn { font-size: 16px; padding: 8px 16px; margin: 4px; }
+.chip, .voice-tab { min-height: 44px; }
+.copy-code { background: #fbf9f1; border: 2px solid #14254f; }
+
+/* Hero */
+.hero .kicker { color: #855900; }
+.hero-copy .lede { color: #1b2a52; }
+.hero-art { width: 100%; max-width: min(480px, 84vw); aspect-ratio: 1; margin: 0 auto; }
+.azl-panel { width: 100%; border: 4px solid #14254f; box-shadow: 8px 8px 0 rgba(20, 37, 79, 0.2); }
+.azl-panel .live { fill: var(--state, #6b5cf0); transition: fill 0.8s var(--ease); }
+.azl-panel .live-rim { stroke: var(--state, #6b5cf0); transition: stroke 0.8s var(--ease); }
+.trust { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; }
+
+/* Section heads sit on a navy rule with a gold line under it, like a tile frieze. */
+main > section { border-top: 3px solid #14254f; box-shadow: inset 0 3px 0 #e0a526; }
+main > section.dark { border-top-color: #e0a526; box-shadow: none; }
+.kicker { color: var(--label-color); }
+.dark .kicker { color: #f1c766; }
+
+.card { background: var(--surface); border: 4px solid #14254f; position: relative; }
+.dark .card { background: var(--band-surface); border-color: #e0a526; box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.3); }
+
+/* The four glazes: each state card carries a painted tile in its colour. */
+.states .card { border-top: 4px solid #14254f; padding-right: 100px; }
+.states .card::after { content: ""; position: absolute; right: 18px; top: 18px; width: 64px; height: 64px; border: 3px solid #14254f;
+  background: radial-gradient(circle, #fbf9f1 0 7px, var(--state) 8px 15px, #fbf9f1 16px 19px, transparent 20px), radial-gradient(circle at 0 0, var(--state) 0 14px, transparent 15px), radial-gradient(circle at 100% 0, var(--state) 0 14px, transparent 15px), radial-gradient(circle at 0 100%, var(--state) 0 14px, transparent 15px), radial-gradient(circle at 100% 100%, var(--state) 0 14px, transparent 15px), #fbf9f1; }
+.states .card h3 { font-size: 30px; }
+.agents .card { border-top: 10px solid var(--state); }
+
+.dest { border: 4px solid #14254f; box-shadow: var(--card-shadow); }
+.dest li { border-top: 2px solid #cfd3dc; }
+.dest .where { color: #855900; }
+.wallpaper { border: 4px solid #14254f; }
+.step { background: #1e4aa8; color: #ffffff; border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); width: 46px; height: 46px; font-family: var(--font-display); font-size: 17px; }
+.stat { color: #1e4aa8; }
+.faq summary { font-size: 22px; }
+.faq details { border-top: 2px solid #14254f; }
+.faq details:last-child { border-bottom: 2px solid #14254f; }
+.faq summary::after { color: #855900; }
+.guide-list a { border: 3px solid #14254f; background: #fbf9f1; box-shadow: var(--card-shadow); }
+.guide-list a:hover { border-color: #1e4aa8; }
+.voice-panel { border: 4px solid #14254f; }
+.voice-tablist { border: 3px solid #14254f; }
+.voice-tab[aria-selected="true"] { background: #1e4aa8; color: #ffffff; }
+.voice-flow .end { border: 2px solid #14254f; }
+footer { border-top: 3px solid #14254f; box-shadow: inset 0 3px 0 #e0a526; font-family: var(--font-label); font-size: 12px; }
+dialog { border: 4px solid #14254f; outline: 3px solid #e0a526; outline-offset: -10px; }
+@media (min-width: 1340px) { footer .wrap, .nav .wrap { padding-left: 40px; } }

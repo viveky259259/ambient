@@ -1,0 +1,15 @@
+{
+  "name": "Illuminated hours",
+  "set": "culture",
+  "inspiration": "A medieval book of hours: vellum, a vermilion rubric, lapis and gold leaf, a vine in the margin, illuminated initials and arched miniatures",
+  "order": 25,
+  "hero": "split",
+  "fonts": [
+    { "family": "UnifrakturMaguntia", "axes": "wght@400" },
+    { "family": "IM Fell DW Pica", "axes": "ital@0;1" },
+    { "family": "IM Fell English SC", "axes": "wght@400" },
+    { "family": "EB Garamond", "axes": "ital,wght@0,400;0,600;1,400" },
+    { "family": "IBM Plex Mono", "axes": "wght@400" }
+  ],
+  "copy": { "kicker": "A free, native macOS app · for Claude Code, Codex & Gemini CLI", "h1": "Glance, don't babysit." }
+}

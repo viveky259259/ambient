@@ -1,4 +1,5 @@
 import AmbientCore
+import AppKit
 import SwiftUI
 
 /// Connect, update or remove Ambient's hooks for each agent.
@@ -7,14 +8,13 @@ struct AgentsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
-            PaneHeader(pane: .agents)
             SettingsSection(footer: "Ambient adds background hooks that never slow your agent down, keeps a backup of every file it edits, and removes only its own entries.") {
-                ForEach(Array(AgentKind.allCases.enumerated()), id: \.element) { index, agent in
+                ForEach(Array(AgentKind.hooked.enumerated()), id: \.element) { index, agent in
                     if index > 0 { SettingsDivider() }
                     AgentRow(agent: agent,
                              state: setup.agentStates[agent] ?? .notInstalled,
                              error: setup.agentErrors[agent],
-                             path: setup.installer.configURL(agent).path
+                             path: (setup.installer.configURL(agent)?.path ?? "")
                                  .replacingOccurrences(of: setup.paths.userHome.path, with: "~"),
                              install: { setup.install(agent) },
                              uninstall: { setup.uninstall(agent) })
@@ -40,8 +40,17 @@ private struct AgentRow: View {
             }
             .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(Theme.Fonts.rowEmphasis)
-                Text(path).font(Theme.Fonts.mono).foregroundStyle(.secondary).textSelection(.enabled)
+                // The config file it edits is in the tooltip and the context menu, not in the way.
+                HStack(spacing: Theme.Space.xs) {
+                    Text(title).font(Theme.Fonts.rowEmphasis).help(path)
+                    if agent.isBeta { StatusBadge("Beta", .neutral) }
+                }
+                if let note {
+                    Text(note)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if agent == .codex, state == .installed {
                     Text("Codex runs new hooks only after you approve them: type /hooks in Codex once.")
                         .font(Theme.Fonts.caption)
@@ -60,6 +69,17 @@ private struct AgentRow: View {
             action
         }
         .settingsRowPadding()
+        .contextMenu {
+            if !path.isEmpty {
+                Button("Copy Config File Path") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(path, forType: .string)
+                }
+                Button("Show Config File in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: (path as NSString).expandingTildeInPath)])
+                }
+            }
+        }
     }
 
     private var title: String {
@@ -67,6 +87,22 @@ private struct AgentRow: View {
         case .claude: "Claude Code"
         case .codex: "Codex CLI"
         case .gemini: "Gemini CLI"
+        case .antigravity: "Antigravity"
+        case .cursor: "Cursor"
+        case .copilot: "Copilot CLI"
+        case .opencode: "OpenCode"
+        case .custom: "Custom agent"
+        }
+    }
+
+    /// What a partial or beta connection shows, and what it can't. Beta shows as a badge by the name.
+    private var note: String? {
+        switch agent {
+        case .antigravity: "Prompts, tools and finished or failed turns. It never shows as needing you: Antigravity has no permission hook."
+        case .opencode: "OpenCode 1.4 or later. OpenCode 2 runs plugins in its background service, so a click can't bring back its terminal."
+        case .cursor: "Prompts, tools (as they finish), subagents and finished turns. It never shows as needing you: Ambient uses no hook that could block Cursor."
+        case .copilot: "Prompts, tools, permission prompts, questions, subagents and errors."
+        default: nil
         }
     }
 

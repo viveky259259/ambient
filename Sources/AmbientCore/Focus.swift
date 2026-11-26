@@ -1,4 +1,5 @@
 import Foundation
+import AmbientContracts
 
 public enum TerminalApp: String, Codable, Sendable {
     case terminal, iterm
@@ -30,6 +31,8 @@ public enum FocusPlanner {
 
     /// Routes to try in order. Everything that reaches a script, command or URL is validated here.
     public static func routes(for s: Session, userHome: String = NSHomeDirectory()) -> [FocusRoute] {
+        // A remote session lives on another machine: no local app, tab, pane or URL is its.
+        guard s.origin == nil else { return [] }
         var routes: [FocusRoute] = []
         let host = s.host
 
@@ -58,7 +61,10 @@ public enum FocusPlanner {
         }
 
         let hints = titleHints(cwd: s.cwd, userHome: userHome)
-        if !hints.isEmpty, host?.bundleId != claudeDesktop, !(host?.bundleId == codexApp && s.agent == .codex) {
+        // Cursor: prefer raising the project window in the editor before a bare activate.
+        if s.agent == .cursor, !hints.isEmpty {
+            routes.append(.window(titleHints: hints))
+        } else if !hints.isEmpty, host?.bundleId != claudeDesktop, !(host?.bundleId == codexApp && s.agent == .codex) {
             routes.append(.window(titleHints: hints))
         }
         routes.append(.activate)

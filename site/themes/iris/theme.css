@@ -1,0 +1,116 @@
+/* Iris — an ophthalmic plate on rose paper. Oxblood hairlines, DM Serif headings, annotations that hang from a
+   rule with a lettered key, lens-shaped buttons, and an iris whose four pigments are Ambient's states. */
+:root {
+  --bg: #f1dcd2;
+  --bg-alt: #ead0c4;
+  --surface: #f7e8e1;
+  --surface-2: #ead3c8;
+  --ink: #25110f;
+  --ink-2: #4b2c28;
+  --rule: #6a1c28;
+  --accent: #25110f;
+  --on-accent: #f1dcd2;
+  --link: #6a1c28;
+  --oxblood: #6a1c28;
+  --band: #2a1013;
+  --band-ink: #f6e4dc;
+  --band-ink-2: #d4b3aa;
+  --band-surface: #3a181c;
+  --band-rule: #7d3a42;
+  --claude: #c75a37;
+  --codex: #0e8a6a;
+  --gemini: #2c58a6;
+  --waiting: #b87008;
+  --done: #1f7a4c;
+  --error: #b02230;
+
+  --font-display: "DM Serif Display", "Didot", Georgia, serif;
+  --font-body: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-label: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.025em;
+  --display-leading: 1;
+  --h1-size: clamp(56px, 9vw, 150px);
+  --h2-size: clamp(38px, 5.2vw, 68px);
+  --h3-size: 30px;
+  --body-size: 18.5px;
+  --label-size: 11.5px;
+  --label-tracking: 0.2em;
+  --label-weight: 500;
+  --label-color: #6a1c28;
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 50% / 100%;
+  --border: 1.5px solid var(--rule);
+  --texture: radial-gradient(900px 700px at 78% 30%, #f7e6de, transparent 70%);
+  --device-edge: #6a1c28;
+  --edge-strength: 0.35;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1.5px solid var(--oxblood); }
+.nav .wrap { height: 74px; }
+.brand { font-family: var(--font-display); font-size: 30px; color: var(--oxblood); text-transform: lowercase; flex: none; margin-right: 8px; }
+.brand img { border-radius: 50%; }
+.nav-links { font-family: var(--font-label); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; gap: 18px; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 21px; letter-spacing: 0; padding: 15px 40px; }
+.btn.small { background: var(--oxblood); font-family: var(--font-label); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 22px; }
+.dark .btn { background: var(--band-ink); color: var(--band); }
+.copy-code { background: var(--surface); border-color: var(--oxblood); }
+
+/* Hero */
+.hero h1 em, .hero h1 { font-weight: 400; }
+.hero .kicker { color: var(--oxblood); }
+.hero-copy .lede { color: var(--ink); }
+.trust { font-style: italic; font-size: 17px; }
+.fineprint { font-family: var(--font-label); font-size: 12px; color: #5a3a35; }
+.hero-art { width: 100%; max-width: 620px; margin: 0 auto; aspect-ratio: 1; min-height: 0; }
+.ir-plate { position: relative; width: 100%; height: 100%; }
+.ir-plate canvas, .ir-plate svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ir-plate text { font-family: var(--font-label); }
+.ir-mark { transform-box: view-box; transform-origin: 500px 500px; transform: rotate(225deg); transition: transform 1.2s var(--spring); }
+html[data-mood="working"] .ir-mark { transform: rotate(45deg); }
+html[data-mood="done"] .ir-mark { transform: rotate(135deg); }
+html[data-mood="waiting"] .ir-mark { transform: rotate(225deg); }
+html[data-mood="error"] .ir-mark { transform: rotate(315deg); }
+
+/* Annotations: every kicker starts with a leader ending in a dot. */
+main > section { border-top: 1.5px solid var(--oxblood); }
+.kicker::before { content: ""; display: inline-block; width: 38px; height: 1.5px; background: currentColor; vertical-align: middle; margin-right: 12px; box-shadow: 38px 0 0 0 transparent; }
+main .kicker::after { content: ""; display: inline-block; width: 7px; height: 7px; border: 1.5px solid currentColor; border-radius: 50%; vertical-align: middle; margin-left: 12px; }
+.dark .kicker { color: #e5a9a2; }
+h2 { color: var(--ink); }
+.dark h2 { color: var(--band-ink); }
+
+.card { background: transparent; border: 0; border-top: 1.5px solid var(--ink); padding: 18px 4px 10px; }
+.dark .card { border-top-color: var(--band-ink-2); }
+.card h3 { font-size: 30px; }
+.states { counter-reset: key; }
+.states .card { border-top: 1.5px solid var(--ink); min-height: 0; position: relative; padding-top: 34px; }
+.states .card::before { counter-increment: key; content: counter(key, lower-alpha); position: absolute; top: 8px; left: 4px; font: 500 11px/1 var(--font-label); letter-spacing: 0.16em; color: #5a3a35; }
+.states .card h3 { color: var(--state); font-size: 36px; }
+.states .card .orb { margin-bottom: 14px; }
+.agents .card { text-align: left; }
+.agents .card .orb { margin: 0 0 14px; }
+.dest { background: transparent; border: 0; border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.dest li { border-top: 1px solid color-mix(in srgb, var(--oxblood) 45%, transparent); padding-left: 4px; padding-right: 4px; }
+.dest .where { font-family: var(--font-body); font-style: italic; font-size: 16px; color: var(--ink-2); }
+.wallpaper { border: 1.5px solid var(--ink); }
+.chip { border-radius: 50% / 100%; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; min-height: 44px; padding: 8px 20px; }
+.voice.tabs-on .voice-tablist { border-radius: 50px; border-color: var(--oxblood); }
+.voice-tab { border-radius: 50px; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; min-height: 44px; }
+.voice-panel { background: var(--surface); }
+.step { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); font-family: var(--font-display); font-size: 18px; }
+.stat { font-family: var(--font-display); color: var(--oxblood); font-style: italic; }
+.faq details { border-top: 1px solid var(--oxblood); }
+.faq details:last-child { border-bottom: 1px solid var(--oxblood); }
+.faq summary { font-size: 24px; }
+.faq summary::after { color: var(--oxblood); }
+.guide-list a { background: transparent; border: 0; border-top: 1.5px solid var(--ink); padding: 18px 4px; }
+.guide-list a:hover { background: var(--surface); }
+.guide-list strong { font-size: 23px; }
+footer { border-top: 1.5px solid var(--oxblood); font-family: var(--font-label); font-size: 12px; }
+dialog { border: 1.5px solid var(--oxblood); }

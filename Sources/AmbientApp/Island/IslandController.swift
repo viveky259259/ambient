@@ -19,6 +19,9 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
 final class IslandController {
     private let model: AppModel
     private let prefs: Preferences
+    private let speech: SpeechController
+    private let permissions: PermissionDesk
+    private let voice: VoiceSyncController
     private let viewModel: IslandViewModel
     private let panel: IslandPanel
     private var cancellables: Set<AnyCancellable> = []
@@ -29,14 +32,20 @@ final class IslandController {
     private var hoverWork: DispatchWorkItem?
     /// After a click, stay collapsed until the pointer leaves, rather than springing open again.
     private var hoverSuppressed = false
-    /// Called when the menu opens or closes, with the open menu's size and where the island is.
+    /// Called when the menu opens, closes or changes size, with the open menu's size and where the island is.
     var onMenuChange: ((Bool, CGSize, IslandGeometry) -> Void)?
+    /// The open menu's size and place as last reported; nil while it's closed.
+    private var reportedMenu: (size: CGSize, geometry: IslandGeometry)?
 
-    init?(model: AppModel, prefs: Preferences, onSettings: @escaping () -> Void) {
+    init?(model: AppModel, prefs: Preferences, speech: SpeechController, permissions: PermissionDesk,
+          voice: VoiceSyncController, onSettings: @escaping () -> Void) {
         guard let geometry = IslandGeometry.current() else { return nil }
         self.model = model
         self.prefs = prefs
-        viewModel = IslandViewModel(geometry: geometry)
+        self.speech = speech
+        self.permissions = permissions
+        self.voice = voice
+        viewModel = IslandViewModel(geometry: geometry, voice: voice)
 
         panel = IslandPanel(contentRect: geometry.panelFrame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -71,6 +80,28 @@ final class IslandController {
             self?.endHover()
             onSettings()
         }
+        viewModel.onToggleShowAll = { [weak self] in
+            guard let self else { return }
+            self.viewModel.showingAll.toggle()
+            self.reportMenu()
+            self.trackPointer()
+        }
+        viewModel.onStopSpeech = { [weak speech] in speech?.stop() }
+        viewModel.onPauseSpeech = { [weak speech] in speech?.pause(from: "island") }
+        viewModel.onResumeSpeech = { [weak speech] in speech?.resume(from: "island") }
+        viewModel.onUseMacVoice = { [weak speech] in speech?.useMacVoice() }
+        viewModel.onAnswer = { [weak self] id, answer in
+            // Answered, so nothing needs the user any more, though the agent's next hook may be a long tool away.
+            guard let self, let ask = self.permissions.settle(id, with: answer) else { return }
+            self.model.acknowledge("\(ask.event.agent.rawValue):\(ask.event.sessionId)")
+        }
+        viewModel.onAnswerInAgent = { [weak self] ask in
+            guard let self else { return }
+            self.permissions.settle(ask.id, with: .ask)
+            if let session = self.viewModel.sessions.first(where: { $0.agent == ask.event.agent && $0.sessionId == ask.event.sessionId }) {
+                self.model.open(session)
+            }
+        }
     }
 
     func start() {
@@ -84,6 +115,34 @@ final class IslandController {
             .store(in: &cancellables)
         model.transitions
             .sink { [weak self] t in self?.handle(t) }
+            .store(in: &cancellables)
+        speech.$state
+            .sink { [weak self] state in
+                self?.viewModel.speech = state
+                self?.refresh()
+            }
+            .store(in: &cancellables)
+        speech.$level
+            .sink { [weak self] in self?.viewModel.speechLevel = $0 }
+            .store(in: &cancellables)
+        permissions.$current
+            .combineLatest(permissions.$count)
+            .sink { [weak self] current, count in
+                self?.viewModel.permission = current
+                self?.viewModel.permissionCount = count
+                self?.refresh()
+            }
+            .store(in: &cancellables)
+        // Only what picks the presentation or the card's size. The level changes many times a second while recording, and
+        // the card follows it, and what's playing or copied, itself. Read a turn later, since a @Published publisher fires
+        // before the change. The view model republishes it, since the voice card's size follows what it shows.
+        Publishers.Merge4(voice.$outgoing.map { _ in () }, voice.$arrival.map { _ in () }, voice.$notice.map { _ in () },
+                          voice.$incoming.map { _ in () })
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.viewModel.objectWillChange.send()
+                self?.refresh()
+            }
             .store(in: &cancellables)
         prefs.objectWillChange
             .receive(on: DispatchQueue.main)
@@ -118,7 +177,7 @@ final class IslandController {
                 self?.bloomID = nil
                 self?.refresh()
             }
-        } else if t.session.id == bloomID, !AlertPolicy.attentionMoods.contains(t.session.mood) || t.removed {
+        } else if t.session.id == bloomID, !t.session.mood.wantsAttention || t.removed {
             // What we were announcing is resolved (permission granted, result seen).
             bloomID = nil
             bloomTimer?.invalidate()
@@ -130,22 +189,49 @@ final class IslandController {
         let sessions = viewModel.sessions
         let next: IslandViewModel.Presentation
         if !prefs.islandEnabled {
-            next = .hidden
+            // Off, it still shows a voice, which has nowhere else to go: the one being recorded, one that came, and what
+            // the shortcut has to say.
+            next = voice.outgoing != nil || voice.arrival != nil || voice.notice != nil ? .voice : .hidden
+        } else if let entry = viewModel.permission {
+            // Ahead of hovering too: reaching for Allow or Deny mustn't swap the prompt for the session list.
+            next = .permission(entry.ask.id)
+        } else if voice.outgoing != nil || voice.arrival != nil || voice.notice != nil {
+            // Ahead of hovering too, so reaching for Send or Copy doesn't swap the card for the session list.
+            next = .voice
+        } else if viewModel.speech != .idle {
+            // Ahead of hovering, so reaching for the stop button doesn't swap it for the session list.
+            next = .speech
         } else if hovering || UserDefaults.standard.bool(forKey: "debugForceExpanded") {
             next = .expanded
         } else if let id = bloomID, sessions.contains(where: { $0.id == id }) {
             next = .bloom(id)
+        } else if !voice.incoming.isEmpty {
+            next = .voiceIncoming
         } else if IslandPolicy.isVisible(sessions, showWhileWorking: prefs.islandShowsWorking) {
             next = .collapsed
         } else {
             next = .hidden
         }
         if next != viewModel.presentation {
-            let wasOpen = viewModel.presentation == .expanded
+            // Each time it opens, the island starts with the short list.
+            if next != .expanded { viewModel.showingAll = false }
             viewModel.presentation = next
-            if (next == .expanded) != wasOpen { onMenuChange?(next == .expanded, viewModel.size(for: .expanded), viewModel.geometry) }
         }
+        reportMenu()
         trackPointer()
+    }
+
+    /// Tells `onMenuChange` when the menu opens or closes, and when sessions or the display resize it while open.
+    private func reportMenu() {
+        let size = viewModel.size(for: .expanded), geometry = viewModel.geometry
+        if viewModel.presentation == .expanded {
+            if let last = reportedMenu, last.size == size, last.geometry == geometry { return }
+            reportedMenu = (size, geometry)
+            onMenuChange?(true, size, geometry)
+        } else if reportedMenu != nil {
+            reportedMenu = nil
+            onMenuChange?(false, size, geometry)
+        }
     }
 
     private func relocate() {

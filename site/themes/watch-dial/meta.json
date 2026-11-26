@@ -1,0 +1,13 @@
+{
+  "name": "Watch dial",
+  "set": "craft",
+  "inspiration": "A chronograph dial: brushed steel case, guilloché centre, four sub-dials and a blued hand that points to the most urgent state",
+  "order": 47,
+  "hero": "split",
+  "fonts": [
+    { "family": "Bodoni Moda", "axes": "ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400;1,6..96,500" },
+    { "family": "Figtree", "axes": "wght@400;500;600" },
+    { "family": "Azeret Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Calibre macOS · free · native" }
+}

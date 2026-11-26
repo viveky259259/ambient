@@ -1,0 +1,115 @@
+/* Brutalist block. Board-marked concrete, six-pixel rules, compressed capitals stencilled on the wall, a
+   directory board by the door and a tower of windows where each session is a lit one. Dark bands are the
+   tower's own face. */
+:root {
+  --bg: #c9c4b8;
+  --bg-alt: #bdb7aa;
+  --surface: #d5d0c5;
+  --surface-2: #c2bcaf;
+  --ink: #161513;
+  --ink-2: #2f2d29;
+  --rule: #161513;
+  --accent: #161513;
+  --on-accent: #f1ede3;
+  --link: #161513;
+  --band: #2b2a27;
+  --band-ink: #ece7db;
+  --band-ink-2: #bcb6a8;
+  --band-surface: #353330;
+  --band-rule: #ece7db40;
+  --waiting: #f2a200;
+  --done: #2fa85a;
+  --error: #e5392a;
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Public Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 900;
+  --display-transform: uppercase;
+  --display-tracking: -0.005em;
+  --display-leading: 0.86;
+  --h1-size: clamp(76px, 11vw, 176px);
+  --h2-size: clamp(46px, 6vw, 88px);
+  --h3-size: 34px;
+  --body-size: 17px;
+  --label-size: 11.5px;
+  --label-tracking: 0.16em;
+  --label-weight: 400;
+  --label-color: var(--ink);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 2px solid var(--rule);
+  --btn-shadow: 8px 8px 0 #8d887d;
+  --texture: repeating-linear-gradient(0deg, #0000000b 0 1px, transparent 1px 46px), repeating-linear-gradient(90deg, #ffffff14 0 2px, transparent 2px 240px);
+  --band-texture: repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 22px);
+  --device-edge: #161513;
+  --edge-strength: 0.4;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+h3 { text-transform: uppercase; line-height: 0.95; }
+.alt { background-image: var(--texture); }
+
+.nav { background: var(--bg); border-bottom: 6px solid var(--ink); }
+.nav .wrap { height: 72px; }
+.brand { font-weight: 900; font-size: 34px; letter-spacing: 0.01em; }
+.brand img { display: none; }
+.nav-links { text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; }
+.nav-links a { color: var(--ink); }
+
+.btn { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: 0.04em; text-transform: uppercase; padding: 14px 30px; }
+.btn:active { transform: translate(4px, 4px); box-shadow: 4px 4px 0 #8d887d; }
+.btn.small { font-family: var(--font-label); font-weight: 400; font-size: 11.5px; letter-spacing: 0.12em; box-shadow: none; min-height: 40px; }
+.dark .btn { background: var(--band-ink); color: var(--band); box-shadow: 8px 8px 0 #11100e; }
+.copy-code { background: var(--surface); border-width: 2px; }
+
+/* The block: a lit amber square before every label, as at the entrance. */
+.kicker::before { content: ""; display: inline-block; width: 10px; height: 10px; background: var(--waiting); margin-right: 12px; vertical-align: 0; }
+.hero .kicker { color: var(--ink); }
+.hero-copy .lede { color: var(--ink-2); font-size: clamp(18px, 1.7vw, 21px); }
+.trust, .fineprint { font-family: var(--font-label); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.8; }
+.fineprint .copy-code { text-transform: none; }
+.hero-art { aspect-ratio: 560 / 700; width: 100%; max-width: 520px; margin: 0 auto; }
+.brt-art { width: 100%; height: auto; }
+.brt-art .now { fill: var(--state, var(--waiting)); transition: fill 0.6s var(--ease); }
+.brt-art .lit { animation: brt-flicker 5s steps(1) infinite; }
+.brt-art .lit:nth-of-type(3n) { animation-delay: -2s; }
+@keyframes brt-flicker { 0%, 92% { opacity: 1; } 94% { opacity: 0.55; } 96% { opacity: 1; } }
+@media (max-width: 860px) { .hero-art { max-width: 340px; } }
+
+main > section { border-top: 6px solid var(--ink); }
+.section-lede { color: var(--ink-2); }
+
+/* Cards are panels cast in place: heavy outline, no rounding. */
+.card { background: var(--surface); }
+.dark .card { background: var(--band-surface); border-color: #ece7db55; }
+.states .card { border-top: 2px solid var(--rule); }
+.states .card .orb { width: 22px; height: 22px; margin: 9px 0 30px 9px; box-shadow: 0 0 0 9px #161513, 0 0 18px 9px color-mix(in srgb, var(--state) 70%, transparent); }
+.states .card h3 { font-size: 44px; }
+.dest { border-width: 2px; }
+.dest li { border-top: 2px solid var(--rule); font-weight: 600; }
+.dest .where { text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.08em; }
+.wallpaper { border-width: 2px; }
+.chip { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em; min-height: 44px; border-width: 2px; }
+.voice-tablist { border-width: 2px; }
+.voice-tab { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; min-height: 44px; }
+.voice-panel { border-width: 2px; }
+.voice-panel h3 { font-size: clamp(34px, 4vw, 52px); }
+.voice-steps li { border-top: 2px solid var(--rule); }
+.voice-flow { background: #161513; }
+.voice-flow .end { background: var(--surface); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.step { border-radius: 0; width: 44px; height: 44px; background: #161513; color: var(--waiting); }
+.stat { font-weight: 900; }
+.faq details { border-top: 2px solid var(--rule); }
+.faq details:last-child { border-bottom: 6px solid var(--rule); }
+.faq summary { font-family: var(--font-body); font-weight: 600; font-size: 19px; }
+.faq summary::after { font-family: var(--font-label); }
+.guide-list a { border-width: 2px; box-shadow: 6px 6px 0 #8d887d; }
+.guide-list strong { text-transform: uppercase; font-size: 26px; line-height: 1; }
+footer { border-top: 6px solid var(--ink); font-family: var(--font-label); font-size: 11px; letter-spacing: 0.04em; }
+dialog { border: 6px solid var(--ink); }
+.sheet h2 { font-size: 40px; }

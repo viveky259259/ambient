@@ -1,4 +1,6 @@
 import Foundation
+import AmbientBase
+import AmbientContracts
 
 /// Folds agent events into per-session state. Not thread-safe: own it from one queue.
 public final class SessionStore {
@@ -16,10 +18,15 @@ public final class SessionStore {
     }
 
     public var timeouts: Timeouts
+    /// The most sessions one machine can have here at once. ER-37 plans for 300 across a whole hub, and sessions leave
+    /// when they end or sit quiet for two hours, so only a machine that's flooding this gets near it.
+    public var machineSessionLimit = 1_000
     private let isAlive: (Int32) -> Bool
     private var byId: [String: Session] = [:]
+    /// Events turned away at `machineSessionLimit` during the current batch.
+    private var refused = 0
 
-    public init(timeouts: Timeouts = Timeouts(), isAlive: @escaping (Int32) -> Bool = SessionStore.processExists) {
+    public init(timeouts: Timeouts = Timeouts(), isAlive: @escaping (Int32) -> Bool = ProcessProbe.isAlive) {
         self.timeouts = timeouts
         self.isAlive = isAlive
     }
@@ -34,11 +41,11 @@ public final class SessionStore {
     }
 
     public var mood: Mood { byId.values.map(\.mood).max() ?? .idle }
-    public var busyCount: Int { byId.values.filter { $0.activity.isBusy }.count }
     public var waitingCount: Int { byId.values.filter { $0.mood == .waiting }.count }
 
     public func session(id: String) -> Session? { byId[id] }
 
+    /// A local hook's event, from the Unix socket.
     @discardableResult
     public func apply(_ e: AgentEvent) -> SessionChange? {
         let id = "\(e.agent.rawValue):\(e.sessionId)"
@@ -46,20 +53,113 @@ public final class SessionStore {
         if let existing, e.timestamp < existing.lastEventAt { return nil }
 
         var s = existing ?? Session(agent: e.agent, sessionId: e.sessionId, at: e.timestamp)
-        let previous = existing?.activity
         if let cwd = e.cwd, !cwd.isEmpty { s.cwd = cwd }
         if let host = e.host { s.host = host }
-        s.lastEventAt = e.timestamp
+        // Only custom agents may carry a display override; hooked kinds keep AgentKind.displayName
+        // (so Cursor never inherits a Codex/Claude payload name).
+        if e.agent == .custom, let name = e.agentName { s.agentName = name }
+        return commit(s, previous: existing?.activity, kind: e.kind, at: e.timestamp)
+    }
 
-        if e.kind == .sessionEnded {
-            byId[id] = nil
-            return SessionChange(session: s, previous: previous, event: e.kind, removed: true)
+    /// A remote machine's event, already through `RemoteEventDecoder`. Quarantined: the session is keyed by
+    /// (machine, session id), ordered by `seq` rather than the remote clock, and never gets a `HostInfo`, so no
+    /// focus route, pid check, tty or script ever runs for it. `date` is when to record it: the remote time, or
+    /// the hub's when the clocks disagree.
+    @discardableResult
+    public func apply(_ e: RemoteEvent, from machine: MachineRef, at date: Date, missed: Bool = false) -> SessionChange? {
+        let id = Session.remoteID(machine: machine.id, agent: e.agent, sessionId: e.session)
+        let existing = byId[id]
+        if let last = existing?.origin?.lastSeq, e.seq <= last { return nil }
+        if existing == nil, isFull(machine.id) {
+            refused += 1
+            return nil
         }
 
-        reduce(&s, e.kind, at: e.timestamp)
-        if s.activity != previous { s.activitySince = e.timestamp }
-        byId[id] = s
-        return SessionChange(session: s, previous: previous, event: e.kind, removed: false)
+        var s = existing ?? Session(agent: e.agent, sessionId: e.session, at: date, origin: RemoteOrigin(machine: machine))
+        s.host = nil
+        s.origin?.machine.label = machine.label
+        s.origin?.lastSeq = e.seq
+        s.origin?.unreachable = false
+        if e.eventKind != nil { s.origin?.missed = missed }
+        if let project = e.project { s.origin?.project = project }
+        if let title = e.title { s.title = title }
+        let at = max(date, existing?.lastEventAt ?? date)
+        guard let kind = e.eventKind else {
+            // A title change: no new state, and not worth a transition unless the name changed.
+            guard existing != nil else { return nil }
+            byId[id] = s
+            return s.title == existing?.title ? nil : SessionChange(session: s, previous: s.activity, event: nil, removed: false)
+        }
+        return commit(s, previous: existing?.activity, kind: kind, at: at)
+    }
+
+    private func isFull(_ machine: String) -> Bool {
+        byId.count >= machineSessionLimit
+            && byId.values.lazy.filter { $0.origin?.machine.id == machine }.count >= machineSessionLimit
+    }
+
+    /// A batch from one machine, and whether the state must reach disk before anyone hears about it. Alerts go out
+    /// only after the sessions and the cursor are saved together, so a hub killed at any point replays the events
+    /// it hasn't saved: none lost, none announced twice. A batch that doesn't follow `saved` comes from a rebuilt spool,
+    /// whose `seq` started over, so what the machine's sessions remember no longer compares. `refused` counts events
+    /// for new sessions turned away at `machineSessionLimit`.
+    public func apply(_ batch: [RemoteDelivery], from machine: MachineRef, saved: RemoteCursor = RemoteCursor(),
+                      cursor: RemoteCursor = RemoteCursor()) -> (changes: [SessionChange], saveFirst: Bool, refused: Int) {
+        if let first = batch.first?.event.seq, saved.epoch != cursor.epoch || first <= saved.seq {
+            for var s in byId.values where s.origin?.machine.id == machine.id {
+                s.origin?.lastSeq = 0
+                byId[s.id] = s
+            }
+        }
+        var changes: [SessionChange] = []
+        var saveFirst = false
+        refused = 0
+        for delivery in batch {
+            guard let change = apply(delivery.event, from: machine, at: delivery.at, missed: delivery.missed) else { continue }
+            changes.append(change)
+            if !change.removed, change.session.origin?.missed != true, change.session.mood.wantsAttention,
+               change.session.mood != change.previousMood {
+                saveFirst = true
+            }
+        }
+        return (changes, saveFirst, refused)
+    }
+
+    /// Marks a machine's sessions as out of reach, or back. Returns the changes for surfaces to show.
+    @discardableResult
+    public func setUnreachable(_ unreachable: Bool, machine: String) -> [SessionChange] {
+        var changes: [SessionChange] = []
+        for var s in byId.values where s.origin?.machine.id == machine && s.origin?.unreachable != unreachable {
+            s.origin?.unreachable = unreachable
+            byId[s.id] = s
+            changes.append(SessionChange(session: s, previous: s.activity, event: nil, removed: false))
+        }
+        return changes
+    }
+
+    /// Forgets every session from a machine, e.g. when it's unpaired.
+    @discardableResult
+    public func remove(machine: String) -> [SessionChange] {
+        var changes: [SessionChange] = []
+        for s in byId.values where s.origin?.machine.id == machine {
+            byId[s.id] = nil
+            changes.append(SessionChange(session: s, previous: s.activity, event: nil, removed: true))
+        }
+        return changes
+    }
+
+    private func commit(_ session: Session, previous: Activity?, kind: EventKind, at date: Date) -> SessionChange {
+        var s = session
+        s.lastEventAt = date
+        if kind == .sessionEnded {
+            byId[s.id] = nil
+            return SessionChange(session: s, previous: previous, event: kind, removed: true)
+        }
+
+        reduce(&s, kind, at: date)
+        if s.activity != previous { s.activitySince = date }
+        byId[s.id] = s
+        return SessionChange(session: s, previous: previous, event: kind, removed: false)
     }
 
     private func reduce(_ s: inout Session, _ kind: EventKind, at date: Date) {
@@ -80,8 +180,18 @@ public final class SessionStore {
             if s.turnStartedAt == nil || s.turnEndedAt != nil { startTurn(&s, at: date) }
             s.activity = .thinking
         case let .needsInput(reason, message):
-            if case .waiting = s.activity {} else { s.acknowledged = false }
+            if case let .waiting(shown, shownMessage) = s.activity {
+                if Self.addsNothing(Need(reason: reason), message, to: Need(reason: shown), shownMessage) { break }
+            } else {
+                s.acknowledged = false
+                s.beforeWaiting = s.activity
+            }
             s.activity = .waiting(reason: reason, message: message)
+        case .answered:
+            guard case .waiting = s.activity else { break }
+            let before = s.beforeWaiting ?? .thinking
+            s.activity = before.isBusy ? before : .thinking
+            s.beforeWaiting = nil
         case .compactStarted:
             if s.activity != .compacting { s.beforeCompaction = s.activity }
             s.activity = .compacting
@@ -100,6 +210,15 @@ public final class SessionStore {
             s.activity = .error(message: message)
             finishTurn(&s, at: date)
         }
+    }
+
+    /// Whether a prompt arriving while another is on show says nothing more, as when Claude follows its permission
+    /// request with a notification of the same prompt. A different need, or a new detail, replaces it.
+    static func addsNothing(_ need: Need, _ message: String?, to shown: Need, _ shownMessage: String?) -> Bool {
+        if need == .permission, shown != .permission { return true }
+        guard need == shown else { return false }
+        guard let message else { return true }
+        return shownMessage?.hasPrefix(message) == true
     }
 
     private func startTurn(_ s: inout Session, at date: Date) {
@@ -136,7 +255,7 @@ public final class SessionStore {
     /// Marks every session hosted by an app as seen, e.g. when the user switches to it.
     @discardableResult
     public func acknowledge(hostBundleId: String) -> [String] {
-        let ids = byId.values.filter { $0.host?.bundleId == hostBundleId }.map(\.id).sorted()
+        let ids = byId.values.filter { $0.origin == nil && $0.host?.bundleId == hostBundleId }.map(\.id).sorted()
         return ids.filter { acknowledge(sessionID: $0) }
     }
 
@@ -148,7 +267,8 @@ public final class SessionStore {
             let quiet = now.timeIntervalSince(s.lastEventAt)
             let previous = s.activity
 
-            if let pid = s.host?.agentPid, !isAlive(pid) {
+            // A remote session's liveness comes from its machine's `follow`; its pids mean nothing here.
+            if s.origin == nil, let pid = s.host?.agentPid, !isAlive(pid) {
                 byId[id] = nil
                 changes.append(SessionChange(session: s, previous: previous, event: nil, removed: true))
                 continue
@@ -156,7 +276,8 @@ public final class SessionStore {
 
             if s.activity.isBusy, quiet > timeouts.busy {
                 s.activity = .idle
-            } else if case .waiting = s.activity, quiet > timeouts.waiting {
+            } else if case .waiting = s.activity, quiet > timeouts.waiting, s.origin?.missed != true {
+                // A missed prompt is old by definition; it stays until the user has seen it.
                 s.activity = .idle
             } else if !s.acknowledged, s.mood == .done || s.mood == .error, quiet > timeouts.unacknowledged {
                 s.acknowledged = true
@@ -177,11 +298,11 @@ public final class SessionStore {
 
     /// Replaces all state, e.g. when restoring. Used by tests and the app's status snapshot.
     public func load(_ sessions: [Session]) {
+        let sessions = sessions.map { s in
+            var s = s
+            if s.origin != nil { s.host = nil }
+            return s
+        }
         byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
-    }
-
-    public static func processExists(_ pid: Int32) -> Bool {
-        guard pid > 0 else { return true }
-        return kill(pid, 0) == 0 || errno == EPERM
     }
 }

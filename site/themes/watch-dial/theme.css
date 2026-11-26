@@ -1,0 +1,126 @@
+/* Watch dial. A chronograph: brushed steel, a silvered dial with a minute track, four sub-dials with jewel
+   lamps, a blued hand and Bodoni numerals. Sections are ruled like a dial's minute track. */
+:root {
+  --bg: #e6e7e9;
+  --bg-alt: #dadde1;
+  --surface: #f3f4f5;
+  --surface-2: #e9ebee;
+  --ink: #14161b;
+  --ink-2: #3b404a;
+  --rule: #9a9ea6;
+  --accent: #1f3a7a;
+  --on-accent: #f3f4f6;
+  --link: #1f3a7a;
+  --band: #10131a;
+  --band-ink: #e9eaec;
+  --band-ink-2: #b3b8c2;
+  --band-surface: #1b202b;
+  --band-rule: #3a4150;
+  --gemini: #2f62d6;
+  --waiting: #e39a16;
+  --done: #2f9960;
+  --error: #c8372d;
+
+  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: Figtree, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Azeret Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+  --display-leading: 1.0;
+  --h1-size: clamp(46px, 5.6vw, 84px);
+  --h2-size: clamp(36px, 4.4vw, 60px);
+  --h3-size: 30px;
+  --body-size: 17.5px;
+  --label-size: 12px;
+  --label-tracking: 0.22em;
+  --label-weight: 500;
+  --label-color: #1f3a7a;
+
+  --radius: 3px;
+  --radius-sm: 2px;
+  --radius-btn: 2px;
+  --border: 1px solid var(--rule);
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(20, 22, 27, 0.08);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 24px rgba(31, 58, 122, 0.28);
+  --texture: radial-gradient(1400px 900px at 30% 10%, #f6f6f5, transparent 70%), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 3px);
+  --band-texture: radial-gradient(900px 600px at 50% 0, #1c2333, transparent 70%);
+  --device-edge: #9ea3ab;
+  --edge-strength: 0.4;
+}
+
+.nav { background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--ink); }
+.brand { font-style: italic; font-size: 30px; }
+.nav-links { font-family: var(--font-label); font-size: 11px; letter-spacing: 0.08em; gap: 18px; text-transform: uppercase; }
+.brand { padding-right: 6px; }
+.nav-links a { color: var(--ink); }
+.btn { font-family: var(--font-label); font-size: 13.5px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; padding: 16px 28px; }
+.btn::after { content: "→"; letter-spacing: 0; }
+.btn.small { background: transparent; color: var(--ink); border: 1px solid var(--ink); box-shadow: none; font-size: 11.5px; }
+.btn.small::after, .sheet .btn::after, .scene-controls .btn::after { content: none; }
+.dark .btn.small { color: var(--band-ink); border-color: var(--band-ink); }
+.link-btn { font-family: var(--font-label); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+.fineprint, .trust { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.05em; line-height: 1.8; }
+.trust { color: var(--ink); }
+
+/* Hero: the dial on the left, the words on the right. */
+@media (min-width: 861px) { html[data-hero="split"] .hero-grid { grid-template-columns: 1.1fr 1fr; gap: 56px; } }
+html[data-hero="split"] .hero-art { order: -1; }
+.hero-art { aspect-ratio: 1 / 1; width: 100%; max-width: 640px; margin: 0 auto; }
+.hero-art svg { width: 100%; height: 100%; }
+.hero h1 { margin: 18px 0 26px; }
+.hero-copy .lede { color: #2b2f38; font-size: clamp(18px, 1.6vw, 20px); }
+@media (max-width: 860px) { .hero-art { max-width: 440px; } }
+.wd-hand { transform-origin: 0 0; transform: rotate(45deg); transition: transform 1.2s var(--spring); }
+html[data-mood="working"] .wd-hand { transform: rotate(-45deg); }
+html[data-mood="done"] .wd-hand { transform: rotate(135deg); }
+html[data-mood="error"] .wd-hand { transform: rotate(225deg); }
+.wd-lamp { fill: var(--state, #e39a16); transition: fill 0.8s var(--ease); }
+.wd-t { display: none; }
+html:not([data-mood]) .wd-t.waiting, html[data-mood="working"] .wd-t.working, html[data-mood="waiting"] .wd-t.waiting,
+html[data-mood="done"] .wd-t.done, html[data-mood="error"] .wd-t.error { display: inline; }
+
+/* Every section opens on a minute track: a hairline with fine and long ticks. */
+main > section::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 14px;
+  background: linear-gradient(var(--ink), var(--ink)) 0 0 / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 60px) 0 1px / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px 12px) 0 1px / 100% 6px no-repeat;
+  opacity: 0.7;
+}
+main > section.dark::before { filter: invert(1); opacity: 0.35; }
+
+.card { border-radius: var(--radius); }
+.card h3 { font-style: italic; font-size: 34px; }
+.dark .card { background: linear-gradient(160deg, #222836, #171b24); }
+/* State cards are sub-dials: a jewel lamp with a halo, a Roman numeral, an italic name. */
+.states { counter-reset: comp; gap: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); }
+.states .card { counter-increment: comp; background: transparent; border: 0; border-left: 1px solid var(--rule); border-radius: 0; box-shadow: none; min-height: 220px; }
+.states .card:first-child { border-left: 0; }
+.states .card::before { content: counter(comp, upper-roman); display: block; font-family: var(--font-display); font-size: 22px; color: var(--accent); margin: -2px 0 6px 36px; height: 0; }
+.states .card .orb { width: 18px; height: 18px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--state) 22%, transparent), inset 0 -3px 4px rgba(0, 0, 0, 0.25); }
+.states .card .orb.big { width: 22px; height: 22px; }
+.states .card h3 { font-size: 44px; margin-top: 4px; }
+@media (max-width: 960px) { .states .card { border-left: 0; border-top: 1px solid var(--rule); } .states .card:first-child { border-top: 0; } }
+
+.dest { border-radius: var(--radius); }
+.dest .where { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.dark .dest .where { color: #a9bdf0; }
+.step { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #c9ccd1 70%, #9fa4ac); color: var(--accent); box-shadow: 0 0 0 1px #6d727a, 0 3px 6px rgba(0, 0, 0, 0.2); font-family: var(--font-display); font-size: 17px; }
+.stat { font-style: italic; color: var(--accent); }
+.faq summary { font-size: 23px; }
+.faq summary::after { font-family: var(--font-label); color: var(--accent); }
+.guide-list strong { font-style: italic; font-size: 23px; }
+.guide-list a:hover { border-color: var(--accent); }
+.voice-tab { font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.voice-tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.chip { font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; min-height: 44px; }
+.dark .kicker { color: #a9bdf0; }
+.dark .btn { background: linear-gradient(180deg, #fdfdfd, #c9ccd1); color: var(--accent); }
+.closing h2 { font-style: italic; }
+footer { font-family: var(--font-label); font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; border-top: 1px solid var(--ink); }
+footer .spacer { text-transform: none; letter-spacing: 0.04em; }
+dialog { background: radial-gradient(500px 400px at 40% 20%, #fbfbfa, #e3e4e6); border: 1px solid var(--ink); }
+.macbook .display { letter-spacing: normal; }
+.hero, .alt { background-image: var(--texture); }
+.chip, .voice-tab { min-height: 44px; }

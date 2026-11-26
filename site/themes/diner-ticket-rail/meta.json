@@ -1,0 +1,13 @@
+{
+  "name": "Diner ticket rail",
+  "set": "culture",
+  "inspiration": "A short-order diner: the service bell on the pass, tickets on a steel rail, an awning stripe, a teal tiled wall and a checkerboard floor",
+  "order": 21,
+  "hero": "split",
+  "fonts": [
+    { "family": "Bowlby One", "axes": "wght@400" },
+    { "family": "Work Sans", "axes": "wght@400;500;600" },
+    { "family": "Courier Prime", "axes": "wght@400;700" }
+  ],
+  "copy": { "kicker": "Free · native macOS · banners and soft chimes", "h1": "Alerts only when they matter." }
+}

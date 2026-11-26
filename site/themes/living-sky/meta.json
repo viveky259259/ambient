@@ -1,0 +1,12 @@
+{
+  "name": "Living sky",
+  "set": "opt",
+  "inspiration": "Dusk over a calm harbour: a setting sun, glass panels, and two boats whose wakes glow in their agents' states",
+  "order": 4,
+  "hero": "under",
+  "fonts": [
+    { "family": "Bricolage Grotesque", "axes": "opsz,wght@12..96,300;12..96,500" },
+    { "family": "DM Mono", "axes": "wght@400;500" }
+  ],
+  "copy": { "kicker": "Ambient · a calmer Mac for coding agents" }
+}

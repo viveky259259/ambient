@@ -1,0 +1,150 @@
+/* Riso zine. Two inks, fluorescent pink and a deep blue, overprinted on cream stock: misregistered display
+   type, halftone dots, cards pasted down a little crooked, a sticker slapped on the cover. */
+:root {
+  --pink: #ff4fa8;
+  --navy: #0f1f66;
+  --bg: #f3ecd9;
+  --bg-alt: #ede2c6;
+  --surface: #f7f1e2;
+  --surface-2: #ebe1c7;
+  --ink: #1a3fb0;
+  --ink-2: #263c8e;
+  --rule: #1a3fb0;
+  --accent: #1a3fb0;
+  --on-accent: #f7f1e2;
+  --link: #1a3fb0;
+  --band: #1a3fb0;
+  --band-ink: #f7f1e2;
+  --band-ink-2: #f8d3e6;
+  --band-surface: #2a4fc4;
+  --band-rule: #f7f1e266;
+  --waiting: #e8940c;
+  --done: #2f9e48;
+  --error: #e8433a;
+
+  --font-display: "Bowlby One", "Arial Black", Impact, sans-serif;
+  --font-body: "Space Grotesk", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Space Grotesk", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --display-transform: uppercase;
+  --display-tracking: -0.015em;
+  --display-leading: 0.92;
+  --h1-size: clamp(46px, 5.8vw, 86px);
+  --h2-size: clamp(32px, 4.2vw, 54px);
+  --h3-size: 26px;
+  --body-size: 17px;
+  --label-size: 13px;
+  --label-tracking: 0.14em;
+  --label-weight: 700;
+  --label-color: var(--navy);
+
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-btn: 0;
+  --border: 4px solid var(--rule);
+  --card-shadow: 8px 8px 0 var(--pink);
+  --btn-shadow: 6px 6px 0 var(--pink);
+  --texture: radial-gradient(#0000000f 1px, transparent 1.4px) 0 0 / 5px 5px;
+  --band-texture: radial-gradient(#ff4fa82e 2.2px, transparent 2.8px) 0 0 / 12px 12px;
+  --device-edge: #1a3fb0;
+  --edge-strength: 0.35;
+}
+
+body { font-weight: 500; }
+h1, h2 { text-shadow: 0.06em 0.05em 0 #ff4fa8aa; }
+h3 { text-transform: uppercase; line-height: 1; }
+/* The MacBook's screen shares the .display class with the type role; keep it a picture of macOS. */
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-style: normal; text-transform: none; letter-spacing: normal; line-height: normal; text-shadow: none; }
+
+/* Masthead */
+.nav { background: color-mix(in srgb, var(--bg) 95%, transparent); border-bottom: 4px solid var(--ink); }
+.nav .wrap { height: 66px; }
+.brand { font-size: 26px; text-transform: uppercase; }
+.brand img { display: none; }
+.nav-links { font-weight: 700; text-transform: uppercase; font-size: 13.5px; letter-spacing: 0.06em; }
+.nav-links a { color: var(--ink); }
+.nav-links a:hover { color: var(--navy); text-decoration: underline 3px var(--pink); }
+
+/* Buttons: a blue block, pasted on a little crooked, with the pink plate off-register behind it. */
+.btn { font-family: var(--font-display); font-weight: 400; font-size: 19px; letter-spacing: 0.01em; padding: 14px 26px; transform: rotate(-1.2deg); }
+.btn:active { transform: rotate(-1.2deg) translate(3px, 3px); box-shadow: 3px 3px 0 var(--pink); }
+.btn.small { font-size: 14px; transform: none; box-shadow: 4px 4px 0 var(--pink); min-height: 40px; }
+.dark .btn { background: var(--pink); color: var(--navy); box-shadow: 6px 6px 0 var(--bg); }
+.copy-code { border-width: 2px; background: var(--surface); }
+
+/* Kickers are pink stickers. */
+.kicker { display: inline-block; background: var(--pink); color: var(--navy); padding: 5px 11px 4px; transform: rotate(-1.5deg); }
+.hero .kicker { color: var(--navy); }
+.dark .kicker { color: var(--navy); }
+
+/* Cover */
+.hero { padding-bottom: calc(var(--hero-pad) + 40px); }
+.hero-copy .lede { color: var(--ink-2); font-weight: 500; }
+.trust { font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.1em; }
+.fineprint { color: var(--ink-2); }
+.hero .link-btn { font-weight: 700; }
+.hero-art { aspect-ratio: 560 / 520; width: 100%; max-width: 560px; margin: 0 auto; }
+.rso-art { width: 100%; height: auto; overflow: visible; }
+.rso-art .mx { mix-blend-mode: multiply; }
+.rso-art .orb { fill: var(--state, var(--claude)); transition: fill 0.6s var(--ease); }
+.rso-art .halo { fill: var(--state, var(--claude)); opacity: 0.3; transform-origin: 380px 120px; animation: rso-breathe 3.2s ease-in-out infinite; }
+@keyframes rso-breathe { 50% { transform: scale(1.25); opacity: 0.12; } }
+@media (max-width: 860px) { .hero-art { max-width: 420px; } }
+
+/* Pages: each section starts at a heavy blue rule. */
+main > section { border-top: 4px solid var(--ink); }
+main > section.dark { border-top-color: var(--navy); }
+.section-lede, p.body { color: var(--ink-2); }
+
+.card { box-shadow: var(--card-shadow); }
+.grid > .card:nth-child(3n + 1) { transform: rotate(-0.8deg); }
+.grid > .card:nth-child(3n + 2) { transform: rotate(0.6deg); }
+.dark .card { box-shadow: 8px 8px 0 var(--pink); border-color: var(--band-ink); }
+
+/* The four states: numbered panels, as on the cover; the second is printed pink. */
+.states { counter-reset: rso; gap: 26px; }
+.states .card { counter-increment: rso; border-top: 14px solid var(--state); min-height: 250px; }
+.states .card::before { content: counter(rso); display: block; font-family: var(--font-display); font-size: 64px; line-height: 1; color: var(--ink); margin-bottom: 8px; }
+.states .card .orb { position: absolute; margin: 0; }
+.states .card { position: relative; }
+.states .card .orb { top: 34px; right: 26px; }
+.states .card h3 { font-size: 30px; margin-top: 18px; }
+.states .card:nth-child(2) { background: var(--pink); box-shadow: 8px 8px 0 var(--ink); }
+.states .card:nth-child(2), .states .card:nth-child(2) h3, .states .card:nth-child(2)::before, .states .card:nth-child(2) p { color: var(--navy); }
+
+.dest { box-shadow: var(--card-shadow); }
+.dest li { border-top-width: 2px; font-weight: 700; }
+.dest .where { color: var(--ink-2); font-weight: 500; }
+.wallpaper { border-width: 4px; box-shadow: var(--card-shadow); }
+.chip { border-width: 2px; font-weight: 700; min-height: 44px; }
+.dark .chip { border-color: var(--band-ink); }
+.voice-tablist, .voice-panel { border-width: 4px; }
+.voice-panel { box-shadow: var(--card-shadow); }
+.voice-tab { font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.06em; min-height: 44px; }
+.voice-flow .end { border-width: 2px; font-weight: 700; }
+.voice-steps li { border-top: 2px solid var(--rule); }
+
+.step { width: 52px; height: 52px; border-radius: 0; background: var(--pink); color: var(--navy); font-family: var(--font-display); font-size: 26px; transform: rotate(-4deg); }
+.stat { color: var(--ink); text-shadow: 0.05em 0.045em 0 var(--pink); margin-bottom: 22px; line-height: 0.95; }
+
+.faq details { border-top: 2px solid var(--rule); }
+.faq details:last-child { border-bottom: 4px solid var(--rule); }
+.faq summary { font-family: var(--font-body); font-weight: 700; font-size: 19px; }
+.faq summary::after { font-family: var(--font-display); color: var(--pink); }
+.guide-list a { border-width: 3px; box-shadow: 5px 5px 0 var(--pink); transition: transform 0.15s var(--ease); }
+.guide-list a:hover { transform: rotate(-0.6deg); }
+.guide-list strong { text-transform: uppercase; font-size: 18px; line-height: 1.1; }
+
+.closing h2 { text-shadow: 0.06em 0.05em 0 var(--pink); }
+.closing img { border-radius: 50%; box-shadow: 8px 8px 0 var(--pink); }
+footer { border-top: 4px solid var(--ink); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--ink-2); }
+footer .spacer { text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+dialog { box-shadow: 12px 12px 0 var(--pink); }
+.sheet h2 { text-shadow: none; }
+.field input { border-width: 2px; }
+
+@media (max-width: 760px) {
+  .grid > .card:nth-child(n) { transform: none; }
+  .card, .dest, .voice-panel { box-shadow: 5px 5px 0 var(--pink); }
+  .states .card:nth-child(2) { box-shadow: 5px 5px 0 var(--ink); }
+}

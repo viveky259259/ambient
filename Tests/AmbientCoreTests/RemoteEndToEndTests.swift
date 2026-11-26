@@ -1,0 +1,1246 @@
+import Foundation
+import Testing
+@testable import AmbientCore
+
+private let shimURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+    .deletingLastPathComponent().appendingPathComponent("Resources/ambient-remote")
+
+/// A pretend remote machine: a home folder, reached by a `sh -c` transport that runs the remote command in it with
+/// the same shim, the same spool and the same hooks a real machine would have.
+private final class StubMachine {
+    let home: URL
+    let hub: URL
+    var paths: AmbientPaths { AmbientPaths(userHome: hub, home: hub.appendingPathComponent(".ambient", isDirectory: true)) }
+    var spool: URL { home.appendingPathComponent(".ambient/spool") }
+    var shim: URL { home.appendingPathComponent(".ambient/bin/ambient-remote") }
+
+    var transportOverride: [String]?
+
+    /// Identity comes from the install id: a test can change it without touching the Mac's host keys.
+    var transport: [String] {
+        transportOverride ?? ["/bin/sh", "-c", #"HOME="$1"; AMBIENT_REMOTE_HOSTKEYS=/nonexistent; export HOME AMBIENT_REMOTE_HOSTKEYS; cd "$HOME" && exec /bin/sh -c "$2""#,
+         "stub", home.path]
+    }
+
+    init() throws {
+        // Short: a Unix socket isn't involved, but these paths appear in every command and failure.
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ar-" + UUID().uuidString.prefix(8))
+        home = root.appendingPathComponent("remote", isDirectory: true)
+        hub = root.appendingPathComponent("hub", isDirectory: true)
+        for dir in [home.appendingPathComponent(".claude"), home.appendingPathComponent(".codex"), hub] {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+    }
+
+    deinit { try? FileManager.default.removeItem(at: home.deletingLastPathComponent()) }
+
+    func pair(redaction: RemoteRedaction? = nil) throws -> Machine {
+        let outcome = try RemotePairing.pair(.init(id: "devbox", label: "Devbox", transport: transport, redaction: redaction),
+                                             shim: RemoteShim(url: shimURL), existing: nil, audit: paths.remoteAudit)
+        return outcome.machine
+    }
+
+    /// What the agent's hook does: pipes a payload into `emit`. Returns how long it took.
+    @discardableResult
+    func emit(_ payload: [String: Any], agent: String = "claude") throws -> TimeInterval {
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = [shim.path, "emit", agent]
+        process.environment = ["HOME": home.path, "PATH": "/usr/bin:/bin"]
+        let input = Pipe()
+        process.standardInput = input
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        let start = Date()
+        try process.run()
+        try input.fileHandleForWriting.write(contentsOf: data)
+        try input.fileHandleForWriting.close()
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0)
+        return Date().timeIntervalSince(start)
+    }
+
+    func hook(_ name: String, session: String = "s1", _ extra: [String: Any] = [:]) throws {
+        var payload: [String: Any] = ["session_id": session, "hook_event_name": name, "cwd": "/home/dev/api"]
+        for (k, v) in extra { payload[k] = v }
+        try emit(payload)
+    }
+
+    /// Appends raw bytes to the spool, as something other than `emit` might.
+    func appendToSpool(_ text: String) throws {
+        let handle = try FileHandle(forWritingTo: spool.appendingPathComponent("events.jsonl"))
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(text.utf8))
+        try handle.close()
+    }
+
+    func spoolLines() throws -> [String] {
+        try String(contentsOf: spool.appendingPathComponent("events.jsonl"), encoding: .utf8)
+            .split(separator: "\n").map(String.init)
+    }
+}
+
+/// The hub's part of an alert, as `AppModel` does it: apply, save first if anyone is about to hear of it, then alert.
+/// `saveEvery` stands in for the app's debounced save, which a killed hub never reaches.
+private final class Hub: @unchecked Sendable {
+    let machine: Machine
+    let stateURL: URL
+    let store = SessionStore()
+    private let lock = NSLock()
+    private(set) var cursor: RemoteCursor
+    private(set) var alerts: [String] = []
+    private(set) var health: [RemoteHealth] = []
+    /// The moment of the crash: nothing from this seq on is processed.
+    var crashAt: Int64?
+    private(set) var crashed = false
+    private(set) var applied: [Int64] = []
+
+    init(machine: Machine, stateURL: URL) {
+        self.machine = machine
+        self.stateURL = stateURL
+        store.load(StateFile.load(from: stateURL))
+        cursor = StateFile.loadCursors(from: stateURL)[machine.id] ?? RemoteCursor()
+    }
+
+    func link(options: RemoteLink.Options = .init(), policy: RemoteIngest.Policy = .init(), audit: RemoteAudit?) -> RemoteLink {
+        RemoteLink(machine: machine, cursor: cursor, policy: policy, options: options, audit: audit,
+                   deliver: { [self] batch, cursor, applied in
+                       receive(batch, cursor: cursor)
+                       applied()
+                   },
+                   report: { [self] health, _ in
+                       lock.lock(); defer { lock.unlock() }
+                       self.health.append(health)
+                   })
+    }
+
+    private func receive(_ batch: [RemoteDelivery], cursor: RemoteCursor) {
+        lock.lock(); defer { lock.unlock() }
+        guard !crashed else { return }
+        var batch = batch
+        var cursor = cursor
+        if let crashAt, let i = batch.firstIndex(where: { $0.event.seq >= crashAt }) {
+            batch = Array(batch[..<i])
+            cursor.seq = batch.last?.event.seq ?? self.cursor.seq
+            crashed = true
+        }
+        let (changes, saveFirst, _) = store.apply(batch, from: machine.ref, saved: self.cursor, cursor: cursor)
+        self.cursor = cursor
+        applied += batch.map(\.event.seq)
+        if saveFirst { try! StateFile.save(store.sessions, cursors: [machine.id: cursor], to: stateURL) }
+        let settings = AlertPolicy.Settings(notifications: true, sounds: true, doneThreshold: 0, quiet: false)
+        for change in changes where AlertPolicy.decide(change, settings: settings, hostIsFrontmost: false) != nil {
+            alerts.append("\(change.session.sessionId)@\(change.session.origin!.lastSeq)")
+        }
+    }
+
+    var healthLog: [RemoteHealth] {
+        lock.lock(); defer { lock.unlock() }
+        return health
+    }
+
+    var alertLog: [String] {
+        lock.lock(); defer { lock.unlock() }
+        return alerts
+    }
+
+    var appliedLog: [Int64] {
+        lock.lock(); defer { lock.unlock() }
+        return applied
+    }
+
+    var hasCrashed: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return crashed
+    }
+
+    func sessions() -> [Session] {
+        lock.lock(); defer { lock.unlock() }
+        return store.sessions
+    }
+}
+
+private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () throws -> Bool) rethrows -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+        if try condition() { return true }
+        Thread.sleep(forTimeInterval: 0.02)
+    }
+    return try condition()
+}
+
+@Suite(.serialized) struct RemoteEndToEndTests {
+    /// Two prompts and two results in three sessions, on a live spool: alerts at each `needsInput` and `Stop`.
+    private func work(on stub: StubMachine, sessions: [String]) throws {
+        for s in sessions {
+            try stub.hook("UserPromptSubmit", session: s)
+            try stub.hook("PreToolUse", session: s, ["tool_name": "Bash"])
+            try stub.hook("PermissionRequest", session: s, ["tool_name": "Bash"])
+            try stub.hook("PostToolUse", session: s, ["tool_name": "Bash"])
+            try stub.hook("Stop", session: s)
+        }
+    }
+
+    @Test func pairingCopiesVerifiesInstallsAndPins() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair(redaction: .metadata)
+        #expect(machine.fingerprint.hasPrefix("id:"))
+        #expect(Machine.isValidFingerprint(machine.fingerprint))
+        let mode = try FileManager.default.attributesOfItem(atPath: stub.shim.path)[.posixPermissions] as? Int
+        #expect(mode == 0o700)
+        let installed = try String(contentsOf: stub.home.appendingPathComponent(".claude/settings.json"), encoding: .utf8)
+        #expect(installed.contains(#"ambient-remote\" emit claude"#))
+        let codex = try String(contentsOf: stub.home.appendingPathComponent(".codex/hooks.json"), encoding: .utf8)
+        #expect(codex.contains(#"ambient-remote\" emit codex"#))
+        #expect(stub.paths.remoteAudit.records().map(\.action) == [.paired])
+
+        // Pairing again is idempotent, and leaves the user's own settings alone.
+        let settings = stub.home.appendingPathComponent(".claude/settings.json")
+        var object = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as! [String: Any]
+        object["theme"] = "dark"
+        try JSONSerialization.data(withJSONObject: object).write(to: settings)
+        _ = try stub.pair()
+        let again = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as! [String: Any]
+        #expect(again["theme"] as? String == "dark")
+        #expect((again["hooks"] as? [String: Any])?.count == 14)
+    }
+
+    @Test func aChecksumMismatchPairsNothing() throws {
+        let stub = try StubMachine()
+        // A machine whose `cat` hands back something else.
+        var argv = stub.transport
+        argv[2] = argv[2].replacingOccurrences(of: "cd \"$HOME\" &&", with: #"cd "$HOME" && PATH="$HOME/fake:$PATH" &&"#)
+        let fake = stub.home.appendingPathComponent("fake")
+        try FileManager.default.createDirectory(at: fake, withIntermediateDirectories: true)
+        try Data("#!/bin/sh\necho tampered\n".utf8).write(to: fake.appendingPathComponent("cat"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fake.appendingPathComponent("cat").path)
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: argv), shim: RemoteShim(url: shimURL), existing: nil, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.checksumMismatch = error { return true }
+            return false
+        }
+    }
+
+    @Test func aChattyLoginShellDoesNotGetInTheWay() throws {
+        let stub = try StubMachine()
+        // A shell rc that prints, the classic way to break anything run over ssh.
+        stub.transportOverride = stub.transport.map {
+            $0.replacingOccurrences(of: #"exec /bin/sh -c "$2""#, with: #"echo 'Welcome to devbox!'; exec /bin/sh -c "$2""#)
+        }
+        let machine = try stub.pair()
+        let shim = try RemoteShim(url: shimURL)
+        let checks = RemoteDoctor.check(machine, shim: shim, cursor: nil)
+        #expect(!checks.contains { $0.level == .fail }, "\(checks)")
+
+        let audit = stub.paths.remoteAudit
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: audit)
+        link.start()
+        defer { link.stop() }
+        try stub.hook("UserPromptSubmit")
+        #expect(waitUntil { !hub.sessions().isEmpty })
+        #expect(audit.records().contains { $0.action == .rejected && $0.detail == "notJSON" })
+    }
+
+    @Test func aLiveStreamReachesTheStoreWithLabelsAndRedaction() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains(.connected) })
+
+        try stub.hook("SessionStart", ["source": "startup"])
+        try stub.hook("UserPromptSubmit", ["prompt": "my secret prompt"])
+        try stub.hook("PreToolUse", ["tool_name": "Bash", "tool_input": ["command": "curl -H 'token: abc' x"]])
+        try stub.hook("Notification", ["notification_type": "permission_prompt", "message": "Allow curl with token abc?"])
+        #expect(waitUntil { hub.alertLog.count == 1 })
+
+        let s = try #require(hub.sessions().first)
+        #expect(s.id == "remote/devbox/claude:s1")
+        #expect(s.origin?.machine.label == "Devbox")
+        #expect(s.project == "api")
+        #expect(s.host == nil)
+        // `standard` carries no prompt or message text, and it never reached the spool either.
+        #expect(s.activity == .waiting(reason: "permission", message: nil))
+        let spool = try stub.spoolLines().joined()
+        #expect(!spool.contains("secret"))
+        #expect(!spool.contains("token"))
+        #expect(!spool.contains("/home/dev"))
+        #expect(spool.contains(#""tool":"Bash""#))
+        #expect(FocusPlanner.routes(for: s).isEmpty)
+    }
+
+    /// At the default level a machine names the tool behind a permission request, never what it would run, so the hub
+    /// says what's needed: "Approve a command", not "Approve a tool".
+    @Test func aPermissionRequestSaysWhatItNeedsAtTheDefaultLevel() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try stub.hook("PermissionRequest", ["tool_name": "Bash", "tool_input": ["command": "rm -rf build"]])
+        let line = try #require(try stub.spoolLines().last)
+        let object = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+        #expect(object["tool"] as? String == "Bash")
+        #expect(object["reason"] as? String == "permission")
+        #expect(object["message"] == nil)
+        #expect(!line.contains("rm -rf"))
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.sessions().first?.mood == .waiting })
+        let s = try #require(hub.sessions().first)
+        #expect(s.activity == .waiting(reason: "command", message: nil))
+        #expect(Describe.activity(s.activity) == "Approve a command")
+        #expect(!stub.paths.remoteAudit.records().contains { $0.action == .rejected })
+    }
+
+    @Test func redactionLevelsApplyOnTheRemote() throws {
+        for (level, wantTool, wantMessage) in [(RemoteRedaction.metadata, false, false), (.standard, true, false), (.full, true, true)] {
+            let stub = try StubMachine()
+            _ = try stub.pair(redaction: level)
+            try stub.hook("PreToolUse", ["tool_name": "Bash"])
+            try stub.hook("Stop", ["last_assistant_message": "All finished"])
+            let spool = try stub.spoolLines().joined()
+            #expect(spool.contains(#""tool":"Bash""#) == wantTool, "\(level)")
+            #expect(spool.contains("All finished") == wantMessage, "\(level)")
+            #expect(spool.contains(#""project":"api""#), "\(level)")
+        }
+    }
+
+    @Test func textStopsAtItsCapOnTheMachine() throws {
+        let stub = try StubMachine()
+        _ = try stub.pair(redaction: .full)
+        func sent(_ text: String) throws -> String {
+            try stub.hook("Stop", ["last_assistant_message": text])
+            let line = try #require(try stub.spoolLines().last)
+            let object = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any]
+            return try #require(object?["message"] as? String)
+        }
+        #expect(try sent(String(repeating: "A", count: 1_000)) == String(repeating: "A", count: 159) + "…")
+        #expect(try sent(String(repeating: "é", count: 1_000)) == String(repeating: "é", count: 159) + "…")
+        #expect(try sent(String(repeating: "\"", count: 1_000)) == String(repeating: "\"", count: 159) + "…")
+        #expect(try sent(String(repeating: "A", count: 160)) == String(repeating: "A", count: 160))
+    }
+
+    @Test func aTightenedLevelCoversWhatWasAlreadySpooled() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair(redaction: .full)
+        try stub.hook("PreToolUse", ["tool_name": "Bash"])
+        try stub.hook("Stop", ["last_assistant_message": "the secret result"])
+        #expect(try stub.spoolLines().joined().contains("the secret result"))
+
+        let tightened = try RemotePairing.pair(.init(id: machine.id, transport: machine.transport, redaction: .metadata),
+                                               shim: RemoteShim(url: shimURL), existing: machine, audit: nil).machine
+        let hub = Hub(machine: tightened, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.cursor.seq == 2 })
+        #expect(hub.sessions().first?.activity == .done(summary: nil))
+    }
+
+    @Test func killingTheHubLosesAndDuplicatesNoAlerts() throws {
+        // Each kill point: right before an alert, right after one, and in a quiet stretch between them.
+        for crashAt in [Int64(3), 4, 6, 8, 12] {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let state = stub.hub.appendingPathComponent("state.json")
+            try work(on: stub, sessions: ["a", "b", "c"])
+            let total = try stub.spoolLines().count
+
+            let first = Hub(machine: machine, stateURL: state)
+            first.crashAt = crashAt
+            let dying = first.link(audit: nil)
+            dying.start()
+            #expect(waitUntil { first.hasCrashed })
+            dying.stop()
+
+            // A new process finds only what reached the disk, while the agents keep working.
+            try work(on: stub, sessions: ["d"])
+            let second = Hub(machine: machine, stateURL: state)
+            let link = second.link(audit: nil)
+            link.start()
+            defer { link.stop() }
+            let all = total + 5
+            #expect(waitUntil { second.cursor.seq == Int64(all) }, "crash at \(crashAt): stopped at \(second.cursor.seq)")
+
+            // Every prompt and result was announced exactly once, across both lives of the hub.
+            let alerts = first.alertLog + second.alertLog
+            let expected = ["a", "b", "c", "d"].flatMap { s in
+                let base = (["a": 0, "b": 5, "c": 10, "d": 15][s] ?? 0)
+                return ["\(s)@\(base + 3)", "\(s)@\(base + 5)"]
+            }
+            #expect(alerts.sorted() == expected.sorted(), "crash at \(crashAt)")
+            #expect(Set(alerts).count == alerts.count, "crash at \(crashAt)")
+            // And what's on screen agrees with an uninterrupted hub.
+            #expect(second.sessions().map(\.id).sorted() == ["a", "b", "c", "d"].map { "remote/devbox/claude:\($0)" })
+            #expect(second.sessions().allSatisfy { $0.mood == .done })
+        }
+    }
+
+    @Test func theHookStaysWithinItsLatencyBudget() throws {
+        let stub = try StubMachine()
+        _ = try stub.pair()
+        let huge = String(repeating: "line of \"quoted\" tool output\n", count: 8_000)
+        var small: [TimeInterval] = []
+        var large: [TimeInterval] = []
+        for _ in 0..<30 {
+            small.append(try stub.emit(["session_id": "s", "hook_event_name": "PreToolUse", "cwd": "/x", "tool_name": "Bash"]))
+            large.append(try stub.emit(["session_id": "s", "hook_event_name": "PostToolUse", "cwd": "/x", "tool_name": "Bash",
+                                        "tool_response": ["stdout": huge]]))
+        }
+        small.sort()
+        large.sort()
+        // The target is about 10 ms; measured 12 ms under dash on a laptop. These limits are for a loaded CI machine and
+        // the slower macOS /bin/sh. They're here to catch the shape of the problem: parsing that grows with the payload
+        // took half a second per event before the tokenizer stopped rejoining strings.
+        #expect(small[small.count / 2] < 0.1, "median \(small[small.count / 2])")
+        #expect(large[large.count / 2] < 0.3, "median \(large[large.count / 2])")
+    }
+
+    @Test func aFailingSpoolNeverFailsTheHook() throws {
+        let stub = try StubMachine()
+        _ = try stub.pair()
+        // The spool can't be written: emit still exits 0, which `emit` here asserts.
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: stub.spool.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stub.spool.path) }
+        try stub.hook("PreToolUse", ["tool_name": "Bash"])
+        // Nor do payloads it can't read.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", #"printf 'not json' | HOME="$0" /bin/sh "$1" emit claude"#, stub.home.path, stub.shim.path]
+        try process.run()
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0)
+    }
+
+    @Test func aMalformedSpoolLineIsRejectedAndAudited() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        try stub.hook("UserPromptSubmit")
+        try stub.appendToSpool(#"{"event":{"_0":{"agent":"claude","sessionId":"x","kind":{"sessionEnded":{}}}},"secret":"hunter2"}"# + "\n")
+        try stub.appendToSpool("not json at all, with a secret: hunter2\n")
+        try stub.appendToSpool(#"{"v":1,"seq":2,"id":"\#(String(repeating: "c", count: 32))","ts":\#(Int(Date().timeIntervalSince1970)),"agent":"claude","session":"forged","kind":"needsInput","host":{"agentPid":1,"tty":"/dev/ttys001"}}"# + "\n")
+        try stub.hook("PreToolUse", ["tool_name": "Bash"])
+
+        let audit = stub.paths.remoteAudit
+        let link = hub.link(audit: audit)
+        link.start()
+        #expect(waitUntil { hub.sessions().first?.activity == .tool(name: "Bash", detail: nil) })
+        link.stop()
+
+        #expect(hub.sessions().map(\.sessionId) == ["s1"])
+        #expect(hub.sessions().first?.host == nil)
+        let rejected = audit.records().filter { $0.action == .rejected }
+        #expect(Set(rejected.compactMap(\.detail)) == ["notJSON", "tooDeep", "unknownField"], "\(rejected)")
+        #expect(rejected.compactMap(\.count).reduce(0, +) == 3, "\(rejected)")
+        #expect(try !String(contentsOf: audit.url, encoding: .utf8).contains("hunter2"))
+    }
+
+    @Test func aReplayedPromptFromLongAgoIsMissedWithoutAChime() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try stub.hook("UserPromptSubmit")
+        try stub.hook("PermissionRequest", ["tool_name": "Bash"])
+        // Two hours pass with the hub asleep.
+        let then = Int(Date().timeIntervalSince1970) - 7_200
+        let file = stub.spool.appendingPathComponent("events.jsonl")
+        let aged = try String(contentsOf: file, encoding: .utf8)
+            .replacingOccurrences(of: #""ts":\d+"#, with: "\"ts\":\(then)", options: .regularExpression)
+        try aged.write(to: file, atomically: true, encoding: .utf8)
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.sessions().first?.origin?.missed == true })
+        #expect(hub.alertLog.isEmpty)
+        let s = try #require(hub.sessions().first)
+        #expect(s.mood == .waiting)
+        #expect(Describe.remoteState(s) == "Missed")
+
+        // What happens next on the machine is live again.
+        try stub.hook("Stop")
+        #expect(waitUntil { hub.alertLog.count == 1 })
+        #expect(hub.sessions().first?.origin?.missed == false)
+    }
+
+    @Test func aChangedMachineStopsTheLinkUntilApproved() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains { if case .revoked = $0 { true } else { false } } })
+        #expect(!hub.healthLog.contains(.connected))
+        #expect(stub.paths.remoteAudit.records().contains { $0.action == .fingerprintChanged })
+
+        // Pairing again doesn't quietly accept it.
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        let approved = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport, acceptNewIdentity: true),
+                                              shim: RemoteShim(url: shimURL), existing: machine, audit: nil)
+        #expect(approved.machine.fingerprint == "id:" + String(repeating: "f", count: 32))
+    }
+
+    @Test func aDifferentMachineIsLeftAsItWas() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+
+        // The transport now reaches another machine, which has its own shim and its own settings.
+        try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
+        let settings = stub.home.appendingPathComponent(".claude/settings.json")
+        try Data("{}".utf8).write(to: settings)
+        var theirShim = try Data(contentsOf: stub.shim)
+        theirShim.append(Data("# this machine's own copy\n".utf8))
+        try theirShim.write(to: stub.shim)
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: stub.paths.remoteAudit)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        #expect(try Data(contentsOf: settings) == Data("{}".utf8))
+        #expect(try Data(contentsOf: stub.shim) == theirShim)
+        #expect(stub.paths.remoteAudit.records().filter { $0.action == .fingerprintChanged }.count == 1)
+    }
+
+    @Test func aDifferentMachineWithNoShimIsLeftAsItWasToo() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try Data((String(repeating: "f", count: 32) + "\n").utf8).write(to: stub.home.appendingPathComponent(".ambient/remote.id"))
+        try FileManager.default.removeItem(at: stub.shim)
+        let settings = stub.home.appendingPathComponent(".claude/settings.json")
+        try Data("{}".utf8).write(to: settings)
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: stub.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        #expect(!FileManager.default.fileExists(atPath: stub.shim.path))
+        #expect(try Data(contentsOf: settings) == Data("{}".utf8))
+    }
+
+    @Test func aMachineThatsNeverSeenAmbientIsLeftAsItWas() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let other = try StubMachine()
+
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: other.transport), shim: RemoteShim(url: shimURL),
+                                       existing: machine, audit: nil)
+        } throws: { error in
+            if case RemotePairing.Failure.identityChanged = error { return true }
+            return false
+        }
+        #expect(!FileManager.default.fileExists(atPath: other.home.appendingPathComponent(".ambient").path))
+        #expect(!FileManager.default.fileExists(atPath: other.home.appendingPathComponent(".claude/settings.json").path))
+    }
+
+    @Test func uninstallingChecksItsMachineFirst() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let other = try StubMachine()
+        let theirs = try other.pair()
+        let shim = try RemoteShim(url: shimURL)
+
+        // The alias now reaches a machine with its own pairing, and that stays exactly as it was.
+        var repointed = machine
+        repointed.transport = theirs.transport
+        #expect(RemotePairing.uninstall(repointed, shim: shim) == .differentMachine(theirs.fingerprint))
+        #expect(FileManager.default.fileExists(atPath: other.shim.path))
+        #expect(FileManager.default.fileExists(atPath: other.spool.path))
+        #expect(try String(contentsOf: other.home.appendingPathComponent(".claude/settings.json"), encoding: .utf8).contains("ambient-remote"))
+
+        #expect(RemotePairing.uninstall(machine, shim: shim) == .removed)
+        #expect(!FileManager.default.fileExists(atPath: stub.shim.path))
+        #expect(!FileManager.default.fileExists(atPath: stub.spool.path))
+
+        var dead = machine
+        dead.transport = ["/bin/sh", "-c", "exit 255", "stub"]
+        guard case .failed = RemotePairing.uninstall(dead, shim: shim) else {
+            Issue.record("a machine out of reach isn't removed")
+            return
+        }
+    }
+
+    @Test func whatAMachineReportsIsPrintedOnlyAsPlainText() throws {
+        let shim = try RemoteShim(url: shimURL)
+        // Everything works until `status`, whose line has a key that clears the screen and retitles the terminal.
+        let script = #"case "$0" in *sha256sum*) echo \#(shim.sha256) ;; *status*) printf '{"\\u001b[2J\\u001b]0;pwned\\u0007":1}\n' ;; *install*) ;; *) cat > /dev/null ;; esac"#
+        #expect {
+            _ = try RemotePairing.pair(.init(id: "devbox", transport: ["/bin/sh", "-c", script]), shim: shim, existing: nil, audit: nil)
+        } throws: { error in
+            let text = String(describing: error)
+            return text.contains("pwned") && !text.unicodeScalars.contains { $0.properties.generalCategory == .control }
+        }
+    }
+
+    /// A machine with plenty to say: hello, then an event every few milliseconds for as long as anyone reads them.
+    private func steadyMachine() -> Machine {
+        let pin = "id:" + String(repeating: "a", count: 32)
+        let script = #"""
+            printf '{"v":1,"type":"hello","shim":"1.0.0","proto":1,"caps":"exit","level":"standard","seq":0,"epoch":"0123456789abcdef","identity":"\#(pin)","ts":%s}\n' "$(date +%s)"
+            i=0
+            while :; do
+                i=$((i + 1))
+                printf '{"v":1,"seq":%s,"id":"%032x","ts":1,"agent":"claude","session":"s","kind":"toolStarted"}\n' "$i" "$i" || exit 0
+                sleep 0.01
+            done
+            """#
+        return Machine(id: "steady", transport: ["/bin/sh", "-c", script], fingerprint: pin)
+    }
+
+    private final class Gate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var answers: [@Sendable () -> Void] = []
+        private var count = 0
+
+        func arrived(_ applied: @escaping @Sendable () -> Void) {
+            lock.lock(); defer { lock.unlock() }
+            count += 1
+            answers.append(applied)
+        }
+
+        var batches: Int {
+            lock.lock(); defer { lock.unlock() }
+            return count
+        }
+
+        func answer() {
+            lock.lock()
+            let waiting = answers
+            answers = []
+            lock.unlock()
+            waiting.forEach { $0() }
+        }
+    }
+
+    @Test func aLinkWaitsForEachBatchToBeApplied() {
+        let gate = Gate()
+        let link = RemoteLink(machine: steadyMachine(), cursor: .init(), deliver: { _, _, applied in gate.arrived(applied) },
+                              report: { _, _ in })
+        link.start()
+        #expect(waitUntil { gate.batches == 1 })
+        // The machine goes on writing, and nothing more comes this way until the first batch is done.
+        Thread.sleep(forTimeInterval: 0.3)
+        #expect(gate.batches == 1)
+        gate.answer()
+        #expect(waitUntil { gate.batches == 2 })
+
+        // Nobody will answer this one, as when the thread that would is the one quitting.
+        let start = Date()
+        link.stop()
+        #expect(Date().timeIntervalSince(start) < 5)
+    }
+
+    @Test func aMachineThatWontSettleWaitsLikeAnyOtherRetry() throws {
+        let stub = try StubMachine()
+        let log = stub.hub.appendingPathComponent("connections")
+        let pin = "id:" + String(repeating: "a", count: 32)
+        // A new epoch on every connection, so every connection says the spool was replaced.
+        let script = #"""
+            echo x >> '\#(log.path)'
+            printf '{"v":1,"type":"hello","shim":"1.0.0","proto":1,"caps":"exit","level":"standard","seq":0,"epoch":"%016x","identity":"\#(pin)","ts":%s}\n' "$$" "$(date +%s)"
+            sleep 5
+            """#
+        let machine = Machine(id: "restless", transport: ["/bin/sh", "-c", script], fingerprint: pin)
+        var options = RemoteLink.Options()
+        options.backoff.base = 0.2
+        let link = RemoteLink(machine: machine, cursor: RemoteCursor(seq: 0, epoch: String(repeating: "0", count: 16)), options: options,
+                              deliver: { _, _, applied in applied() }, report: { _, _ in })
+        link.start()
+        Thread.sleep(forTimeInterval: 1)
+        link.stop()
+        let connections = try String(contentsOf: log, encoding: .utf8).split(separator: "\n").count
+        #expect(connections >= 2, "the first restart is immediate")
+        #expect(connections <= 5, "\(connections) connections in a second")
+    }
+
+    @Test func theLinkReconnectsAndARebuiltSpoolStartsOver() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        var options = RemoteLink.Options()
+        options.backoff.base = 0.05
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        try work(on: stub, sessions: ["a"])
+        let link = hub.link(options: options, audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.cursor.seq == 5 })
+
+        // The machine is rebuilt: new spool, new epoch, seq back to 1. `follow` hangs up, and the link starts again.
+        try FileManager.default.removeItem(at: stub.spool)
+        try stub.hook("UserPromptSubmit", session: "b")
+        #expect(waitUntil { hub.sessions().contains { $0.sessionId == "b" } })
+        #expect(hub.cursor.seq == 1)
+        #expect(hub.healthLog.contains { if case .reconnecting = $0 { true } else { false } })
+        #expect(hub.healthLog.filter { $0 == .connected }.count >= 2)
+        #expect(stub.paths.remoteAudit.records().contains { $0.action == .spoolReset })
+
+        // A session from before the rebuild goes on, with a seq far below the one it remembers.
+        try stub.hook("UserPromptSubmit", session: "a")
+        #expect(waitUntil { hub.sessions().first { $0.sessionId == "a" }?.activity == .thinking })
+    }
+
+    @Test func aFloodIsHeldBackOnlyAsLongAsTheLimitSays() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains(.connected) })
+
+        // 300 past the burst of 500, so about 6 s at 50 a second. Adding up each event's wait would take minutes.
+        let count = 800, now = Int(Date().timeIntervalSince1970)
+        try Data().write(to: stub.spool.appendingPathComponent("events.jsonl"))
+        try stub.appendToSpool((1...count).map {
+            #"{"v":1,"seq":\#($0),"id":"\#(String(format: "%032x", $0))","ts":\#(now),"agent":"claude","session":"s1","kind":"toolStarted"}"# + "\n"
+        }.joined())
+        try "\(count) 0\n".write(to: stub.spool.appendingPathComponent("seq"), atomically: true, encoding: .utf8)
+        #expect(waitUntil(20) { hub.cursor.seq == Int64(count) })
+    }
+
+    @Test func pairingAgainStartsANewLink() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let again = try RemotePairing.pair(.init(id: machine.id, label: machine.label, transport: machine.transport),
+                                           shim: RemoteShim(url: shimURL), existing: machine, audit: nil)
+        // The coordinator restarts a link when its machine changes, which is what puts the new shim and level to work.
+        #expect(again.machine != machine)
+        #expect(again.machine.fingerprint == machine.fingerprint)
+    }
+
+    @Test func pairingKeepsASymlinkedConfigALink() throws {
+        let stub = try StubMachine()
+        let dotfile = stub.home.appendingPathComponent("dotfiles-settings.json")
+        try Data("{}".utf8).write(to: dotfile)
+        let config = stub.home.appendingPathComponent(".claude/settings.json")
+        try FileManager.default.createSymbolicLink(at: config, withDestinationURL: dotfile)
+
+        _ = try stub.pair()
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: config.path) == dotfile.path)
+        #expect(try String(contentsOf: dotfile, encoding: .utf8).contains("ambient-remote"))
+    }
+
+    @Test func anUnreachableMachineRetriesWithoutAFuss() throws {
+        let stub = try StubMachine()
+        let machine = Machine(id: "gone", transport: ["/bin/sh", "-c", "echo 'ssh: connect to host gone port 22: No route to host' >&2; exit 255", "stub"],
+                              fingerprint: "id:" + String(repeating: "0", count: 32))
+        var options = RemoteLink.Options()
+        options.backoff.base = 0.02
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(options: options, audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.filter { if case .reconnecting = $0 { true } else { false } }.count >= 3 })
+        #expect(!stub.paths.remoteAudit.records().contains { $0.action == .linkUp })
+    }
+
+    @Test func aShimThatCantBeUnderstoodAsksForAnUpdate() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        // A future shim whose handshake has moved on.
+        var script = try String(contentsOf: stub.shim, encoding: .utf8)
+        script = script.replacingOccurrences(of: #""identity":"%s","ts":%s'"#, with: #""identity":"%s","ts":%s,"future":1'"#)
+        try script.write(to: stub.shim, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stub.shim.path)
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains { if case .upgradeNeeded = $0 { true } else { false } } })
+
+        // Pairing again is what fixes it, even though this shim's `status` can't be read either.
+        let shim = try RemoteShim(url: shimURL)
+        let again = try RemotePairing.pair(.init(id: machine.id, transport: machine.transport), shim: shim, existing: machine, audit: nil)
+        #expect(again.status.hello.shim == shim.version)
+    }
+
+    @Test func aRefusedSignInAsksForIt() throws {
+        let stub = try StubMachine()
+        let machine = Machine(id: "locked", transport: ["/bin/sh", "-c", "echo 'dev@locked: Permission denied (publickey).' >&2; exit 255", "stub"],
+                              fingerprint: "id:" + String(repeating: "0", count: 32))
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: stub.paths.remoteAudit)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.healthLog.contains { if case .signInNeeded = $0 { true } else { false } } })
+        #expect(stub.paths.remoteAudit.records().contains { $0.action == .signInNeeded })
+    }
+
+    @Test func followReportsWhenTheAgentExits() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        try stub.hook("UserPromptSubmit")
+        // A session whose agent is gone. Its pid stays on the remote: nothing about it reaches the hub.
+        let live = stub.spool.appendingPathComponent("live/claude.s1")
+        try Data("999999\n\napi\n\n".utf8).write(to: live)
+
+        let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+        let link = hub.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { hub.cursor.seq == 2 && hub.sessions().isEmpty })
+        #expect(!FileManager.default.fileExists(atPath: live.path))
+    }
+
+    @Test func doctorSeesEachPartOfTheLink() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let shim = try RemoteShim(url: shimURL)
+        let levels = { (checks: [RemoteDoctor.Check]) in checks.filter { $0.level == .fail }.map(\.text) }
+        let good = RemoteDoctor.check(machine, shim: shim, cursor: nil)
+        #expect(levels(good).isEmpty, "\(good)")
+        #expect(good.contains { $0.text.contains("Identity matches") })
+        #expect(good.contains { $0.text == "Claude Code: hooks installed" })
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.spool.path)
+        #expect(levels(RemoteDoctor.check(machine, shim: shim, cursor: nil)).contains { $0.contains("permissions") })
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stub.spool.path)
+
+        var tampered = try Data(contentsOf: stub.shim)
+        tampered.append(Data("# edited\n".utf8))
+        try tampered.write(to: stub.shim)
+        #expect(levels(RemoteDoctor.check(machine, shim: shim, cursor: nil)).contains { $0.contains("checksum") })
+
+        let dead = Machine(id: "gone", transport: ["/bin/sh", "-c", "exit 255", "stub"], fingerprint: machine.fingerprint)
+        #expect(RemoteDoctor.check(dead, shim: shim, cursor: nil).map(\.level) == [.fail])
+    }
+
+    @Test func removingAndPurgingLeaveNothingBehind() throws {
+        let stub = try StubMachine()
+        let machine = try stub.pair()
+        let paths = stub.paths
+        try FileManager.default.createDirectory(at: paths.home, withIntermediateDirectories: true)
+        let store = SessionStore()
+        let e = RemoteEvent(seq: 1, id: String(repeating: "1", count: 32), ts: Date(), agent: .claude, session: "s1", kind: .turnCompleted,
+                            project: "secret-project")
+        let change = try #require(store.apply(e, from: machine.ref, at: e.ts))
+        let tasks = TaskStore()
+        tasks.observe(change)
+        var day = DayLog(now: Date())
+        day.apply(change, now: Date())
+        let local = AgentEvent(agent: .codex, sessionId: "mine", cwd: "/x", kind: .promptSubmitted)
+        store.apply(local)
+        try StateFile.save(store.sessions, cursors: ["devbox": RemoteCursor(seq: 1, epoch: "e"), "ci": RemoteCursor(seq: 2)], to: paths.stateFile)
+        try TaskFile.save(tasks.tasks, to: paths.tasksFile)
+        try DayLogFile.save(day, to: paths.dayFile)
+
+        try RemotePurge.scrub(machine: "devbox", paths: paths)
+        #expect(StateFile.load(from: paths.stateFile).map(\.id) == ["codex:mine"])
+        #expect(StateFile.loadCursors(from: paths.stateFile) == ["ci": RemoteCursor(seq: 2)])
+        #expect(TaskFile.load(from: paths.tasksFile).isEmpty)
+        #expect(DayLogFile.load(from: paths.dayFile)?.moments.isEmpty == true)
+        for file in [paths.stateFile, paths.tasksFile, paths.dayFile] {
+            #expect(try !String(contentsOf: file, encoding: .utf8).contains("secret-project"))
+        }
+        // A running app picks the rest up from the marker, once.
+        #expect(RemotePurge.pendingPurges(paths: paths) == ["devbox"])
+        RemotePurge.clearPurge("devbox", paths: paths)
+        #expect(RemotePurge.pendingPurges(paths: paths).isEmpty)
+    }
+
+    /// The same path over real ssh, with a throwaway sshd on loopback, its own keys, and a forced command that keeps
+    /// everything in a temp home. Opens a port for as long as it runs, so it's opt-in: `AMBIENT_TEST_SSHD=1 swift test`.
+    @Test func overARealSSHServer() throws {
+        guard ProcessInfo.processInfo.environment["AMBIENT_TEST_SSHD"] != nil else { return }
+        let stub = try StubMachine()
+        let root = stub.home.deletingLastPathComponent()
+        func path(_ name: String) -> String { root.appendingPathComponent(name).path }
+        func keygen(_ name: String) throws {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
+            process.arguments = ["-q", "-t", "ed25519", "-N", "", "-f", path(name)]
+            try process.run()
+            process.waitUntilExit()
+        }
+        try keygen("host_key")
+        try keygen("client_key")
+        try FileManager.default.copyItem(atPath: path("client_key.pub"), toPath: path("authorized_keys"))
+        let port = Int.random(in: 42_000...58_000)
+        try """
+        ListenAddress 127.0.0.1
+        Port \(port)
+        HostKey \(path("host_key"))
+        AuthorizedKeysFile \(path("authorized_keys"))
+        PasswordAuthentication no
+        KbdInteractiveAuthentication no
+        UsePAM no
+        StrictModes no
+        PidFile \(path("sshd.pid"))
+        ForceCommand /bin/sh -c 'HOME=\(stub.home.path); export HOME; cd "$HOME" && exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"'
+        """.write(toFile: path("sshd_config"), atomically: true, encoding: .utf8)
+
+        let server = Process()
+        server.executableURL = URL(fileURLWithPath: "/usr/sbin/sshd")
+        server.arguments = ["-D", "-e", "-f", path("sshd_config")]
+        server.standardError = FileHandle.nullDevice
+        try server.run()
+        defer { server.terminate() }
+
+        stub.transportOverride = ["ssh", "-F", "/dev/null", "-p", "\(port)", "-i", path("client_key"), "-o", "IdentitiesOnly=yes",
+                                  "-o", "UserKnownHostsFile=\(path("known_hosts"))", "-o", "StrictHostKeyChecking=accept-new",
+                                  "-o", "BatchMode=yes", "127.0.0.1"]
+        var machine: Machine?
+        let paired = waitUntil(10) {
+            machine = try? stub.pair()
+            return machine != nil
+        }
+        #expect(paired)
+        let pinned = try #require(machine)
+        #expect(pinned.fingerprint.hasPrefix("SHA256:"))
+
+        try work(on: stub, sessions: ["a", "b"])
+        let state = stub.hub.appendingPathComponent("state.json")
+        let first = Hub(machine: pinned, stateURL: state)
+        first.crashAt = 4
+        let dying = first.link(audit: nil)
+        dying.start()
+        #expect(waitUntil { first.hasCrashed })
+        dying.stop()
+
+        let second = Hub(machine: pinned, stateURL: state)
+        let link = second.link(audit: nil)
+        link.start()
+        defer { link.stop() }
+        #expect(waitUntil { second.cursor.seq == 10 })
+        let alerts = (first.alertLog + second.alertLog).sorted()
+        #expect(alerts == ["a@3", "a@5", "b@8", "b@10"].sorted())
+    }
+}
+
+/// What the app hears from a link about voices.
+private final class VoiceSink: @unchecked Sendable {
+    private let lock = NSLock()
+    private var events: [VoiceInboxEvent] = []
+    private var saved = VoiceCursor()
+    private var handed = 0
+
+    func add(_ batch: [VoiceInboxEvent], cursor: VoiceCursor) {
+        lock.lock(); defer { lock.unlock() }
+        events += batch
+        saved = cursor
+        handed += 1
+    }
+
+    /// Times the link handed something over, events or only a cursor.
+    var deliveries: Int {
+        lock.lock(); defer { lock.unlock() }
+        return handed
+    }
+
+    var all: [VoiceInboxEvent] {
+        lock.lock(); defer { lock.unlock() }
+        return events
+    }
+
+    var savedCursor: VoiceCursor {
+        lock.lock(); defer { lock.unlock() }
+        return saved
+    }
+
+    var cursor: Int64 { savedCursor.vseq }
+
+    var arrivals: [VoiceArrival] { all.compactMap { if case let .arrived(a) = $0 { a } else { nil } } }
+
+    func heard(_ id: String) -> Bool {
+        all.contains { if case let .incoming(got, _) = $0 { got == id } else { false } }
+    }
+
+    func progressed(_ id: String) -> Bool {
+        all.contains { if case let .progress(got, _, _) = $0 { got == id } else { false } }
+    }
+}
+
+extension RemoteEndToEndTests {
+    /// Voice sync over the same `sh -c` transport and shim: a Mac records into its outbox, and the hub following it gets
+    /// the voice as it's recorded. It's nested so it runs one test at a time with the suite it's in: both pair stub
+    /// machines through real shims, and side by side they stalled a three-core CI runner for a minute.
+    @Suite struct VoiceSync {
+        private let hubID = String(repeating: "5a", count: 16)
+
+        private func chunk(_ frames: Int = 10) -> Data {
+            (0..<frames).reduce(into: Data()) { data, i in data += ADTS.frame(Data(repeating: UInt8(i), count: 80), sampleRate: 24_000)! }
+        }
+
+        private func outbox(_ stub: StubMachine) -> VoiceOutbox {
+            VoiceOutbox(dir: stub.home.appendingPathComponent(".ambient/voice-sync"))
+        }
+
+        private func link(_ machine: Machine, _ sink: VoiceSink, cursor: Int64 = 0, epoch: String? = nil,
+                          known: Set<String> = [], hub: String? = nil) -> RemoteLink {
+            let receiver = VoiceReceiver(hub: VoiceHub(id: hub ?? hubID, label: "Mac Studio"),
+                                         cursor: VoiceCursor(vseq: cursor, epoch: epoch), known: known) {
+                sink.add($0, cursor: $1)
+            }
+            return RemoteLink(machine: machine, cursor: RemoteCursor(), voice: receiver,
+                              deliver: { _, _, applied in applied() }, report: { _, _ in })
+        }
+
+        @Test func aVoiceStreamsToItsHubAsItIsRecorded() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let sink = VoiceSink()
+            let link = link(machine, sink)
+            link.start()
+            defer { link.stop() }
+
+            // The hub says who it is, so Ambient on that Mac can offer it as a destination.
+            let hubs = stub.spool.appendingPathComponent("hubs")
+            #expect(waitUntil { VoiceDestination.load(from: hubs).map(\.label) == ["Mac Studio"] })
+            #expect(VoiceDestination.load(from: hubs).first?.isOnline() == true)
+
+            let id = VoiceHub.randomID()
+            box.setLive(true)
+            try box.append(to: hubID, voice: id, .start(at: Date()))
+            #expect(waitUntil(5) { sink.heard(id) })
+            // Live, a chunk crosses in a fifth of a second plus the transport.
+            let sent = Date()
+            try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+            #expect(waitUntil(5) { sink.progressed(id) })
+            let latency = Date().timeIntervalSince(sent)
+            #expect(latency < 0.8, "\(latency) s")
+            try box.append(to: hubID, voice: id, .text("hello from daily"))
+            try box.append(to: hubID, voice: id, .audio(n: 1, data: chunk(4)))
+            try box.append(to: hubID, voice: id, .end(text: "Hello from Daily."))
+            box.setLive(false)
+
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            let arrival = try #require(sink.arrivals.first)
+            #expect(arrival.id == id)
+            #expect(arrival.machine == machine.ref)
+            #expect(arrival.audio == chunk() + chunk(4))
+            #expect(arrival.text == "Hello from Daily.")
+            #expect(abs(arrival.seconds - 14 * 1024 / 24_000.0) < 0.001)
+            #expect(sink.cursor == 5)
+        }
+
+        @Test func aHubHearsOnlyItsOwnVoices() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let elsewhere = VoiceHub.randomID(), mine = VoiceHub.randomID()
+            for (hub, id) in [(String(repeating: "77", count: 16), elsewhere), (hubID, mine)] {
+                try box.append(to: hub, voice: id, .start(at: Date()))
+                try box.append(to: hub, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hub, voice: id, .end(text: nil))
+            }
+            let sink = VoiceSink()
+            let link = link(machine, sink)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            Thread.sleep(forTimeInterval: 1.2)
+            #expect(sink.arrivals.map(\.id) == [mine])
+            #expect(!sink.heard(elsewhere))
+        }
+
+        @Test func aHubCutOffMidVoiceGetsItWholeOnceItsBack() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let first = VoiceSink()
+            let id = VoiceHub.randomID()
+            do {
+                let link = link(machine, first)
+                link.start()
+                box.setLive(true)
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                #expect(waitUntil(5) { first.progressed(id) })
+                link.stop()
+            }
+            #expect(first.all.last == .ended(id: id), "the cut-off voice stops showing")
+            #expect(first.cursor == 0)
+
+            // The rest is recorded while the hub is away, and the replay starts from the voice's start.
+            try box.append(to: hubID, voice: id, .audio(n: 1, data: chunk()))
+            try box.append(to: hubID, voice: id, .end(text: "done"))
+            box.setLive(false)
+            let second = VoiceSink()
+            let link = link(machine, second, cursor: first.cursor)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { second.arrivals.count == 1 })
+            #expect(second.arrivals.first?.audio == chunk() + chunk())
+            #expect(second.cursor == 4)
+        }
+
+        @Test func aVoiceAlreadyKeptIsntKeptTwice() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let kept = VoiceHub.randomID(), fresh = VoiceHub.randomID()
+            for id in [kept, fresh] {
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hubID, voice: id, .end(text: nil))
+            }
+            // As after a hub killed between saving the voice and moving its cursor.
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 0, known: [kept])
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.cursor == 6 })
+            #expect(sink.arrivals.map(\.id) == [fresh])
+        }
+
+        @Test func aReplacedOutboxStartsTheHubsVoicesOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let id = VoiceHub.randomID()
+            try box.append(to: hubID, voice: id, .start(at: Date()))
+            try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+            try box.append(to: hubID, voice: id, .end(text: nil))
+            // The hub remembers an outbox that got to 40.
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 40)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.cursor == 3)
+        }
+
+        @Test func aReplacedOutboxSavesTheCursorItStartsOverFrom() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            // Only another hub's voice: nothing comes for this one to carry the cursor.
+            let id = VoiceHub.randomID()
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .start(at: Date()))
+            try box.append(to: String(repeating: "77", count: 16), voice: id, .cancel)
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 40)
+            link.start()
+            defer { link.stop() }
+            // Saved as it's reset, so a launch before the next voice doesn't follow from 40 again.
+            #expect(waitUntil(5) { sink.deliveries > 0 })
+            #expect(sink.cursor == 0)
+            #expect(sink.all.isEmpty)
+        }
+
+        @Test func aRecreatedOutboxThatGrewPastTheCursorStartsOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let earlier = VoiceHub.randomID()
+            let old = outbox(stub)
+            try old.append(to: hubID, voice: earlier, .start(at: Date()))
+            try old.append(to: hubID, voice: earlier, .audio(n: 0, data: chunk()))
+            try old.append(to: hubID, voice: earlier, .end(text: nil))
+            let first = VoiceSink()
+            do {
+                let link = link(machine, first)
+                link.start()
+                #expect(waitUntil(5) { first.arrivals.count == 1 })
+                link.stop()
+            }
+            #expect(first.savedCursor == VoiceCursor(vseq: 3, epoch: old.epoch))
+
+            // While the hub is away, the outbox is made again, and grows past where the hub got to.
+            try FileManager.default.removeItem(at: old.dir)
+            let new = outbox(stub)
+            let ids = [VoiceHub.randomID(), VoiceHub.randomID()]
+            for id in ids {
+                try new.append(to: hubID, voice: id, .start(at: Date()))
+                try new.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try new.append(to: hubID, voice: id, .end(text: nil))
+            }
+            #expect(new.epoch != old.epoch)
+            let second = VoiceSink()
+            let link = link(machine, second, cursor: first.cursor, epoch: first.savedCursor.epoch, known: [earlier])
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { second.arrivals.count == 2 })
+            #expect(second.arrivals.map(\.id) == ids, "the first one too, though its lines are behind the old cursor")
+            #expect(second.savedCursor == VoiceCursor(vseq: 6, epoch: new.epoch))
+        }
+
+        @Test func aCursorFromBeforeEpochsTakesTheOutboxsWithoutStartingOver() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let box = outbox(stub)
+            let kept = VoiceHub.randomID(), fresh = VoiceHub.randomID()
+            for id in [kept, fresh] {
+                try box.append(to: hubID, voice: id, .start(at: Date()))
+                try box.append(to: hubID, voice: id, .audio(n: 0, data: chunk()))
+                try box.append(to: hubID, voice: id, .end(text: nil))
+            }
+            let sink = VoiceSink()
+            let link = link(machine, sink, cursor: 3)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.savedCursor == VoiceCursor(vseq: 6, epoch: box.epoch))
+            Thread.sleep(forTimeInterval: 1.2)
+            #expect(sink.arrivals.map(\.id) == [fresh])
+            #expect(!sink.heard(kept))
+        }
+
+        @Test func anOutboxFromBeforeEpochsStillStreams() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            let dir = stub.home.appendingPathComponent(".ambient/voice-sync")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent("outbox.jsonl")
+            // As an app from before epochs writes it: the newest vseq alone in outbox.seq.
+            func append(_ line: VoiceLine) throws {
+                if !FileManager.default.fileExists(atPath: file.path) { FileManager.default.createFile(atPath: file.path, contents: nil) }
+                let handle = try FileHandle(forWritingTo: file)
+                try handle.seekToEnd()
+                try handle.write(contentsOf: line.encoded() + Data("\n".utf8))
+                try handle.close()
+                try Data("\(line.vseq)\n".utf8).write(to: dir.appendingPathComponent("outbox.seq"), options: .atomic)
+            }
+            let id = VoiceHub.randomID()
+            try append(VoiceLine(vseq: 1, to: hubID, voice: id, part: .start(at: Date())))
+            try append(VoiceLine(vseq: 2, to: hubID, voice: id, part: .audio(n: 0, data: chunk())))
+            let sink = VoiceSink()
+            let saved = "0123456789abcdef"
+            let link = link(machine, sink, epoch: saved)
+            link.start()
+            defer { link.stop() }
+            #expect(waitUntil(5) { sink.progressed(id) })
+            try append(VoiceLine(vseq: 3, to: hubID, voice: id, part: .end(text: "still here")))
+            #expect(waitUntil(5) { sink.arrivals.count == 1 })
+            #expect(sink.arrivals.first?.text == "still here")
+            #expect(sink.savedCursor == VoiceCursor(vseq: 3, epoch: saved), "a hello with no epoch leaves the saved one")
+        }
+
+        @Test func aHubFromBeforeVoiceSyncSeesWhatItAlwaysDid() throws {
+            let stub = try StubMachine()
+            let machine = try stub.pair()
+            try outbox(stub).append(to: hubID, voice: VoiceHub.randomID(), .start(at: Date()))
+            let hub = Hub(machine: machine, stateURL: stub.hub.appendingPathComponent("state.json"))
+            let link = hub.link(audit: stub.paths.remoteAudit)
+            link.start()
+            defer { link.stop() }
+            try stub.hook("UserPromptSubmit")
+            #expect(waitUntil { !hub.sessions().isEmpty })
+            #expect(!FileManager.default.fileExists(atPath: stub.spool.appendingPathComponent("hubs").path))
+            #expect(!stub.paths.remoteAudit.records().contains { $0.action == .rejected })
+        }
+    }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Jazz sleeve",
+  "set": "insp",
+  "inspiration": "A mid-century modern jazz LP sleeve: a flat field of blue, huge condensed capitals, a level meter in the state colours, a tracklist and liner notes",
+  "order": 12,
+  "hero": "split",
+  "fonts": [
+    { "family": "Anton", "axes": "wght@400" },
+    { "family": "Libre Franklin", "axes": "wght@400;600;800" }
+  ],
+  "copy": { "kicker": "Stereo · for macOS 14 or later", "h1": "Glance, don't babysit." }
+}

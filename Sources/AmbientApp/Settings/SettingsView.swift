@@ -6,15 +6,30 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
+    @ObservedObject var model: AppModel
+    let remote: RemoteCoordinator
     let wallpaper: LivingWallpaper
+    let speech: SpeechController
+    let voicePack: VoicePackInstaller
+    let shortcuts: ShortcutCenter
+    let voiceSync: VoiceSyncController
+    let voiceShortcuts: ShortcutCenter
+    let speaker: SpeakerController
+    let mic: MicController
     let onDemo: () -> Void
     let onPreviewSound: (Mood) -> Void
     let onDone: () -> Void
+    var onOpenBoard: (() -> Void)? = nil
 
-    @AppStorage("settingsPane") private var pane: SettingsPane = .welcome
+    /// A raw value, which may name a pane from before the panes were grouped (`SettingsPane.moved`).
+    @AppStorage("settingsPane") private var paneName = SettingsPane.welcome.rawValue
+    @AppStorage("settingsTab.agents") private var agentsTab = AgentsTab.thisMac
+    @AppStorage("settingsTab.appearance") private var appearanceTab = AppearanceTab.notch
+    @AppStorage("settingsTab.voice") private var voiceTab = VoiceTab.readAloud
+    @AppStorage("settingsTab.general") private var generalTab = GeneralTab.general
     @FocusState private var sidebarFocused: Bool
 
-    /// Live, not captured: the window outlives first run and is reused when Settings opens again.
+    /// Live, not captured: first run can end while the window is open.
     private var firstRun: Bool { !prefs.setupCompleted }
 
     var body: some View {
@@ -27,7 +42,8 @@ struct SettingsView: View {
         // Up under the transparent title bar, so the traffic lights sit on the sidebar.
         .ignoresSafeArea(.container, edges: .top)
         .onAppear {
-            if firstRun { pane = .welcome }
+            moveOldPane()
+            if firstRun { paneName = SettingsPane.welcome.rawValue }
             sidebarFocused = true
             setup.refresh()
         }
@@ -38,8 +54,8 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsPane.shown) { p in
-                SidebarItem(title: p.title, symbol: p.symbol, selected: p == current) { select(p) }
+            ForEach(SettingsPane.allCases) { p in
+                SidebarItem(title: p.title, symbol: p.symbol, selected: p == current, focused: sidebarFocused) { select(p) }
             }
             Spacer(minLength: 0)
         }
@@ -73,38 +89,74 @@ struct SettingsView: View {
         .transition(.opacity)
     }
 
-    /// The stored pane, unless this build doesn't show it (Performance, saved by a dev build).
-    private var current: SettingsPane { SettingsPane.shown.contains(pane) ? pane : .welcome }
+    private var current: SettingsPane { SettingsPane(rawValue: paneName) ?? .welcome }
+
+    /// A pane saved before the panes were grouped opens as the tab it became.
+    private func moveOldPane() {
+        guard SettingsPane(rawValue: paneName) == nil else { return }
+        guard let (pane, tab) = SettingsPane.moved(from: paneName) else {
+            paneName = SettingsPane.welcome.rawValue
+            return
+        }
+        paneName = pane.rawValue
+        switch pane {
+        case .agents: agentsTab = AgentsTab(rawValue: tab) ?? agentsTab
+        case .appearance: appearanceTab = AppearanceTab(rawValue: tab) ?? appearanceTab
+        case .voice: voiceTab = VoiceTab(rawValue: tab) ?? voiceTab
+        case .general: generalTab = GeneralTab(rawValue: tab) ?? generalTab
+        default: break
+        }
+    }
 
     @ViewBuilder private var paneContent: some View {
         switch current {
         case .welcome:
             WelcomePane(setup: setup, firstRun: firstRun, onDemo: onDemo, onGetStarted: onDone)
         case .agents:
-            AgentsPane(setup: setup)
-        case .island:
-            IslandPane(prefs: prefs)
-        case .pet:
-            PetPane(prefs: prefs)
+            TabbedPane(pane: .agents, selection: $agentsTab) { tab in
+                switch tab {
+                case .thisMac: AgentsPane(setup: setup)
+                case .otherMachines: RemotePane(model: model, prefs: prefs, remote: remote)
+                }
+            }
+        case .board:
+            BoardPane(model: model, prefs: prefs, onOpenBoard: onOpenBoard)
         case .alerts:
             AlertsPane(setup: setup, prefs: prefs, onPreviewSound: onPreviewSound)
-        case .dock:
-            DockPane(setup: setup, prefs: prefs)
-        case .wallpaper:
-            WallpaperPane(prefs: prefs, wallpaper: wallpaper, calendar: wallpaper.calendar)
-        case .performance:
-            PerformancePane(monitor: PerfMonitor.shared)
+        case .appearance:
+            TabbedPane(pane: .appearance, selection: $appearanceTab) { tab in
+                switch tab {
+                case .notch: IslandPane(prefs: prefs)
+                case .pet: PetPane(prefs: prefs)
+                case .dock: DockPane(setup: setup, prefs: prefs)
+                case .wallpaper: WallpaperPane(prefs: prefs, wallpaper: wallpaper, calendar: wallpaper.calendar)
+                }
+            }
+        case .voice:
+            TabbedPane(pane: .voice, selection: $voiceTab) { tab in
+                switch tab {
+                case .readAloud: VoicePane(prefs: prefs, voicePack: voicePack, speech: speech, shortcuts: shortcuts)
+                case .voiceSync: VoiceSyncPane(voice: voiceSync, prefs: prefs, shortcuts: voiceShortcuts)
+                case .speaker: SpeakerPane(speaker: speaker, prefs: prefs, model: model)
+                case .microphone: MicrophonePane(mic: mic, speaker: speaker, prefs: prefs, model: model)
+                }
+            }
         case .general:
-            GeneralPane(setup: setup)
+            TabbedPane(pane: .general, tabs: GeneralTab.shown, selection: $generalTab) { tab in
+                switch tab {
+                case .general: GeneralPane(setup: setup)
+                case .performance: PerformancePane(monitor: PerfMonitor.shared)
+                }
+            }
         }
     }
 
     private func select(_ p: SettingsPane) {
-        withAnimation(.easeOut(duration: 0.18)) { pane = p }
+        withAnimation(.easeOut(duration: 0.18)) { paneName = p.rawValue }
     }
 
     private func move(_ delta: Int) -> KeyPress.Result {
-        let all = SettingsPane.shown
+        let all = SettingsPane.allCases
         guard let i = all.firstIndex(of: current) else { return .ignored }
         if all.indices.contains(i + delta) { select(all[i + delta]) }
         return .handled

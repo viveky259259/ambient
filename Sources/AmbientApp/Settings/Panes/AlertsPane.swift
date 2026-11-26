@@ -5,6 +5,12 @@ struct AlertsPane: View {
     @ObservedObject var setup: SetupModel
     @ObservedObject var prefs: Preferences
     let onPreviewSound: (Mood) -> Void
+    @State private var hookProblem: String?
+
+    private static let finishedTurns: [(seconds: Double, label: String)] = [
+        (0, "All of them"), (10, "Longer than 10 seconds"), (20, "Longer than 20 seconds"), (60, "Longer than 1 minute"),
+        (300, "Longer than 5 minutes"),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -14,7 +20,8 @@ struct AlertsPane: View {
                             footer: "Ambient stays quiet while you're already in the app running the agent.") {
                 SettingsRow(title: "Show notifications", subtitle: "When an agent needs you, finishes, or fails.") {
                     HStack(spacing: Theme.Space.sm) {
-                        permission
+                        PermissionControl(allowed: notificationsAllowed, ask: setup.requestNotifications,
+                                          openSettings: setup.requestNotifications)
                         Toggle("Show notifications", isOn: $prefs.notificationsEnabled)
                             .toggleStyle(.switch)
                             .labelsHidden()
@@ -22,19 +29,15 @@ struct AlertsPane: View {
                     }
                 }
                 SettingsDivider()
-                SettingsRow(title: "Announce finished turns longer than") {
-                    Picker("Announce finished turns longer than", selection: $prefs.doneThreshold) {
-                        Text("Always").tag(0.0)
-                        Text("10 seconds").tag(10.0)
-                        Text("20 seconds").tag(20.0)
-                        Text("1 minute").tag(60.0)
-                        Text("5 minutes").tag(300.0)
+                SettingsRow(title: "Tell me about finished turns", subtitle: "For banners and chimes.") {
+                    Picker("Tell me about finished turns", selection: $prefs.doneThreshold) {
+                        ForEach(Self.finishedTurns, id: \.seconds) { Text($0.label).tag($0.seconds) }
                     }
                     .labelsHidden()
                     .fixedSize()
                 }
             }
-            SettingsSection(header: "Sound") {
+            SettingsSection(header: "Chimes") {
                 SettingsToggleRow(title: "Play chimes", isOn: $prefs.soundsEnabled)
                 SettingsDivider()
                 SettingsRow(title: "Volume") {
@@ -53,17 +56,39 @@ struct AlertsPane: View {
                 }
                 .disabled(!prefs.soundsEnabled)
             }
+            SettingsSection(header: "Permission prompts",
+                            footer: "Ambient never answers for you. Changing this edits a Codex hook: type /hooks in Codex once to approve it.") {
+                SettingsToggleRow(title: "Answer from the notch",
+                                  subtitle: prefs.islandEnabled
+                                      ? "Allow once or Deny Claude Code and Codex requests at the notch."
+                                      : "Turn on Show agent status in Appearance › Notch first.",
+                                  isOn: $prefs.answerPermissions)
+                    .disabled(!prefs.islandEnabled)
+                SettingsDivider()
+                SettingsRow(title: "Wait for an answer", subtitle: "Then the agent asks you as usual.") {
+                    Picker("Wait for an answer", selection: $prefs.permissionWait) {
+                        ForEach(PermissionSettings.waits, id: \.self) { Text("\($0) seconds").tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                .disabled(!prefs.answerPermissions || !prefs.islandEnabled)
+                if let hookProblem {
+                    Text(hookProblem)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(Theme.Status.error.textColor)
+                        .settingsRowPadding()
+                }
+            }
         }
+        .onChange(of: prefs.permissionSettings) { _, settings in hookProblem = PermissionHooks.apply(settings) }
     }
 
-    @ViewBuilder private var permission: some View {
+    private var notificationsAllowed: Bool? {
         switch setup.notificationStatus {
-        case .authorized, .provisional:
-            StatusBadge("Allowed", .success)
-        case .denied:
-            Button("Open System Settings") { setup.requestNotifications() }.buttonStyle(.pill)
-        default:
-            Button("Allow") { setup.requestNotifications() }.buttonStyle(.pill)
+        case .authorized, .provisional: true
+        case .denied: false
+        default: nil
         }
     }
 }

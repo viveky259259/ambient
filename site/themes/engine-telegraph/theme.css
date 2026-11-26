@@ -1,0 +1,136 @@
+/* Engine telegraph: a ship's bridge at night. Navy panelling with rivet lines, brass plates with screw heads,
+   an ivory dial face, and a brass handle for every button. Marcellus for the engraving, Spectral for prose,
+   Fira Code for the small stamped legends. */
+:root {
+  --bg: #0b1a2c;
+  --bg-alt: #10233a;
+  --surface: #e6c983;
+  --surface-2: #132a44;
+  --ink: #f4ecd8;
+  --ink-2: #e2dac6;
+  --rule: rgba(203, 166, 89, 0.45);
+  --accent: #cba659;
+  --on-accent: #1c1509;
+  --link: #e3c47c;
+  --band: #f4ecd8;
+  --band-ink: #1c1509;
+  --band-ink-2: #4a3d22;
+  --band-surface: #e9dfc7;
+  --band-rule: rgba(28, 21, 9, 0.3);
+  --hero-bg: radial-gradient(900px 700px at 72% 40%, #132a44, transparent 70%);
+  --claude: #e08463;
+  --waiting: #f2a516;
+  --done: #3db06c;
+  --error: #e04a3b;
+
+  --font-display: "Marcellus", "Optima", "Iowan Old Style", Georgia, serif;
+  --font-body: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-label: "Fira Code", ui-monospace, Menlo, monospace;
+  --font-mono: "Fira Code", ui-monospace, Menlo, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
+  --display-leading: 1.05;
+  --h1-size: clamp(46px, 6vw, 80px);
+  --h2-size: clamp(36px, 4.6vw, 58px);
+  --h3-size: 28px;
+  --body-size: 18px;
+  --label-size: 13.5px;
+  --label-tracking: 0.16em;
+  --label-weight: 400;
+  --label-color: #cba659;
+
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-btn: 50px;
+  --border: 1.5px solid var(--rule);
+  --brass: linear-gradient(160deg, #e6c983 0, #c9a252 50%, #b48e40 100%);
+  --rivet: radial-gradient(circle at 40% 35%, #8a6a2a 0 3px, #5b4416 4px, transparent 5px);
+  --texture: radial-gradient(circle, rgba(255, 255, 255, 0.07) 3px, transparent 3.5px) 20px 232px / 60px 250px, repeating-linear-gradient(0deg, transparent 0 248px, rgba(255, 255, 255, 0.04) 248px 250px);
+  --band-texture: none;
+  --device-edge: #b08a3d;
+  --edge-strength: 0.32;
+}
+
+.nav { background: color-mix(in srgb, #0b1a2c 92%, transparent); border-bottom: 1.5px solid rgba(203, 166, 89, 0.4); }
+.nav .wrap { height: 68px; }
+.brand { font-family: "Marcellus SC", var(--font-display); font-size: 28px; letter-spacing: 0.16em; color: #cba659; }
+.brand img { display: none; }
+.nav-links { gap: 16px; font-family: "Marcellus SC", var(--font-display); font-size: 14px; letter-spacing: 0.04em; }
+.nav-links a { color: #f4ecd8; }
+.nav-links a:hover { color: #cba659; }
+
+/* Buttons: a polished brass handle grip. */
+.btn { font-family: "Marcellus SC", var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 0.1em; padding: 12px 32px; background: linear-gradient(170deg, #e9cd8a, #a9843a); color: #1c1509; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 6px 0 #5b4416, 0 12px 24px rgba(0, 0, 0, 0.5); margin-bottom: 6px; }
+.btn:active { transform: translateY(4px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 2px 0 #5b4416; }
+.btn.small { font-size: 15px; padding: 8px 18px; min-height: 44px; background: transparent; color: #cba659; border: 1.5px solid #cba659; box-shadow: none; margin: 0; border-radius: 0; }
+
+/* Hero */
+.hero h1 { margin-bottom: 26px; }
+.hero-copy .lede { color: #e2dac6; }
+.trust { font-family: var(--font-body); font-style: italic; font-size: 17px; }
+.fineprint { font-family: var(--font-mono); font-size: 13px; color: #b9b29c; }
+.copy-code { background: transparent; border: 1px solid rgba(203, 166, 89, 0.6); color: #f4ecd8; }
+.copy-code span { color: #cba659; }
+.hero .link-btn { color: #e3c47c; }
+.hero-art { width: min(560px, 100%); margin: 0 auto; aspect-ratio: 820 / 1010; }
+.eot { width: 100%; height: auto; overflow: visible; }
+.eot .arm { transition: transform 1.2s var(--spring); }
+.eot .sec { transition: fill-opacity 0.6s; }
+@media (max-width: 860px) { .hero-art { width: min(400px, 90%); } }
+
+main > section { border-top: 1.5px solid rgba(203, 166, 89, 0.3); }
+.dark { --label-color: #6b4f19; }
+.dark .section-lede, .dark p.body { color: #3b3020; }
+
+/* Brass plates with a screw at each corner. */
+.card, .guide-list a, .dest, .voice-panel {
+  --ink: #1c1509; --ink-2: #3b2c10; --link: #1c1509; --rule: rgba(28, 21, 9, 0.35); --surface-2: #d9b96f;
+  color: #1c1509; border: 0;
+  background: var(--rivet) 8px 8px / 12px 12px no-repeat, var(--rivet) right 8px top 8px / 12px 12px no-repeat, var(--rivet) left 8px bottom 8px / 12px 12px no-repeat, var(--rivet) right 8px bottom 8px / 12px 12px no-repeat, var(--brass);
+  box-shadow: inset 0 0 0 2px #f3dfa6, inset 0 0 0 9px rgba(184, 146, 67, 0.55), 0 14px 24px rgba(0, 0, 0, 0.45);
+}
+.card { padding: 34px 30px; }
+.card h3, .guide-list strong { font-family: "Marcellus SC", var(--font-display); letter-spacing: 0.06em; }
+.card p, .guide-list span { color: #1c1509; font-weight: 600; }
+.dark .card { box-shadow: inset 0 0 0 2px #f3dfa6, inset 0 0 0 9px rgba(184, 146, 67, 0.55), 0 10px 18px rgba(28, 21, 9, 0.25); }
+.card .orb { width: 34px; height: 34px; box-shadow: 0 0 0 3px #1c1509; }
+.card .orb::after { line-height: 34px; font-size: 16px; }
+.states .card { border-top: 0; }
+.states .card h3 { font-size: 34px; }
+.agents .card .orb { width: 26px; height: 26px; }
+.dest li { border-top: 1px solid rgba(28, 21, 9, 0.3); font-weight: 600; }
+.dest { padding: 8px 10px; }
+.dest .where { color: #1c1509; font-family: var(--font-mono); font-size: 12.5px; }
+.step { background: #0b1a2c; color: #cba659; font-family: "Marcellus SC", var(--font-display); font-size: 18px; box-shadow: 0 0 0 3px #cba659; }
+.stat { color: #cba659; }
+
+.faq summary { font-family: var(--font-display); font-size: 21px; }
+.faq summary::after { color: #cba659; }
+.faq details { border-top: 1.5px solid rgba(203, 166, 89, 0.35); }
+.faq details:last-child { border-bottom: 1.5px solid rgba(203, 166, 89, 0.35); }
+
+.voice.tabs-on .voice-tablist { background: #0b1a2c; border: 1.5px solid #cba659; border-radius: 50px; }
+.voice-tab { font-family: "Marcellus SC", var(--font-display); font-size: 16px; color: #f4ecd8; border-radius: 50px; min-height: 44px; }
+.voice-tab[aria-selected="true"] { background: linear-gradient(170deg, #e9cd8a, #a9843a); color: #1c1509; }
+.voice-flow { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--state) 22%, transparent), transparent 70%), #f4ecd8; border-radius: 50%/30%; }
+.voice-flow .end { background: #f4ecd8; color: #1c1509; border: 1.5px solid #1c1509; font-family: var(--font-mono); font-size: 12.5px; }
+.voice-steps li { border-top: 1px solid rgba(28, 21, 9, 0.3); }
+.voice-steps li::before { color: #1c1509; }
+.chip { font-family: "Marcellus SC", var(--font-display); font-size: 16px; min-height: 44px; border-radius: 50px; }
+.dark .chip { border-color: rgba(28, 21, 9, 0.4); }
+.wallpaper { border: 0; border-radius: 4px; box-shadow: inset 0 0 0 2px #f3dfa6, 0 0 0 8px #b08a3d; }
+.scene-demo, .dock-stage { box-shadow: 0 0 0 8px #b08a3d, 0 0 0 10px #5b4416; }
+.closing h2 { font-size: clamp(36px, 5vw, 64px); }
+.closing img { box-shadow: 0 0 0 8px #cba659, 0 0 0 10px #5b4416; }
+
+footer { background: #07111d; color: #b9b29c; border-top: 1.5px solid rgba(203, 166, 89, 0.35); font-family: var(--font-mono); font-size: 12.5px; }
+footer a { color: #f4ecd8; }
+
+dialog { --ink: #1c1509; --ink-2: #3b2c10; --link: #1c1509; color: #1c1509; background: #f4ecd8; border: 0; box-shadow: 0 0 0 10px #b08a3d, 0 0 0 12px #5b4416, 0 30px 80px rgba(0, 0, 0, 0.5); border-radius: 6px; }
+.sheet .btn.small, .sheet .inline .btn { font-size: 15px; }
+.field input { border: 1.5px solid #1c1509; background: #fffaf0; }
+.close { color: #1c1509; }
+
+/* The MacBook's screen shares the .display class with the type role; keep the picture of the app as it is. */
+.macbook .display { font-family: inherit; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+@media (prefers-reduced-motion: reduce) { .eot .arm, .eot .sec { transition: none; } }

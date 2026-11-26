@@ -1,0 +1,127 @@
+/* Switchboard. A telephone exchange: a walnut cabinet, a black jack field with brass rings and lamps, ivory
+   designation strips and key cards, patch cords, and a serif with an operator's poise. */
+:root {
+  --bg: #3b2314;
+  --bg-alt: #14100d;
+  --surface: #f2e6c9;
+  --surface-2: #241a12;
+  --ink: #f2e6c9;
+  --ink-2: #e2d4b4;
+  --rule: rgba(195, 148, 71, 0.6);
+  --accent: #f2e6c9;
+  --on-accent: #1c120a;
+  --link: #ecc77e;
+  --band: #120b06;
+  --band-ink: #f2e6c9;
+  --band-ink-2: #d9cba8;
+  --band-surface: #1f150d;
+  --band-rule: rgba(195, 148, 71, 0.55);
+  --hero-bg: transparent;
+  --waiting: #ffb11f;
+  --done: #4fd17c;
+  --error: #ff5340;
+
+  --font-display: "DM Serif Display", "Didot", Georgia, serif;
+  --font-body: "Karla", "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
+  --display-leading: 1;
+  --h1-size: clamp(50px, 6.6vw, 96px);
+  --h2-size: clamp(38px, 5vw, 64px);
+  --h3-size: 30px;
+  --body-size: 18px;
+  --label-size: 14px;
+  --label-tracking: 0.16em;
+  --label-weight: 700;
+  --label-color: #d3a659;
+
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-btn: 40px;
+  --border: 2px solid var(--rule);
+  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --texture: repeating-linear-gradient(92deg, transparent 0 38px, rgba(0, 0, 0, 0.13) 38px 40px, transparent 40px 97px, rgba(255, 255, 255, 0.025) 97px 99px), linear-gradient(180deg, #3b2314, #2a180d);
+  --band-texture: none;
+  --device-edge: #5d3d20;
+  --edge-strength: 0.45;
+  color-scheme: dark;
+}
+
+.macbook .display { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-style: normal; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: normal; }
+body { background-attachment: fixed; }
+
+/* The alt sections are the black jack field: a grid of brass-ringed jacks behind them. */
+.alt { background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0 4px, rgba(195, 148, 71, 0.16) 4.5px 6.5px, transparent 7px) 0 0 / 64px 72px, var(--bg-alt); box-shadow: inset 0 0 0 10px #1f120a, inset 0 0 0 12px #5d3d20; }
+
+.nav { background: color-mix(in srgb, #2a180d 92%, transparent); border-bottom: 2px solid #c39447; }
+.brand { font-family: var(--font-display); font-style: italic; font-size: 30px; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-weight: 700; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; gap: 18px; }
+.nav-links a { color: #e2d4b4; }
+.nav-links a:hover { color: #ecc77e; }
+.nav .btn.small { background: transparent; color: #ecc77e; border: 1.5px solid #c39447; box-shadow: none; }
+.nav .btn.small::before { content: none; }
+
+/* Buttons: an ivory key with a brass jack set in it. */
+.btn { font-family: var(--font-body); font-weight: 700; font-size: 20px; letter-spacing: 0.03em; padding: 14px 30px 14px 20px; gap: 14px; box-shadow: inset 0 -5px 0 #cdbd96, 0 10px 24px rgba(0, 0, 0, 0.45); }
+.btn::before { content: ""; width: 24px; height: 24px; border-radius: 50%; flex: none; background: radial-gradient(circle, #000 0 32%, #6b5226 34% 48%, #c39447 50% 66%, #6b5226 68%); }
+.btn.small { font-size: 15px; min-height: 44px; padding: 6px 18px; }
+.btn.small::before, .sheet .btn::before { content: none; }
+.sheet .inline .btn { font-size: 16px; padding: 8px 16px; box-shadow: inset 0 -4px 0 #cdbd96; }
+.chip, .voice-tab { min-height: 44px; border-radius: 40px; font-family: var(--font-label); font-weight: 700; }
+.chip[aria-pressed="true"], .dark .chip[aria-pressed="true"] { background: #f2e6c9; color: #1c120a; }
+.copy-code { background: #14100d; border: 1px solid #c39447; }
+
+/* Hero */
+.hero .kicker { color: #d3a659; }
+.hero h1 { font-size: clamp(48px, 5.8vw, 84px); }
+.hero-copy .lede { color: #ecdfc2; }
+.hero-art { width: 100%; max-width: min(520px, 86vw); aspect-ratio: 600 / 640; margin: 0 auto; }
+.swb-board { width: 100%; }
+.swb-board .live { fill: var(--state, #ffb11f); transition: fill 0.8s var(--ease); }
+.swb-board .live-glow { fill: var(--state, #ffb11f); transition: fill 0.8s var(--ease); animation: swb-pulse 2.4s ease-in-out infinite; }
+@keyframes swb-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+.trust { font-family: var(--font-label); font-weight: 700; font-size: 15px; }
+.fineprint { font-family: var(--font-label); font-size: 14.5px; color: #e2d4b4; }
+
+/* Section kickers are ivory designation strips; each section starts on a brass rail. */
+main > section { border-top: 6px solid #c39447; }
+main .kicker { display: inline-block; background: #f2e6c9; color: #1c120a; padding: 5px 12px; letter-spacing: 0.14em; }
+.section-lede { color: var(--ink-2); }
+
+/* Cards are ivory key cards, set in dark type. */
+.card, .dest, .guide-list a { --ink: #1c120a; --ink-2: #4a3a28; --rule: rgba(28, 18, 10, 0.3); color: #1c120a; border: 0; box-shadow: var(--card-shadow); }
+.card { background: #f2e6c9; position: relative; }
+.card h3 { color: #1c120a; }
+.dark .card { background: #f2e6c9; }
+.states .card { border-top: 0; padding-right: 92px; }
+.states .card::after { content: ""; position: absolute; right: 22px; top: 22px; width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #ffffff 0, var(--state) 45%, rgba(0, 0, 0, 0.4) 130%); box-shadow: 0 0 0 6px #1c120a, 0 0 24px var(--state); }
+.states .card h3 { font-size: 38px; }
+.states .card p { font-weight: 600; }
+.agents .card { border-top: 8px solid var(--state); }
+
+.dest { background: #f2e6c9; }
+.dest li { border-top: 1.5px dashed rgba(28, 18, 10, 0.4); }
+.dest .where { color: #4a3a28; font-weight: 700; }
+.wallpaper { border: 10px solid #1f120a; box-shadow: inset 0 0 0 2px #5d3d20; }
+.step { background: #f2e6c9; color: #1c120a; border: 3px solid #c39447; font-family: var(--font-display); font-size: 18px; }
+.steps .card .step { background: #1c120a; color: #f2e6c9; }
+.stat { color: #ecc77e; font-style: italic; }
+.faq { background: #14100d; padding: 8px 28px; border: 10px solid #1f120a; box-shadow: inset 0 0 0 2px #5d3d20; }
+.faq summary { font-size: 22px; }
+.faq summary::after { color: #c39447; }
+.guide-list a { background: #f2e6c9; color: #1c120a; }
+.guide-list a:hover { box-shadow: 0 0 0 3px #c39447, var(--card-shadow); }
+.guide-list span { color: #4a3a28; }
+.voice-panel { background: #14100d; border: 10px solid #1f120a; box-shadow: inset 0 0 0 2px #5d3d20; }
+.voice-tablist { background: #14100d; border: 1.5px solid #c39447; border-radius: 44px; }
+.voice-tab[aria-selected="true"] { background: #f2e6c9; color: #1c120a; }
+.voice-flow .end { background: #f2e6c9; color: #1c120a; border: 0; border-radius: 40px; }
+footer { background: #120b06; border-top: 6px solid #c39447; font-family: var(--font-label); }
+footer a { color: #ecc77e; }
+dialog { background-color: #2a180d; border: 2px solid #c39447; }
+dialog .error { color: #ff9a8f; }
+.field input { background: #14100d; }
+@media (max-width: 760px) { .faq { padding: 4px 16px; border-width: 6px; } }

@@ -1,0 +1,12 @@
+{
+  "name": "Lighthouse",
+  "set": "insp",
+  "inspiration": "A lighthouse at night: the notch is the lamp, its beam sweeps the sea in the current state's colour, and the four states are a chart of lights",
+  "order": 6,
+  "hero": "stack",
+  "fonts": [
+    { "family": "Young Serif", "axes": "wght@400" },
+    { "family": "Outfit", "axes": "wght@300;400;500" }
+  ],
+  "copy": { "kicker": "A beacon for coding agents on macOS", "h1": "A light for the moment your agents need you." }
+}

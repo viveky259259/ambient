@@ -1,0 +1,103 @@
+/* Lighthouse: a night sea. The notch is the lamp; its beam turns over the hero in the current state's colour,
+   and the four states below are read like a chart of lights. */
+:root {
+  --bg: #0a1628;
+  --bg-alt: #0d1d36;
+  --surface: #10233f;
+  --surface-2: #14294a;
+  --ink: #f3ead6;
+  --ink-2: #cfc8b6;
+  --rule: rgba(243, 234, 214, 0.16);
+  --accent: #ffdc93;
+  --on-accent: #0a1428;
+  --link: #ffdc93;
+  --band: #050c18;
+  --band-ink: #f3ead6;
+  --band-ink-2: #c8c1ae;
+  --band-surface: #0c1a30;
+  --band-rule: rgba(243, 234, 214, 0.14);
+  --hero-bg: linear-gradient(#070f20, #0c1c38 62%, #12305a 86%, #0d2244);
+  --hero-ink: #f3ead6;
+  --hero-ink-2: #dcd6c6;
+
+  --font-display: "Young Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Outfit", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-label: "Outfit", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --display-tracking: -0.03em;
+  --display-leading: 1.02;
+  --h1-size: clamp(44px, 7vw, 100px);
+  --h2-size: clamp(36px, 4.8vw, 60px);
+  --h3-size: 28px;
+  --body-size: 17px;
+  --label-size: 12px;
+  --label-tracking: 0.24em;
+  --label-weight: 500;
+  --label-color: #e9c98b;
+
+  --radius: 18px;
+  --radius-sm: 10px;
+  --radius-btn: 999px;
+  --border: 1px solid var(--rule);
+  --texture: repeating-linear-gradient(#ffffff00 0 17px, #ffffff06 17px 18px);
+  --band-texture: radial-gradient(800px 300px at 50% 0, #ffdc9314, transparent 70%);
+  --device-edge: #2b3d5c;
+  --edge-strength: 0.5;
+  color-scheme: dark;
+}
+
+.nav { background: color-mix(in srgb, #070f20 82%, transparent); border-bottom-color: rgba(243, 234, 214, 0.1); }
+.brand { font-family: var(--font-display); font-size: 26px; text-transform: lowercase; }
+.brand img { display: none; }
+.nav-links { font-family: var(--font-body); font-size: 15px; letter-spacing: 0; }
+.nav-links a { color: #dcd6c6; }
+.btn { font-family: var(--font-body); font-size: 18px; font-weight: 500; letter-spacing: 0; padding: 17px 36px; box-shadow: 0 0 40px -6px #ffdc9366; }
+.btn.small { font-size: 14px; min-height: 40px; padding: 9px 20px; box-shadow: none; }
+.chip, .voice-tab { border-radius: 999px; font-family: var(--font-body); }
+
+/* Hero: the lamp at the notch, the turning beam and its rings behind the words, a sea at the foot. */
+.hero { padding-top: 0; isolation: isolate; }
+.hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 120px; z-index: -1; background: repeating-linear-gradient(#ffffff00 0 13px, #ffffff0d 13px 14px), linear-gradient(transparent, #071226); }
+.hero .wrap { position: static; }
+html[data-theme] .hero-art { position: static; min-height: 190px; }
+.hero-copy { position: relative; }
+.hero .kicker { color: #e9c98b; }
+html[data-theme] .hero-copy .lede { font-weight: 300; }
+.trust { color: var(--ink); }
+.fineprint { color: #c8c1ae; }
+.copy-code { border-radius: 999px; padding-left: 14px; }
+@media (max-width: 760px) { html[data-theme] .hero-art { min-height: 150px; } }
+.lh-beam { position: absolute; left: 50%; top: 19px; width: 3000px; height: 3000px; margin: -1500px 0 0 -1500px; z-index: -1; pointer-events: none;
+  background: conic-gradient(from 118deg, transparent 0, color-mix(in srgb, var(--lh-lamp) 34%, transparent) 13deg, color-mix(in srgb, var(--lh-lamp) 8%, transparent) 24deg, transparent 30deg, transparent 78deg, color-mix(in srgb, var(--lh-lamp) 24%, transparent) 94deg, transparent 112deg);
+  -webkit-mask: radial-gradient(circle, #000 0, #000 30%, transparent 62%); mask: radial-gradient(circle, #000 0, #000 30%, transparent 62%);
+  animation: lh-turn 26s linear infinite; }
+:root { --lh-lamp: var(--state, #ffd27a); }
+@keyframes lh-turn { to { transform: rotate(360deg); } }
+.lh-rings { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: repeating-radial-gradient(circle at 50% 19px, transparent 0 25px, #ffe7b01c 25px 26.5px); -webkit-mask: radial-gradient(circle at 50% 19px, #000 80px, transparent 520px); mask: radial-gradient(circle at 50% 19px, #000 80px, transparent 520px); }
+.lh-notch { position: absolute; top: 0; left: 50%; width: 230px; height: 38px; margin-left: -115px; background: #000; border-radius: 0 0 18px 18px; }
+.lh-notch::after { content: ""; position: absolute; left: 103px; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: #ffe7b0; box-shadow: 0 0 30px 12px var(--lh-lamp), 0 0 140px 60px color-mix(in srgb, var(--lh-lamp) 35%, transparent); transition: box-shadow 0.8s var(--ease); }
+
+/* The chart of lights */
+.states { gap: 30px; }
+.states .card { background: transparent; border: 0; text-align: center; box-shadow: none; }
+.states .card .orb, .states .card .orb.big { width: 112px; height: 112px; margin: 0 auto 26px; animation: none;
+  background: radial-gradient(circle, var(--state) 0 16%, #ffffff55 17% 19%, transparent 20% 32%, var(--state) 33% 35%, transparent 36% 50%, var(--state) 51% 53%, transparent 54% 66%, #ffffff40 67% 69%, transparent 70%);
+  box-shadow: 0 0 70px 6px color-mix(in srgb, var(--state) 70%, transparent); }
+.states .card .orb.pulse { animation: lh-flash 1.6s ease-in-out infinite; }
+@keyframes lh-flash { 50% { opacity: 0.45; } }
+.states .card .orb.check::after, .states .card .orb.bang::after { content: none; }
+.states .card h3 { font-size: 32px; }
+.states .card p { max-width: 240px; margin: 0 auto; }
+.card h3 { font-weight: 400; }
+.agents .card .orb { box-shadow: 0 0 24px 4px color-mix(in srgb, var(--state) 70%, transparent); }
+.dark .kicker { color: #e9c98b; }
+.dest .where { color: #e9c98b; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.step { background: var(--accent); color: var(--on-accent); font-family: var(--font-display); box-shadow: 0 0 24px #ffdc9355; }
+.stat { color: var(--accent); text-shadow: 0 0 40px #ffdc9355; }
+.faq summary { font-size: 21px; }
+.guide-list a:hover { border-color: #e9c98b; }
+footer { background: #050c18; }
+dialog { background: #0d1d36; border-radius: 22px; }
+.field input { background: #0a1628; }
+.error { color: #ff9a92; }
+
+@media (prefers-reduced-motion: reduce) { .lh-beam { animation: none; transform: rotate(-12deg); } }

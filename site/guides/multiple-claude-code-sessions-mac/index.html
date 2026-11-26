@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Run multiple Claude Code sessions on a Mac (and keep track)</title>
-  <meta name="description" content="Run several Claude Code sessions at once on a Mac: worktrees so edits don&#x27;t collide, agent view and background sessions, tmux, and seeing which one needs you.">
+  <meta name="description" content="Run several Claude Code sessions in parallel on a Mac: worktrees so edits don&#x27;t collide, agent view and background sessions, tmux, and seeing which one needs you.">
   <link rel="canonical" href="https://yaml.cafe/guides/multiple-claude-code-sessions-mac/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Ambient">
@@ -34,7 +34,7 @@
       "mainEntityOfPage": "https://yaml.cafe/guides/multiple-claude-code-sessions-mac/",
       "image": "https://yaml.cafe/assets/og.png",
       "datePublished": "2026-10-09T00:00:00+00:00",
-      "dateModified": "2026-10-09T00:00:00+00:00",
+      "dateModified": "2026-11-03T00:00:00+00:00",
       "inLanguage": "en",
       "proficiencyLevel": "Beginner",
       "about": {
@@ -106,7 +106,23 @@
             "@type": "Answer",
             "text": "In agent view, sessions that need input sit at the top in yellow, and the terminal tab title shows how many are waiting. With Ambient, the notch turns amber and ambient open jumps straight to the session that needs you most."
           }
-        }
+        },
+          {
+            "@type": "Question",
+            "name": "Is there a Claude Code session manager for Mac?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Claude Code's own: claude --resume picks a past session, the Claude desktop app lists sessions in its sidebar, and agent view shows background sessions. For terminal sessions, tmux with one window per session is the usual manager. Ambient adds the missing piece: a menu bar list of every session of every agent, most urgent first, and a click that returns you to the right one."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I run Claude Code sessions in parallel without them colliding?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, if each works in its own git worktree, which Claude Code can create for you, so edits in one session don't overwrite another's. Concurrent sessions share no context; each has its own conversation. Ambient tells you which of them is waiting."
+            }
+          }
       ]
     }
   ]
@@ -125,9 +141,11 @@
   <article>
     <p class="crumbs"><a href="/">Ambient</a> › <a href="/guides/">Guides</a></p>
     <h1>How to run multiple Claude Code sessions at once on a Mac</h1>
-    <p class="meta">Updated <time datetime="2026-10-09">October 9, 2026</time> · 5 min read</p>
+    <p class="meta">Updated <time datetime="2026-11-03">November 3, 2026</time> · 5 min read</p>
 
     <p class="answer">Give each session its own git worktree with <code>claude --worktree &lt;name&gt;</code>, so their edits don't collide. Then keep track of them in one place: Claude Code's agent view (<code>claude agents</code>) for background sessions, or Ambient's notch island and menu bar for every session, in any terminal, editor or the Claude desktop app, most urgent first.</p>
+
+    <p class="top-cta"><a class="btn small" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-multiple-claude-code-sessions-mac-top">Get Ambient</a> <span>Free for macOS 14 and later.</span></p>
 
     <h2>1. Keep their edits apart with worktrees</h2>
     <p>Two sessions editing the same checkout will trip over each other. A git worktree is a separate checkout on its own branch:</p>
@@ -166,6 +184,7 @@ claude --bg "upgrade the test runner"   # start a background session from the sh
       <h2>Stop babysitting terminals.</h2>
       <p>Free for macOS 14 and later. Works with Claude Code, Codex and Gemini CLI.</p>
       <a class="btn" href="/" data-umami-event="Get Ambient" data-umami-event-from="guide-multiple-claude-code-sessions-mac-body">Get Ambient</a>
+      <p class="try-alt">Or <code>brew install --cask viveky259259/tap/ambient</code> · <a href="https://github.com/viveky259259/ambient" data-umami-event="Star on GitHub" data-umami-event-from="guide-multiple-claude-code-sessions-mac-try">Star on GitHub</a></p>
     </div>
 
     <h2>Common questions</h2>
@@ -175,6 +194,10 @@ claude --bg "upgrade the test runner"   # start a background session from the sh
     <p>No. Each session is its own conversation with its own context.</p>
     <h3>How do I find the session that&#x27;s waiting for me?</h3>
     <p>In agent view, sessions that need input sit at the top in yellow, and the terminal tab title shows how many are waiting. With Ambient, the notch turns amber and <code>ambient open</code> jumps straight to the session that needs you most.</p>
+    <h3>Is there a Claude Code session manager for Mac?</h3>
+    <p>Claude Code's own: <code>claude --resume</code> picks a past session, the Claude desktop app lists sessions in its sidebar, and agent view shows background sessions. For terminal sessions, tmux with one window per session is the usual manager. Ambient adds the missing piece: a menu bar list of every session of every agent, most urgent first, and a click that returns you to the right one.</p>
+    <h3>Can I run Claude Code sessions in parallel without them colliding?</h3>
+    <p>Yes, if each works in its own git worktree, which Claude Code can create for you, so edits in one session don't overwrite another's. Concurrent sessions share no context; each has its own conversation. Ambient tells you which of them is waiting.</p>
 
     <h2>Sources</h2>
     <ul class="sources">
@@ -182,7 +205,7 @@ claude --bg "upgrade the test runner"   # start a background session from the sh
       <li><a href="https://code.claude.com/docs/en/agent-view">Agent view</a>, Claude Code docs</li>
       <li><a href="https://code.claude.com/docs/en/worktrees">Worktrees</a>, Claude Code docs</li>
     </ul>
-    <p>More guides: <a href="/guides/claude-code-tmux-notifications/">Claude Code notifications in tmux</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
+    <p>More guides: <a href="/guides/claude-code-in-tmux/">Claude Code in tmux</a> · <a href="/guides/claude-code-tmux-notifications/">Claude Code notifications in tmux</a> · <a href="/guides/claude-code-notifications-mac/">Claude Code notifications on Mac</a></p>
   </article>
 </main>
 
@@ -191,6 +214,7 @@ claude --bg "upgrade the test runner"   # start a background session from the sh
     <span>© 2026 yaml.cafe</span>
     <a href="/guides/">Guides</a>
     <a href="/requests/">Requests</a>
+    <a href="https://github.com/viveky259259/ambient">GitHub</a>
     <a href="/contact/">Contact</a>
     <a href="/privacy.html">Privacy</a>
     <span class="spacer">Claude, Codex and Gemini are trademarks of their owners. Ambient isn't affiliated with Anthropic, OpenAI or Google.</span>

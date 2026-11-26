@@ -23,10 +23,9 @@ struct WelcomePane: View {
                 SettingsDivider()
                 ChecklistRow(done: notificationsAllowed, title: "Allow notifications",
                              subtitle: "So Ambient can tell you when an agent needs you.") {
-                    if setup.notificationStatus == .denied {
-                        Button("Open System Settings") { setup.requestNotifications() }.buttonStyle(.pill)
-                    } else if !notificationsAllowed {
-                        Button("Allow") { setup.requestNotifications() }.buttonStyle(.pill)
+                    if !notificationsAllowed {
+                        PermissionControl(allowed: setup.notificationStatus == .denied ? false : nil,
+                                          ask: { setup.requestNotifications() }, openSettings: { setup.requestNotifications() })
                     }
                 }
                 SettingsDivider()
@@ -70,7 +69,7 @@ struct WelcomePane: View {
 
     /// Agents installed on this Mac.
     private var found: [AgentKind] {
-        AgentKind.allCases.filter { (setup.agentStates[$0] ?? .notInstalled) != .agentMissing }
+        AgentKind.hooked.filter { (setup.agentStates[$0] ?? .notInstalled) != .agentMissing }
     }
 
     private var connected: [AgentKind] { found.filter { setup.agentStates[$0] == .installed } }

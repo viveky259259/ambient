@@ -1,5 +1,6 @@
 import AmbientCore
 import AppKit
+import Combine
 import SwiftUI
 import os
 
@@ -8,16 +9,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let paths = AmbientPaths.current()
     private let prefs = Preferences.shared
     private lazy var model = AppModel(prefs: prefs, stateURL: paths.stateFile, dayURL: paths.dayFile,
-                                      titles: SessionTitles(userHome: paths.userHome))
+                                      tasksURL: paths.tasksFile, memoryURL: paths.memoryFile,
+                                      memoryBlobs: MemoryBlobStore(root: paths.memoryBlobs),
+                                      titles: SessionTitles(userHome: paths.userHome),
+                                      history: HistoryLauncher(paths: paths))
     private var server: EventServer?
+    private lazy var permissions = PermissionDesk(model: model, prefs: prefs)
+    private lazy var hookDoctor = HookDoctor(paths: paths, model: model)
+    private var remote: RemoteCoordinator?
     private var island: IslandController?
     private var pet: PetController?
     private var notifier: Notifier?
     private var menuBar: MenuBarController?
     private var dockGlow: DockGlow?
     private var wallpaper: LivingWallpaper?
+    private lazy var speech = SpeechController(prefs: prefs)
+    private lazy var voicePack = VoicePackInstaller(paths: paths)
+    private lazy var voiceChooser = VoiceChooser(prefs: prefs, voicePack: voicePack, speech: speech)
+    private var kokoro: KokoroVoice?
+    private var selectionService: SelectionService?
+    private lazy var shortcuts = ShortcutCenter(prefs: prefs)
+    private lazy var voiceSync = VoiceSyncController(paths: paths, prefs: prefs)
+    private lazy var voiceShortcuts = ShortcutCenter(prefs: prefs, key: \.voiceSyncShortcut, fallback: { .controlOptionV })
+    private lazy var nowPlaying = NowPlaying(speech: speech)
+    private lazy var speaker = SpeakerController(prefs: prefs, paths: paths)
+    private lazy var mic = MicController(prefs: prefs, paths: paths)
+    private var hintCancellable: AnyCancellable?
     private var setupWindow: NSWindow?
     private var setupModel: SetupModel?
+    private var setupClosing: NSObjectProtocol?
+    private var boardWindow: NSWindow?
+    private var boardClosing: NSObjectProtocol?
     private var demoTimers: [Timer] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -33,26 +55,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             log.error("Couldn't prepare \(self.paths.home.path): \(error.localizedDescription)")
         }
-        healHooks()
+        // Repairs out-of-date hooks before the first events arrive, then keeps watching.
+        hookDoctor.start()
 
         model.start()
-        let server = EventServer(paths: paths, model: model)
+        let server = EventServer(paths: paths, model: model, permissions: permissions)
         do { try server.start() } catch { log.error("Socket server failed: \(String(describing: error))") }
         self.server = server
+
+        voiceSync.start()
+        let remote = RemoteCoordinator(paths: paths, model: model, voice: voiceSync)
+        remote.start()
+        self.remote = remote
+        // Plays on the Mac it played on when Ambient quit.
+        speaker.resume()
+        // Lends this Mac's microphone, and uses another's, as it did when Ambient quit.
+        mic.resume()
 
         let notifier = Notifier(model: model, prefs: prefs)
         notifier.start()
         self.notifier = notifier
 
-        island = IslandController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
+        island = IslandController(model: model, prefs: prefs, speech: speech, permissions: permissions,
+                                  voice: voiceSync) { [weak self] in self?.showSetup() }
         island?.start()
 
-        pet = PetController(model: model, prefs: prefs) { [weak self] in self?.showSetup() }
+        pet = PetController(model: model, prefs: prefs, speech: speech) { [weak self] in self?.showSetup() }
         pet?.start()
 
-        menuBar = MenuBarController(model: model, prefs: prefs,
+        menuBar = MenuBarController(model: model, prefs: prefs, speech: speech, shortcuts: shortcuts, hookDoctor: hookDoctor,
+                                    voice: voiceSync, voiceShortcuts: voiceShortcuts,
+                                    onReadSelection: { [weak self] in self?.speakFrontmostSelection() },
                                     onSettings: { [weak self] in self?.showSetup() },
-                                    onDemo: { [weak self] in self?.playDemo() })
+                                    onDemo: { [weak self] in self?.playDemo() },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
         menuBar?.start()
 
         dockGlow = DockGlow(model: model, prefs: prefs)
@@ -66,8 +102,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             wallpaper?.islandChanged(open: open, menu: menu, island: geometry)
         }
 
+        speech.makeEngine = { [weak self] kind in
+            guard let self else { throw SpeechFailure(message: "Ambient is quitting.") }
+            return try self.engine(for: kind)
+        }
+        speech.chooseEngine = { [weak self] done in self?.voiceChooser.show(completion: done) }
+        let selectionService = SelectionService { [weak self] text in self?.speech.toggle(text) }
+        selectionService.register()
+        shortcuts.onPress = { [weak self] in
+            self?.prefs.speechHintShown = true
+            self?.speakFrontmostSelection()
+        }
+        shortcuts.start()
+        voiceShortcuts.onPress = { [weak self] in self?.voiceSync.toggle() }
+        voiceShortcuts.start()
+        nowPlaying.start()
+        showShortcutHintOnce()
+        voicePack.onRemove = { [weak self] in
+            self?.speech.stop()
+            self?.kokoro?.shutDown()
+            self?.kokoro = nil
+        }
+        self.selectionService = selectionService
+
         if !prefs.setupCompleted { showSetup() } else { askForNotificationsOnce() }
+        #if DEBUG || AMBIENT_DEV
+        openForMeasuring(ProcessInfo.processInfo.environment["AMBIENT_PERF_OPEN"])
+        #endif
     }
+
+    #if DEBUG || AMBIENT_DEV
+    /// `scripts/measure-perf.sh --board` can't click, so it names the window to open: "settings", "board", or
+    /// "settings-closed" (Settings, closed again a moment later). Developer builds only.
+    private func openForMeasuring(_ window: String?) {
+        switch window {
+        case "settings": showSetup()
+        case "board": showBoard()
+        case "settings-closed":
+            showSetup()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.setupWindow?.close() }
+        default: break
+        }
+    }
+    #endif
 
     /// The system prompt appears only while permission is undecided.
     private func askForNotificationsOnce() {
@@ -79,7 +156,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         model.saveNow()
+        voiceSync.quit()
+        speaker.quit()
+        mic.quit()
+        remote?.stop()
         server?.stop()
+        kokoro?.shutDown()
+        // The board's model runs in a process of its own, which would otherwise keep loading or generating.
+        LocalModelRunner.stopAll()
     }
 
     /// Opening the app again (Finder, Spotlight, `open -a Ambient`) shows the settings.
@@ -91,16 +175,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup window
 
     func showSetup() {
-        if setupWindow == nil, let notifier, let wallpaper {
+        if setupWindow == nil, let notifier, let wallpaper, let remote {
             let setup = SetupModel(paths: paths, notifier: notifier)
-            let view = SettingsView(setup: setup, prefs: prefs, wallpaper: wallpaper,
+            let view = SettingsView(setup: setup, prefs: prefs, model: model, remote: remote, wallpaper: wallpaper,
+                                    speech: speech, voicePack: voicePack, shortcuts: shortcuts,
+                                    voiceSync: voiceSync, voiceShortcuts: voiceShortcuts, speaker: speaker, mic: mic,
                                     onDemo: { [weak self] in self?.playDemo() },
                                     onPreviewSound: { [weak notifier] in notifier?.preview($0) },
                                     onDone: { [weak self] in
                                         self?.prefs.setupCompleted = true
                                         self?.setupWindow?.close()
                                         self?.askForNotificationsOnce()
-                                    })
+                                    },
+                                    onOpenBoard: { [weak self] in self?.showBoard() })
             let hosting = NSHostingController(rootView: view)
             hosting.sizingOptions = [.minSize, .maxSize]
             let window = NSWindow(contentViewController: hosting)
@@ -117,8 +204,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             setupModel = setup
             setupWindow = window
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            setupClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
                 self?.prefs.setupCompleted = true
+                // Let its views go, as the Task Board's do: kept, Settings › Board redraws on every agent event with
+                // nobody looking.
+                self?.setupWindow = nil
+                self?.setupModel = nil
+                if let closing = self?.setupClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.setupClosing = nil
                 NSApp.setActivationPolicy(.accessory)
             }
         }
@@ -127,6 +220,98 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupModel?.refresh()
         setupWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate()
+    }
+
+    // MARK: - Board window
+
+    /// Wider dedicated Board — menu Task Board… and Settings › Board › Open Board.
+    func showBoard() {
+        if boardWindow == nil {
+            let view = BoardWindowView(model: model, prefs: prefs)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "Task Board"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isReleasedWhenClosed = false
+            window.setContentSize(NSSize(width: 980, height: 620))
+            window.center()
+            boardWindow = window
+            boardClosing = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+                // Let its views go: kept, they re-render every card on every agent event with nobody looking.
+                self?.boardWindow = nil
+                if let closing = self?.boardClosing { NotificationCenter.default.removeObserver(closing) }
+                self?.boardClosing = nil
+                if self?.setupWindow?.isVisible != true {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
+        }
+        NSApp.setActivationPolicy(.regular)
+        boardWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+    }
+
+    // MARK: - Speech
+
+    /// The first time an agent finishes, after its own bloom has had its moment, the island says how to hear the
+    /// reply. Once shown (or once the shortcut has been used) it never comes back.
+    private func showShortcutHintOnce() {
+        guard !prefs.speechHintShown else { return }
+        hintCancellable = model.transitions
+            .filter { $0.session.mood == .done && $0.previousMood != .done && !$0.removed }
+            .first()
+            .delay(for: .seconds(8), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, !self.prefs.speechHintShown, !self.prefs.isQuiet else { return }
+                self.prefs.speechHintShown = true
+                self.speech.hint("Select part of the reply and press \(self.shortcuts.shortcut.display) to hear it")
+            }
+    }
+
+    /// The read-aloud shortcut (⌥⎋ by default) and Read Selection Aloud in the menu bar: reads the frontmost app's
+    /// selection through Accessibility. Same rules as Services › Speak with Ambient:
+    /// the same text (or nothing) stops, new text replaces what's playing.
+    private func speakFrontmostSelection() {
+        guard SelectionReader.isTrusted else {
+            if prefs.speechAccessExplained {
+                speech.fail("This app needs Accessibility to read selections — Settings › Voice & Sound")
+            } else {
+                prefs.speechAccessExplained = true
+                let alert = NSAlert()
+                alert.messageText = "Let Ambient read your selection"
+                alert.informativeText = "To read the text you select in Claude, Codex or a terminal, Ambient needs Accessibility access. It reads only the selection, and only when you press the shortcut."
+                alert.addButton(withTitle: "Open Accessibility Settings")
+                alert.addButton(withTitle: "Not Now")
+                NSApp.activate()
+                if alert.runModal() == .alertFirstButtonReturn { SelectionReader.askForAccess() }
+            }
+            return
+        }
+        Task { @MainActor [weak self] in
+            let text = await SelectionReader.selectedText()
+            self?.speech.toggle(text)
+        }
+    }
+
+    private func engine(for kind: SpeechEngineKind) throws -> SpeechEngine {
+        switch kind {
+        case .mac:
+            return MacVoice(voiceID: prefs.macVoice, rate: prefs.speechRate)
+        case .online:
+            return OnlineVoice.make(prefs: prefs)
+        case .kokoro:
+            voicePack.refresh()
+            guard voicePack.status == .installed else {
+                throw SpeechFailure(message: "The offline voice isn't installed. Download it in Settings › Voice & Sound.",
+                                    offerMacVoice: true)
+            }
+            let engine = kokoro ?? KokoroVoice(helper: voicePack.helper, pack: voicePack.folder,
+                                               log: paths.logs.appendingPathComponent("voice.log"),
+                                               voice: prefs.kokoroVoice, speed: prefs.speechRate)
+            engine.configure(voice: prefs.kokoroVoice, speed: prefs.speechRate)
+            kokoro = engine
+            return engine
+        }
     }
 
     // MARK: - Demo
@@ -162,19 +347,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try? fm.removeItem(at: link)
         do { try fm.createSymbolicLink(at: link, withDestinationURL: cli) } catch {
             log.error("Couldn't link the command-line tool: \(error.localizedDescription)")
-        }
-    }
-
-    /// Repairs hooks the user installed before, e.g. after an update changed the events.
-    private func healHooks() {
-        let installer = HookInstaller(paths: paths)
-        for agent in AgentKind.allCases where installer.status(agent) == .partial {
-            do {
-                try installer.install(agent)
-                log.notice("Updated \(agent.rawValue) hooks")
-            } catch {
-                log.error("Couldn't update \(agent.rawValue) hooks: \(String(describing: error))")
-            }
         }
     }
 }

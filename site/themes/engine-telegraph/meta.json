@@ -1,0 +1,14 @@
+{
+  "name": "Engine telegraph",
+  "set": "machines",
+  "inspiration": "A ship's engine-order telegraph on a night bridge: brass dial, ivory face, a handle that rings the order down",
+  "order": 33,
+  "hero": "split",
+  "fonts": [
+    { "family": "Marcellus", "axes": "wght@400" },
+    { "family": "Marcellus SC", "axes": "wght@400" },
+    { "family": "Spectral", "axes": "ital,wght@0,400;0,600;1,400" },
+    { "family": "Fira Code", "axes": "wght@400;600" }
+  ],
+  "copy": { "kicker": "Free · native macOS · open source", "h1": "The agent rings down. You answer in one click." }
+}

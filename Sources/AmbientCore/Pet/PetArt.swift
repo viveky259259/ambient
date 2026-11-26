@@ -91,7 +91,6 @@ public struct PlacedProp: Sendable {
 
 /// The pet's pixel art. A body sits in a larger canvas that leaves room for props around it.
 public enum PetArt {
-    public static let bodySize = PixelSize(width: 16, height: 13)
     public static let canvasSize = PixelSize(width: 20, height: 18)
     /// Where the body's top-left pixel sits in the canvas.
     public static let bodyOrigin = PixelPoint(2, 5)

@@ -27,7 +27,7 @@ struct IslandPreview: View {
             .allowsHitTesting(false)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Preview of the notch island")
+        .accessibilityLabel("Preview of the notch light")
         .onAppear(perform: apply)
         .onChange(of: enabled) { apply() }
         .onChange(of: showsWorking) { apply() }
@@ -65,7 +65,7 @@ struct IslandPreview: View {
         case .working:
             s.activity = .tool(name: "Bash", detail: "npm test")
         case .waiting:
-            s.activity = .waiting(reason: "permission", message: "Bash: rm -rf build")
+            s.activity = .waiting(reason: Need.command.rawValue, message: "rm -rf build")
         case .done:
             s.activity = .done(summary: "All 42 tests pass. Ready for review.")
             s.turnEndedAt = now

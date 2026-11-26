@@ -90,7 +90,7 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         let s = session("a", .waiting(reason: "permission", message: "Bash: swift test"),
                         cwd: "/x/ambient-notification", title: "Wallpaper that follows agents")
         let inhabitant = make([s]).inhabitants[0]
-        #expect(inhabitant.headline == "Claude · Needs you · 2m")
+        #expect(inhabitant.headline == "Claude · Approve tool · 2m")
         #expect(inhabitant.place == "Wallpaper that follows agents · ambient-notification")
         #expect(inhabitant.detail == "Bash: swift test")
     }
@@ -180,5 +180,29 @@ private func make(_ sessions: [Session], surface: SceneSurface = .desk, lockMess
         #expect(scenery.inhabitants.isEmpty)
         #expect(scenery.clock == nil && scenery.nextEvent == nil)
         #expect(scenery.story.isEmpty && scenery.timeline.isEmpty && scenery.marks.isEmpty)
+        #expect(scenery.boardCues.isEmpty)
+    }
+
+    @Test func boardCuesPreferBlockedAndHideWhenQuiet() {
+        let tasks = [
+            AgentTask(title: "Ship wallpaper cues", status: .inProgress, agents: [.cursor]),
+            AgentTask(title: "Approve shell", status: .blocked, agents: [.codex]),
+            AgentTask(title: "Old polish", status: .done, agents: [.claude]),
+            AgentTask(title: "Later", status: .backlog, agents: [.gemini]),
+        ]
+        let cues = SceneState.boardCues(from: tasks, sessions: [])
+        #expect(cues.count == 2)
+        #expect(cues[0].title == "Approve shell")
+        #expect(cues[0].statusLabel == "Needs you" || cues[0].statusLabel == "Blocked")
+        #expect(cues[0].mood == .waiting)
+        #expect(cues[1].title == "Ship wallpaper cues")
+        #expect(cues[1].statusLabel == "In progress")
+        #expect(SceneState.boardCues(from: [AgentTask(title: "Done", status: .done)], sessions: []).isEmpty)
+        #expect(SceneState.make(sessions: [], day: DayLog(now: evening, calendar: utc), now: evening,
+                                kind: .sky, surface: .desk, boardTasks: tasks, calendar: utc, locale: gb)
+                    .boardCues.count == 2)
+        #expect(SceneState.make(sessions: [], day: DayLog(now: evening, calendar: utc), now: evening,
+                                kind: .sky, surface: .lock, boardTasks: tasks, calendar: utc, locale: gb)
+                    .boardCues.isEmpty)
     }
 }
