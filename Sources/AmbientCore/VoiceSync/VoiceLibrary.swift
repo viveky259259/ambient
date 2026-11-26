@@ -2,7 +2,7 @@ import Foundation
 import AmbientBase
 import AmbientContracts
 
-/// One voice, sent or received, as the library keeps it.
+/// One voice or typed note, sent or received, as the library keeps it.
 public struct VoiceRecord: Codable, Equatable, Identifiable, Sendable {
     public enum Direction: String, Codable, Sendable { case sent, received }
 
@@ -12,17 +12,23 @@ public struct VoiceRecord: Codable, Equatable, Identifiable, Sendable {
     public var peer: MachineRef
     public let recordedAt: Date
     public var seconds: Double
-    /// Nil when this Mac couldn't transcribe it.
+    /// Nil when this Mac couldn't transcribe it. A note's words.
     public var text: String?
+    /// True for a typed note, which has no audio. Left out for a voice, so a library from before notes reads the same.
+    private var note: Bool?
 
-    public init(id: String, direction: Direction, peer: MachineRef, recordedAt: Date, seconds: Double, text: String?) {
+    public init(id: String, direction: Direction, peer: MachineRef, recordedAt: Date, seconds: Double, text: String?,
+                note: Bool = false) {
         self.id = id
         self.direction = direction
         self.peer = peer
         self.recordedAt = recordedAt
         self.seconds = seconds
         self.text = text
+        self.note = note ? true : nil
     }
+
+    public var isNote: Bool { note == true }
 
     /// The audio's file name in the library's `audio` folder.
     public var audioFile: String { "\(id).aac" }
@@ -101,12 +107,14 @@ public final class VoiceLibrary {
         Set(voices.filter { $0.direction == .received && $0.peer.id == machine }.map(\.id))
     }
 
-    /// Adds a voice with its audio. `cursor`, when given, is saved in the same write.
+    /// Adds a voice with its audio, or a note, which has none. `cursor`, when given, is saved in the same write.
     public func add(_ record: VoiceRecord, audio: Data, cursor: (machine: String, cursor: VoiceCursor)? = nil) throws {
         try prepare()
-        let file = audioURL(for: record)
-        try audio.write(to: file, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        if !record.isNote {
+            let file = audioURL(for: record)
+            try audio.write(to: file, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        }
         try insert(record, cursor: cursor)
     }
 

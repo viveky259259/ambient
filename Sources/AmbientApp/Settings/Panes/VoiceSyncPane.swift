@@ -79,6 +79,16 @@ struct VoiceSyncPane: View {
                     .fixedSize()
                 }
             }
+            SettingsSection(header: "Clipboard",
+                            footer: "Turn it on on each Mac that should share. Text only, and only with Macs connected now. Passwords and anything else an app marks as private stay here.") {
+                SettingsRow(title: "Share the clipboard",
+                            subtitle: "Text you copy here goes to your paired Macs, and what you copy there comes here.") {
+                    Toggle("Share the clipboard", isOn: $prefs.clipboardShare)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.small)
+                }
+            }
             SettingsSection(header: "History", footer: voice.voices.isEmpty ? nil : "Kept on this Mac until you delete them.") {
                 if voice.voices.isEmpty {
                     Text("No voices yet.")
@@ -138,7 +148,8 @@ private struct VoiceRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: "\(record.direction == .received ? "From" : "To") \(record.peer.label)")
                     .font(Theme.Fonts.rowEmphasis)
-                Text([record.recordedAt.formatted(date: .abbreviated, time: .shortened), VoiceFormat.clock(record.seconds)]
+                Text([record.recordedAt.formatted(date: .abbreviated, time: .shortened),
+                      record.isNote ? "Note" : VoiceFormat.clock(record.seconds)]
                     .joined(separator: " · "))
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
@@ -148,17 +159,21 @@ private struct VoiceRow: View {
                     .lineLimit(2)
             }
             Spacer(minLength: Theme.Space.sm)
-            Button {
-                voice.togglePlay(record)
-            } label: {
-                Image(systemName: playing ? "stop.fill" : "play.fill")
+            if !record.isNote {
+                Button {
+                    voice.togglePlay(record)
+                } label: {
+                    Image(systemName: playing ? "stop.fill" : "play.fill")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(playing ? "Stop" : "Play")
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(playing ? "Stop" : "Play")
             Menu {
                 if record.text != nil { Button("Copy Text") { voice.copyText(record) } }
-                Button("Copy Audio") { voice.copyAudio(record) }
-                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([voice.audioURL(for: record)]) }
+                if !record.isNote {
+                    Button("Copy Audio") { voice.copyAudio(record) }
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([voice.audioURL(for: record)]) }
+                }
                 Divider()
                 Button("Delete", role: .destructive) { voice.delete(record) }
             } label: {

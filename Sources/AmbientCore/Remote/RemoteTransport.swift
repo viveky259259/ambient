@@ -65,6 +65,11 @@ public struct RemoteTransport: Sendable {
 
     /// Runs one command to the end. `input` is what the machine reads on stdin.
     public func run(_ remote: String, input: Data? = nil, timeout: TimeInterval = 30) -> Result {
+        // Callers run this on threads that may never drain a pool, so the pipes' handles are freed here.
+        autoreleasepool { runOnce(remote, input: input, timeout: timeout) }
+    }
+
+    private func runOnce(_ remote: String, input: Data?, timeout: TimeInterval) -> Result {
         let process = process(for: remote)
         let out = Pipe(), err = Pipe()
         process.standardOutput = out
@@ -76,6 +81,7 @@ public struct RemoteTransport: Sendable {
         do {
             try process.run()
         } catch {
+            RemoteLink.close(out, err)
             return Result(status: 127, stdout: Data(), stderr: String(describing: error), timedOut: false)
         }
         let collected = Collected()
@@ -101,7 +107,9 @@ public struct RemoteTransport: Sendable {
             process.terminate()
             _ = finished.wait(timeout: .now() + 2)
         }
-        _ = readers.wait(timeout: .now() + 2)
+        // A reader still waiting has a grandchild holding its pipe open, and closing the pipe under it would crash it:
+        // that one is left to end with the grandchild.
+        if readers.wait(timeout: .now() + 2) == .success { RemoteLink.close(out, err) }
         let (stdout, stderr) = collected.get()
         return Result(status: timedOut ? -1 : process.terminationStatus, stdout: stdout,
                       stderr: String(decoding: stderr, as: UTF8.self), timedOut: timedOut)

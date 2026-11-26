@@ -108,7 +108,7 @@ private struct RecordingCard: View {
     }
 }
 
-/// A voice from another Mac: what was said, and a minute to copy it.
+/// A voice or a note from another Mac: what was said, and a minute to copy it.
 private struct ArrivalCard: View {
     let arrival: VoiceSyncController.Arrival
     let playing: Bool
@@ -123,17 +123,19 @@ private struct ArrivalCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "waveform.circle.fill")
+                Image(systemName: record.isNote ? "text.bubble.fill" : "waveform.circle.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Palette.waiting.color)
                     .accessibilityHidden(true)
-                Text(verbatim: "Voice from \(record.peer.label)")
+                Text(verbatim: "\(record.isNote ? "Note" : "Voice") from \(record.peer.label)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(VoiceFormat.clock(record.seconds))
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.55))
+                if !record.isNote {
+                    Text(VoiceFormat.clock(record.seconds))
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.55))
+                }
                 Spacer(minLength: 8)
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     Text("\(max(0, Int(arrival.until.timeIntervalSince(ctx.date).rounded(.up))))s")
@@ -157,15 +159,19 @@ private struct ArrivalCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 8) {
-                Button(action: onPlay) {
-                    Label(playing ? "Stop" : "Play", systemImage: playing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.75))
+                if !record.isNote {
+                    Button(action: onPlay) {
+                        Label(playing ? "Stop" : "Play", systemImage: playing ? "stop.fill" : "play.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
                 Spacer()
-                CardButton(title: copied == .audio(record.id) ? "Copied" : "Copy Audio", prominent: record.text == nil,
-                           action: onCopyAudio)
+                if !record.isNote {
+                    CardButton(title: copied == .audio(record.id) ? "Copied" : "Copy Audio", prominent: record.text == nil,
+                               action: onCopyAudio)
+                }
                 if record.text != nil {
                     CardButton(title: copied == .text(record.id) ? "Copied" : "Copy Text", prominent: true, action: onCopyText)
                 }

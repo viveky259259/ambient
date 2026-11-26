@@ -214,6 +214,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         menu.addItem(readSelectionItem())
         voiceItems().forEach(menu.addItem)
+        noteItems().forEach(menu.addItem)
         let pet = item("Show Desktop Pet", #selector(togglePet))
         pet.state = prefs.petEnabled ? .on : .off
         menu.addItem(pet)
@@ -254,6 +255,24 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         others.submenu = sub
         return [record, others]
+    }
+
+    /// Type a note for the default Mac, or for any of them.
+    private func noteItems() -> [NSMenuItem] {
+        guard let main = voice.destination else { return [item("Send a Note…", #selector(writeNote(_:)))] }
+        let note = item("Send Note to \(main.label)…", #selector(writeNote(_:)))
+        note.representedObject = main.id
+        guard voice.destinations.count > 1 else { return [note] }
+        let others = NSMenuItem(title: "Send Note To", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for d in voice.destinations {
+            let i = item(d.isOnline() ? "\(d.label)…" : "\(d.label) (away)…", #selector(writeNote(_:)))
+            i.representedObject = d.id
+            i.state = d.id == main.id ? .on : .off
+            sub.addItem(i)
+        }
+        others.submenu = sub
+        return [note, others]
     }
 
     private func shortcutItem(_ title: String, _ action: Selector, _ shortcut: Shortcut) -> NSMenuItem {
@@ -332,6 +351,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func readSelection() { onReadSelection() }
     @objc private func sendVoice() { voice.send() }
     @objc private func cancelVoice() { voice.cancel() }
+    @objc private func writeNote(_ sender: NSMenuItem) {
+        let id = sender.representedObject as? String
+        // After the menu closes, so the note window isn't opened from inside its tracking loop.
+        DispatchQueue.main.async { [voice] in voice.writeNote(to: voice.destinations.first { $0.id == id }) }
+    }
     @objc private func recordVoice(_ sender: NSMenuItem) {
         let id = sender.representedObject as? String
         voice.record(to: voice.destinations.first { $0.id == id })

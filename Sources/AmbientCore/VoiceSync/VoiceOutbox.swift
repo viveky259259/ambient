@@ -1,6 +1,6 @@
 import Foundation
 
-/// The sending Mac's outbox: the voice lines `follow` streams, each to the hub it's addressed to. The app is its only
+/// The sending Mac's outbox: the voice and note lines `follow` streams, each to the hub it's addressed to. The app is its only
 /// writer. Each line is appended before `outbox.seq` names it, and `follow` reads only as far as `outbox.seq`, so it never
 /// sees half a line. Safe from any thread.
 ///
@@ -87,7 +87,7 @@ public final class VoiceOutbox: @unchecked Sendable {
     private func trim(now: Date, maxAge: TimeInterval, maxBytes: Int, endingOpen: Bool) {
         guard let data = try? Data(contentsOf: file) else { return }
 
-        struct Voice { var to: String; var first: Int64; var start: Date?; var open = true; var bytes = 0 }
+        struct Voice { var to: String; var first: Int64; var start: Date?; var open = true; var bytes = 0; var clip = false }
         var voices: [String: Voice] = [:]
         var order: [String] = []
         var kept: [(voice: String, line: Data)] = []
@@ -100,6 +100,13 @@ public final class VoiceOutbox: @unchecked Sendable {
             }
             switch v.part {
             case let .start(at): voices[v.voice]?.start = at
+            case let .note(at, _):
+                voices[v.voice]?.start = at
+                voices[v.voice]?.open = false
+            case let .clip(at, _):
+                voices[v.voice]?.start = at
+                voices[v.voice]?.open = false
+                voices[v.voice]?.clip = true
             case .end, .cancel: voices[v.voice]?.open = false
             default: break
             }
@@ -112,8 +119,10 @@ public final class VoiceOutbox: @unchecked Sendable {
             guard let voice = voices[id], voice.open else { return false }
             return !endingOpen || voice.first > opened
         })
+        // What was copied is no use to anyone after a few minutes, so it doesn't stay on disk for a day.
         var dropped = Set(order.filter {
-            !recording.contains($0) && (voices[$0]?.start ?? .distantPast) < now.addingTimeInterval(-maxAge)
+            let age = voices[$0]?.clip == true ? min(maxAge, ClipboardShare.keepInOutbox) : maxAge
+            return !recording.contains($0) && (voices[$0]?.start ?? .distantPast) < now.addingTimeInterval(-age)
         })
         var total = order.filter { !dropped.contains($0) }.reduce(0) { $0 + (voices[$1]?.bytes ?? 0) }
         for id in order where total > maxBytes && !dropped.contains(id) && !recording.contains(id) {

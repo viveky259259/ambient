@@ -819,3 +819,78 @@ driver's own tests, `Test*` functions named under **Automated by**, live in `Dri
 
 - Step 1: Desk's waveform goes and no voice arrives; Lap keeps nothing, and `~/.ambient/voice-sync/outbox.live` is gone.
 - Step 2: Desk receives the voice with the words so far, and both Macs list it in History.
+
+### SPM-040 · A text note from Lap arrives at Desk's notch
+
+- **Priority:** P1
+- **Type:** both
+- **Covers:** `Sources/AmbientApp/VoiceSync/VoiceSyncController.swift`, `Sources/AmbientApp/Island/VoiceCards.swift`, `Sources/AmbientCore/VoiceSync/VoiceLine.swift`, `Sources/AmbientCore/VoiceSync/VoiceInbox.swift`, `Sources/AmbientCore/VoiceSync/VoiceLibrary.swift`
+- **Automated by:** `VoiceNoteTests.aNoteArrivesAtOnceWithoutAudio`, `VoiceNoteTests.aNoteKeepsItsLinesAndIndentationButNothingHidden`, `VoiceNoteTests.aNoteIsKeptWithoutAudioAndStaysANote`
+- **Needs:** SPM-028 set up
+
+**Steps**
+
+1. On Lap, choose *Send Note to Desk…* from the menu bar, type `git pull`, a line break, `  swift build`, and click Send.
+2. On Desk, click *Copy Text* on the card and paste into a text editor.
+3. Open Settings › Voice & Sound › Voice Sync › History on both Macs.
+
+**Expected**
+
+- Step 1: Lap shows *Note sent to Desk* at the notch. Within about a second, Desk's notch shows *Note from Lap* with the
+  text, no clock, no Play and no *Copy Audio*.
+- Step 2: the paste is the two lines, with the second line's two spaces kept.
+- Step 3: both list it with *Note* where a voice shows its length, with no Play button and no *Copy Audio* or *Show in
+  Finder*. No `.aac` file for it is in `~/.ambient/voice-sync/audio/`.
+
+### SPM-041 · The note window takes typing, pasting and the editing shortcuts
+
+- **Priority:** P1
+- **Type:** manual
+- **Covers:** `Sources/AmbientApp/VoiceSync/NoteComposer.swift`, `Sources/AmbientApp/MenuBarController.swift`
+- **Automated by:** none
+- **Needs:** SPM-028 set up; some styled text (a web page) and an image to copy
+
+**Steps**
+
+1. On Lap, copy a paragraph of styled text from a web page. Choose *Send Note to Desk…* and press ⌘V.
+2. Press ⌘A, ⌘X, then ⌘Z, then ⌘⇧Z. Click *Paste*.
+3. Copy an image and press ⌘V in the window.
+4. Clear the text. Type a few words, close the window with Escape, and choose *Send Note to Desk…* again.
+5. Type a note and press ⌘↩.
+
+**Expected**
+
+- Step 1: the window opens in front with the cursor in the box, and the paragraph pastes as plain text.
+- Step 2: each shortcut works as in any text box, and *Paste* pastes the clipboard at the cursor.
+- Step 3: nothing is pasted.
+- Step 4: *Send* is disabled while the box is empty or only spaces; Escape closes the window and nothing is sent. Choosing
+  the menu item while the window is open brings that window to the front with its text.
+- Step 5: the note is sent and the window closes. The count reads `n / 10,000` and turns orange past the limit.
+
+### SPM-042 · The shared clipboard passes text both ways and keeps secrets
+
+- **Priority:** P0
+- **Type:** both
+- **Covers:** `Sources/AmbientCore/VoiceSync/ClipboardShare.swift`, `Sources/AmbientApp/VoiceSync/VoiceSyncController.swift`, `Sources/AmbientApp/Settings/Panes/VoiceSyncPane.swift`, `Sources/AmbientCore/VoiceSync/VoiceOutbox.swift`
+- **Automated by:** `ClipboardShareTests.onlyPlainTextWithNoPrivateMarkIsShared`, `ClipboardShareTests.onlyRecentCopiesInOrderGoOnTheClipboard`, `ClipboardShareTests.copiesLeaveTheOutboxAfterTenMinutesAndNotesStay`, `ClipboardShareTests.aCopyGoesThroughTheDecoderExactlyAsCopied`
+- **Needs:** SPM-028 set up, with each Mac paired from the other; a password manager on Lap
+
+**Steps**
+
+1. With *Share the clipboard* off on both Macs, copy text on Lap and paste on Desk.
+2. Turn *Share the clipboard* on in Settings › Voice Sync on both Macs. Copy a few indented lines on Lap; paste on Desk.
+3. Copy text on Desk; paste on Lap. Wait ten seconds and paste on Desk again.
+4. On Lap, copy a password from the password manager. Paste on Desk.
+5. On Lap, copy an image. Paste on Desk.
+6. Put Desk to sleep, copy text on Lap, wait three minutes, wake Desk and paste.
+
+**Expected**
+
+- Step 1: Desk pastes what it had; nothing is shared while the setting is off.
+- Step 2: within about a second Desk pastes exactly the lines copied, indentation included.
+- Step 3: Lap pastes Desk's text, and Desk still pastes its own text: nothing bounces back.
+- Step 4: Desk pastes what it had before. The password never leaves Lap: it isn't in Lap's
+  `~/.ambient/voice-sync/outbox.jsonl`.
+- Step 5: Desk pastes what it had before.
+- Step 6: Desk pastes what it had before sleeping, not the copy made while it was away. Copies leave Lap's outbox after
+  ten minutes.

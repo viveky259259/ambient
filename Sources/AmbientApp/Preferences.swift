@@ -97,6 +97,8 @@ final class Preferences: ObservableObject {
     @Published var voiceSyncDestination: String? { didSet { defaults.set(voiceSyncDestination, forKey: "voiceSyncDestination") } }
     /// Seconds a received voice's Copy card stays under the notch.
     @Published var voiceSyncCopySeconds: Int { didSet { defaults.set(voiceSyncCopySeconds, forKey: "voiceSyncCopySeconds") } }
+    /// Text copied here goes to the paired Macs, and theirs comes here. Off until the user turns it on, on each Mac.
+    @Published var clipboardShare: Bool { didSet { defaults.set(clipboardShare, forKey: "clipboardShare") } }
 
     // MARK: - Speaker
 
@@ -161,6 +163,7 @@ final class Preferences: ObservableObject {
             "taskLLMModelsVolume": "/Volumes/Models",
             "remoteSummaries": false,
             "voiceSyncCopySeconds": 60,
+            "clipboardShare": false,
         ])
         islandEnabled = defaults.bool(forKey: "islandEnabled")
         islandShowsWorking = defaults.bool(forKey: "islandShowsWorking")
@@ -210,6 +213,7 @@ final class Preferences: ObservableObject {
         voiceSyncShortcut = defaults.string(forKey: "voiceSyncShortcut")
         voiceSyncDestination = defaults.string(forKey: "voiceSyncDestination")
         voiceSyncCopySeconds = defaults.integer(forKey: "voiceSyncCopySeconds")
+        clipboardShare = defaults.bool(forKey: "clipboardShare")
         speakerDestination = defaults.string(forKey: "speakerDestination")
         speakerOn = defaults.bool(forKey: "speakerOn")
         speakerReceive = defaults.bool(forKey: "speakerReceive")

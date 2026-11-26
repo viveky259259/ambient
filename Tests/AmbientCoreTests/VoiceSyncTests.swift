@@ -616,3 +616,148 @@ private func scratch() -> AmbientPaths {
         }
     }
 }
+
+@Suite struct VoiceNoteTests {
+    private func inbox(cursor: Int64 = 0, known: Set<String> = []) -> VoiceInbox {
+        VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor(vseq: cursor), known: known)
+    }
+
+    @Test func aNoteGoesThroughTheDecoderUnchanged() throws {
+        let sent = line(1, .note(at: now, text: "Ship the fix,\nthen tag \"0.11\""))
+        let encoded = String(decoding: sent.encoded(), as: UTF8.self)
+        #expect(encoded.hasPrefix(#"{"v":1,"type":"voice","vseq":1,"to":"\#(hub)","#), "follow matches notes as it does voices")
+        #expect(try decode(encoded) == sent)
+    }
+
+    @Test func aNoteKeepsItsLinesAndIndentationButNothingHidden() {
+        #expect(VoiceLine.noteText("\n\n  git pull  \r\n\tswift build\u{202E}\n\n\n\nthen ship \n\n") ==
+                "  git pull\n\tswift build\n\nthen ship")
+        #expect(VoiceLine.noteText(" \n\u{200B}\t\n") == nil)
+        #expect(VoiceLine.noteText(String(repeating: "a", count: 20_000))?.count == VoiceLine.maxText)
+    }
+
+    @Test func aNoteWithNothingToReadOrMissingFieldsIsRejected() {
+        let base = #"{"v":1,"type":"voice","vseq":1,"to":"\#(hub)","voice":"\#(voiceID(1))","part":"note""#
+        for bad in [base + #","ts":1793000000,"text":"   "}"#, base + #","ts":1793000000,"text":"​"}"#,
+                    base + #","ts":1793000000}"#, base + #","text":"hi"}"#, base + #","ts":1793000000,"text":"hi","n":0}"#] {
+            #expect(throws: RemoteRejection.self) { try decode(bad) }
+        }
+    }
+
+    @Test func aNoteArrivesAtOnceWithoutAudio() {
+        let box = inbox()
+        let events = box.receive(line(1, .note(at: now, text: "Back at 3")), now: now)
+        #expect(events == [.arrived(VoiceArrival(id: voiceID(1), machine: daily, recordedAt: now, seconds: 0,
+                                                 text: "Back at 3", audio: Data(), isNote: true))])
+        #expect(box.cursor == 1)
+        #expect(box.receive(line(1, .note(at: now, text: "Back at 3")), now: now) == [], "a repeat changes nothing")
+        guard case let .arrived(note)? = events.first else { return }
+        #expect(note.record.isNote)
+        #expect(note.record.direction == .received)
+    }
+
+    @Test func aNoteAlreadyKeptOrForAnotherMacDoesntArrive() {
+        #expect(inbox(known: [voiceID(1)]).receive(line(1, .note(at: now, text: "x")), now: now) == [])
+        #expect(inbox().receive(line(1, to: otherHub, .note(at: now, text: "x")), now: now) == [])
+    }
+
+    @Test func aNoteArrivesWhileAVoiceIsComingInWithoutMovingThePastIt() {
+        let box = inbox()
+        _ = box.receive(line(1, 1, .start(at: now)), now: now)
+        guard case .arrived? = box.receive(line(2, 2, .note(at: now, text: "meanwhile")), now: now).first else {
+            Issue.record("no arrival"); return
+        }
+        #expect(box.cursor == 0, "a reconnect still replays the voice from its start")
+        _ = box.receive(line(3, 1, .audio(n: 0, data: audio())), now: now)
+        guard case .arrived? = box.receive(line(4, 1, .end(text: nil)), now: now).first else {
+            Issue.record("no voice"); return
+        }
+        #expect(box.cursor == 4)
+    }
+
+    @Test func tidyingKeepsARecentNoteAndDropsAnOldOne() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .note(at: now.addingTimeInterval(-100_000), text: "old"))
+        try box.append(to: hub, voice: voiceID(2), .note(at: now.addingTimeInterval(-60), text: "new"))
+        let launched = VoiceOutbox(dir: box.dir)
+        launched.tidy(now: now)
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> VoiceLine? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v
+        }
+        #expect(kept == [VoiceLine(vseq: 2, to: hub, voice: voiceID(2), part: .note(at: now.addingTimeInterval(-60), text: "new"))],
+                "a note is never open, so it isn't cancelled")
+    }
+
+    @Test func aNoteIsKeptWithoutAudioAndStaysANote() throws {
+        let paths = scratch()
+        let library = VoiceLibrary(paths: paths)
+        let note = VoiceRecord(id: voiceID(1), direction: .sent, peer: daily, recordedAt: now, seconds: 0, text: "hi", note: true)
+        let voice = VoiceRecord(id: voiceID(2), direction: .sent, peer: daily, recordedAt: now, seconds: 2, text: "hey")
+        try library.add(note, audio: Data())
+        try library.add(voice, audio: audio())
+        #expect(!FileManager.default.fileExists(atPath: library.audioURL(for: note).path))
+        let again = VoiceLibrary(paths: paths)
+        #expect(again.record(voiceID(1))?.isNote == true)
+        #expect(again.record(voiceID(2))?.isNote == false)
+        let saved = try String(contentsOf: paths.voiceLibrary, encoding: .utf8)
+        #expect(saved.components(separatedBy: "\"note\"").count == 2, "only the note says so")
+        try again.delete(voiceID(1))
+        #expect(again.record(voiceID(1)) == nil)
+    }
+}
+
+@Suite struct ClipboardShareTests {
+    @Test func aCopyGoesThroughTheDecoderExactlyAsCopied() throws {
+        let copied = "  indented\n\tline two\r\nemoji 👩‍💻 and \"quotes\" \\ end  \n"
+        let sent = line(1, .clip(at: now, text: copied))
+        #expect(try decode(String(decoding: sent.encoded(), as: UTF8.self)) == sent)
+    }
+
+    @Test func onlyControlCharactersAreTakenOutAndTooMuchIsLeftOut() {
+        #expect(VoiceLine.clipText("a\u{07}b\u{0}c\td") == "abc\td")
+        #expect(VoiceLine.clipText(" \n\t ") == nil)
+        #expect(VoiceLine.clipText(String(repeating: "x", count: VoiceLine.maxClip)) != nil)
+        #expect(VoiceLine.clipText(String(repeating: "x", count: VoiceLine.maxClip + 1)) == nil, "never half a copy")
+    }
+
+    @Test func aCopyIsHandedOverAtOnceAndOnlyOnce() {
+        let box = VoiceInbox(machine: daily, hub: hub, cursor: VoiceCursor())
+        #expect(box.receive(line(1, .clip(at: now, text: "x")), now: now) == [.clipboard(id: voiceID(1), text: "x", at: now)])
+        #expect(box.cursor == 1)
+        #expect(box.receive(line(1, .clip(at: now, text: "x")), now: now) == [])
+    }
+
+    @Test func onlyPlainTextWithNoPrivateMarkIsShared() {
+        #expect(ClipboardShare.shareable(types: ["public.utf8-plain-text", "public.html"]))
+        #expect(!ClipboardShare.shareable(types: ["public.png"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", "org.nspasteboard.ConcealedType"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", "org.nspasteboard.TransientType"]))
+        #expect(!ClipboardShare.shareable(types: ["public.utf8-plain-text", ClipboardShare.marker]), "never sent back")
+    }
+
+    @Test func onlyRecentCopiesInOrderGoOnTheClipboard() {
+        var arrivals = ClipboardShare.Arrivals()
+        func accept(_ machine: String, _ offset: TimeInterval) -> Bool {
+            arrivals.accept(machine, at: now.addingTimeInterval(offset), now: now)
+        }
+        let results = [accept("daily", -121), accept("daily", -5), accept("daily", -5), accept("daily", -10),
+                       accept("studio", -10), accept("daily", 3), accept("daily", 600)]
+        // Stale, as after a sleep; fresh; two copies in the same second; older than the last one; each Mac has its own
+        // order; a clock a little ahead; far ahead.
+        #expect(results == [false, true, true, false, true, true, false])
+    }
+
+    @Test func copiesLeaveTheOutboxAfterTenMinutesAndNotesStay() throws {
+        let box = VoiceOutbox(dir: scratch().voiceOutbox)
+        try box.append(to: hub, voice: voiceID(1), .clip(at: now.addingTimeInterval(-700), text: "old copy"))
+        try box.append(to: hub, voice: voiceID(2), .note(at: now.addingTimeInterval(-700), text: "note"))
+        try box.append(to: hub, voice: voiceID(3), .clip(at: now.addingTimeInterval(-60), text: "new copy"))
+        box.expire(now: now)
+        let kept = try String(contentsOf: box.file, encoding: .utf8).split(separator: "\n").compactMap { raw -> String? in
+            guard case let .voice(v) = try RemoteLineDecoder.decode(Data(raw.utf8)) else { return nil }
+            return v.voice
+        }
+        #expect(kept == [voiceID(2), voiceID(3)])
+    }
+}

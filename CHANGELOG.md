@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Shared clipboard**: text you copy on one Mac is ready to paste on your other paired Macs, within a second or so.
+  Turn on *Share the clipboard* in Settings › Voice Sync on each Mac that should share. Only text, only with Macs
+  connected at the time, and never what a password manager or other app marks as private. A copy that arrives more
+  than two minutes late, as after a sleep, isn't pasted over a newer one, and copies leave the sending Mac's outbox
+  after ten minutes.
+- **Text notes**: send typed text to another Mac, as you send a voice. *Send Note to …* in the menu bar opens a
+  window to type or paste in (⌘V, or its Paste button), with a choice of Mac and ⌘↩ to send; the other Mac shows it under the notch with *Copy Text* and keeps it with your voices.
+  Line breaks and indentation stay, so a command or a list arrives as written. A Mac that's away gets it when it's
+  back. Both Macs need this version.
+- **The Ambient speaker and the link to another Mac no longer stop after a few days.** Each time the link to a Mac
+  that sleeps reconnected, Ambient left two files open, until it reached its limit: then the speaker, the link and the
+  speaker driver's install (*couldn't be copied*) all failed. It now closes them as it goes.
 - **Agent history**: keep a team's finished agent chats in one place, and ask why the code is the way it is.
   `ambient history setup --store s3://bucket/prefix` (or a folder) in a repository turns it on for that repository
   only. When a Claude chat ends, Ambient stores it as one record with paths relative to the repository and credentials
